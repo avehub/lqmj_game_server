@@ -1,0 +1,106 @@
+# coding=utf-8
+from sanic.request import Request
+from nsanic.handler_http import BaseHttpApi
+from nsanic.base_ws import BaseWebsocket
+from nsanic.libs.manager import WsConnector
+from common.public.common_class import CommonApi
+from common.public.enum_const import StaCode
+from promising_admin.model_rc.conf_announcements import ConfAnnouncementsRC
+from promising_game.config import conf_srv, ConfSrv
+from promising_game.handler.decorator import GameChecker
+from promising_game.handler.exception import RealJsonFinish
+from promising_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
+from promising_game.model_rc.base_ads import BaseAds
+from promising_game.model_rc.base_award import ConfAwardRC, UserAwardRC
+from promising_game.model_rc.base_bag import UserBagRC
+from promising_game.model_rc.base_chat import ChatRecordRC
+from promising_game.model_rc.base_friend import UserFriendshipRC
+from promising_game.model_rc.base_goods import ItemsBaseRC
+from promising_game.model_rc.base_cosmetic import ItemsCosmeticRC, UserCosmeticRC
+from promising_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
+from promising_game.model_rc.base_monopoly import MonopolyMapRC, MonopolyEventRC, UserMonopolyRC
+from promising_game.model_rc.base_prop import ItemsPropRC
+from promising_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
+from promising_game.model_rc.conf_quick_chat import ConfQuickChatRC
+from promising_game.model_rc.goods_manager import GoodsManagerRC
+from promising_game.model_rc.base_interaction import InteractionRC
+from promising_game.model_rc.base_mails import MailsRC
+from promising_game.model_rc.base_ranking import ConfRankingRC, UserRankingRC, ConfSeasonRC
+from promising_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
+from promising_game.model_rc.base_safe_box import UserSafeBoxRC
+from promising_game.model_rc.base_store import ConfStoreRC, ConfMonopolyStoreRC
+from promising_game.model_rc.base_user import BaseUserRC, BaseBanRC
+from promising_game.model_rc.active_behaviors import UserBehaviorsRC
+from promising_game.model_rc.conf_json import ConfJsonRC
+from promising_game.model_rc.conf_leisure import LeisureConfRC
+from promising_game.model_rc.player_game_times import PlayerGameTimesRC
+from promising_game.model_rc.vip_level import ConfVipRC, UserVipRC
+
+
+class BaseApi(BaseHttpApi, CommonApi):
+    conf: ConfSrv = conf_srv
+    init_model = [
+        BaseUserRC, BaseRobotRC, LeisureConfRC, InteractionRC, ConfStoreRC, ConfAwardRC, UserBehaviorsRC,
+        PlayerGameTimesRC, MailsRC, UserBagRC, ConfJsonRC, ConfTaskRC, UserTaskRC, ConfVipRC, UserVipRC,
+        ConfActivityRC, UserActivityRC, UserSafeBoxRC, ConfSeasonRC, UserRankingRC, ConfRankingRC,
+        UserCosmeticRC, ItemsCosmeticRC, GoodsManagerRC, ItemsBaseRC, UserAwardRC, ItemsPropRC, ItemsSkinRC, UserSkinRC,
+        ConfMonopolyStoreRC, MonopolyMapRC, MonopolyEventRC, UserMonopolyRC, ConfRobotRC, ConfAnnouncementsRC, BaseAds,
+        UserFriendshipRC, ConfQuickChatRC, ChatRecordRC, BaseBanRC
+    ]
+    for m in init_model:
+        m.conf = conf
+
+    async def check_solid_params(self, req: Request):
+        """ 检查固有参数 """
+        uid = req.json.get("uid")
+        self.check_int(uid, require=True)
+        user = await BaseUserRC.cache_by_uid(uid)
+        not user and self.answer(self.sta_code.FAIL, hint="No player information")
+        return user
+
+    @staticmethod
+    def real_ip(req: Request):
+        """ 与Nginx直接建立TCP连接的客户端的IP地址 """
+        return req.headers.get("x-real-ip")
+
+    @classmethod
+    def ori_ip(cls, req: Request):
+        """
+        多级代理最前面那个ip
+        X-Forwarded-For: client, proxy1, proxy2
+        通常情况下第一个IP地址是最接近用户的，但这并不总是绝对安全或准确的，因为X-Forwarded-For头可以被伪造。
+        因此，在处理涉及安全性的事务时，不能仅依赖于X-Forwarded-For来判断用户的真实性。
+        """
+        ip_list = req.headers.get("x-forwarded-for")
+        # cls.info_log("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
+        if ip_list:
+            return ip_list.split(',')[0]
+        return cls.real_ip(req) or req.client_ip
+
+    def answer_json(
+            self, code: StaCode = None,
+            data: (dict, object, list) = None,
+            total: int = 0,
+            hint: str = '',
+            headers: dict = None):
+        """
+        公共JSON响应函数
+
+        :param code: 响应码,请参照StaCode中取值, 默认响应成功状态
+        :param data: 响应数据, 可以是任意符合JSON规范类型的数据模型
+        :param total: 针对于分页响应的总数量
+        :param hint: 响应消息, 字符串, 设置值后会采取设置的值，否则会使用响应码映射的默认值
+        :param headers: 附加响应头
+        """
+        if not code:
+            code = self.sta_code.PASS
+        raise RealJsonFinish(code, data, total, hint, headers)
+
+
+class GameAuthApi(BaseApi):
+    decorators = [GameChecker]
+
+
+class BaseWS(BaseWebsocket):
+    conf = conf_srv
+    conn_manager = WsConnector

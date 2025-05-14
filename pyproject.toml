@@ -1,0 +1,4 @@
+[tool.aerich]
+tortoise_orm = "promising_game.config.migrate_db"
+location = "./migrations"
+src_folder = "./."

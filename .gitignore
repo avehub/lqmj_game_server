@@ -1,0 +1,10 @@
+.idea/
+logs/
+test/
+*.pyc
+migrations/
+promising_proto/
+common/public/conf.py
+__pycache__/
+restart.sh
+test.py
