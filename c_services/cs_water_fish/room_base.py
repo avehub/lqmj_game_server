@@ -7,7 +7,7 @@ from .const import FlowStatus, OperateType, CompareRes, OPERATE_RATE
 from .rule import Rule
 from c_services.const.cs_enum_const import CmdRoom, RoomStatus
 from c_services.base.base_leisure_room import BaseLeisureRoom
-from promising_game.const import ReasonCostGold
+from lucky_game.const import ReasonCostGold
 
 
 class Room(BaseLeisureRoom):

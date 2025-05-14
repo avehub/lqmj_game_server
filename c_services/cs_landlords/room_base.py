@@ -11,7 +11,7 @@ from .const import FlowStatus, ActionType
 from .poker import Poker, Cards
 from c_services.base.base_leisure_room import BaseLeisureRoom
 from ..const.cs_enum_const import RoomStatus, CmdRoom, CmdRobotMethods
-from promising_game.const import ReasonCostGold
+from lucky_game.const import ReasonCostGold
 
 
 class Room(BaseLeisureRoom):

@@ -1,7 +1,7 @@
 from nsanic.libs.tool import json_encode
 from common.proto.pb2 import http_interaction_pb2
 from common.proto.py_pb2 import http_player_vault
-from promising_game.const import AwardType
+from lucky_game.const import AwardType
 
 
 class PbSignInConf():

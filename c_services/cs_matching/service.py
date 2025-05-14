@@ -8,23 +8,23 @@ from c_services.base.base_server import BaseServer
 from common.proto.py_pb2.common import s2c_in_service_model
 from common.proto.py_pb2.ws_c2s import C2SEnterLeisure
 from common.utils.utils import UtilsTool
-from promising_game.const import GamePropType, SeasonStatus, LvDefendType
-from promising_game.model_rc.base_activity import UserActivityRC
-from promising_game.model_rc.base_bag import UserBagRC
-from promising_game.model_rc.base_prop import ItemsPropRC
-from promising_game.model_rc.base_ranking import ConfRankingMatchTimeRc, ConfSeasonRC, UserRankingRC, ConfRankingRC
-from promising_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from promising_game.model_rc.conf_json import ConfJsonRC
-from promising_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
-from promising_game.model_rc.base_user import BaseUserRC
+from lucky_game.const import GamePropType, SeasonStatus, LvDefendType
+from lucky_game.model_rc.base_activity import UserActivityRC
+from lucky_game.model_rc.base_bag import UserBagRC
+from lucky_game.model_rc.base_prop import ItemsPropRC
+from lucky_game.model_rc.base_ranking import ConfRankingMatchTimeRc, ConfSeasonRC, UserRankingRC, ConfRankingRC
+from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
+from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.kit_async import DelayCall, delay_func
 from c_services.const.cs_enum_const import CmdMatch, CmdRoom
 from common.public.enum_const import ServiceEnum, StaCode, GameType
 from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD
 from common.utils.kit_dt import KitDt
-from promising_game.model_rc.conf_leisure import LeisureConfRC
-from promising_game.model_rc.player_game_times import PlayerGameTimesRC
-from promising_game.model_rc.vip_level import UserVipRC, ConfVipRC
+from lucky_game.model_rc.conf_leisure import LeisureConfRC
+from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
+from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from .const import MatchingMode
 from .player import Player
 from .session import Session

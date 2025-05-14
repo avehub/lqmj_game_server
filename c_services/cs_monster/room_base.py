@@ -1,5 +1,5 @@
 import random
-from promising_game.const import ReasonCostGold
+from lucky_game.const import ReasonCostGold
 from .player import Player
 from .room_comb import RoomComb
 from .rule import Rule

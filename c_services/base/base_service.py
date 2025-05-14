@@ -12,10 +12,10 @@ from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CmdRoom, CallCheck
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2
 from common.public.enum_const import StaCode, CacheKey
-from promising_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
-from promising_game.model_rc.base_activity import UserActivityRC
-from promising_game.model_rc.base_user import BaseUserRC
-from promising_game.model_rc.conf_quick_chat import ConfQuickChatRC
+from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
+from lucky_game.model_rc.base_activity import UserActivityRC
+from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
 class BaseService(BaseServer, SessionManager):

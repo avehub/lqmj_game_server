@@ -2,7 +2,7 @@ from nsanic.libs import tool_dt
 from datetime import datetime, timedelta
 
 from common.public.conf import GLOBAL_TZ
-from promising_game.const import LimitPeriod
+from lucky_game.const import LimitPeriod
 
 
 class KitDt:

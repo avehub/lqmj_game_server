@@ -2,9 +2,9 @@ from typing import Dict
 
 from c_services.base.base_service import BaseService
 from common.public.enum_const import ServiceEnum, StaCode
-from promising_game.model_rc.base_activity import ConfActivityRC
-from promising_game.model_rc.base_safe_box import UserSafeBoxRC
-from promising_game.model_rc.conf_leisure import LeisureConfRC
+from lucky_game.model_rc.base_activity import ConfActivityRC
+from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
+from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from nsanic.libs import tool
 
 from ..const.cs_enum_const import CmdRoom

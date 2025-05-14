@@ -11,8 +11,8 @@ from common.proto.py_pb2.ws_leisure import S2CRoundOver
 from common.public.enum_const import StaCode
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
-from promising_game.const import ReasonCostGold, SeasonStatus, QuickChatType, InteractPropType, PayType
-from promising_game.model_rc.conf_quick_chat import ConfQuickChatRC
+from lucky_game.const import ReasonCostGold, SeasonStatus, QuickChatType, InteractPropType, PayType
+from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
 class RoomComb(BaseLeisureRoom):

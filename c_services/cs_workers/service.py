@@ -11,32 +11,32 @@ from common.public.conf import ROBOT_RANK
 from common.public.enum_const import TaskId, DbKey, LEISURE_GAME_LIST
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
-from promising_admin.const import BackTaskSta, WeightEnum
-from promising_admin.model_db.main import RecordsAdminTimedTask
-from promising_admin.model_rc.mails_manage import RecordsAdminMailsRC
-from promising_game.model_rc.active_behaviors import UserBehaviorsRC
-from promising_game.model_rc.base_activity import UserActivityRC
-from promising_game.model_rc.base_bag import UserBagRC
-from promising_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from promising_game.model_rc.base_goods import ItemsBaseRC
-from promising_game.model_rc.base_interaction import InteractionRC
-from promising_game.model_rc.base_mails import MailsRC
-from promising_game.model_rc.base_prop import ItemsPropRC
-from promising_game.model_rc.base_safe_box import UserSafeBoxRC
-from promising_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from promising_game.model_rc.base_store import ConfStoreRC
-from promising_game.model_rc.base_user import BaseUserRC
-from promising_game.model_rc.conf_json import ConfJsonRC
-from promising_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
-from promising_game.model_rc.conf_leisure import LeisureConfRC
-from promising_game.model_rc.goods_manager import GoodsManagerRC
-from promising_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from promising_game.model_rc.player_game_times import PlayerGameTimesRC
-from promising_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
-from promising_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatement
-from promising_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
-from promising_game.model_db.main import Mails, RecordsUserRankingHistory, RecordsTradeOrder
-from promising_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, \
+from lucky_admin.const import BackTaskSta, WeightEnum
+from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
+from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
+from lucky_game.model_rc.base_activity import UserActivityRC
+from lucky_game.model_rc.base_bag import UserBagRC
+from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
+from lucky_game.model_rc.base_goods import ItemsBaseRC
+from lucky_game.model_rc.base_interaction import InteractionRC
+from lucky_game.model_rc.base_mails import MailsRC
+from lucky_game.model_rc.base_prop import ItemsPropRC
+from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
+from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
+from lucky_game.model_rc.base_store import ConfStoreRC
+from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
+from lucky_game.model_rc.conf_leisure import LeisureConfRC
+from lucky_game.model_rc.goods_manager import GoodsManagerRC
+from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
+from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
+from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
+from lucky_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatement
+from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
+from lucky_game.model_db.main import Mails, RecordsUserRankingHistory, RecordsTradeOrder
+from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, \
     CompleteSta, EventTracking, OrderStatus
 
 

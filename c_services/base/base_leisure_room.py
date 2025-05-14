@@ -10,9 +10,9 @@ from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CB
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
 from common.utils.utils import UtilsTool
-from promising_admin.const import WeightEnum
-from promising_game.const import ReasonCostGold, SeasonStatus, GiftType
-from promising_game.model_rc.base_activity import ConfActivityRC
+from lucky_admin.const import WeightEnum
+from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
+from lucky_game.model_rc.base_activity import ConfActivityRC
 
 
 class BaseLeisureRoom(BaseRoom):

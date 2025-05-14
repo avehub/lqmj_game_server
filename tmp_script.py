@@ -5,11 +5,11 @@
 
 import asyncio
 
-from promising_admin.script.create_admin import create_super_admin
-from promising_game.script.ban_player import ban_player
-from promising_game.script.set_new_season import set_new_season
-from promising_game.script.db_manager import del_conf_leisure, delete_user
-from promising_game.script.forbid_match import let_service_forbid_match
+from lucky_admin.script.create_admin import create_super_admin
+from lucky_game.script.ban_player import ban_player
+from lucky_game.script.set_new_season import set_new_season
+from lucky_game.script.db_manager import del_conf_leisure, delete_user
+from lucky_game.script.forbid_match import let_service_forbid_match
 
 if __name__ == '__main__':
     asyncio.run(del_conf_leisure([6, 7]))  # 刷新游戏与匹配服务的内存休闲场配置

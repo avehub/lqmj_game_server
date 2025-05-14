@@ -6,18 +6,18 @@ from c_services.base.base_conf import BaseConf
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
-from promising_admin.const import BackTaskSta
-from promising_admin.model_db.main import RecordsAdminTimedTask
-from promising_game.const import SeasonStatus
-from promising_admin.handler.stats_expert import StatsExpert
-from promising_game.handler.douyin import DouYin
-from promising_game.model_db.main import RecordsUserRankingHistory
-from promising_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
-from promising_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
-from promising_game.model_rc.base_robot import BaseRobotRC
-from promising_game.model_rc.conf_json import ConfJsonRC
-from promising_game.model_rc.player_game_times import PlayerGameTimesRC
-from promising_game.script.timed_task import BaseTimed
+from lucky_admin.const import BackTaskSta
+from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.const import SeasonStatus
+from lucky_admin.handler.stats_expert import StatsExpert
+from lucky_game.handler.douyin import DouYin
+from lucky_game.model_db.main import RecordsUserRankingHistory
+from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
+from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
+from lucky_game.model_rc.base_robot import BaseRobotRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
+from lucky_game.script.timed_task import BaseTimed
 
 
 class TimedService():

@@ -4,7 +4,7 @@ from c_services.base.base_server import JsonBaseServer
 from c_services.const.cs_enum_const import CmdChat
 from common.proto.pb2 import common_pb2
 from common.public.enum_const import ChatChannel
-from promising_game.model_rc.base_chat import ChatRecordRC
+from lucky_game.model_rc.base_chat import ChatRecordRC
 
 
 class ChatServer(JsonBaseServer):

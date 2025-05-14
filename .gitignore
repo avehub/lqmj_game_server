@@ -3,7 +3,7 @@ logs/
 test/
 *.pyc
 migrations/
-promising_proto/
+lucky_proto/
 common/public/conf.py
 __pycache__/
 restart.sh
