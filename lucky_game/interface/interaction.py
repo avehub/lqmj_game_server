@@ -8,8 +8,6 @@ from common.utils.kit_dt import KitDt
 from common.utils.utils import UtilsTool
 from lucky_game.base_api import GameAuthApi
 from c_services.const.cs_enum_const import CmdWorkers
-from common.proto.py_pb2.http_player_vault import PbGoods
-from common.proto.py_pb2.http_trade_center import PbOrder
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.interface.some_pay import BaseSomePay
 from lucky_game.model_db.extra import RecordsAdOrder
@@ -28,7 +26,6 @@ from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_admin.model_rc.conf_announcements import ConfAnnouncementsRC
 from common.public.enum_const import DbKey, TaskId, Switch
-from common.proto.py_pb2.http_interaction import PbSignInConf, PbRaffle, PbRelief, PbAwards
 from lucky_game.const import AchieveType, AdSlotItem, PlatForm, OrderStatus, DeliverStatus, AwardType, \
     SignInSta, GoodsItem, GoodsType, ReasonCostGold, CompleteSta, GamePropType, ActivityItem
 
@@ -92,9 +89,8 @@ class MakeAdOrder(GameAuthApi):
             "order_id": insert_data.get("ad_order_id"),
             "trade_time": tool_dt.cur_time(),
         }
-        pro_data = PbOrder.pb_model(return_data)
         self.info_log(uid, f"MakeAdOrder 创建{ao_enum.phrase}广告订单 成功")
-        return self.answer(data=pro_data)
+        return self.answer(data=return_data)
 
 
 class CompleteAdOrder(GameAuthApi):
@@ -191,7 +187,7 @@ class CompleteAdOrder(GameAuthApi):
 
         (not awards) and self.answer(self.sta_code.GOODS_NOT_FOUND, hint="商品缺货，请联系客服")
         up_goods = await UpAssets.update_assets(u_info.get("uid"), [awards], [], is_pack=True)
-        return PbGoods.pb_model(up_goods)
+        return up_goods
 
     async def deal_ad_pay(self, ad_slot_id, u_info, _):
         """每日看广告商店兑换"""
@@ -210,7 +206,7 @@ class CompleteAdOrder(GameAuthApi):
         up_goods = await UpAssets.update_assets(u_info.get("uid"), conf_items, [], is_pack=True)
         if buy_record:  # 更新购买次数（仅充值礼包促销）
             await BaseUserRC.cache_count_buy_limit(uid, ad_slot_id, buy_record)
-        return PbGoods.pb_model(up_goods)
+        return up_goods
 
 
 class SignInHandler(GameAuthApi):
@@ -259,9 +255,8 @@ class SignInHandler(GameAuthApi):
         }
         return_data["sign_data"] = sign_data
 
-        pro_data = PbSignInConf.pb_model(return_data)
         self.info_log(uid, f"SignInHandler {at_enum.phrase}配置 / 用户签到数据 成功")
-        return self.answer(data=pro_data)
+        return self.answer(data=return_data)
 
     async def get_raffle_sign_conf(self, uid):
         """运势抽奖签到配置"""
@@ -342,8 +337,7 @@ class SignInTotalComplete(GameAuthApi):
         sta, res_info = await self.complete_sign_in_total(uid, achieved, award_type)
         (not sta) and self.answer(code=self.sta_code.FAIL, hint=res_info)
 
-        pro_data = PbGoods.pb_model(res_info)
-        return self.answer(data=pro_data)
+        return self.answer(data=res_info)
 
     @classmethod
     async def complete_sign_in_total(cls, uid, achieved: int, award_type: AwardType):
@@ -517,10 +511,10 @@ class SignInComplete(GameAuthApi):
                 sta, res_info = await SignInTotalComplete.complete_sign_in_total(uid, achieved_days, award_type)
                 if sta:
                     sign_awards.extend(res_info)
-            pro_data = PbGoods.pb_model(sign_awards)
+            pro_data = sign_awards
 
         elif award_type == AwardType.SIGN_IN_RF:
-            pro_data = PbRaffle.pb_model(sign_conf)
+            pro_data = sign_conf
 
         cls.info_log(uid, f"签到{award_type}成功，是否免费：{is_free}，是否补签：{backdate_sign_date}")
         return True, pro_data
@@ -567,9 +561,8 @@ class GetReliefConf(GameAuthApi):
             "relief_times": relief_conf.get("times") or 2,
             "relief_used_times": used_times
         }
-        proto_data = PbRelief.pb_model(relief_data)
         self.info_log(uid, "GetReliefConf 加载救济金配置", relief_data)
-        return self.answer(data=proto_data)
+        return self.answer(data=relief_data)
 
 
 class GetReliefHandler(GameAuthApi):
@@ -623,9 +616,8 @@ class GetReliefHandler(GameAuthApi):
             cls.error_log(f"GetReliefHandler 事务执行失败，原因：{e}")
             return False, "抽奖签到发奖失败，请联系客服"
 
-        pro_data = PbGoods.pb_model(up_goods)
         cls.info_log(uid, f"GetReliefHandler 领取{relief_conf.get('count')}救济金成功")
-        return True, pro_data
+        return True, up_goods
 
 
 class GetCommonAwardsConf(GameAuthApi):
@@ -649,9 +641,8 @@ class GetCommonAwardsConf(GameAuthApi):
         common_awards['receive_times'] = watch_record.get(ao_enum.desc, 0) if watch_record else 0
 
         await GoodsManagerRC.pack_goods_conf([common_awards])
-        proto_data = PbAwards.pb_model(common_awards)
         self.info_log(uid, "GetCommonAwardsConf 加载通用奖励配置", ad_slot_id)
-        return self.answer(data=proto_data)
+        return self.answer(data=common_awards)
 
 
 class PullCommonAwards(GameAuthApi):
@@ -699,9 +690,8 @@ class PullCommonAwards(GameAuthApi):
             self.error_log(f"PullCommonAwards 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="奖励领取失败，请联系客服")
 
-        pro_data = PbGoods.pb_model(up_goods)
         self.info_log(uid, "PullCommonAwards 已领取奖励", award_id)
-        return self.answer(data=pro_data)
+        return self.answer(data=up_goods)
 
 
 class OpenTreasureBox(GameAuthApi):
@@ -760,9 +750,8 @@ class OpenTreasureBox(GameAuthApi):
             self.error_log(f"OpenTreasureBox 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="宝盒开启失败，请联系客服")
 
-        pro_data = PbGoods.pb_model(up_goods)
         self.info_log(uid, "OpenTreasureBox 宝盒开启成功")
-        return self.answer(data=pro_data)
+        return self.answer(data=up_goods)
 
 
 class AnnouncementsHandler(GameAuthApi):

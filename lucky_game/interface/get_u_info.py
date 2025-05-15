@@ -1,7 +1,6 @@
 import tortoise
 from sanic import Request
 from c_services.const.cs_enum_const import CmdWorkers
-from common.proto.py_pb2.http_login import PbUser
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from common.public.enum_const import Sex, ServiceEnum, CacheKey, GameType
 from lucky_game.base_api import GameAuthApi
@@ -16,9 +15,7 @@ from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.vip_level import UserVipRC
-from common.proto.py_pb2.common import get_one_of_model, s2c_in_service_model
-from common.proto.py_pb2.http_leisure import S2CRoomUserInfo, S2CUserGameStates, S2CUserGameGrade, PbLeisure, \
-    PbUserAdditionInfo
+from common.proto.py_pb2.common import get_one_of_model
 
 
 class QueryUserInfo(GameAuthApi):
@@ -26,24 +23,24 @@ class QueryUserInfo(GameAuthApi):
 
     async def get(self, req: Request, **_b):
 
-        r_user_model = S2CRoomUserInfo()
+        r_user_model = {}
         uid = self.check_int(req.args.get("uid"), require=True, minval=100000, p_name="uid")
         if uid > R_UID_THRESHOLD:
             user_info = await BaseUserRC.cache_by_uid(uid)
             vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
             ur_data = await UserRankingRC.cache_by_unique(uid, u_info=user_info) or {}
-            r_user_model.vip_level = vip_info.get("level")
-            r_user_model.ranking_id = ur_data.get("ranking_id") or 0
+            r_user_model["vip_level"] = vip_info.get("level")
+            r_user_model["ranking_id"] = ur_data.get("ranking_id") or 0
         else:
             user_info = await BaseRobotRC.cache_by_pk(uid) or {}
             avatar = user_info.get("avatar") or ""
             user_info["avatar"] = ROBOT_AVATAR + avatar if avatar else ""
 
-        r_user_model.name = user_info.get("name") or ""
-        r_user_model.uid = user_info.get("uid") or 0
-        r_user_model.sex = user_info.get("sex") or Sex.DEFAULT
-        r_user_model.address = user_info.get("address") or ""
-        r_user_model.avatar = user_info.get("avatar") or ""
+        r_user_model["name"] = user_info.get("name") or ""
+        r_user_model["uid"] = user_info.get("uid") or 0
+        r_user_model["sex"] = user_info.get("sex") or Sex.DEFAULT
+        r_user_model["address"] = user_info.get("address") or ""
+        r_user_model["avatar"] = user_info.get("avatar") or ""
 
         return self.answer(data=r_user_model)
 
@@ -57,8 +54,7 @@ class RefreshAssets(GameAuthApi):
             "gold": u_info.get("gold"),
             "diamond": u_info.get("diamond")
         }
-        proto_data = PbUser.pb_model(**data)
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class GetLeisureList(GameAuthApi):
@@ -72,8 +68,7 @@ class GetLeisureList(GameAuthApi):
             self.answer(self.sta_code.ERR_ARG, hint="非休闲场")
 
         data = await LeisureConfRC.cache_all_by_cs_type(cs_type=cs_type)
-        pb_model = PbLeisure.pb_model(data)
-        return self.answer(data=pb_model)
+        return self.answer(data=data)
 
 
 class QueryUserAdditionInfo(GameAuthApi):
@@ -96,8 +91,7 @@ class QueryUserAdditionInfo(GameAuthApi):
         conf_vip = await UserVipRC.get_vip_conf_by_uid(uid)
         add_info['vip_addition'] = conf_vip.get("ranking_addition", 0)
 
-        proto_data = PbUserAdditionInfo.pb_model(add_info)
-        return self.answer(data=proto_data)
+        return self.answer(data=add_info)
 
 
 class QueryUserGameStates(GameAuthApi):
@@ -124,8 +118,7 @@ class QueryUserGameStates(GameAuthApi):
             game_count_key = f"game_count_{cs_type}"
 
         if not game_data:
-            data_model = S2CUserGameStates.pb_model()
-            self.answer(self.sta_code.PASS, data=data_model, hint="无数据")
+            self.answer(self.sta_code.PASS, hint="无数据")
 
         total_count = 0
         total_win_count = 0
@@ -144,8 +137,7 @@ class QueryUserGameStates(GameAuthApi):
             "win_rate": win_rate,  # 胜率
             "games_info": game_data
         }
-        data_model = S2CUserGameStates.pb_model(**data)
-        self.answer(data=data_model)
+        self.answer(data=data)
 
 
 class QueryUserAllNumOfGames(GameAuthApi):
@@ -165,8 +157,7 @@ class QueryUserAllNumOfGames(GameAuthApi):
             game_count_key = "game_count_5"
 
         if not game_data:
-            data_model = S2CUserGameStates.pb_model()
-            self.answer(self.sta_code.PASS, data=data_model, hint="无数据")
+            self.answer(self.sta_code.PASS, hint="无数据")
 
         total_count = 0
         total_win_count = 0
@@ -178,15 +169,14 @@ class QueryUserAllNumOfGames(GameAuthApi):
             total_win_count += win_count
 
         if total_count == 0:
-            data_model = S2CUserGameStates.pb_model()
+            self.answer()
         else:
             win_rate = UtilsTool.get_percent((total_win_count / total_count) * 100)
             data = {
                 "total_count": total_count,
                 "win_rate": win_rate  # 胜率
             }
-            data_model = S2CUserGameStates.pb_model(**data)
-        self.answer(data=data_model)
+            self.answer(data=data)
 
 
 class QueryUserGameGrade(GameAuthApi):
@@ -205,11 +195,10 @@ class QueryUserGameGrade(GameAuthApi):
         except tortoise.exceptions.OperationalError:
             data = {}
         if not data:
-            data_model = S2CUserGameGrade.pb_model()
-            self.answer(self.sta_code.PASS, data=data_model, hint="无数据")
+            self.answer(self.sta_code.PASS, hint="无数据")
 
-        data_model = S2CUserGameGrade.pb_model(**{"games_info": data})
-        self.answer(data=data_model)
+        data_model = {"games_info": data}
+        self.answer(data={"games_info": data})
 
 
 class QueryUserIsInCService(GameAuthApi):
@@ -222,8 +211,7 @@ class QueryUserIsInCService(GameAuthApi):
         if not cs_info:
             self.answer(self.sta_code.FAIL, hint="不在游戏中")
 
-        in_service_model = s2c_in_service_model(**cs_info)
-        self.answer(data=in_service_model)
+        self.answer(data=cs_info)
 
 
 class FetchRedDotsByOpportunity(GameAuthApi):

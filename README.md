@@ -16,8 +16,8 @@
 
 * `c_services` 该目录下表示所有子服务
 * `common` 该目录下表示所有的工具包，及其它目录公共使用的如：常量、消息体、公共基类等
-* `promising_game`：该目录是web接口，所有的表定义在该目录下
-* `promising_ws`：该目录是`ws`服务
+* `lucky_game`：该目录是web接口，所有的表定义在该目录下
+* `lucky_ws`：该目录是`ws`服务
 * `promising_proto`：该目录是所有`protobuf`协议文件（生成代码在common/proto/目录下）
 
 # 项目依赖
@@ -63,7 +63,7 @@ message S2CcService {
    MODEL_LIST = [sys_account]
 3. 将数据库配置单独初始化到`config/__init__.py`内(已添加过的忽略这一步)
    `migrate_db = conf_srv.db_migration`(`db_migration`对应当前项目可迁移的库模型)
-4. 进入项目根目录，执行 `aerich init -t promising_game.config.migrate_db `(对应在`__init__.py`中的名称) 初始化数据库连接，同一数据库下只需做一次，更换服务数据库需要从该步骤重新开始执行，在同一数据库服务下，更新或回退，只参照5、6、7步骤
+4. 进入项目根目录，执行 `aerich init -t lucky_game.config.migrate_db `(对应在`__init__.py`中的名称) 初始化数据库连接，同一数据库下只需做一次，更换服务数据库需要从该步骤重新开始执行，在同一数据库服务下，更新或回退，只参照5、6、7步骤
 5. 再执行 `aerich init-db` 初始化数据库结构
 6. `aerich migrate` 生成迁移数据（修改了模型类（Model）或者模型字段（Field）后，需要生成迁移文件。）
 7. `aerich upgrade` 发起迁移（应用迁移）

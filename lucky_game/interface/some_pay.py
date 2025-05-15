@@ -7,8 +7,6 @@ from dg_sdk import DGTools
 from sanic import Request, response
 from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdWorkers
-from common.proto.py_pb2.http_login import PbS2CExternalReturn
-from common.proto.py_pb2.http_player_vault import PbGoods
 from common.public.conf import DouYinConf, WeChatConf, HuiFuConf, LIVE_SERVER
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.douyin import DouYin
@@ -23,7 +21,6 @@ from nsanic.libs import tool_dt
 from lucky_game.handler.alipay import Alipay
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.base_store import ConfStoreRC
-from common.proto.py_pb2.http_trade_center import PbOrder
 from common.proto.py_pb2.common import get_one_of_model
 from common.public.enum_const import DbKey, TaskId
 from nsanic.libs.tool import json_parse, json_encode
@@ -132,8 +129,7 @@ class BaseSomePay(GameAuthApi):
         result, req_data = await Alipay.ali_mini_game_coin_pay(open_id, order_id, trade_amount, trade_name, trade_desc)
         self.info_log("AliPay 扣减游戏币结果", req_data)
         if not result:
-            data = PbS2CExternalReturn.pb_model(
-                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -144,7 +140,7 @@ class BaseSomePay(GameAuthApi):
         errcode, req_data = await DouYin.douyin_mini_game_coin_pay(open_id, access_token, trade_amount, order_id)
         self.info_log("DouYin 扣减游戏币结果：", errcode, req_data)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
+            data = {"errcode": int(errcode), "errmsg": req_data}
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -157,7 +153,7 @@ class BaseSomePay(GameAuthApi):
                                                                    u_ip)
         self.info_log("WeChat 扣减游戏币结果：", errcode, req_data)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
+            data = {"errcode": int(errcode), "errmsg": req_data}
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -169,7 +165,7 @@ class BaseSomePay(GameAuthApi):
         errcode, access_token = await DouYin.douyin_get_access_token()
         self.info_log("DouYin 获取TOKEN结果：", errcode)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": access_token})
+            data = {"errcode": int(errcode), "errmsg": access_token}
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return access_token
 
@@ -179,7 +175,7 @@ class BaseSomePay(GameAuthApi):
         errcode, access_token = await WeChat.wechat_get_access_token_stable(app_id=app_id, app_secret=app_secret)
         self.info_log("WeChat 获取TOKEN结果：", errcode)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": access_token})
+            data = {"errcode": int(errcode), "errmsg": access_token}
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return access_token
 
@@ -220,8 +216,7 @@ class BaseSomePay(GameAuthApi):
 
     def rep_express(self, goods, gifts):
         express = goods + (gifts if gifts else [])
-        pro_data = PbGoods.pb_model(express)
-        return self.answer(self.sta_code.PASS, data=pro_data)
+        return self.answer(self.sta_code.PASS, data=express)
 
 
 class MakeOrder(BaseSomePay):
@@ -239,8 +234,7 @@ class MakeOrder(BaseSomePay):
 
         order_info, hint = await self.create_order(uid, trade_item, pay_mode, platform, req, count=count)
         if order_info:
-            pro_data = PbOrder.pb_model(order_info)
-            return self.answer(data=pro_data)
+            return self.answer(data=order_info)
         return self.answer(self.sta_code.FAIL, hint=hint)
 
     @classmethod
@@ -408,7 +402,7 @@ class GetBalanceByWechatMiniProgram(BaseSomePay):
         errcode, req_data = await WeChat.wechat_mini_game_coin_query(uid, openid, access_token, u_ip)
         if errcode != 0:
             self.info_log(uid, "失败查询Wechat游戏币余额：", errcode, req_data)
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
+            data = {"errcode": int(errcode), "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
         else:
             balance = req_data.get("balance") or 0
@@ -445,7 +439,7 @@ class MiniGameQueryOrder(BaseSomePay):
         errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, access_token, order_id)
         self.info_log(uid, "MiniGameQueryOrder 解析查询数据：", req_data, errcode)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         if req_data.get("pay_state") != OrderStatus.PAID:  # 支付状态（用户是否已支付）1 未支付 2 已支付
@@ -686,8 +680,7 @@ class AliPayQueryStatus(BaseSomePay):
         results, req_data = await Alipay.ali_order_query_status(open_id, order_id)
         self.info_log(uid, "AliPayQueryStatus 解析查询数据：", results, req_data)
         if not results:
-            data = PbS2CExternalReturn.pb_model(
-                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
             self.answer(self.sta_code.EXTERNAL_ERR, data)
 
         if req_data.get("status") != 'success':  # 支付状态 成功: success / 关闭: closed / 已退款: refunded / 中间状态: processing
@@ -890,8 +883,7 @@ class AliPayRefund(BaseSomePay):
         results, req_data = await Alipay.ali_payment_refund(open_id, trade_no)
         self.info_log(uid, "AliPayRefund 解析请求数据：", results, req_data)
         if not results:
-            data = PbS2CExternalReturn.pb_model(
-                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         self.answer(hint="申请退款成功，平台正在处理")
@@ -1102,7 +1094,7 @@ class DouYinGameQueryOrder(BaseSomePay):
         errcode, req_data = await DouYin.douyin_query_pay_status(access_token, order_id)
         self.info_log(uid, "DouYinGameQueryOrder 解析查询数据：", errcode, req_data)
         if errcode:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
+            data = {"errcode": int(errcode), "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         if req_data.get("status") != "success":  # success 表示支付成功且发币到账，unsuccess 表示支付失败或支付成功未发币到账
@@ -1447,8 +1439,7 @@ class CompletePaidOrder(BaseSomePay):
         # 1.注意物品和赠品以预发货的为主
         paid_orders = await BaseUserRC.get_user_paid_order(uid)
         if not paid_orders:
-            data = PbS2CExternalReturn.pb_model(
-                **{"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '没有待领取订单'})
+            data = {"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '没有待领取订单'}
             self.answer(data=data)
 
         all_goods = []
@@ -1463,8 +1454,7 @@ class CompletePaidOrder(BaseSomePay):
             order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
             if not order_info:
                 self.error_log("CompletePaidOrder 无此待领取订单", order_id)
-                data = PbS2CExternalReturn.pb_model(
-                    **{"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '无此待领取订单'})
+                data = {"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '无此待领取订单'}
                 self.answer(data=data)
 
             # 3.发货并准备派送
@@ -1484,8 +1474,7 @@ class CompletePaidOrder(BaseSomePay):
                             await UserActivityRC.update_user_charge_records(uid, express)
                 except Exception as e:
                     self.error_log(f"CompletePaidOrder 事务执行失败，原因：{e}")
-                    data = PbS2CExternalReturn.pb_model(
-                        **{"errcode": self.sta_code.FAIL, "errmsg": '查询发货失败'})
+                    data = {"errcode": self.sta_code.FAIL, "errmsg": '查询发货失败'}
                     self.answer(data=data)
 
                 # 4.将当前订单的货物和奖励加入总结果

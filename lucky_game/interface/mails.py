@@ -4,9 +4,7 @@
 import asyncio
 from sanic import Request
 from tortoise.transactions import in_transaction
-from common.proto.py_pb2.http_player_vault import PbGoods
 from lucky_game.base_api import GameAuthApi
-from common.proto.py_pb2.http_interaction import PbMail
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_db.main import Mails
 from lucky_game.model_rc.base_mails import MailsRC
@@ -23,8 +21,7 @@ class MailsListHandler(GameAuthApi):
         uid = user.get("uid")
 
         mail_list = await MailsRC.get_mails_list(uid)
-        pro_data = PbMail.pb_model(mail_list)
-        return self.answer(data=pro_data)
+        return self.answer(data=mail_list)
 
 
 class MailsOperateUser(GameAuthApi):
@@ -56,8 +53,7 @@ class MailsOperateUser(GameAuthApi):
             self.info_log(uid, f'邮件{ot_enum.phrase}操作结果 {sta}')
             if sta:
                 if opt_type == MailOpType.PULL:
-                    pro_data = PbGoods.pb_model(sta)
-                    self.answer(data=pro_data)
+                    self.answer(data=sta)
                 else:
                     self.answer(hint='OK!')
             return self.answer(code=self.sta_code.FAIL)
@@ -131,8 +127,7 @@ class MailsOperateOneClick(GameAuthApi):
             self.info_log(uid, f'邮件{ot_enum.phrase}一键操作结果 {sta}')
             if sta:
                 if opt_type == MailOpType.PULL:
-                    pro_data = PbGoods.pb_model(sta)
-                    self.answer(data=pro_data)
+                    self.answer(data=sta)
                 else:
                     self.answer(hint='邮件操作成功')
             return self.answer(code=self.sta_code.FAIL)

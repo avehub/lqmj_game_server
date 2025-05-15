@@ -23,7 +23,6 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_cosmetic import ItemsCosmeticRC, UserCosmeticRC
-from common.proto.py_pb2.http_player_vault import PbBag, PbCosmetic, PbSafeBox, PbGameProp, PbUsedGoods, PbGoods
 from common.public.enum_const import CacheKey, ServiceEnum, GameType, DbKey, Switch, TaskId
 from lucky_game.const import SafeBoxOpType, GotType, ReasonCostGold, PutType, GoodsType, SeasonStatus, \
     CompleteSta, JumpTarget, ActivityItem, JumpType
@@ -52,9 +51,8 @@ class BagHandler(GameAuthApi):
             "all_bag": all_bag,
             "new_bag": [] if not new_bag else json_parse(new_bag)
         }
-        proto_data = PbBag.pb_model(data)
         self.info_log(uid, "BagHandler 背包加载成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class DropBagItem(GameAuthApi):
@@ -79,9 +77,8 @@ class DropBagItem(GameAuthApi):
             "all_bag": all_bag,
             "new_bag": [] if not new_bag else json_parse(new_bag)
         }
-        proto_data = PbBag.pb_model(data)
         self.info_log(uid, f"DropBagItem 背包删除物品{bag_id}成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class GetGamePropHandler(GameAuthApi):
@@ -101,9 +98,8 @@ class GetGamePropHandler(GameAuthApi):
         all_prop = UserBagRC.check_bag_data(user_bag, prop_conf, is_ready=True, season_sta=season_sta)
         (not all_prop) and self.answer(self.sta_code.ERR_CONF, hint="没有道具数据，请稍后再试")
 
-        proto_data = PbGameProp.pb_model(all_prop)
         self.info_log(uid, f"GetGamePropHandler 玩家持有道具加载成功 赛季状态 {season_sta}")
-        return self.answer(data=proto_data)
+        return self.answer(data=all_prop)
 
 
 class GetCosmeticHandler(GameAuthApi):
@@ -124,9 +120,8 @@ class GetCosmeticHandler(GameAuthApi):
             "all_cos": user_cos,
             "new_cos": [] if not new_cos else json_parse(new_cos)
         }
-        proto_data = PbCosmetic.pb_model(data)
         self.info_log(uid, "GetCosmeticHandler 游戏装扮加载成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class GetCosmeticUsedItems(GameAuthApi):
@@ -178,9 +173,8 @@ class GetCosmeticUsedItems(GameAuthApi):
 
             result_list.append({"uid": uid, "used_goods": used_list})
 
-        proto_data = PbUsedGoods.pb_model(result_list)
         self.info_log(query_uid_list, "GetCosmeticUsedItems 正在使用的装扮查询成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=result_list)
 
 
 class UseCosmeticItem(GameAuthApi):
@@ -272,9 +266,8 @@ class SafeBoxHandler(GameAuthApi):
             "safe_box_conf": conf_data,
             "safe_box_data": user_data
         }
-        proto_data = PbSafeBox.pb_model(data)
         self.info_log(uid, "SafeBoxHandler 加载保险箱成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class SafeBoxOperateUser(GameAuthApi):
@@ -437,9 +430,8 @@ class GetDetailShardInfo(GameAuthApi):
         await GoodsManagerRC.pack_goods_list(goods)
         (not goods) and self.answer(self.sta_code.GOODS_NOT_FOUND, hint="未找到物品配置")
 
-        proto_data = PbGoods.pb_model(goods)
         self.info_log(f"GetDetailShardInfo 查询{goods_id}详细信息成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=goods)
 
 
 class GetGoodsJumpChance(GameAuthApi):

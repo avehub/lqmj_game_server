@@ -4,7 +4,6 @@
 from sanic import Request
 from datetime import datetime, timedelta
 from lucky_game.base_api import GameAuthApi
-from common.proto.py_pb2.http_friend import PbFriendship
 from lucky_game.const import FriendshipSta, FriendOpType
 from lucky_game.model_rc.base_friend import UserFriendshipRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -53,8 +52,7 @@ class GetUserFriendList(GameAuthApi):
 
         self.info_log(uid, f"GetUserFriendList 获取{is_new}列表 成功", friend_list)
         # (not friend_list) and self.answer(self.sta_code.NO_PLAYER_INFO, hint="没有任何相关好友记录")
-        proto_data = PbFriendship.pb_model(friend_list)
-        return self.answer(data=proto_data)
+        return self.answer(data=friend_list)
 
 
 class FriendshipOperate(GameAuthApi):
@@ -92,8 +90,7 @@ class FriendshipOperate(GameAuthApi):
             self.info_log(operate_uid, f"FriendshipOperate {ot_enum.phrase}操作结果 {opt_res}")
 
             if opt_res:
-                proto_data = PbFriendship.pb_model([opt_res])
-                return self.answer(hint="OK", data=proto_data)
+                return self.answer(hint="OK", data=[opt_res])
 
             return self.answer(code=self.sta_code.FAIL, hint="好友操作失败")
         return self.answer(code=self.sta_code.FAIL, hint="非有效操作")

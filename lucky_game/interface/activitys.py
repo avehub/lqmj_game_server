@@ -5,13 +5,11 @@ from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
-from common.proto.py_pb2.http_player_vault import PbGoods
 from common.public.enum_const import DbKey
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
-from common.proto.py_pb2.http_trade_center import PbActivityItems, PbVip
 from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
@@ -61,9 +59,8 @@ class GetActivityHandler(GameAuthApi):
             "act_conf": act_datas,
             "extra_conf": json_encode(extra_conf)
         }
-        proto_data = PbActivityItems.pb_model(data)
         self.info_log(uid, "GetActivityHandler 获取活动配置 / 用户充值数据 成功", act_type, act_id)
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class GetActivityAwards(GameAuthApi):
@@ -115,9 +112,8 @@ class GetActivityAwards(GameAuthApi):
                 self.error_log(f"GetActivityAwards 事务执行失败，原因：{e}")
                 self.answer(code=self.sta_code.FAIL, hint="奖励领取失败，请联系客服")
 
-            pro_data = PbGoods.pb_model(up_goods)
             self.info_log(uid, act_item.get('desc', ''), '活动领取成功')
-            return self.answer(data=pro_data)
+            return self.answer(data=up_goods)
         return self.answer(code=self.sta_code.FAIL)
 
     async def act_pull_day_regular(self, _, __, activity_item, charge_record):
@@ -248,9 +244,8 @@ class VipLevelHandler(GameAuthApi):
             "vip_conf": vip_items,
             "vip_data": vip_data
         }
-        proto_data = PbVip.pb_model(return_data)
         self.info_log(uid, "VipLevelHandler 获取VIP配置 / 用户VIP数据 成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=return_data)
 
 
 class VipLevelPullAwards(GameAuthApi):
@@ -324,6 +319,5 @@ class VipLevelPullAwards(GameAuthApi):
             self.error_log(f"VipLevelPullAwards 事务执行失败，原因：{e}")
             self.answer(code=self.sta_code.FAIL, hint="vip奖励领取失败，请联系客服")
 
-        pro_data = PbGoods.pb_model(up_goods)
         self.info_log(uid, f"VipLevelPullAwards vip领取{level}奖成功")
-        return self.answer(data=pro_data)
+        return self.answer(data=up_goods)

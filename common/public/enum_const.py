@@ -107,8 +107,8 @@ class GameType(BaseEnum):
 @unique
 class ServiceEnum(BaseEnum):
     """ 服务枚举号 """
-    WS_HALL = 1, "promising_ws", '大厅网关'
-    WS_CHILD = 2, "promising_wsc", '子网关'
+    WS_HALL = 1, "lucky_ws", '大厅网关'
+    WS_CHILD = 2, "lucky_wsc", '子网关'
     C_MATCHING = 3, "matching", '子服务-匹配服务'
     C_WORKERS = 4, "workers", '任务服务（异步调度任务（不停地消费）：服务端内部使用）'
 

@@ -6,7 +6,6 @@ from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 from common.proto.py_pb2.common import switch_enum, get_one_of_model, switch_type_enum
-from common.proto.py_pb2.http_player_vault import PbGoods
 from common.public.enum_const import DbKey, ServiceEnum
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
@@ -15,7 +14,6 @@ from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_store import ConfStoreRC, ConfMonopolyStoreRC
-from common.proto.py_pb2.http_trade_center import PbStore
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
     BossType, HeldSta, PlatForm
@@ -49,9 +47,8 @@ class StoreHandler(GameAuthApi):
                 (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                   hint='游戏商店加载失败，请稍后再试')
 
-        proto_data = PbStore.pb_model(items_lists)
         self.info_log(uid, f"StoreHandler {bs_enum.phrase}加载成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=items_lists)
 
 
 class PayByRedemption(GameAuthApi):
@@ -115,8 +112,7 @@ class PayByRedemption(GameAuthApi):
                     self.error_log(f'{pt_enum.phrase}事务执行失败，原因：{e}')
                     self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
 
-                pro_data = PbGoods.pb_model(show_items)
-                return self.answer(data=pro_data)
+                return self.answer(data=show_items)
             return self.answer(code=self.sta_code.FAIL)
 
     async def __check_item_validity(self, uid, trade_item, trade_count: int, express: dict):

@@ -7,7 +7,6 @@ from collections import defaultdict
 from nsanic.libs.tool import json_encode
 from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdWorkers
-from common.proto.py_pb2.http_interaction import PbMonopoly
 from common.public.enum_const import DbKey, TaskId
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.monopoly import Monopoly
@@ -49,8 +48,7 @@ class WestWayQueryMap(GameAuthApi):
             "map_conf": all_cell,
             "position": monopoly.position
         }
-        proto_data = PbMonopoly.pb_model(data, is_map=True)
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
     async def map_first_loading(self, uid, map_conf: list, user_map: dict):
         awards_conf = await ConfAwardRC.get_award_items(award_type=AwardType.MONOPOLY_RAND_AWARD, is_pack=True)
@@ -116,9 +114,8 @@ class WestWayQueryGoods(GameAuthApi):
         (not user_magic) and self.answer(self.sta_code.ERR_CONF, hint="没有法宝数据，请稍后再试")
         data['magic_conf'] = user_magic
 
-        proto_data = PbMonopoly.pb_model(data, is_goods=True)
         self.info_log(uid, "WestWayMapMagic 西行路物资加载成功")
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
 
 class WestWayPlaySteps(GameAuthApi):
@@ -186,9 +183,8 @@ class WestWayPlaySteps(GameAuthApi):
             "net_steps": total_net_steps,
             "cross_times": total_cross_times
         }
-        proto_data = PbMonopoly.pb_model(final_data)
         self.info_log(uid, f"WestWayPlaySteps 西行路行进{total_net_steps}成功，使用{mt_enum.phrase}")
-        return self.answer(data=proto_data)
+        return self.answer(data=final_data)
 
     async def process_step_modes(self, uid, req: Request, magic_type: MagicType, monopoly: Monopoly):
         """处理手动摇骰子方式"""

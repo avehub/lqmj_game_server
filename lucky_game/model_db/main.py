@@ -81,7 +81,7 @@ class UserFriendship(DBModel):
 
 class ConfRobot(DBModel):
     """ 机器人简单配置 """
-    leisure = fields.ForeignKeyField("promising_game.ConfLeisure", related_name="conf_robot", on_delete=fields.CASCADE)
+    leisure = fields.ForeignKeyField("lucky_game.ConfLeisure", related_name="conf_robot", on_delete=fields.CASCADE)
     cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
     avatar_frame = fields.JSONField(null=True, description="头像框配置")
     chat_bubble = fields.JSONField(null=True, description="聊天气泡配置")
@@ -129,7 +129,7 @@ class ConfLeisure(DBModel):
     ranking_addition = fields.FloatField(default=0, description="修为加成")
     gift_conf = fields.JSONField(null=True, description="礼包配置")
     # 表示在 RuleConf 模型中可以通过 conf_leisure 属性访问所有相关的 LeisureConf 实例（这里好像用不到）
-    rule_conf = fields.ForeignKeyField("promising_game.ConfRule", related_name="conf_leisure")
+    rule_conf = fields.ForeignKeyField("lucky_game.ConfRule", related_name="conf_leisure")
     threshold_multiple = fields.SmallIntField(max_length=2, null=True, default=0, description='大赢公告倍率')
 
     class Meta:
@@ -228,7 +228,7 @@ class ItemsSkin(DBModel):
     extra_info = fields.JSONField(null=True, escription='额外配置信息')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
     skin_public = fields.ForeignKeyField(
-        'promising_game.ItemsSkinPublic', related_name='skin_public', on_delete=OnDelete.CASCADE, null=True)
+        'lucky_game.ItemsSkinPublic', related_name='skin_public', on_delete=OnDelete.CASCADE, null=True)
 
     class Meta:
         table = "items_skin"
@@ -383,7 +383,7 @@ class UserSkin(DBModel):
     uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
     cs_type = fields.IntField(max_length=10, default=0, description='子服务类型')
     skin_item = fields.ForeignKeyField(
-        'promising_game.ItemsSkin', related_name='skin_item', on_delete=OnDelete.CASCADE, null=True)
+        'lucky_game.ItemsSkin', related_name='skin_item', on_delete=OnDelete.CASCADE, null=True)
     skin_public_id = fields.IntField(max_length=10, index=True, default=0, description='皮肤公有项ID')
     got_type = fields.IntEnumField(enum_type=GotType, default=0, description='获得类型')
     exp_time = fields.BigIntField(max_length=28, null=True, default=0, description="过期时间")
@@ -414,7 +414,7 @@ class UserCosmetic(DBModel):
     """玩家装扮"""
     cos_id = fields.IntField(max_length=10, pk=True, default=1, description='装扮统计ID')
     cosmetic_type = fields.IntEnumField(enum_type=CosmeticType, index=True, default=0, description='装扮类型')
-    cosmetic_item = fields.ForeignKeyField('promising_game.ItemsCosmetic', related_name='cosmetic_item',
+    cosmetic_item = fields.ForeignKeyField('lucky_game.ItemsCosmetic', related_name='cosmetic_item',
                                            on_delete=OnDelete.CASCADE, null=True)
     uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
     got_type = fields.IntEnumField(enum_type=GotType, default=0, description='获得类型')
@@ -548,7 +548,7 @@ class UserVip(DBModel):
     """ VIP玩家记录 """
     uid = fields.IntField(max_length=28, pk=True, default=100000, description='玩家ID')
     cur_exp = fields.IntField(max_length=20, description='当前经验')
-    vip = fields.ForeignKeyField('promising_game.ConfVip', related_name='conf_vip', default=None)
+    vip = fields.ForeignKeyField('lucky_game.ConfVip', related_name='conf_vip', default=None)
     recharge_amount = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description="充值金额")
     level_achieved = fields.JSONField(null=True, description='已领取的等级奖励')
     time_node = fields.BigIntField(max_length=28, null=True, default=0, description='日奖最新发奖时间')
@@ -589,7 +589,7 @@ class ConfSeason(DBModel):
 class ConfRanking(DBModel):
     """ 排位配置 """
     level = fields.IntField(max_length=10, default=1, description='排位等级ID')
-    season = fields.ForeignKeyField('promising_game.ConfSeason', index=True, related_name='s_ranking')
+    season = fields.ForeignKeyField('lucky_game.ConfSeason', index=True, related_name='s_ranking')
     ranking_name = fields.CharField(max_length=32, null=False, default='', description='排位等级名称')
     major_level = fields.IntEnumField(
         enum_type=RankingDanLevel, index=True, default=RankingDanLevel.DAN_LEVEL_1, description='大段等级')
@@ -604,7 +604,7 @@ class ConfRanking(DBModel):
 
     lv_defend = fields.IntEnumField(enum_type=LvDefendType, default=0, description="段位保护类型")
     ranking_match_time = fields.ForeignKeyField(
-        'promising_game.ConfRankingMatchTime', related_name="ranking", null=True, on_delete=OnDelete.SET_NULL)
+        'lucky_game.ConfRankingMatchTime', related_name="ranking", null=True, on_delete=OnDelete.SET_NULL)
 
     level_awards = fields.JSONField(null=True, description='段位等级奖（突破奖励）')
     season_awards = fields.JSONField(null=True, description='赛季奖（赛季结算奖励）')
@@ -629,9 +629,9 @@ class ConfRankingMatchTime(DBModel):
 class UserRanking(DBModel):
     """ 用户排位 """
     # uid = fields.IntField(max_length=28, default=100000, description='玩家ID')
-    user = fields.OneToOneField('promising_game.User', related_name='ur', on_delete=OnDelete.CASCADE)
-    ranking = fields.ForeignKeyField('promising_game.ConfRanking', related_name='u_ranking', default=None)
-    # season = fields.ForeignKeyField('promising_game.ConfSeason', related_name='u_season', default=None)
+    user = fields.OneToOneField('lucky_game.User', related_name='ur', on_delete=OnDelete.CASCADE)
+    ranking = fields.ForeignKeyField('lucky_game.ConfRanking', related_name='u_ranking', default=None)
+    # season = fields.ForeignKeyField('lucky_game.ConfSeason', related_name='u_season', default=None)
     cur_score = fields.IntField(max_length=20, index=True, description='当前排位分')
     top_score = fields.IntField(max_length=20, description='历史最高段位分')  # 主要用于首次获取突破奖励
     season_achieved = fields.BooleanField(default=False, description='赛季奖是否获得')
@@ -649,8 +649,8 @@ class UserRanking(DBModel):
 class RecordsUserRankingHistory(DBModel):
     """ 记录玩家历史排位 """
     uid = fields.IntField(max_length=28, index=True, default=100000, description='玩家ID')
-    ranking = fields.ForeignKeyField('promising_game.ConfRanking', related_name='r_ranking', default=None)
-    season = fields.ForeignKeyField('promising_game.ConfSeason', index=True, related_name='r_season', default=None)
+    ranking = fields.ForeignKeyField('lucky_game.ConfRanking', related_name='r_ranking', default=None)
+    season = fields.ForeignKeyField('lucky_game.ConfSeason', index=True, related_name='r_season', default=None)
     cur_score = fields.IntField(max_length=20, description='当前排位分')
     top_score = fields.IntField(max_length=20, description='历史最高段位分')  # 主要用于首次获取突破奖励
     season_achieved = fields.BooleanField(default=False, description='赛季奖是否获得')
@@ -666,7 +666,7 @@ class RecordsUserRankingHistory(DBModel):
 
 # class UserLeague(DBModel):
 #     """ 降妖结盟 """
-#     user = fields.OneToOneField('promising_game.User', related_name='ul', on_delete=OnDelete.CASCADE)
+#     user = fields.OneToOneField('lucky_game.User', related_name='ul', on_delete=OnDelete.CASCADE)
 #     contribution_val = fields.IntField(max_length=16, default=0, description='贡献值')
 #     region = fields.IntEnumField(enum_type=RegionEnum, default=RegionEnum.DEFAULT, description="行政区域（省份）")
 #     join_time = fields.BigIntField(null=True, default=0, description='加入时间，退出时置为0，主要用于发奖判断')
@@ -682,7 +682,7 @@ class RecordsUserTask(DBModel):
     """任务记录"""
     uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
     time_node = fields.BigIntField(max_length=28, index=True, null=True, default=0, description='时间节点：天')
-    task = fields.ForeignKeyField('promising_game.ConfTask', related_name='conf_task')
+    task = fields.ForeignKeyField('lucky_game.ConfTask', related_name='conf_task')
     task_type = fields.IntEnumField(enum_type=TaskType, index=True, default=1, description='任务类型')
     task_sta = fields.IntEnumField(enum_type=CompleteSta, index=True, default=1, description="任务完成状态")
     cur_value = fields.BigIntField(max_length=4, null=False, default=0, description='任务完成情况')

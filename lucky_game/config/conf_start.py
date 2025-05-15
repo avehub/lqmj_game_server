@@ -10,7 +10,7 @@ from lucky_game.handler.sensitive_words import SensitiveWords
 
 
 class ConfSrv(BaseConf):
-    SERVER_NAME = 'promising_game'
+    SERVER_NAME = 'lucky_game'
     SERVER_ID = 'G0001'
     RUN_PORT = 8988
     HOST = '0.0.0.0'

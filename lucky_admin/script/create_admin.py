@@ -46,7 +46,7 @@ async def create_super_admin():
         await Tortoise.init(
             config={
                 'apps': {
-                    "promising_game": {'models': ["promising_game.model_db.main", "promising_game.model_db.extra"]}},
+                    "lucky_game": {'models': ["lucky_game.model_db.main", "lucky_game.model_db.extra"]}},
                 'connections': CONF_DB,
                 'use_tz': False,
                 'timezone': "UTC"

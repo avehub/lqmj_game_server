@@ -14,7 +14,6 @@ from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.server_addr import ServerAddrRC
 from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
-from common.proto.py_pb2.http_login import PbLogin, PbS2CExternalReturn
 from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
@@ -124,12 +123,11 @@ class BaseLogin(GameAuthApi):
         u_info.update({"vip_level": vip_info.get("level")})
 
         data = {"user_info": u_info, "server_info": server_info}
-        proto_data = PbLogin.pb_model(data)
         self.info_log("user login: ", uid, u_info.get("token"))
 
         await self.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, uid=uid)
         await self.push_task2worker(CmdWorkers.LOGIN_SIGN_IN, uid=uid)
-        return self.answer(data=proto_data)
+        return self.answer(data=data)
 
     async def create_new_user(
             self,
@@ -220,7 +218,7 @@ class LoginByWechatMiniProgram(BaseLogin):
         errcode, req_data = await WeChat.wechat_mini_game_login(code)
         self.info_log('Wechat mini_program_login result:', errcode, req_data)
         if errcode > 0:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         # 通过union_id查询数据库用户信息
@@ -266,7 +264,7 @@ class LoginByWechat(BaseLogin):
         errcode, req_data = await WeChat.wechat_app_login(code)
         self.info_log('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         return await self.__after_get_token_by_code(req, req_data, server_info, dev_ident)
@@ -284,7 +282,7 @@ class LoginByWechat(BaseLogin):
         self.info_log('Wechat userinfo result:', req_data)
         errcode = req_data.get("errcode", 0)
         if errcode > 0:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         # 通过union_id查询数据库用户信息
@@ -348,8 +346,7 @@ class LoginByAlipayGame(BaseLogin):
         results, req_data = await Alipay.ali_get_access_token(code, AliGrantType.GET_TOKEN)
         self.info_log('Ali get_access_token result:', results, req_data)
         if not results:
-            data = PbS2CExternalReturn.pb_model(
-                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
             self.answer(self.sta_code.EXTERNAL_ERR, data)
 
         return await self.__after_get_token_by_code(req, req_data, server_info)
@@ -404,7 +401,7 @@ class LoginByDouYinGame(BaseLogin):
         errcode, req_data = await DouYin.douyin_mini_game_login(code)
         self.info_log('DouYin mini_game_login result:', code, req_data)
         if errcode > 0:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         # 通过union_id查询数据库用户信息

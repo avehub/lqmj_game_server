@@ -27,7 +27,7 @@ class BaseConf(metaclass=SingleTon):
     '''只用模型而不需要在当前项目迁移的表，请配置到该目录'''
     PROC_NAME = ''
 
-    CHILD_GATE_CHANNEL = "PUBSUB_PROMISING_WSC_G0003"
+    CHILD_GATE_CHANNEL = "PUBSUB_lucky_wsC_G0003"
     SECRET_KEY = C_SERVICE_SECRET_KEY  # 消息验证密钥
 
     USE_OBJ_POOL = USE_OBJ_POOL
@@ -65,8 +65,8 @@ class BaseConf(metaclass=SingleTon):
     def makeup_db_conf(cls, model_list: list):
         return {
             'apps': {
-                "promising_game": {'models': model_list},
-                f'promising_game_log': {'models': ['promising_game.model_db.log'], 'default_connection': DbKey.LOG}
+                "lucky_game": {'models': model_list},
+                f'lucky_game_log': {'models': ['lucky_game.model_db.log'], 'default_connection': DbKey.LOG}
             },
             'connections': cls.CONF_DB,
             'use_tz': False,
@@ -77,7 +77,7 @@ class BaseConf(metaclass=SingleTon):
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
-        model_list = [f'promising_game.model_db.{item}' for item in models]
+        model_list = [f'lucky_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
     @classmethod

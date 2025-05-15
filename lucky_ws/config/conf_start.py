@@ -8,7 +8,7 @@ from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, RUN_FAS
 
 class ConfSrv(BaseConf):
     SERVER_ENUM = ServiceEnum.WS_HALL
-    SERVER_NAME = 'promising_ws'
+    SERVER_NAME = 'lucky_ws'
     SERVER_ID = 'W0001'
     RUN_PORT = 8886
     HOST = "0.0.0.0"
@@ -45,15 +45,15 @@ class ConfSrv(BaseConf):
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
-        model_list = [f'promising_game.model_db.{item}' for item in models]
+        model_list = [f'lucky_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
         return {
             'apps': {
-                "promising_game": {'models': model_list},
-                f'promising_game_log': {'models': ['promising_game.model_db.log'], 'default_connection': DbKey.LOG}
+                "lucky_game": {'models': model_list},
+                f'lucky_game_log': {'models': ['lucky_game.model_db.log'], 'default_connection': DbKey.LOG}
             },
             'connections': cls.CONF_DB,
             'use_tz': False,

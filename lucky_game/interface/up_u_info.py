@@ -8,7 +8,6 @@ from lucky_game.const import ReasonCostGold, PlatForm
 from lucky_game.handler.decorator import GameChecker, CurrentLimiting, LimitTestCall
 from lucky_game.handler.douyin import DouYin
 from lucky_game.model_rc.base_user import BaseUserRC
-from common.proto.py_pb2.http_login import PbUser, PbS2CExternalReturn
 from common.utils.utils import UtilsTool
 from lucky_game.handler.wechat import WeChat
 
@@ -17,8 +16,7 @@ class BaseUserInfo(GameAuthApi):
 
     def format_response_info(self, user: dict):
         self.info_log("format_response_info:", user)
-        proto_data = PbUser.pb_model(**user)
-        return self.answer(data=proto_data)
+        return self.answer(data=user)
 
 
 class ModifyGeneralUserInfo(BaseUserInfo):
@@ -69,8 +67,7 @@ class Certification(BaseUserInfo):
         status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
         self.info_log("实名结果：", result)
         if not status:
-            data = PbS2CExternalReturn.pb_model(**result)
-            self.answer(code=self.sta_code.EXTERNAL_ERR, data=data)
+            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
 
         pi = result.get('data').get('result').get('pi')
         sex = UtilsTool.determine_gender(id_card)
@@ -136,7 +133,7 @@ class GetSessionKey(BaseUserInfo):
 
         self.info_log(f'{platform} GetSessionKey res:', code, req_data)
         if errcode > 0:
-            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         session_key = req_data.get("session_key")
