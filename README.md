@@ -18,7 +18,7 @@
 * `common` 该目录下表示所有的工具包，及其它目录公共使用的如：常量、消息体、公共基类等
 * `lucky_game`：该目录是web接口，所有的表定义在该目录下
 * `lucky_ws`：该目录是`ws`服务
-* `promising_proto`：该目录是所有`protobuf`协议文件（生成代码在common/proto/目录下）
+* `lucky_proto`：该目录是所有`protobuf`协议文件（生成代码在common/proto/目录下）
 
 # 项目依赖
 
