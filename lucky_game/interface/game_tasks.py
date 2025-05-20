@@ -83,10 +83,11 @@ class GameTaskUpdate(GameAuthApi):
 
     async def post(self, req: Request, **kwargs):
         task_id = req.json.get("task_id")
-        if not TaskId.find_member_by_val(task_id):
+        task_enum = TaskId.find_member_by_val(task_id)
+        if not task_enum:
             self.answer(self.sta_code.ERR_ARG, hint="该任务不存在")
 
-        if task_id not in UserTaskRC.ALLOW_UPDATE_TASKS:  # 更新任务交由客户端调用时需要进行非法拦截，避免恶意调用
+        if task_enum.desc != "allow_update":  # 更新任务交由客户端调用时需要进行非法拦截，避免恶意调用
             self.answer(self.sta_code.ERR_ARG, hint="任务更新非法调用")
 
         add_val = req.json.get("add_val") or 1  # 增加值

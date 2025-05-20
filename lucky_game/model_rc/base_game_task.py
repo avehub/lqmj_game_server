@@ -78,11 +78,6 @@ class UserTaskRC(BaseRC):
     expired_mode = 1
     expired_sec = 2 * 86400
 
-    ALLOW_UPDATE_TASKS = (TaskId.ROOKIE_PART_FIRST.val, TaskId.DOUYIN_REVISIT.val,
-                          TaskId.ROOKIE_PART_MONOPOLY.val, TaskId.ROOKIE_PART_SECOND_1.val,
-                          TaskId.ROOKIE_PART_SECOND_2.val, TaskId.FIRST_SHARE_AL.val,
-                          TaskId.FIRST_SHARE_WX.val, TaskId.FIRST_SHARE_DY.val)
-
     @classmethod
     async def cache_task_records(cls, uid):
         """ 获取用户任务记录 """

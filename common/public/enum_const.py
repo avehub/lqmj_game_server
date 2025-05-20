@@ -158,15 +158,15 @@ class TaskId(BaseEnum):
     COMPLETE_GAME_18 = 6, "完成任意对局18次"
     BUY_PACKAGE_1 = 7, "购买任意礼包1个"
     # 每日任务（分享）
-    FIRST_SHARE_WX = 17, "每日首次分享（微信）"
-    FIRST_SHARE_DY = 18, "每日首次分享（抖音）"
-    FIRST_SHARE_AL = 19, "每日首次分享（阿里）"
+    FIRST_SHARE_WX = 17, "每日首次分享（微信）", "allow_update"
+    FIRST_SHARE_DY = 18, "每日首次分享（抖音）", "allow_update"
+    FIRST_SHARE_AL = 19, "每日首次分享（阿里）", "allow_update"
     # 新手任务
-    DOUYIN_REVISIT = 8, "抖音侧边栏复访"
-    ROOKIE_PART_FIRST = 9, "西游上篇新手引导"
-    ROOKIE_PART_SECOND_1 = 10, "西游下篇新手引导一"
-    ROOKIE_PART_SECOND_2 = 16, "西游下篇新手引导二"
-    ROOKIE_PART_MONOPOLY = 11, "漫漫西行路新手引导"
+    DOUYIN_REVISIT = 8, "抖音侧边栏复访", "allow_update"
+    ROOKIE_PART_FIRST = 9, "西游上篇新手引导", "allow_update"
+    ROOKIE_PART_SECOND_1 = 10, "西游下篇新手引导一", "allow_update"
+    ROOKIE_PART_SECOND_2 = 16, "西游下篇新手引导二", "allow_update"
+    ROOKIE_PART_MONOPOLY = 11, "漫漫西行路新手引导", "allow_update"
     ROOKIE_SEVEN_SIGN_IN = 15, "新人七日签到"
     # 大富翁任务
     MONOPOLY_ROLL_DICE_1 = 12, "掷1次骰子"
