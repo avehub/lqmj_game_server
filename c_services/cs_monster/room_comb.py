@@ -402,8 +402,8 @@ class RoomComb(BaseLeisureRoom):
         self.__table_cards.clear()
         super().clear_room()
 
-    def refresh_room_conf(self, room_conf, **extra_room_info):
-        super().refresh_room_conf(room_conf, **extra_room_info)
+    def refresh_room_conf(self, service, room_conf, **extra_room_info):
+        super().refresh_room_conf(service, room_conf, **extra_room_info)
         self.__ranking_addition_at_session = room_conf.get("ranking_addition") or 0
         rule_conf = room_conf.get("rule_conf", {})
         self.__ranking_addition_win_streak = rule_conf.get("win_streak_addition") or {}

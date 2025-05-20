@@ -505,11 +505,11 @@ class BaseLeisureRoom(BaseRoom):
         self.__task_collect.clear()
         super().clear_room()
 
-    def refresh_room_conf(self, room_conf, **extra_room_info):
+    def refresh_room_conf(self, service, room_conf, **extra_room_info):
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
         self.__gift_conf = room_conf.get("gift_conf") or []
         robot_interact = room_conf.get("rule_conf", {}).get("robot_interact", {})
         self.__robot_interact = {int(key): value for key, value in robot_interact.items()}
         self.__ann_threshold_multiple = room_conf.get("threshold_multiple") or 0  # 公告阈值倍率
 
-        super().refresh_room_conf(room_conf)
+        super().refresh_room_conf(service, room_conf)

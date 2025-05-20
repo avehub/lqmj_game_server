@@ -496,6 +496,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def clear_room(self):
         """ 清理房间 """
+        self.__service = None
         self.__room_status = RoomStatus.T_IDLE
         self.__flow_status = 0
         self.__curr_seat_id = 0
@@ -503,8 +504,9 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats.clear()
 
-    def refresh_room_conf(self, room_conf):
+    def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """
+        self.__service = service
         self.__room_conf = room_conf
         self.__room_type = room_conf.get("room_type") or RoomType.COMMON
         self.__play_type = room_conf.get("play_type") or 1
