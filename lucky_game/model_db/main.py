@@ -15,12 +15,14 @@ class Users(DBModel):
     """用户总表"""
     uid = fields.IntField(max_length=28, pk=True, default=500000, description='玩家ID')
     name = fields.CharField(max_length=20, null=True, default='', description='玩家昵称')
+    avatar = fields.CharField(max_length=256, null=True, default='', description='头像地址')
     sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
     phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
     email = fields.CharField(max_length=256, null=True, description='邮箱')
     address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
     id_card = fields.CharField(max_length=20, null=True, default='', description='身份证')
     real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
+    album = fields.CharField(max_length=256, null=True, default='', description='相册')
     pi = fields.CharField(max_length=64, index=True, default='', description='已通过实名认证用户的唯一标识')
     gold = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="金币")
     diamond = fields.IntField(max_digits=20, null=True, default=0, description="钻石")
@@ -35,13 +37,58 @@ class Users(DBModel):
     ip = fields.CharField(max_length=128, null=True, default='', description='登陆IP')
     region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
     country = fields.CharField(max_length=16, null=True, default='CN', description='国家域名')
-    openid = fields.CharField(max_length=128, null=True, description='微信小游戏授权用户唯一标识')
-    unionid = fields.CharField(max_length=128, null=True, description='微信平台用户授权唯一标识')
+    openid = fields.CharField(max_length=128, null=True, default='', description='微信小游戏授权用户唯一标识')
+    union_id = fields.CharField(max_length=128, null=True, default='', description='微信平台用户授权唯一标识')
+    apple_id = fields.CharField(max_length=128, null=True, default='', description='苹果平台用户授权唯一标识')
     ban_time = fields.BigIntField(null=True, default=0, description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
-        unique_together = (("platform", "openid"), ("platform", "unionid"))  # 联合主键
+        unique_together = (("platform", "openid"), ("platform", "union_id"))  # 联合主键
+
+
+class UserFollows(DBModel):
+    """用户关注关系表"""
+    id = fields.BigIntField(max_length=10, pk=True, description='主键ID')
+    uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
+    follow_uid = fields.CharField(max_length=28, null=True, default='', description='被关注玩家ID')
+
+    class Meta:
+        table = "user_follows"
+
+
+class ExtraUserPraises(DBModel):
+    """用户点赞记录表"""
+    id = fields.BigIntField(max_length=10, pk=True, description='主键ID')
+    uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
+    praise_uid = fields.CharField(max_length=28, null=True, default='', description='被点赞玩家ID')
+
+    class Meta:
+        table = "extra_user_praises"
+
+
+class RecordsUserVisits(DBModel):
+    """用户访问记录表"""
+    id = fields.BigIntField(max_length=10, pk=True, description='主键ID')
+    uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
+    visit_uid = fields.CharField(max_length=28, null=True, default='', description='被访问玩家ID')
+
+    class Meta:
+        table = "records_user_visits"
+
+
+class UserBags(DBModel):
+    """用户背包表"""
+    id = fields.BigIntField(max_length=10, pk=True, description='主键ID')
+    uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
+    good_id = fields.IntField(max_length=28, null=True, default=0, description='商品/道具ID')
+    count = fields.IntField(max_length=28, null=True, default=0, description='数量')
+    end_time = fields.DatetimeField(null=True, default='', description='商品有效期')
+    updated = fields.BigIntField(null=True, default=0, description='更新时间')
+
+    class Meta:
+        table = "user_bags"
+
 
 
 class LogUserBehavior(DBModel):
@@ -190,5 +237,127 @@ class ExtraUserReports(DBModel):
 
     class Meta:
         table = "extra_user_reports"
+
+
+class Stores(DBModel):
+    """商店信息表"""
+    sid = fields.IntField(max_length=10, pk=True, description='商店ID')
+    platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+    type = fields.IntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
+    label = fields.CharField(max_length=64, unique=True, default=0, description="唯一标识")
+    original = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="原价")
+    price = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="售价")
+    currency = fields.IntField(max_digits=2, null=True, default=0, description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
+    rank = fields.IntField(max_digits=10, null=True, default=0, description="排序：越大越靠前")
+    total = fields.IntField(max_digits=10, null=True, default=0, description="总量：-1无限")
+    purchase_limit = fields.CharField(max_length=256, null=True, default='', description='限购条件')
+    name = fields.CharField(max_length=64, null=True, default=0, description="名称")
+    img = fields.CharField(max_length=256, null=True, default='', description='图片')
+    desc = fields.CharField(max_length=256, null=True, default='', description='描述')
+    content = fields.JSONField(null=True, default='{}', description='商品内容：JSON存储')
+    status = fields.IntField(max_length=2, null=True, description='状态：0下架 1上架')
+    up_time = fields.DatetimeField(null=True, default='', description='上架时间')
+    down_time = fields.DatetimeField(null=True, default='', description='下架时间')
+    start_time = fields.DatetimeField(null=True, default='', description='有效期开始时间')
+    end_time = fields.DatetimeField(null=True, default='', description='有效期结束时间')
+    updated = fields.BigIntField(null=True, default=0, description='更新时间')
+
+
+class Goods(DBModel):
+    """商品(道具)表"""
+    id = fields.IntField(max_length=10, pk=True, description='商品ID')
+    sid = fields.IntField(max_length=10, pk=True, default=0, description='商城ID')
+    kind = fields.IntField(max_length=2, null=True, description='特性：0虚拟 1实物')
+    type = fields.IntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
+    sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
+    total = fields.IntField(max_digits=10, null=True, default=0, description="总量：-1无限")
+    name = fields.CharField(max_length=64, null=True, default=0, description="商品名称")
+    img = fields.CharField(max_length=256, null=True, default='', description='商品图片')
+    desc = fields.CharField(max_length=256, null=True, default='', description='商品描述')
+    content = fields.JSONField(null=True, default='{}', description='商品内容：JSON存储')
+    status = fields.IntField(max_length=2, null=True, description='状态：0下架 1上架')
+    start_time = fields.DatetimeField(null=True, default='', description='商品有效期开始时间')
+    end_time = fields.DatetimeField(null=True, default='', description='商品有效期结束时间')
+    bag_type = fields.IntField(max_length=2, null=True, default=0, description='背包类型：0常规 1延时')
+    updated = fields.BigIntField(null=True, default=0, description='更新时间')
+
+
+class Orders(DBModel):
+    """用户订单表"""
+    id = fields.IntField(max_length=10, pk=True, description='变动ID')
+    uid = fields.IntField(max_length=28, index=True, description='玩家ID')
+    sid = fields.IntField(max_length=28, index=True, description='购买商店ID')
+    platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+    amount = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="支付金额")
+    currency = fields.IntField(max_digits=2, null=True, default=0, description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
+    pay_mode = fields.IntEnumField(enum_type=PayMode, null=True, default=PayMode.NO_MODE, description="支付方式")
+    num = fields.IntField(max_digits=10, null=True, default=0, description="购买数量")
+    order_no = fields.CharField(max_length=32, null=True, default=0, description="订单编号")
+    out_order_no = fields.IntField(max_digits=10, null=True, default=0, description="外部订单编号")
+    prepay_id = fields.CharField(max_length=64, null=True, default='', description="外部支付标识")
+    status = fields.IntField(max_length=2, null=True, description='订单状态：0待支付 1支付失败 2订单关闭 99支付成功')
+    explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
+    updated = fields.BigIntField(null=True, default=0, description='更新时间')
+
+
+class Guilds(DBModel):
+    """ 牌友会表 """
+    id = fields.IntField(max_length=10, pk=True, description='公会ID')
+    name = fields.CharField(max_length=20, null=True, description='公会名称')
+    logo = fields.CharField(max_length=256, null=True, description='公会logo')
+    desc = fields.CharField(max_length=256, null=True, description='公会描述')
+    update = fields.DatetimeField(null=True, default=0, description='更新时间')
+
+
+class GuildUsers(DBModel):
+    """ 牌友会成员关系表 """
+    id = fields.IntField(max_length=10, pk=True, description='关系ID')
+    guild_id = fields.IntField(max_length=10, index=True, description='公会ID')
+    uid = fields.IntField(max_length=28, index=True, description='玩家ID')
+    week_glory = fields.IntField(max_length=10, null=True, default=0, description='本周荣耀值')
+    last_week_glory = fields.IntField(max_length=10, null=True, default=0, description='上周荣耀值')
+    update = fields.DatetimeField(null=True, default=0, description='更新时间')
+
+    class Meta:
+        unique_together = (("guild_id", "uid"),)  # 联合主键
+        table = "guild_users"
+
+
+class Awards(DBModel):
+    """ 奖励信息表 """
+    id = fields.IntField(max_length=10, pk=True, description='奖励ID')
+    type = fields.IntField(max_length=2, index=True, description='奖励类型：1牌友会')
+    level = fields.IntField(max_length=2, index=True, description='奖励等级')
+    name = fields.CharField(max_length=20, null=True, description='奖励名称')
+    content = fields.JSONField(null=True, default='{}', description='奖励内容：JSON存储')
+    update = fields.DatetimeField(null=True, default=0, description='更新时间')
+
+
+class AwardGains(DBModel):
+    """ 奖励领取记录表 """
+    id = fields.IntField(max_length=10, pk=True, description='领取ID')
+    award_id = fields.IntField(max_length=10, index=True, description='奖励ID')
+    uid = fields.IntField(max_length=28, index=True, description='玩家ID')
+    status = fields.IntField(max_length=2, null=True, description='领取状态：0未领取 99已领取')
+    update = fields.DatetimeField(null=True, default=0, description='更新时间')
+
+    class Meta:
+        unique_together = (("award_id", "uid"),)  # 联合主键
+        table = "award_gains"
+
+
+class Emails(DBModel):
+    """ 邮件表 """
+    id = fields.IntField(max_length=10, pk=True, description='邮件ID')
+    uid = fields.IntField(max_length=28, index=True, description='玩家ID')
+    type = fields.IntField(max_length=2, index=True, description='邮件类型：1系统 2牌友会 3活动 4任务')
+    title = fields.CharField(max_length=20, null=True, description='邮件标题')
+    content = fields.CharField(max_length=256, null=True, description='邮件内容')
+    gain_status = fields.IntField(max_length=2, null=True, description='邮件奖品领取状态：0未领取 99已领取')
+    status = fields.IntField(max_length=2, null=True, description='邮件状态：0未读 99已读')
+    update = fields.DatetimeField(null=True, default=0, description='更新时间')
+
+
+
 
 
