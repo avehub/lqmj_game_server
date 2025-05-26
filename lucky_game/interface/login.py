@@ -145,7 +145,7 @@ class BaseLogin(GameAuthApi):
         req_user_info["platform"] = platform or PlatForm.DEFAULT
         u_dict = self.init_user_info(login_info, req_user_info)
 
-        # 新用户登录赠送灵石
+        # 新用户登录赠送金币
         gift_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_NEW_USER_GIFT)
         asset_gift = {'gold': gift_conf.get("gold"), 'diamond': gift_conf.get("diamond")}
         u_dict.update(asset_gift)

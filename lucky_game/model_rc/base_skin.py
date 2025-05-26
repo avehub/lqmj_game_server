@@ -189,7 +189,7 @@ class UserSkinRC(BaseRC):
             for sc in skin_items:
                 skin_info = {
                     "skin_item_id": sc.get("goods_id"),
-                    "skin_addition": (sc.get("extra_info") or {}).get("addition", 0),  # todo:灵石加成暂时未使用
+                    "skin_addition": (sc.get("extra_info") or {}).get("addition", 0),  # todo:金币加成暂时未使用
                     "sr_addition": (sc.get("extra_info") or {}).get("ranking_addition", 0),  # 修为加成
                     "match_card": sc.get("match_card")
                 }

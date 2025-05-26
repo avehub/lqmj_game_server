@@ -115,11 +115,11 @@ class UserSafeBoxRC(RCModel):
 
         cur_gold = u_info.get("gold", 0)
         if cur_gold > cur_complement_count:
-            return cls.conf.STA_CODE.GOLD_NOT_ENOUGH, "灵石余额未满足领取条件"
+            return cls.conf.STA_CODE.GOLD_NOT_ENOUGH, "金币余额未满足领取条件"
 
         cur_amount = safe_box_info.get("amount", 0)
         if not cur_amount:
-            return cls.conf.STA_CODE.GOLD_NOT_ENOUGH, "保险箱灵石库存不足"
+            return cls.conf.STA_CODE.GOLD_NOT_ENOUGH, "保险箱金币库存不足"
 
         # 计算实际补足金额
         cur_complement_count -= cur_gold
@@ -136,7 +136,7 @@ class UserSafeBoxRC(RCModel):
                 await BaseUserRC.update_user_asset(uid, user_data, ReasonCostGold.SAFE_BOX_COMPLEMENT)
         except Exception as e:
             cls.conf.error_log(f"safe_box_use_complement 事务执行失败，原因：{e}")
-            return cls.conf.STA_CODE.FAIL, "自动补足灵石失败，请稍后重试"
+            return cls.conf.STA_CODE.FAIL, "自动补足金币失败，请稍后重试"
 
         return cls.conf.STA_CODE.PASS, ""
 

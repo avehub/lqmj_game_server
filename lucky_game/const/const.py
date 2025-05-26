@@ -12,8 +12,7 @@ from common.public.base_enum import BaseEnum
 
 class PlatForm(BaseEnum):
     """ 平台 """
-    DEFAULT = 0, "default", ''
-    TEST = 1, "test", ''
+    WEBPAGE = 1, "webpage", '网页'
     WECHAT_MP = 2, "wechat_mp", '微信公众号平台'
     NATIVE_APP = 3, "native_app", '原生app'
     WECHAT_MINI_GAME = 4, "minigame_wechat", '微信小游戏'
@@ -33,6 +32,18 @@ class OperatingSystem(StrEnum):
     Android = "android"
     IOS = "ios"
     PC = "pc"
+
+
+class PlayTemplate(BaseEnum):
+    """ 游戏玩法类型 """
+    MJ_XTMJ = 1, "玄筒麻将"
+    MJ_JLXL = 2, "捡漏血流"
+    MJ_MHXL = 3, "闷胡血流"
+    MJ_GZZJ = 4, "贵州捉鸡"
+    MJ_SDG = 5, "三丁拐"
+    MJ_EDG = 6, "二丁拐"
+    MJ_BJMJ = 7, "毕节麻将"
+    PK_PDK = 8, "跑得快"
 
 
 @unique
@@ -55,8 +66,8 @@ class PayType(BaseEnum):
     """ 支付类型 """
     BY_FREE = 0, "免费兑换"
     BY_RMB = 1, "充值兑换"
-    BY_DIAMOND = 2, "仙玉兑换"
-    BY_GOLD = 3, "灵石兑换"
+    BY_DIAMOND = 2, "钻石兑换"
+    BY_GOLD = 3, "金币兑换"
     BY_DY_DIAMOND = 4, "抖音钻石兑换"
     BY_FIVE_AGGREGATES = 5, "五蕴丹兑换"
     BY_WATCH_AD = 6, "看广告兑换"
@@ -83,7 +94,7 @@ class DeliverStatus(BaseEnum):
 class RandType(BaseEnum):
     """商品返利类型"""
     NONE = 0, "不返利"
-    BACK_AND_DISCOUNT = 1, "反还灵石并打折"
+    BACK_AND_DISCOUNT = 1, "反还金币并打折"
 
 
 @unique
@@ -136,8 +147,8 @@ class GamePropType(BaseEnum):
 class StoreType(BaseEnum):
     """商品类型"""
     DEFAULT = 0, "默认", ''
-    DIAMOND = 1, "仙玉", 'diamond'
-    GOLD = 2, "灵石", 'gold'
+    DIAMOND = 1, "钻石", 'diamond'
+    GOLD = 2, "金币", 'gold'
     PROP = 3, "道具", ''
     SKIN = 4, "皮肤", ''
     S_MAGIC = 5, "法宝", ''
@@ -437,8 +448,8 @@ class ActivityItem(BaseEnum):
 @unique
 class GoodsItem(BaseEnum):
     """物品统计key"""
-    DIAMOND = 1001, "仙玉", 'diamond'
-    GOLD = 1002, "灵石", 'gold'
+    DIAMOND = 1001, "钻石", 'diamond'
+    GOLD = 1002, "金币", 'gold'
     RELICS = 1013, "法相舍利", ''
     DICE = 1014, "骰子", ''
     FIVE_AGGREGATES = 1018, "五蕴丹", ''
@@ -448,7 +459,7 @@ class GoodsItem(BaseEnum):
 @unique
 class StoreItem(BaseEnum):
     """商品统计key"""
-    FREE_GOLD = 2000, "免费灵石"
+    FREE_GOLD = 2000, "免费金币"
     FREE_DICE = 2100, "免费骰子"
 
 
@@ -456,11 +467,11 @@ class StoreItem(BaseEnum):
 class AdSlotItem(BaseEnum):
     """广告奖励位，对应award_id或store_id"""
     DY_RAFFLE_LUCK = 4000, "每日看广告运势抽奖", 't_raffle_luck'
-    DY_AWARD = 4001, "每日看广告获得灵石", 't_award'
+    DY_AWARD = 4001, "每日看广告获得金币", 't_award'
     DY_RELIEF = 4002, "每日看广告救济翻倍", 't_relief'
     DY_DICE = 2127, "看广告免费获得骰子", 't_dice'
-    DY_GOLD_NOT_ENOUGH_FIRST = 3015, "看广告领取灵石不足礼包（上篇）", 't_gold_not_enough_first'
-    DY_GOLD_NOT_ENOUGH_SECOND = 3023, "看广告领取灵石不足礼包（下篇）", 't_gold_not_enough_second'
+    DY_GOLD_NOT_ENOUGH_FIRST = 3015, "看广告领取金币不足礼包（上篇）", 't_gold_not_enough_first'
+    DY_GOLD_NOT_ENOUGH_SECOND = 3023, "看广告领取金币不足礼包（下篇）", 't_gold_not_enough_second'
     DY_SIGN_WK = 4003, "看广告每周七日签到", 't_sign_in_wk'
 
 
@@ -501,30 +512,30 @@ RED_DOTS_OPPORTUNITY_MAP = {
 ################ 资产流水原因短语 ################
 @unique
 class ReasonCostGold(BaseEnum):
-    """ 灵石流水原因 """
+    """ 金币流水原因 """
     QUICK_CHAT = 1, "游戏内快捷聊天"
     TEST_ADD = 2, "测试修改资产"
     TICKETS_LEISURE = 3, "休闲场门票"
     CHECK_OUT_MONSTER_FIRST = 4, "打妖怪上结算"
     CHECK_OUT_MONSTER_SECOND = 5, "打妖怪下结算"
     CHECK_OUT_LANDLORDS = 6, "斗地主结算"
-    DIAMOND_EX_GOLD = 7, "仙玉兑换灵石"
+    DIAMOND_EX_GOLD = 7, "钻石兑换金币"
     RELIEF_GET = 8, "救济金领取"
     STORE_SHOPPING_GIFT = 9, "商店购物赠品"
     ACT_PACKAGE = 10, "游戏礼包"
     ACT_FIRST_CHARGE = 11, "首充礼包"
     ACT_WEEK_CARD = 12, "开通周卡"
     ACT_LIFETIME_CARD = 13, "开通终生卡"
-    STORE_FREE_GOLD = 14, "商店免费灵石"
+    STORE_FREE_GOLD = 14, "商店免费金币"
     WEEK_CARD_AWARDS = 15, "周卡日奖"
     LIFETIME_CARD_AWARDS = 16, "终生卡日奖"
     VIP_LEVEL_AWARDS = 17, "VIP等级奖"
     VIP_DAILY_AWARDS = 18, "VIP日奖"
     ROOKIE_TASK = 19, "新手引导任务"
-    GOLD_EXCHANGE = 20, "商店灵石兑换"
+    GOLD_EXCHANGE = 20, "商店金币兑换"
     DAILY_TASK = 21, "每日任务完成"
     DAILY_ACTIVE = 22, "每日活跃达成"
-    AD_FREE_GOLD = 23, "每日看广告获得灵石"
+    AD_FREE_GOLD = 23, "每日看广告获得金币"
     RAFFLE_LUCK = 24, "每日运势抽奖"
     SIGN_IN_TOTAL = 25, "累计签到天数达成"
     MAILS_GIFT = 26, "邮件赠品"
@@ -545,9 +556,9 @@ class ReasonCostGold(BaseEnum):
 
 @unique
 class ReasonCostDiamond(BaseEnum):
-    """ 仙玉流水原因 """
-    DIAMOND_EXCHANGE = 1, "商店仙玉兑换"
-    STORE_BUY_DIAMOND = 2, "商店仙玉礼包"
+    """ 钻石流水原因 """
+    DIAMOND_EXCHANGE = 1, "商店钻石兑换"
+    STORE_BUY_DIAMOND = 2, "商店钻石礼包"
     STORE_SHOPPING_GIFT = 3, "商店购物赠品"
     ACT_FIRST_CHARGE = 4, "首充礼包"
     ACT_WEEK_CARD = 5, "开通周卡"

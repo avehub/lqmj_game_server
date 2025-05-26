@@ -288,7 +288,7 @@ class Room(RoomComb):
 
         # 携带护盾卡的系统照常帮出。未携带玩家不够时全部赔付，其它玩家平分
         if not p.free_loss and p.gold + mine < 0:
-            # 玩家自身灵石不足扣除 捡牌玩家向上取整
+            # 玩家自身金币不足扣除 捡牌玩家向上取整
             mine = -p.gold
             other = int(p.gold // (self.max_player_count - self.ren_shu_count - 1))  # 得分玩家向下取整
 
@@ -298,7 +298,7 @@ class Room(RoomComb):
             'curr_pick_len': p.curr_pick_len
         }
 
-        # todo: 即时结算，更新玩家灵石： 1.此处使用事务更新 2.启动一个新的专门用于更新玩家资产的服务
+        # todo: 即时结算，更新玩家金币： 1.此处使用事务更新 2.启动一个新的专门用于更新玩家资产的服务
         await self.instant_checkout(p, mine, other, notify_info, ReasonCostGold.CHECK_OUT_MONSTER_FIRST)
         data_model = S2CPickCards.pb_model(**notify_info)
         await self.inner_broadcast(CmdRoom.PICK_CARDS, data_model)
@@ -461,7 +461,7 @@ class Room(RoomComb):
         return skin_equip_id, skin_info
 
     async def play_skin_equip_card_get_fairy_stone(self, p: Player, skin_info: dict):
-        """ 打出装备皮肤对应的牌，获得底注 * 加成灵石 """
+        """ 打出装备皮肤对应的牌，获得底注 * 加成金币 """
         # todo: 打出牌是额外加成与特效是否会冲突？？？
         addition = skin_info.get("skin_addition") or 0
         if addition > 0:

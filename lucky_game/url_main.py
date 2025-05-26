@@ -53,7 +53,7 @@ class MainBp(BaseBlue):
         # 用户数据相关
         Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息
         Urls("/Certification/", Certification),  # 实名认证
-        Urls("/TestAddGold/", TestAddGold),  # 修改灵石（测试）
+        Urls("/TestAddGold/", TestAddGold),  # 修改金币（测试）
         Urls("/QueryUserInfo/", QueryUserInfo),  # 查询用户信息
         Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产

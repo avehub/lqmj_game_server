@@ -28,7 +28,7 @@ class ConfQuickChatRC(RCModel):
                         'prop_type': one_model.prop_type,
                         'pay_type': one_model.pay_type,  # 支付方式
                         'price': one_model.price,  # 和leisure_rate只能同时配置一个，两者为0则免费
-                        'leisure_rate': one_model.leisure_rate,  # 休闲场底分 * leisure_rate = 价格，和price只能同时配置一个，涉及到底分则货币一定是灵石
+                        'leisure_rate': one_model.leisure_rate,  # 休闲场底分 * leisure_rate = 价格，和price只能同时配置一个，涉及到底分则货币一定是金币
                         'cool_down': one_model.cool_down,  # 冷却时间（秒）
                         'img_url': one_model.img_url,
                         'level': one_model.level,

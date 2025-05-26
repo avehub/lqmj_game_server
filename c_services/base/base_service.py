@@ -110,7 +110,7 @@ class BaseService(BaseServer, SessionManager):
 
             elif pay_type == PayType.BY_DIAMOND:
                 if price > player.diamond:
-                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='仙玉不足！')
+                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='钻石不足！')
                 if price != 0:
                     u_info = await BaseUserRC.update_user_asset(player.uid, {"diamond": -price}, ReasonCostGold.QUICK_CHAT)
                     if u_info:
