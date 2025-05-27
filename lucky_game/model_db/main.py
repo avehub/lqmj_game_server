@@ -11,7 +11,7 @@ from lucky_game.const import QuickChatType, PlatForm, MailSta, PullSta, AchieveT
     CellType, EventType, LvDefendType, SeasonStatus, AdEventType, FriendshipSta, InteractPropType, PlayTemplate
 
 
-class Users(DBModel):
+class User(DBModel):
     """用户总表"""
     uid = fields.IntField(max_length=28, pk=True, default=500000, description='玩家ID')
     name = fields.CharField(max_length=20, null=True, default='', description='玩家昵称')
@@ -83,7 +83,7 @@ class UserBags(DBModel):
     uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
     good_id = fields.IntField(max_length=28, null=True, default=0, description='商品/道具ID')
     count = fields.IntField(max_length=28, null=True, default=0, description='数量')
-    end_time = fields.DatetimeField(null=True, default='', description='商品有效期')
+    end_time = fields.DatetimeField(null=True, default=None, description='商品有效期')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
@@ -295,17 +295,17 @@ class Stores(DBModel):
     desc = fields.CharField(max_length=256, null=True, default='', description='描述')
     content = fields.JSONField(null=True, description='商品内容：JSON存储')
     status = fields.SmallIntField(max_length=2, null=True, description='状态：0下架 1上架')
-    up_time = fields.DatetimeField(null=True, default='', description='上架时间')
-    down_time = fields.DatetimeField(null=True, default='', description='下架时间')
-    start_time = fields.DatetimeField(null=True, default='', description='有效期开始时间')
-    end_time = fields.DatetimeField(null=True, default='', description='有效期结束时间')
+    up_time = fields.DatetimeField(null=True, default=None, description='上架时间')
+    down_time = fields.DatetimeField(null=True, default=None, description='下架时间')
+    start_time = fields.DatetimeField(null=True, default=None, description='有效期开始时间')
+    end_time = fields.DatetimeField(null=True, default=None, description='有效期结束时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
 
 class Goods(DBModel):
     """商品(道具)表"""
     id = fields.IntField(max_length=10, pk=True, description='商品ID')
-    sid = fields.IntField(max_length=10, pk=True, default=0, description='商城ID')
+    sid = fields.IntField(max_length=10, index=True, default=0, description='商城ID')
     kind = fields.SmallIntField(max_length=2, null=True, description='特性：0虚拟 1实物')
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
     sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
@@ -315,8 +315,8 @@ class Goods(DBModel):
     desc = fields.CharField(max_length=256, null=True, default='', description='商品描述')
     content = fields.JSONField(null=True, description='商品内容：JSON存储')
     status = fields.SmallIntField(max_length=2, null=True, description='状态：0下架 1上架')
-    start_time = fields.DatetimeField(null=True, default='', description='商品有效期开始时间')
-    end_time = fields.DatetimeField(null=True, default='', description='商品有效期结束时间')
+    start_time = fields.DatetimeField(null=True, default=None, description='商品有效期开始时间')
+    end_time = fields.DatetimeField(null=True, default=None, description='商品有效期结束时间')
     bag_type = fields.SmallIntField(max_length=2, null=True, default=0, description='背包类型：0常规 1延时')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 

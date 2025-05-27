@@ -5,47 +5,16 @@ from nsanic.base_ws import BaseWebsocket
 from nsanic.libs.manager import WsConnector
 from common.public.common_class import CommonApi
 from common.public.enum_const import StaCode
-from lucky_admin.model_rc.conf_announcements import ConfAnnouncementsRC
 from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
-from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
-from lucky_game.model_rc.base_ads import BaseAds
-from lucky_game.model_rc.base_award import ConfAwardRC, UserAwardRC
-from lucky_game.model_rc.base_bag import UserBagRC
-from lucky_game.model_rc.base_chat import ChatRecordRC
-from lucky_game.model_rc.base_friend import UserFriendshipRC
-from lucky_game.model_rc.base_goods import ItemsBaseRC
-from lucky_game.model_rc.base_cosmetic import ItemsCosmeticRC, UserCosmeticRC
-from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_monopoly import MonopolyMapRC, MonopolyEventRC, UserMonopolyRC
-from lucky_game.model_rc.base_prop import ItemsPropRC
-from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
-from lucky_game.model_rc.goods_manager import GoodsManagerRC
-from lucky_game.model_rc.base_interaction import InteractionRC
-from lucky_game.model_rc.base_mails import MailsRC
-from lucky_game.model_rc.base_ranking import ConfRankingRC, UserRankingRC, ConfSeasonRC
-from lucky_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
-from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-from lucky_game.model_rc.base_store import ConfStoreRC, ConfMonopolyStoreRC
 from lucky_game.model_rc.base_user import BaseUserRC, BaseBanRC
-from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.conf_leisure import LeisureConfRC
-from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
-from lucky_game.model_rc.vip_level import ConfVipRC, UserVipRC
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
     init_model = [
-        BaseUserRC, BaseRobotRC, LeisureConfRC, InteractionRC, ConfStoreRC, ConfAwardRC, UserBehaviorsRC,
-        PlayerGameTimesRC, MailsRC, UserBagRC, ConfJsonRC, ConfTaskRC, UserTaskRC, ConfVipRC, UserVipRC,
-        ConfActivityRC, UserActivityRC, UserSafeBoxRC, ConfSeasonRC, UserRankingRC, ConfRankingRC,
-        UserCosmeticRC, ItemsCosmeticRC, GoodsManagerRC, ItemsBaseRC, UserAwardRC, ItemsPropRC, ItemsSkinRC, UserSkinRC,
-        ConfMonopolyStoreRC, MonopolyMapRC, MonopolyEventRC, UserMonopolyRC, ConfRobotRC, ConfAnnouncementsRC, BaseAds,
-        UserFriendshipRC, ConfQuickChatRC, ChatRecordRC, BaseBanRC
+        BaseUserRC, BaseBanRC
     ]
     for m in init_model:
         m.conf = conf

@@ -11,15 +11,15 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.vip_level import UserVipRC
-from lucky_game.model_rc.server_addr import ServerAddrRC
+# from lucky_game.model_rc.vip_level import UserVipRC
+# from lucky_game.model_rc.server_addr import ServerAddrRC
 from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
 from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
-
+from pprint import pprint
 
 class BaseLogin(GameAuthApi):
 
@@ -42,8 +42,6 @@ class BaseLogin(GameAuthApi):
     async def update_user_login_info(self, req, u_info, login_info):
         """ 更新玩家表登录数据 """
         updated = {'valid_key': self.rng.mk_str(16), 'ip': self.ori_ip(req)}
-        # ip_info = await self.request_get_ip_geo(req, u_info.get("ip"))  # 2024/11/19仅在玩家第一次登录游戏获取
-        # updated.update(ip_info)
         u_info = await BaseUserRC.update_info(u_info, updated)
 
         login_info.update({'uid': u_info.get('uid')})
@@ -119,8 +117,8 @@ class BaseLogin(GameAuthApi):
             u_info.update({'token': token})
 
         # vip等级查询
-        vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
-        u_info.update({"vip_level": vip_info.get("level")})
+        # vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
+        # u_info.update({"vip_level": vip_info.get("level")})
 
         data = {"user_info": u_info, "server_info": server_info}
         self.info_log("user login: ", uid, u_info.get("token"))
@@ -142,7 +140,7 @@ class BaseLogin(GameAuthApi):
         login_info.update(ip_info)
 
         req_user_info = req_user_info or {}
-        req_user_info["platform"] = platform or PlatForm.DEFAULT
+        req_user_info["platform"] = platform
         u_dict = self.init_user_info(login_info, req_user_info)
 
         # 新用户登录赠送金币
@@ -172,7 +170,9 @@ class BaseLogin(GameAuthApi):
 
     async def whether_through(self) -> List[Dict]:
         """ 是否通过 """
-        server_info: List[Dict] = await ServerAddrRC.cache_all()
+        # server_info: List[Dict] = await ServerAddrRC.cache_all()
+        server_info: List[Dict] = []
+        return server_info
         if not server_info or not server_info[0].get("status"):
             self.answer(hint="As server maintenance, please visit later, thank you.")
         return server_info
@@ -186,7 +186,7 @@ class LoginByGuest(BaseLogin):
         server_info = await self.whether_through()
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        platform = PlatForm.TEST
+        platform = req.json.get('platform')
         q_params = {
             "dev_ident": dev_ident,
             "platform": platform,
