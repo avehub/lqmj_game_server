@@ -9,12 +9,13 @@ from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
 from lucky_game.model_rc.base_user import BaseUserRC, BaseBanRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
     init_model = [
-        BaseUserRC, BaseBanRC
+        BaseUserRC, BaseBanRC, ConfJsonRC
     ]
     for m in init_model:
         m.conf = conf

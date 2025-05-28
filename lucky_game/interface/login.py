@@ -12,7 +12,7 @@ from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 # from lucky_game.model_rc.vip_level import UserVipRC
-# from lucky_game.model_rc.server_addr import ServerAddrRC
+from lucky_game.model_rc.server_addr import ServerAddrRC
 from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
 from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
@@ -70,26 +70,28 @@ class BaseLogin(GameAuthApi):
         """
         safe_key = self.rng.mk_str(18)
         valid_key = self.rng.mk_str(16)
+        dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
             name = f"游客{self.conf.rng.mk_str(8, True)}"
+            user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
+            user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
+
 
         info = {
             'name': name,
             'safe_key': safe_key,
             'valid_key': valid_key,
-
             "ip": login_info.get("login_ip"),
             'address': login_info.get("address"),
             'region': login_info.get("region"),
             'country': login_info.get("country") or "CN",
             'tst_mark': login_info.get("tst_mark") or False,
-            "dev_ident": login_info.get("dev_id"),
-
-            "platform": user_info.get("platform") or PlatForm.DEFAULT,
+            "dev_ident": dev_ident,
+            "platform": user_info.get("platform"),
             "unionid": user_info.get("unionid"),
             "openid": user_info.get("openid")
         }
@@ -170,9 +172,8 @@ class BaseLogin(GameAuthApi):
 
     async def whether_through(self) -> List[Dict]:
         """ 是否通过 """
-        # server_info: List[Dict] = await ServerAddrRC.cache_all()
-        server_info: List[Dict] = []
-        return server_info
+        return []
+        server_info: List[Dict] = await ServerAddrRC.cache_all()
         if not server_info or not server_info[0].get("status"):
             self.answer(hint="As server maintenance, please visit later, thank you.")
         return server_info
@@ -193,7 +194,6 @@ class LoginByGuest(BaseLogin):
         }
         u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_DEVICE_ID)
         login_info = await self.get_login_info(req, LoginWay.GUEST, dev_ident=dev_ident)
-
         if not u_info:
             u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform)
         else:

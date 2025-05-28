@@ -34,6 +34,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 # from lucky_game.interface.activitys import GetActivityAwards, VipLevelHandler, VipLevelPullAwards, \
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
+from lucky_game.interface.club import ClubCreate
 
 
 class MainBp(BaseBlue):
@@ -48,6 +49,19 @@ class MainBp(BaseBlue):
         Urls("/LoginByPhone/", LoginByWechatMiniProgram),  # 手机号登陆
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录
         Urls("/LoginByApple/", LoginByAlipayGame),  # AppleID登录
+
+        # 茶馆
+        Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
+        # Urls("/ClubApply/", ClubApply),  # 茶馆申请
+        # Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
+        # Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
+        # Urls("/ClubList/", ClubList),  # 我的茶馆列表
+        # Urls("/ClubHall/", ClubHall),  # 茶馆大厅
+        # Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
+        # Urls("/ClubRoomCreate/", ClubRoomCreate),  # 茶馆房间创建
+        # Urls("/ClubRoomList/", ClubRoomList),  # 茶馆房间列表
+        # Urls("/ClubRoomJoin/", ClubRoomJoin),  # 茶馆房间加入
+        # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
 
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息

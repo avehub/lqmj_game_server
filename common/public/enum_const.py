@@ -90,6 +90,7 @@ class LoginWay(BaseEnum):
     TOKEN = 5, "Token登录"
     ALIPAY = 6, "支付宝登录"
     DOUYIN = 7, "抖音登录"
+    APPLE = 8, "AppleID登录"
 
 
 class PlayType(BaseEnum):

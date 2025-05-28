@@ -26,6 +26,9 @@ class TestApi(GameAuthApi):
             "req_ip": req.ip,
         }
 
+        res = await self.conf.rds.get_item("test")
+        print("1111", res)
+
         return json(data)
 
 
