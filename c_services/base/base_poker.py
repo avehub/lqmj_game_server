@@ -92,10 +92,9 @@ class BasePoker:
         """ 剩余牌：未使用的牌 """
         return self.__cards[self.__cursor:]
 
-    def set_order_cards(self, cards, player_count=2):
-        player_count = max(player_count, 2)
-        assert len(cards) == player_count + 1  # 人数加1
+    def set_order_cards(self, cards):
         self.__set_cards_list = cards
+        return True
 
     # def __set_cards_ordered(self, card_count):
     #     """

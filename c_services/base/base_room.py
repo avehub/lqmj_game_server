@@ -325,22 +325,29 @@ class BaseRoom(metaclass=ABCMeta):
         """ 设牌调试 """
         if LIVE_SERVER:
             return StaCode.FAIL, "不允许设牌"
+
         dealer_id = data.dealer_id
         cards = data.cards
+        if len(cards) != self.max_player_count + 1:
+            return StaCode.FAIL, "设牌数据结构错误"
+
         all_cards = []
         for c in cards:
             all_cards.extend(c)
         card2count = {}
+
         for c in all_cards:
             count = card2count.get(c, 0) + 1
             card2count[c] = count
-            if count > 4:
+            if count > self.__poker.CARDS_NUM:
                 return StaCode.FAIL, "设牌多于牌该有的数量"
-            if not self.poker.CARDS_ENUM.find_member_by_val(c):
+            card = self.__poker.CARDS_ENUM.find_member_by_val(c)
+            if not card:
                 return StaCode.FAIL, "设牌错误"
+
         if dealer_id > 0:
             pass  # todo 设置庄家
-        self.__poker.set_order_cards(cards, self.__max_player_count)  # 具体设置牌
+        self.__poker.set_order_cards(cards)  # 具体设置牌
         return StaCode.PASS, ""
 
     async def round_start(self):
