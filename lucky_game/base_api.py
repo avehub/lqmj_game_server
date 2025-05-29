@@ -10,12 +10,15 @@ from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
 from lucky_game.model_rc.base_user import BaseUserRC, BaseBanRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.base_clubs import BaseClubRC
+from lucky_game.model_rc.club_users import ClubUsersRC
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
     init_model = [
-        BaseUserRC, BaseBanRC, ConfJsonRC
+        BaseUserRC, BaseBanRC, ConfJsonRC, BaseClubRC, ClubUsersRC, ExtraClubBehaviorRC
     ]
     for m in init_model:
         m.conf = conf
