@@ -266,7 +266,7 @@ class BaseRoom(metaclass=ABCMeta):
                 if with_cards and not p.cards:
                     continue
                 return p
-        for i in range(self.max_player_count - 1, seat_id - 2, -1):  # 前包后不包，只到当前玩家的下一个玩家
+        for i in range(self.max_player_count - 1, seat_id - 1, -1):  # -1是当前玩家，不能包含当前玩家
             p = self.seats[i]
             if p:
                 if p.is_out:
