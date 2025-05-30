@@ -3,9 +3,11 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
+from common.public.enum_const import StaCode
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from common.public.enum_const import StaCode
+from lucky_game.model_rc.game_rooms import GameRoomsRC
+from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 
 
 class BaseClub(GameAuthApi):
@@ -51,10 +53,17 @@ class ClubList(BaseClub):
 class ClubHall(BaseClub):
     """茶馆大厅"""
     async def get(self, req: Request, **kwargs):
-        club_id = req.json.get("id")
-        result, e = await BaseClubRC.get_club_by_id(club_id)
-        if not result:
-            return self.answer(StaCode.FAIL, hint=e)
+        club_id = req.args.get("club_id")
+        # 玩法模板
+        templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
+        # 创建的房间
+        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
+        # 数据合并
+        result = []
+        if isinstance(templates, list):
+            result.extend(templates)
+        if isinstance(room_list, list):
+            result.extend(room_list)
         return self.answer(data=result)
 
 

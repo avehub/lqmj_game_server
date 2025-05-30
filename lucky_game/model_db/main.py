@@ -9,6 +9,7 @@ from lucky_game.const import QuickChatType, PlatForm, MailSta, PullSta, AchieveT
     TaskType, PayType, AddType, StoreType, RandType, ActivityType, GotType, MailType, CompleteSta, JumpTarget, \
     ConditionType, ActivitySta, PayMode, DeliverStatus, OrderStatus, CosmeticType, GamePropType, BagSta, PutType, \
     CellType, EventType, LvDefendType, SeasonStatus, AdEventType, FriendshipSta, InteractPropType, PlayTemplate
+from c_services.const.cs_enum_const import RoomStatus
 
 
 class User(DBModel):
@@ -184,16 +185,20 @@ class ClubRoomTemplates(DBModel):
 
 class GameRooms(DBModel):
     """游戏房间关系表"""
-    id = fields.IntField(max_length=10, pk=True, default=0, description='房间ID')
-    club_id = fields.IntField(max_length=6, null=True, description='茶馆ID,无茶馆为0')
-    uid = fields.IntField(max_length=28, null=True, description='房主ID(玩家ID)')
+    id = fields.IntField(max_length=10, pk=True, description='主键ID')
+    room_id = fields.IntField(max_length=6, index=True, description='房间ID')
+    club_id = fields.IntField(max_length=6, index=True, default=0, description='茶馆ID,无茶馆为0')
+    creator = fields.IntField(max_length=28, null=True, description='房主ID(玩家ID)')
     platform = fields.SmallIntField(max_length=2, null=True, description='平台: 1微信小游戏 2APP 3H5')
+    pay_type = fields.SmallIntField(max_length=2, null=True, default=0, description='支付方式：0房主 1冠军支付 2茶馆基金 3AA支付')
+    price = fields.SmallIntField(max_length=6, null=True, default=0, description='费用')
     cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
     play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    room_rule = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
-    max_players = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
-    current_players = fields.SmallIntField(max_length=2, null=True, default=0, description='当前人数')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='房间状态：0有空 1已满')
+    total_round = fields.SmallIntField(max_length=6, null=True, default=0, description='总局数')
+    cur_round = fields.SmallIntField(max_length=6, null=True, default=0, description='当前局数')
+    rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
+    max_player = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
+    status = fields.IntEnumField(enum_type=RoomStatus, default=RoomStatus.T_IDLE, index=True, description='房间状态')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:

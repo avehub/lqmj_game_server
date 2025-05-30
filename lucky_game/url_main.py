@@ -35,6 +35,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall
+from lucky_game.interface.game_room import CreateRoom
 
 
 class MainBp(BaseBlue):
@@ -58,7 +59,7 @@ class MainBp(BaseBlue):
         Urls("/ClubList/", ClubList),  # 我的茶馆列表
         Urls("/ClubHall/", ClubHall),  # 茶馆大厅
         # Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
-        # Urls("/ClubRoomCreate/", ClubRoomCreate),  # 茶馆房间创建
+        Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         # Urls("/ClubRoomList/", ClubRoomList),  # 茶馆房间列表
         # Urls("/ClubRoomJoin/", ClubRoomJoin),  # 茶馆房间加入
         # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
