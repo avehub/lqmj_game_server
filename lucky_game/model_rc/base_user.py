@@ -458,3 +458,4 @@ class BaseBanRC(BaseCommonRC):
         if info:
             return json_parse(info, cls.conf.error_log)
         return await cls.conf.rds.locked(key, fun=from_db)
+

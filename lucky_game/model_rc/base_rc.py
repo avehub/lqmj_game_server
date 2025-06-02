@@ -2,7 +2,7 @@ from typing import Union
 from nsanic.libs.tool import json_parse, json_encode
 from nsanic.orm.rc_model import RCModel
 from tortoise.expressions import Q
-
+from tortoise.exceptions import OperationalError
 from common.public.common_class import CommonApi
 
 
@@ -259,4 +259,46 @@ class BaseRC(RCModel):
 
 
 class BaseCommonRC(RCModel, CommonApi):
-    pass
+
+    @classmethod
+    async def update_int_field(cls, club_id: int, field_name: str, value: int, operation: str = 'add'):
+        """
+        更新数据表的整型字段
+
+        Args:
+            club_id (int): 茶馆ID
+            field_name (str): 要修改的字段名
+            value (int): 修改的值
+            operation (str): 操作类型，'add' 或 'sub'，默认为'add'
+
+        Returns:
+            tuple: (bool, str) - (操作结果, 消息)
+        """
+        if operation not in ['add', 'sub']:
+            return False, "无效的操作类型，只支持'add'或'sub'"
+
+        try:
+            # 获取当前值
+            data = await cls.db_model.get_or_none(id=club_id)
+            if not data:
+                return False, "茶馆不存在"
+
+            # 获取当前字段值
+            current_value = getattr(data, field_name, 0)
+            if not isinstance(current_value, (int, float)):
+                return False, f"字段{field_name}不是数值类型"
+
+            # 计算新值
+            if operation == 'add':
+                new_value = current_value + value
+            else:
+                new_value = current_value - value
+
+            # 更新数据
+            update_data = {field_name: new_value}
+            up = await cls.db_model.update_by_pk(club_id, update_data, old_data=data)
+            if not up:
+                return False, "更新失败"
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+        return True, "更新成功"

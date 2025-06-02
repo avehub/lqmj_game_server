@@ -59,6 +59,7 @@ class MainBp(BaseBlue):
         Urls("/ClubList/", ClubList),  # 我的茶馆列表
         Urls("/ClubHall/", ClubHall),  # 茶馆大厅
         # Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
+        # Urls("/ClubRoomTemplateCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         # Urls("/ClubRoomList/", ClubRoomList),  # 茶馆房间列表
         # Urls("/ClubRoomJoin/", ClubRoomJoin),  # 茶馆房间加入

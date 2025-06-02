@@ -27,6 +27,10 @@ class BaseClubRC(BaseCommonRC):
         return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{club_id}")
 
     @classmethod
+    async def cache_session_drop(cls, club_id):
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{club_id}")
+
+    @classmethod
     async def create_club(cls, name: str, club_uid: int, room_card: int):
         """创建茶馆"""
         if room_card >= cls.KEY_CLUB_CARD_LIMIT:
@@ -93,3 +97,18 @@ class BaseClubRC(BaseCommonRC):
                 return club, "成功"
         except OperationalError as e:
             return None, f"失败：{str(e)}"
+
+    @classmethod
+    async def update_club_int_field(cls, club_id: int, field_name: str, value: int, operation: str = 'add'):
+        try:
+            # 获取当前值
+            club, e = await cls.update_int_field(club_id, field_name, value, operation)
+            if not club:
+                return False, e
+            # 更新缓存
+            await cls.cache_session_drop(club_id)
+            return True, "更新成功"
+
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+
