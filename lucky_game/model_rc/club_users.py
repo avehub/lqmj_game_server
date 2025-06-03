@@ -7,6 +7,7 @@ from lucky_game.model_rc.base_rc import BaseCommonRC
 from pprint import pprint
 from nsanic.libs.tool import json_encode
 
+
 class ClubUsersRC(BaseCommonRC):
     db_model = ClubUsers
     tb_name = db_model.sheet_name()
@@ -40,12 +41,15 @@ class ClubUsersRC(BaseCommonRC):
         await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
     @classmethod
-    async def _check(cls, uid, club_id):
+    async def check_club_user(cls, uid, club_id):
         """检查用户是否在茶馆"""
         try:
             club_user = await cls.db_model.get_or_none(uid=uid, club_id=club_id)
+            print(club_user)
             if not club_user:
                 return False, "茶馆用户关系不存在"
+            if club_user.status != 0:
+                return False, "茶馆成员状态异常"
         except OperationalError as e:
             return False, e
         return True, "茶馆用户关系已存在"
@@ -54,7 +58,7 @@ class ClubUsersRC(BaseCommonRC):
     async def create_club_user(cls, uid: int, club_id: int):
         """添加用户至茶馆"""
         try:
-            club_user, e = await cls._check(uid, club_id)
+            club_user, e = await cls.check_club_user(uid, club_id)
             if club_user:
                 return False, e
             await cls.db_model.add_one({
@@ -86,10 +90,13 @@ class ClubUsersRC(BaseCommonRC):
         return True, "更新成功"
 
     @classmethod
-    async def delete_club_user(cls, uid: int, club_id: int):
+    async def delete_club_user(cls, id: int = 0, uid: int = 0, club_id: int = 0):
         """删除用户茶馆关系"""
         try:
-            data, e = await cls.get_club_user_by_id(id)
+            if id == 0:
+                data, e = await cls.get_club_user_by_id(id)
+            else:
+                data, e = await cls.get_club_user_by_one(uid, club_id)
             if not data:
                 return False, e
             await cls.db_model.filter(id=id).delete()
@@ -130,6 +137,17 @@ class ClubUsersRC(BaseCommonRC):
             if not result:
                 result = await cls.db_model.get_by_dict({"uid": uid})
                 await cls.cache_session_uid_set(uid, result if result else {})
+        except OperationalError as e:
+            return False, e
+        return result, "成功"
+
+    @classmethod
+    async def get_club_user_by_one(cls, uid: int, club_id: int):
+        """根据用户ID、茶馆ID获取用户茶馆关系"""
+        try:
+            result = await cls.db_model.get_or_none(uid=uid, club_id=club_id)
+            if not result:
+                return result, "茶馆用户关系不存在"
         except OperationalError as e:
             return False, e
         return result, "成功"

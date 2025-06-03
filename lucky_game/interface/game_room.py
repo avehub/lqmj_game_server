@@ -9,6 +9,7 @@ from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
+from pprint import pprint
 
 
 class GameRoomBase(GameAuthApi):
@@ -24,19 +25,16 @@ class GameRoomAPI(GameAuthApi):
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
             # 校验茶馆成员身份
-            club_user, _ = await ClubUsersRC.get_club_user_by_id(creator)
-            if not club_user or club_user.club_id != club_id:
-                return self.answer(StaCode.FAIL, hint="非茶馆成员无法创建房间")
-            # 黑名单校验
-            if club_user.status != 0:
-                return self.answer(StaCode.FAIL, hint="茶馆成员状态异常")
+            club_user, e = await ClubUsersRC.check_club_user(creator, club_id)
+            if not club_user:
+                return self.answer(StaCode.FAIL, hint=e)
             # 权限&规则校验
             club = await BaseClubRC.cache_session_get(club_id)
-            if club.rule_details.get("host_power_room") == 1:
+            if club['other'].get("host_power_room") == 1:
                 return self.answer(StaCode.FAIL, hint="无法创建房间")
-            if club.rule_details.get("pay_type") == 1 and u_info.room_card < price:
+            if club['other'].get("pay_type") == 1 and u_info.room_card < price:
                 return self.answer(StaCode.FAIL, hint="房卡不足")
-            if club.rule_details.get("pay_type") == 2 and club.room_card < price:
+            if club['other'].get("pay_type") == 2 and club.room_card < price:
                 return self.answer(StaCode.FAIL, hint="茶馆基金不足")
         else:
             if rule_details.get("pay_type") == 1:
@@ -120,52 +118,38 @@ class RoomList(GameRoomAPI):
 
 class JoinRoom(GameRoomAPI):
     """加入房间"""
-    
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         room_id = req.json.get("room_id")
-        user_id = req.ctx.user.uid
-        
-        # 获取并更新房间信息
-        room, _ = await GameRoomsRC.get_game_room_by_id(room_id)
-        if room.current_players >= room.max_player:
-            return self.answer(StaCode.FAIL, hint="房间已满")
-        
-        # 更新玩家列表
-        uids = room.room_uids.split(",") if room.room_uids else []
-        if str(user_id) not in uids:
-            uids.append(str(user_id))
-            await GameRoomsRC.update_game_room(
-                room_id, 
-                current_players=room.current_players+1,
-                room_uids=",".join(uids)
-            )
-        
+        self.check_int(room_id, require=True, p_name="房间ID")
+        u_info = kwargs.get("u_info")
+        room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
+        rule_details = json_parse(room_data['rule_details'])
+        if rule_details.get("pay_type") == 1:
+            if u_info.get("room_card") < room_data['price']:
+                return self.answer(StaCode.FAIL, hint="房卡不足")
+        uid = u_info.get("uid")
+        sta, e = await GameRoomsRC.join_room(room_id, uid)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
         return self.answer()
 
 
 class LeaveRoom(GameRoomAPI):
     """离开房间"""
-    
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         room_id = req.json.get("room_id")
-        user_id = req.ctx.user.uid
+        self.check_int(room_id, require=True, p_name="房间ID")
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
         # 更新房间信息
-        room, _ = await GameRoomsRC.get_game_room_by_id(room_id)
-        uids = room.room_uids.split(",") if room.room_uids else []
-        if int(user_id) in uids:
-            uids.remove(int(user_id))
-            await GameRoomsRC.update_game_room(
-                room_id, 
-                current_players=room.current_players-1,
-                room_uids=",".join(uids) if uids else ""
-            )
-        
+        sta, e = await GameRoomsRC.leave_room(room_id, uid)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
         return self.answer()
 
 
 class DismissRoom(GameRoomAPI):
     """解散房间"""
-    
     async def post(self, req: Request):
         room_id = req.json.get("room_id")
         user_id = req.ctx.user.uid

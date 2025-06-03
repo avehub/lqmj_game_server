@@ -11,6 +11,7 @@ class RoomStatus(BaseEnum):
     T_RECHARGE_ING = 3, "充值中"
     T_CHECK_OUT = 4, "结算中"
     T_DISMISS = 5, "解散中"
+    T_CLOSED = 6, "已关闭"
 
 
 @unique

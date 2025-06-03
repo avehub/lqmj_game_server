@@ -76,9 +76,10 @@ class BaseClubRC(BaseCommonRC):
         try:
             club = await cls.cache_session_get(club_id)
             if not club:
-                club = await cls.db_model.get_or_none(id=club_id)
+                club = await cls.db_model.get_by_pk(club_id)
                 if not club:
                     return None, "茶馆不存在"
+                await cls.cache_session_set(club_id, club)
         except OperationalError as e:
             return None, f"失败：{str(e)}"
         return club, "成功"

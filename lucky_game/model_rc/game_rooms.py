@@ -4,12 +4,13 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import GameRooms
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from nsanic.libs.tool import json_encode
+from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.handler.random_utils import generate_natural_random
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from c_services.const.cs_enum_const import RoomStatus
 
 
 class GameRoomsRC(BaseCommonRC):
@@ -18,8 +19,18 @@ class GameRoomsRC(BaseCommonRC):
 
     KEY_ROOM_ID = 'room_id'
     KEY_CLUB_ID = 'club_id'
+    SESSION_KEY = "room_player"
+    SESSION_DISK_KEY = "room_player_uid"
 
     NULL_MEG = "房间不存在"
+
+    @classmethod
+    async def cache_room_player_up(cls, room_id, value=1):
+        await cls.conf.rds.incr(f"{cls.SESSION_KEY}:{room_id}", value)
+
+    @classmethod
+    async def cache_room_player_get(cls, room_id):
+        return await cls.conf.rds.get_item(f"{cls.SESSION_KEY}:{room_id}")
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,
@@ -67,11 +78,9 @@ class GameRoomsRC(BaseCommonRC):
     async def delete_game_room(cls, room_id: int):
         """删除游戏房间"""
         try:
-            room = await cls.db_model.get_or_none(id=room_id)
-            if not room:
+            sta = await cls.db_model.filter(room_id=room_id).delete()
+            if not sta:
                 return False, cls.NULL_MEG
-
-            await cls.db_model.filter(id=room_id).delete()
         except OperationalError as e:
             return False, f"房间删除失败: {str(e)}"
         return True, "成功"
@@ -80,7 +89,7 @@ class GameRoomsRC(BaseCommonRC):
     async def update_game_room(cls, room_id: int, **kwargs):
         """更新房间信息"""
         try:
-            room = await cls.db_model.get_or_none(id=room_id)
+            room, e= await cls.get_game_room_by_room_id(room_id)
             if not room:
                 return False, cls.NULL_MEG
 
@@ -88,16 +97,16 @@ class GameRoomsRC(BaseCommonRC):
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
 
             if update_data:
-                await cls.db_model.filter(id=room_id).update(**update_data)
+                await cls.db_model.filter(room_id=room_id).update(**update_data)
         except OperationalError as e:
             return False, f"房间更新失败: {str(e)}"
         return True, "成功"
 
     @classmethod
-    async def get_game_room_by_id(cls, room_id: int):
+    async def get_game_room_by_room_id(cls, room_id: int):
         """根据ID获取房间详情"""
         try:
-            room = await cls.db_model.get_or_none(id=room_id)
+            room = await cls.db_model.get_or_none(room_id=room_id)
             if not room:
                 return None, cls.NULL_MEG
         except OperationalError as e:
@@ -122,3 +131,49 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return rooms, "成功"
+
+    @classmethod
+    async def join_room(cls, room_data: dict, uid: int):
+        """加入房间"""
+        try:
+            if not room_data:
+                return False, e
+            if room_data['status'] != 0:
+                return False, "房间已满"
+
+            max_player = room_data['max_player']
+            sta = cls.conf.rds.sadd(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            if sta == 0:
+                return False, "用户已加入房间或加入房间失败"
+            disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+            if len(disk_uid) > max_player:
+                await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+                return False, "房间已满"
+            elif len(disk_uid) == max_player:
+                # 房间已满 可以直接开始 修改状态
+                # await cls.update_game_room(room_id, status=RoomStatus.)
+                pass
+        except OperationalError as e:
+            return False, f"加入房间失败: {str(e)}"
+        return True, "成功"
+
+    @classmethod
+    async def leave_room(cls, room_id: int, uid: int):
+        """离开（解散）房间"""
+        try:
+            room_data, e = await cls.get_game_room_by_room_id(room_id)
+            if not room_data:
+                return False, e
+            if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT]:
+                return False, "离开房间状态异常"
+            sta = cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            if sta == 0:
+                return False, "用户已离开房间或离开房间失败"
+            elif room_data['creator'] == uid:
+                # 关闭房间
+                await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
+        except OperationalError as e:
+            return False, f"离开房间失败: {str(e)}"
+        return True, "成功"
+
+
