@@ -33,7 +33,7 @@ class BaseClubRC(BaseCommonRC):
     @classmethod
     async def create_club(cls, name: str, club_uid: int, room_card: int):
         """创建茶馆"""
-        if room_card >= cls.KEY_CLUB_CARD_LIMIT:
+        if room_card < cls.KEY_CLUB_CARD_LIMIT:
             return False, "房卡不足"
 
         try:
@@ -102,14 +102,12 @@ class BaseClubRC(BaseCommonRC):
     @classmethod
     async def update_club_int_field(cls, club_id: int, field_name: str, value: int, operation: str = 'add'):
         try:
-            # 获取当前值
             club, e = await cls.update_int_field(club_id, field_name, value, operation)
             if not club:
                 return False, e
             # 更新缓存
             await cls.cache_session_drop(club_id)
-            return True, "更新成功"
-
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"
+        return True, "更新成功"
 

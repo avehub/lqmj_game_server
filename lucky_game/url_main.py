@@ -34,7 +34,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 # from lucky_game.interface.activitys import GetActivityAwards, VipLevelHandler, VipLevelPullAwards, \
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
-from lucky_game.interface.club import ClubCreate, ClubList, ClubHall
+from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch
 from lucky_game.interface.game_room import CreateRoom, JoinRoom
 
 
@@ -42,7 +42,7 @@ class MainBp(BaseBlue):
     # 路由请添加在这里
     DEFAULT_APIS = [
         # 结构为: 接口路由地址, 接口视图处理器, 版本号(可选), 接口命名(可选)
-        Urls("/testapi/", TestApi),
+        Urls("/testapi", TestApi),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -53,15 +53,14 @@ class MainBp(BaseBlue):
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
-        # Urls("/ClubApply/", ClubApply),  # 茶馆申请
-        # Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
-        # Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
+        Urls("/ClubApply/", ClubApply),  # 茶馆申请
+        Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
+        Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
         Urls("/ClubList/", ClubList),  # 我的茶馆列表
         Urls("/ClubHall/", ClubHall),  # 茶馆大厅
-        # Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
+        Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
         # Urls("/ClubRoomTemplateCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
-        # Urls("/ClubRoomList/", ClubRoomList),  # 茶馆房间列表
         Urls("/ClubRoomJoin/", JoinRoom),  # 茶馆房间加入
         # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
 

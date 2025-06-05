@@ -7,7 +7,11 @@ from common.public.enum_const import StaCode
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
+from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
+from nsanic.libs.tool import json_encode, json_parse
+from pprint import pprint
 
 
 class BaseClub(GameAuthApi):
@@ -54,6 +58,7 @@ class ClubHall(BaseClub):
     """茶馆大厅"""
     async def get(self, req: Request, **kwargs):
         club_id = req.args.get("club_id")
+        self.check_int(club_id, require=True, p_name="茶馆ID")
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
         # 创建的房间
@@ -67,10 +72,58 @@ class ClubHall(BaseClub):
         return self.answer(data=result)
 
 
-class ClubJoin(BaseClub):
-    """加入茶馆"""
+class ClubSearch(BaseClub):
+    """茶馆搜索"""
+    async def get(self, req: Request, **kwargs):
+        # 获取请求参数
+        club_id = req.args.get("club_id")
+        self.check_int(club_id, require=True, p_name="茶馆ID")
+        # 从数据库查询茶馆信息
+        club, e = await BaseClubRC.get_club_by_id(club_id)
+        if not club:
+            return self.answer(StaCode.FAIL, hint=e)
+        # 茶馆和用户关系
+        if isinstance(club, bytes):
+            club = json_parse(club.decode())
+        club_user, e = await ClubUsersRC.get_club_user_by_one(club["uid"], club_id)
+        club["join_status"] = 0
+        if club_user:
+            club["join_status"] = 1
+        return self.answer(data=club)
+
+
+class ClubCheck(BaseClub):
+    """茶馆审批"""
     async def post(self, req: Request, **kwargs):
-        pass
+        # 获取请求参数
+        u_info = kwargs.get("u_info")
+        check_uid = u_info.get("uid")
+        behavior_id = req.json.get("behavior_id")
+        status = req.json.get("status")
+        self.check_int(behavior_id, require=True, p_name="申请行为ID")
+        self.check_int(status, require=True, p_name="审批状态")
+        # TODO 管理员校验 测试暂不加
+        sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
+        if not sta:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
+
+
+class ClubApply(BaseClub):
+    """茶馆申请"""
+    async def post(self, req: Request, **kwargs):
+        # 获取请求参数
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        club_id = req.json.get("club_id")
+        self.check_int(club_id, require=True, p_name="茶馆ID")
+        # 校验是否已申请
+        has, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid=uid, club_id=club_id, status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
+        if not has:
+            sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
 
 
 class ClubLeave(BaseClub):
@@ -79,6 +132,16 @@ class ClubLeave(BaseClub):
         pass
 
 
-class ClubInfo(BaseClub):
-    """茶馆详情"""
-    pass
+class ClubApplyList(BaseClub):
+    """茶馆申请列表"""
+
+    async def get(self, req: Request, **kwargs):
+        # 获取请求参数
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        club_id = req.args.get("club_id")
+        self.check_int(club_id, require=True, p_name="茶馆ID")
+        data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, club_id=club_id)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer(data=data)

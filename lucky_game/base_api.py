@@ -19,13 +19,15 @@ from lucky_game.model_rc.conf_game_room_rules import ConfGameRoomRulesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from lucky_game.model_rc.extra_game_room import ExtraGameRoomRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+from lucky_game.model_rc.base_rc import BaseRedisRc
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
     init_model = [
         BaseUserRC, BaseBanRC, ConfJsonRC, BaseClubRC, ClubUsersRC, ExtraClubBehaviorRC, GameRoomsRC,
-        ClubRoomTemplatesRC, ConfGameRoomRulesRC, ExtraClubEventRC, ExtraGameRoomRC, ExtraUserResourceChangesRC
+        ClubRoomTemplatesRC, ConfGameRoomRulesRC, ExtraClubEventRC, ExtraGameRoomRC, ExtraUserResourceChangesRC,
+        BaseRedisRc
     ]
     for m in init_model:
         m.conf = conf

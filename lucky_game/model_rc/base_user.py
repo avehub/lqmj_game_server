@@ -459,3 +459,15 @@ class BaseBanRC(BaseCommonRC):
             return json_parse(info, cls.conf.error_log)
         return await cls.conf.rds.locked(key, fun=from_db)
 
+    @classmethod
+    async def update_user_int_field(cls, uid: int, field_name: str, value: int, operation: str = 'add'):
+        try:
+            user, e = await cls.update_int_field(uid, field_name, value, operation)
+            if not user:
+                return False, e
+            # 更新缓存
+            userinfo = await cls.db_model.get_or_none(uid=uid)
+            await cls.update_cache(uid, userinfo)
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+        return True, "更新成功"
