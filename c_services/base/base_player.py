@@ -110,6 +110,12 @@ class BasePlayer():
         for c in cards:
             self.__cards.remove(c)
 
+    def ex_cards(self,card,idx):
+        self.__cards[idx] = card
+
+    def sort_cards(self):
+        self.__cards.sort()
+
     @property
     def cards_len(self):
         return len(self.__cards)

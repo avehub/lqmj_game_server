@@ -11,7 +11,7 @@ signal_map = {}
 WsProtocol.connector_map = {
     WsRdsConnector.__name__: WsRdsConnector
 }
-main_server = InitServer(conf, mws=[CorsMiddle], bps=[MainBp], excps=[CatchExpt])
+main_server = InitServer(conf, middlewares=[CorsMiddle], bp_arr=[MainBp], exceptions=[RCatchExpt])
 main_server.add_signal(signal_map)
 
 if __name__ == '__main__':
