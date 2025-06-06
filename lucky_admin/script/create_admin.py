@@ -1,6 +1,6 @@
 import argparse
 from nsanic.libs import tool_dt
-from nsanic.libs.random_maker import RngMaker
+from nsanic.libs.mk_random import RngMaker
 from common.utils.utils import UtilsTool
 from nsanic import verify
 from common.public.conf import CONF_DB, SERVER_SECRET_KEY
@@ -27,7 +27,7 @@ async def create_super_admin():
     """ 创建超级管理员 """
     arg = init_args()
     cur_time = tool_dt.cur_time()
-    rng = RngMaker('admin')
+    rng = RngMaker
     permission = AdminPermission.find_member_by_val(arg.permission)
     if not permission:
         raise ValueError('权限不对！请更正！')
