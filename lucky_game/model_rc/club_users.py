@@ -16,28 +16,37 @@ class ClubUsersRC(BaseCommonRC):
     KEY_SESSION_UID = "club_user_session_uid"
     KEY_SESSION_CLUBID = "club_user_session_clubid"
 
+    ROLE_MANAGE = 1  # 管理员
+    ROLE_HOST = 9  # 茶馆主
+
     @classmethod
     async def cache_session_uid_set(cls, uid, value):
+        """根据用户ID缓存用户茶馆关系列表"""
         await cls.conf.rds.set_item(f"{cls.KEY_SESSION_UID}:{uid}", value)
 
     @classmethod
     async def cache_session_uid_get(cls, uid):
+        """根据用户ID获取用户茶馆关系列表"""
         await cls.conf.rds.get_item(f"{cls.KEY_SESSION_UID}:{uid}")
 
     @classmethod
     async def cache_session_uid_drop(cls, uid):
+        """根据用户ID删除用户茶馆关系列表"""
         await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_UID}:{uid}")
 
     @classmethod
     async def cache_session_clubid_set(cls, club_id, value):
+        """根据茶馆ID缓存用户茶馆关系列表"""
         await cls.conf.rds.set_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}", value)
 
     @classmethod
     async def cache_session_clubid_get(cls, club_id):
+        """根据茶馆ID缓存用户茶馆关系列表"""
         await cls.conf.rds.get_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
     @classmethod
     async def cache_session_clubid_drop(cls, club_id):
+        """根据茶馆ID缓存用户茶馆关系列表"""
         await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
     @classmethod
@@ -45,7 +54,6 @@ class ClubUsersRC(BaseCommonRC):
         """检查用户是否在茶馆"""
         try:
             club_user = await cls.db_model.get_or_none(uid=uid, club_id=club_id)
-            print(club_user)
             if not club_user:
                 return False, "茶馆用户关系不存在"
             if club_user.status != 0:
@@ -55,7 +63,7 @@ class ClubUsersRC(BaseCommonRC):
         return True, "茶馆用户关系已存在"
 
     @classmethod
-    async def create_club_user(cls, uid: int, club_id: int):
+    async def create_club_user(cls, uid: int, club_id: int, role: int = 0, status: int = 0):
         """添加用户至茶馆"""
         try:
             club_user, e = await cls.check_club_user(uid, club_id)
@@ -63,7 +71,9 @@ class ClubUsersRC(BaseCommonRC):
                 return False, e
             await cls.db_model.add_one({
                 "uid": uid,
-                "club_id": club_id
+                "club_id": club_id,
+                "role": role,
+                "status": status
             })
         except OperationalError as e:
             return False, e
@@ -130,13 +140,28 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_uid(cls, uid: int):
+    async def get_club_user_by_uid(cls, uid: int, in_role: list = []):
         """根据用户ID获取用户茶馆关系"""
         try:
             result = await cls.cache_session_uid_get(uid)
             if not result:
-                result = await cls.db_model.get_by_dict({"uid": uid})
-                await cls.cache_session_uid_set(uid, result if result else {})
+                result = await cls.db_model.get_by_dict({"uid": uid, "role__in": in_role})
+                await cls.cache_session_uid_set(uid, result)
+        except OperationalError as e:
+            return False, e
+        return result, "成功"
+
+    @classmethod
+    async def get_club_user_by_uid_club_ids(cls, uid: int, in_role: list = []):
+        """根据用户ID获取用户加入、管理茶馆IDS"""
+        result = []
+        try:
+            where = {"uid": uid}
+            if in_role:
+                where["role__in"] = in_role
+            club_users_data = await cls.db_model.get_by_dict(where)
+            if club_users_data:
+                result = [club_user["club_id"] for club_user in club_users_data]
         except OperationalError as e:
             return False, e
         return result, "成功"
@@ -150,4 +175,16 @@ class ClubUsersRC(BaseCommonRC):
                 return result, "茶馆用户关系不存在"
         except OperationalError as e:
             return False, e
-        return result, "成功"
+        if isinstance(result, dict):
+            data = result
+        else:
+            data = {
+                "id": result.id,
+                "uid": result.uid,
+                "club_id": result.club_id,
+                "role": result.role,
+                "status": result.status,
+                "created": result.created,
+                "updated": result.updated
+            }
+        return data, "成功"

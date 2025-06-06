@@ -190,7 +190,10 @@ class GameRoomsRC(BaseCommonRC):
                 return False, "房间已满"
             room_id = room_data.room_id
             max_player = room_data.max_player
-            sta = await cls.conf.rds.sadd(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+            if uid in disk_uid:
+                return False, "用户已加入房间"
+            sta = await cls.conf.rds.set_hash(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
             if sta == 0:
                 return False, "用户已加入房间或加入房间失败"
             disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
@@ -223,5 +226,17 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"离开房间失败: {str(e)}"
         return True, "成功"
+
+    @classmethod
+    async def get_room_player(cls, room_id: int):
+        """获取房间玩家"""
+        try:
+            room_data, e = await cls.get_game_room_by_room_id(room_id)
+            if not room_data:
+                return None, e
+            player = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+        except OperationalError as e:
+            return None, f"获取房间玩家失败: {str(e)}"
+        return player, "成功"
 
 

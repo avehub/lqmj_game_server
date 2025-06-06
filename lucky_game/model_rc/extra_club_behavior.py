@@ -26,10 +26,12 @@ class ExtraClubBehaviorRC(BaseCommonRC):
 
     BEHAVIOR_STATUS_DEFAULT = 0
     BEHAVIOR_STATUS_REFUSE = 1
+    BEHAVIOR_STATUS_CANCEL = 2
     BEHAVIOR_STATUS_SUCCEED = 99
     BEHAVIOR_STATUS = {
         0: "未审批",
         1: "拒绝",
+        2: "取消",
         99: "通过"
     }
 
@@ -68,7 +70,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 if not data:
                     return False, e
                 up_status = up_data.get("status")
-                if up_status == cls.BEHAVIOR_STATUS_REFUSE:
+                if up_status in [cls.BEHAVIOR_STATUS_REFUSE, cls.BEHAVIOR_STATUS_CANCEL]:
                     sta, e = await cls.delete_club_behavior(behavior_id)
                     if not sta:
                         return False, "更新失败"
@@ -106,24 +108,26 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_behavior_by_filter(cls, club_id: int = None, type: int = None, uid: int = None, status: int = None):
+    async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None):
         """多条件查询茶馆操作行为列表"""
         try:
             query = {}
             if club_id is not None:
-                query["club_id"] = club_id
+                if isinstance(club_id, list):
+                    query["club_id__in"] = club_id
+                else:
+                    query["club_id"] = club_id
             if status is not None:
                 query["status"] = status
             if uid is not None:
                 query["uid"] = uid
             if type is not None:
                 query["type"] = type
-
             data = await cls.db_model.filter(**query).order_by("status").values()
             if not data:
                 return [], "未找到符合条件的数据"
         except OperationalError as e:
-            return None, f"查询失败: {str(e)}"
+            return False, f"查询失败: {str(e)}"
         return data, "成功"
 
     @classmethod

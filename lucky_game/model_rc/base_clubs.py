@@ -41,15 +41,13 @@ class BaseClubRC(BaseCommonRC):
             if club:
                 # cls.conf.info_log(f"creat club: {name} 茶馆已存在")
                 return False, "茶馆名已存在"
-
             club_dick = {
                 "name": name,
                 "uid": club_uid
             }
-
             # cls.conf.info_log('creat club:', club_dick)
             row = await cls.db_model.add_one(club_dick)
-            club_user, e = await ClubUsersRC.create_club_user(club_uid, row.id)
+            club_user, e = await ClubUsersRC.create_club_user(club_uid, row.id, role=ClubUsersRC.ROLE_HOST)
             if not club_user:
                 return False, e
         except OperationalError as e:
@@ -58,16 +56,13 @@ class BaseClubRC(BaseCommonRC):
         return True, "创建成功"
 
     @classmethod
-    async def get_club_by_uid(cls, uid: int):
+    async def get_club_by_uid(cls, uid: int, in_role: list = []):
         """根据用户ID获取已加入茶馆列表"""
         try:
-            club_users_data, e = await ClubUsersRC.get_club_user_by_uid(uid)
-            if not club_users_data:
-                return [], e
-            club_ids = [club_user["club_id"] for club_user in club_users_data]
+            club_ids, _ = await ClubUsersRC.get_club_user_by_uid_club_ids(uid, in_role)
             club_list = await cls.db_model.filter(id__in=club_ids).values()
         except OperationalError as e:
-            return [], f"失败：{str(e)}"
+            return False, f"失败：{str(e)}"
         return club_list, "成功"
 
     @classmethod

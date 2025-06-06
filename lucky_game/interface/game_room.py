@@ -76,15 +76,13 @@ class CreateRoom(GameRoomAPI):
         self.check_int(pay_type, require=True, p_name="支付方式")
         self.check_int(price, require=True, p_name="支付金额")
         # 预处理
-        before_status = await self._before_create_room(
+        await self._before_create_room(
             creator=creator,
             price=int(price),
             club_id=club_id,
             u_info=u_info,
             rule_details=json_parse(rule_details)
         )
-        if before_status is not True:
-            return before_status
 
         # 创建房间
         new_room, err = await GameRoomsRC.create_game_room(

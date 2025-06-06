@@ -34,8 +34,10 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 # from lucky_game.interface.activitys import GetActivityAwards, VipLevelHandler, VipLevelPullAwards, \
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
-from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch
+from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
+    ClubCheckList, ClubUserInfo
 from lucky_game.interface.game_room import CreateRoom, JoinRoom
+from lucky_game.interface.user import UserInfo
 
 
 class MainBp(BaseBlue):
@@ -56,10 +58,11 @@ class MainBp(BaseBlue):
         Urls("/ClubApply/", ClubApply),  # 茶馆申请
         Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
         Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
+        Urls("/ClubCheckList/", ClubCheckList),  # 茶馆房间创建
         Urls("/ClubList/", ClubList),  # 我的茶馆列表
         Urls("/ClubHall/", ClubHall),  # 茶馆大厅
         Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
-        # Urls("/ClubRoomTemplateCreate/", CreateRoom),  # 茶馆房间创建
+        Urls("/ClubUserInfo/", ClubUserInfo),  # 茶馆搜索
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomJoin/", JoinRoom),  # 茶馆房间加入
         # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
@@ -68,7 +71,7 @@ class MainBp(BaseBlue):
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息
         # Urls("/Certification/", Certification),  # 实名认证
         # Urls("/TestAddGold/", TestAddGold),  # 修改金币（测试）
-        # Urls("/QueryUserInfo/", QueryUserInfo),  # 查询用户信息
+        Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         # Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产
         # Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点

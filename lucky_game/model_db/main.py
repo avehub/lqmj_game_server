@@ -147,7 +147,7 @@ class ExtraClubBehavior(DBModel):
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1加入茶馆申请 2小黑屋 3隔离')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态，类型==1：0未审批 1拒绝 99通过，类型==2/3:99成功')
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态，类型==1：0未审批 1拒绝 2取消 99通过，类型==2/3:99成功')
     check_uid = fields.IntField(max_length=28, null=True, default=0, description='审批/操作玩家ID')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
@@ -217,23 +217,58 @@ class ExtraClubEvent(DBModel):
         table = "extra_club_event"
 
 
-class RecordsGames(DBModel):
-    """游戏战绩记录表"""
-    id = fields.IntField(max_length=10, pk=True, description='战绩ID')
-    club_id = fields.IntField(max_length=6, index=True, default=0, description='茶馆ID，玩家无茶馆值为0')
-    uid = fields.IntField(max_length=28, index=True, description='玩家ID')
-    room_id = fields.IntField(max_length=10, index=True, description='房间ID')
-    round_total = fields.SmallIntField(max_length=2, null=True, default=0, description='总局数')
-    round_num = fields.SmallIntField(max_length=2, null=True, default=0, description='当前局数')
-    current_players = fields.SmallIntField(max_length=2, null=True, default=0, description='对局人数')
-    best_uid = fields.IntField(max_length=28, index=True, description='最佳玩家ID')
-    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
-    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    room_rule = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
-    result = fields.JSONField(null=True, description='游戏结果：JSON存储')
+class RecordsGameRoom(DBModel):
+    record_rid = fields.IntField(pk=True, description='战绩ID', )
+    club_id = fields.IntField(index=True, description='茶馆ID，玩家无茶馆值为0', )
+    room_id = fields.IntField(index=True, description='房间ID', )
+    creator = fields.IntField(description='房主ID', )
+    round_total = fields.SmallIntField(description='总局数', )
+    current_player = fields.SmallIntField(description='对局人数', )
+    rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储', )
+    play_type = fields.SmallIntField(description='玩法类型', )
+    cs_type = fields.IntField(description='子服务类型', )
+    start_time = fields.BigIntField(default=0, description='开始时间', )
+    ent_time = fields.BigIntField(default=0, description='结束时间', )
+    pay_type = fields.SmallIntField(description='支付方式：0房主 1冠军支付 2茶馆基金 3AA支付', )
+    price = fields.SmallIntField(description='费用', )
+    updated = fields.BigIntField(default=0, description='更新时间', )
 
     class Meta:
-        table = "records_games"
+        table = "records_game_room"
+
+
+class RecordsGameTotal(DBModel):
+    record_tid = fields.IntField(pk=True, description='战绩总局ID', )
+    record_rid = fields.IntField(index=True, description='战绩房间ID', )
+    club_id = fields.IntField(index=True, description='茶馆ID，玩家无茶馆值为0', )
+    room_id = fields.IntField(index=True, description='房间ID', )
+    uid = fields.IntField(index=True, description='玩家ID', )
+    cs_type = fields.IntField(description='子服务类型', )
+    final_status = fields.SmallIntField(description='输赢状态：0输 1赢', )
+    final_score = fields.IntField(description='最终分数', )
+    final_ranking = fields.IntField(description='最终名次', )
+    final_grade = fields.SmallIntField(description='最终评价：1全场最佳', )
+    final_result = fields.JSONField(null=True, description='详细结果：JSON存储', )
+
+    class Meta:
+        table = "records_game_total"
+
+
+class RecordsGameSegment(DBModel):
+    record_sid = fields.IntField(pk=True, description='战绩子ID', )
+    record_tid = fields.IntField(index=True, description='战绩总局ID', )
+    record_rid = fields.IntField(index=True, description='战绩房间ID', )
+    uid = fields.IntField(index=True, description='玩家ID', )
+    round_num = fields.SmallIntField(description='当前局数', )
+    round_status = fields.SmallIntField(description='当局状态：0输 1赢', )
+    round_score = fields.IntField(description='当局分数', )
+    round_ranking = fields.IntField(description='当局名次', )
+    round_result = fields.JSONField(null=True, description='详细结果：JSON存储', )
+    replay_msg = fields.JSONField(null=True, description='回放数据', )
+    cs_type = fields.IntField(description='子服务类型', )
+
+    class Meta:
+        table = "records_game_segment"
 
 
 class ExtraGameRoom(DBModel):
