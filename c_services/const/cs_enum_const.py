@@ -101,6 +101,32 @@ class CmdRoom(BaseEnum):
     TURN_RE_REDOUBLE = 53, "轮到加加倍", "斗地主（反铲）"
     DO_RE_REDOUBLE = 54, "Do 加加倍", "斗地主（反铲）"
 
+    # 麻将
+    PLAYER_PASS = 60,"过","麻将"
+    PLAYER_PENG = 61,"碰","麻将"
+    PLAYER_GANG = 62,"杠","麻将"
+    PLAYER_HU = 63,"胡","麻将"
+    PLAYER_MEN = 64,"闷","麻将"
+    PLAYER_JIAN = 65,"捡","麻将"
+    PLAYER_SHANG_GA = 66,"估卖","麻将(卖分)"
+    GAME_START = 67,"游戏开始","麻将"
+    START_EXCHANGE_CARDS = 68,"开始换牌","麻将"
+    PLAYER_EXCHANGE_CARDS = 69,"玩家换牌","麻将"
+    START_DING_QUE = 70,"开始定缺","麻将"
+    PUBLIC_OPERATES = 71,"公共操作","麻将"
+    PLAYER_TIAN_TING = 72,"天听","麻将"
+    PLAYER_SHANG_GA_BEGIN = 73,"开始估卖","麻将"
+    HU_AFTER_CARDS_INFO = 74,"通知所有玩家手牌信息","麻将"
+    PLAYER_MEN_SUC = 75,"闷成功","麻将"
+    PLAYER_JIAN_SUC = 76,"捡成功","麻将"
+    PLAYER_MO_PAI = 77,"摸牌","麻将"
+    AFTER_GANG_MO_CARD = 78,"杠后摸牌","麻将"
+    LIU_JU_NOTIFY = 79,"流局通知","麻将"
+    CONFIRM_CHONG_FENG_JI = 80,"冲锋鸡","麻将"
+    ZHA_HU = 91,"炸胡","麻将"
+    ZHA_MEN = 92,"炸闷","麻将"
+    REQ_DISMISS = 93,"请求解散房间","麻将"
+
 
 class CmdWorkers(BaseEnum):
     """ 消费服务命令（服务端内部使用） """
