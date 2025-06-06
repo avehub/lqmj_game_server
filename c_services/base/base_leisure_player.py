@@ -17,9 +17,9 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__ranking_score = 0  # 段位分
         self.__check_info_ranking = {}
 
-        self.__skin_addition_num = 0  # 皮肤加成数量(灵石)
-        self.__multiple_card_addition_num = 0  # 多倍卡加成数量(灵石)
-        self.__free_loss_num = 0  # 免输数量（护盾卡）(灵石)
+        self.__skin_addition_num = 0  # 皮肤加成数量(金币)
+        self.__multiple_card_addition_num = 0  # 多倍卡加成数量(金币)
+        self.__free_loss_num = 0  # 免输数量（护盾卡）(金币)
         self.__ranking_score_free_num = 0  # 修为免输数量（固元丹）
 
         self.__actual_score = 0  # 实际赢分，非加成
@@ -96,7 +96,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
 
     def update_gold(self, score: int, accumulate=True):
         """
-        更新玩家灵石
+        更新玩家金币
         accumulate: 是否累计在得分上
         """
         res_count = self.__gold + score

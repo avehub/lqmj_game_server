@@ -314,7 +314,7 @@ class SafeBoxOperateUser(GameAuthApi):
         (amount < 1) and self.answer(self.sta_code.ERR_ARG, hint="不能存入小于1的金额，请重新输入")
         uid = u_info.get("uid")
 
-        # 1.该限制主要避免玩家游戏中要输时退出游戏来将灵石存入保险箱
+        # 1.该限制主要避免玩家游戏中要输时退出游戏来将金币存入保险箱
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
         if cs_info:
             cs_enum = ServiceEnum.find_member_by_val(cs_info.get("cs_type"))
@@ -322,7 +322,7 @@ class SafeBoxOperateUser(GameAuthApi):
                                                                hint="当前在休闲场游戏中，不能使用保险箱")
         # 3.验证钱包余额
         (amount > u_info.get("gold", 0)) and self.answer(self.sta_code.GOLD_NOT_ENOUGH,
-                                                         hint="对不起，您的灵石不足，请注意灵石余额！")
+                                                         hint="对不起，您的金币不足，请注意金币余额！")
         # 2.验证使用次数
         used_record = await BaseUserRC.get_safe_box_count(uid)
         time_node = used_record.get("time_node")

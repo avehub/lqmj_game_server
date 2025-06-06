@@ -358,7 +358,7 @@ class MatchServer(BaseServer, LeisureService):
 
             match prop_item.get("game_prop_type"):
                 # 2025/4/15护盾卡 翻倍卡暂时取消
-                # 护盾卡：只判断灵石是否超过准入上限，不判断玩家灵石>=门槛
+                # 护盾卡：只判断金币是否超过准入上限，不判断玩家金币>=门槛
                 # case GamePropType.SHIELD_CARD:
                 #     if target_info.get("max_take") != -1 and target_info.get("max_take") < take_gold:
                 #         return 0, "您的金币超过了该场次的最高携带，请选择更高场次吧~", None

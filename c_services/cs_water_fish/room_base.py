@@ -398,7 +398,7 @@ class Room(BaseLeisureRoom):
         win_gold = sum(win_gold_info.values())
         diff_gold = dealer.gold + abs(lose_gold) - win_gold
         self.info_log(dealer.uid, dealer.seat_id, "是否够赔付：", diff_gold)
-        res_diff_gold = diff_gold  # 剩余的差额灵石
+        res_diff_gold = diff_gold  # 剩余的差额金币
         if diff_gold < 0:
             # 不够赔付时按赢家赔付 比例 递减
             for seat, gold in win_gold_info.items():

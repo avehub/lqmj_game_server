@@ -85,7 +85,7 @@ class Certification(BaseUserInfo):
 
 
 class TestAddGold(BaseUserInfo):
-    """修改灵石（调试用）"""
+    """修改金币（调试用）"""
     decorators = [LimitTestCall, GameChecker]
 
     async def post(self, req, **kwargs):
@@ -97,7 +97,7 @@ class TestAddGold(BaseUserInfo):
                 "gold": 0
             }
             if u_info.get("gold") == 0:
-                self.answer(self.sta_code.ALREADY_DO, hint="灵石已经归零了")
+                self.answer(self.sta_code.ALREADY_DO, hint="金币已经归零了")
             p_info = await BaseUserRC.update_info(u_info, new_info)
         else:
             gold = self.check_int(req.json.get("gold"), require=True, p_name="gold")
@@ -109,7 +109,7 @@ class TestAddGold(BaseUserInfo):
         if not p_info:
             return self.answer(code=self.sta_code.FAIL)
 
-        self.info_log('TestAddGold 修改灵石成功')
+        self.info_log('TestAddGold 修改金币成功')
         return self.format_response_info(p_info)
 
 

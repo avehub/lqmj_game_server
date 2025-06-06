@@ -189,7 +189,8 @@ class RecordsUserAwards(DBModel):
 
     uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
     time_node = fields.BigIntField(max_length=28, null=True, default=0, description='最新领奖时间')
-    award = fields.ForeignKeyField('lucky_game.ConfAward', related_name='conf_award')
+    # TODO 注释掉，后续需要
+    # award = fields.ForeignKeyField('lucky_game.ConfAward', related_name='conf_award')
     award_type = fields.IntEnumField(enum_type=AwardType, index=True, default=0, description='奖励类型')
     receive_times = fields.IntField(max_length=10, null=True, default=0, description='领奖次数')
 

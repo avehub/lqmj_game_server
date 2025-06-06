@@ -21,8 +21,8 @@ class AdminPermission(BaseEnum):
 
 class AssetEnum(BaseEnum):
     """ 资产枚举 """
-    GOLD = 1, 'gold', '灵石'
-    DIAMOND = 2, 'diamond', '仙玉'
+    GOLD = 1, 'gold', '金币'
+    DIAMOND = 2, 'diamond', '钻石'
     RELICS = 3, '法相舍利', ""
     DICE = 4, '骰子', ""
     FIVE_AGGREGATES = 5, '五蕴丹', ""
