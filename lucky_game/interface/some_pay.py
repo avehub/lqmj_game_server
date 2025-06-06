@@ -110,7 +110,7 @@ class BaseSomePay(GameAuthApi):
                             express["orig_price"] = price
                             express["price"] = discount_price
 
-                        # 返还灵石
+                        # 返还金币
                         conf_items = express.get("conf_items")
                         for c in conf_items or []:
                             multiple = sale_limit.get("multiple")

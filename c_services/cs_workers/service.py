@@ -135,13 +135,13 @@ class WorkersServer(JsonBaseServer):
             await self.__user_event_tracking(uid, {'event_tracking': EventTracking.AFTER_FIRST_PAY.val})
 
     async def __insert_gold_statement(self, uid, data):
-        """ 插入灵石流水 """
-        self.info_log(uid, "插入灵石流水", data)
+        """ 插入金币流水 """
+        self.info_log(uid, "插入金币流水", data)
         await RecordsGoldStatement.insert_one(uid, **data)
 
     async def __insert_diamond_statement(self, uid, data):
-        """ 插入仙玉流水 """
-        self.info_log(uid, "插入仙玉流水", data)
+        """ 插入钻石流水 """
+        self.info_log(uid, "插入钻石流水", data)
         await RecordsDiamondStatement.insert_one(uid, **data)
 
     async def __new_user_give_gift(self, uid, data):

@@ -171,7 +171,7 @@ class CompleteAdOrder(GameAuthApi):
         return res_info
 
     async def deal_ad_award(self, ad_slot_id, u_info, _):
-        """每日看广告获得灵石"""
+        """每日看广告获得金币"""
         awards = {}
         if ad_slot_id == AdSlotItem.DY_AWARD:
             conf_odds = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ADS_AWARDS)
@@ -583,7 +583,7 @@ class GetReliefHandler(GameAuthApi):
         # 获取计算后的次数和额度
         relief_json = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF) or {}
         if cur_gold >= relief_json.get("limit_count", 0):
-            return False, "灵石少于1千时才可以领取"
+            return False, "金币少于1千时才可以领取"
 
         # 剩余次数
         relief_record = await BaseUserRC.get_relief_count(uid)

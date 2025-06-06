@@ -193,7 +193,7 @@ class BaseUserRC(BaseCommonRC):
         else:
             info = await cls.cache_by_pk(uid)
         if info:
-            info["gold"] = int(info.get("gold", 0))
+            info["gold"] = float(info.get("gold", 0))
         return info
 
     @classmethod
@@ -201,7 +201,7 @@ class BaseUserRC(BaseCommonRC):
             cls, unique: dict, suffix: str, split: Union[str, int, float, datetime, date] = None, **kwargs):
         info = await cls.cache_by_unique_inner(unique, suffix, split, **kwargs)
         if info:
-            info["gold"] = int(info.get("gold", 0))
+            info["gold"] = float(info.get("gold", 0))
         return info
 
     @classmethod
@@ -240,7 +240,7 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def update_cache(cls, pk_val, new_info: dict):
-        new_info["gold"] = str(new_info.get("gold", 0))
+        new_info["gold"] = float(new_info.get("gold", 0))
         if cls.expired_mode:
             key = f"{cls.tb_name}:{pk_val}"
             await cls.conf.rds.set_item(key, json_encode(new_info), ex_time=cls.expired_sec)
@@ -458,3 +458,16 @@ class BaseBanRC(BaseCommonRC):
         if info:
             return json_parse(info, cls.conf.error_log)
         return await cls.conf.rds.locked(key, fun=from_db)
+
+    @classmethod
+    async def update_user_int_field(cls, uid: int, field_name: str, value: int, operation: str = 'add'):
+        try:
+            user, e = await cls.update_int_field(uid, field_name, value, operation)
+            if not user:
+                return False, e
+            # 更新缓存
+            userinfo = await cls.db_model.get_or_none(uid=uid)
+            await cls.update_cache(uid, userinfo)
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+        return True, "更新成功"
