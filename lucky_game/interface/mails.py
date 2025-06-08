@@ -50,7 +50,7 @@ class MailsOperateUser(GameAuthApi):
         opt_func = map_func.get(opt_type)
         if opt_func and callable(opt_func):
             sta = await opt_func(uid, mail_id, mail_data)
-            self.info_log(uid, f'邮件{ot_enum.phrase}操作结果 {sta}')
+            self.log_info(uid, f'邮件{ot_enum.phrase}操作结果 {sta}')
             if sta:
                 if opt_type == MailOpType.PULL:
                     self.answer(data=sta)
@@ -95,7 +95,7 @@ class MailsOperateUser(GameAuthApi):
                 await Mails.update_by_pk(mail_id, new_data)
                 up_goods = await UpAssets.update_assets(uid, award_items, [], is_pack=True)
         except Exception as e:
-            self.error_log(f"mails_pull 事务执行失败，原因：{e}")
+            self.log_err(f"mails_pull 事务执行失败，原因：{e}")
             self.answer(code=self.sta_code.FAIL, hint="邮件奖励领取失败，请联系客服")
 
         return up_goods
@@ -124,7 +124,7 @@ class MailsOperateOneClick(GameAuthApi):
         opt_func = map_func.get(opt_type)
         if opt_func and callable(opt_func):
             sta = await opt_func(uid, mail_data)
-            self.info_log(uid, f'邮件{ot_enum.phrase}一键操作结果 {sta}')
+            self.log_info(uid, f'邮件{ot_enum.phrase}一键操作结果 {sta}')
             if sta:
                 if opt_type == MailOpType.PULL:
                     self.answer(data=sta)
@@ -171,7 +171,7 @@ class MailsOperateOneClick(GameAuthApi):
                 update_mail and await asyncio.gather(*update_mail)
                 up_goods = await UpAssets.update_assets(uid, award_items, [], is_pack=True)
         except Exception as e:
-            self.error_log(f"mails_pull_auto 事务执行失败，原因：{e}")
+            self.log_err(f"mails_pull_auto 事务执行失败，原因：{e}")
             self.answer(code=self.sta_code.FAIL, hint="一键领取奖励失败，请联系客服")
 
         return up_goods

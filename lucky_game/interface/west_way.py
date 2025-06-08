@@ -64,10 +64,10 @@ class WestWayQueryMap(GameAuthApi):
                 await UserMonopolyRC.update_user_monopoly(uid, update_info={"map": json_encode(award_map)}, old_info=user_map)
                 await UserBagRC.update_user_bag(uid, gift_dice)
         except Exception as e:
-            self.error_log(f"map_first_loading 事务执行失败，原因：{e}")
+            self.log_err(f"map_first_loading 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="首次加载地图失败，请稍后再试")
 
-        self.info_log(uid, "WestWayQueryMap 西行路首次进入")
+        self.log_info(uid, "WestWayQueryMap 西行路首次进入")
         return monopoly
 
     async def map_normal_loading(self, uid, map_conf: list, user_map: dict):
@@ -75,7 +75,7 @@ class WestWayQueryMap(GameAuthApi):
         rand_award_map = user_map.get("map")
         monopoly = Monopoly(position=position, map_conf=map_conf, awards_map=rand_award_map)
 
-        self.info_log(uid, "WestWayQueryMap 西行路正常进入")
+        self.log_info(uid, "WestWayQueryMap 西行路正常进入")
         return monopoly
 
 
@@ -114,7 +114,7 @@ class WestWayQueryGoods(GameAuthApi):
         (not user_magic) and self.answer(self.sta_code.ERR_CONF, hint="没有法宝数据，请稍后再试")
         data['magic_conf'] = user_magic
 
-        self.info_log(uid, "WestWayMapMagic 西行路物资加载成功")
+        self.log_info(uid, "WestWayMapMagic 西行路物资加载成功")
         return self.answer(data=data)
 
 
@@ -169,7 +169,7 @@ class WestWayPlaySteps(GameAuthApi):
                     task_data = {"task_id": TaskId.MONOPOLY_ROLL_DICE_1, "add_val": 1}
                     await self.push_task2worker(CmdWorkers.UPDATE_GAME_TASK, task_data, uid)
         except Exception as e:
-            self.error_log(f"WestWayPlaySteps 事务执行失败，原因：{e}")
+            self.log_err(f"WestWayPlaySteps 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="行进错误，请稍后再试")
 
         # 累积 总步数net_steps 和 总圈数cross_times
@@ -183,7 +183,7 @@ class WestWayPlaySteps(GameAuthApi):
             "net_steps": total_net_steps,
             "cross_times": total_cross_times
         }
-        self.info_log(uid, f"WestWayPlaySteps 西行路行进{total_net_steps}成功，使用{mt_enum.phrase}")
+        self.log_info(uid, f"WestWayPlaySteps 西行路行进{total_net_steps}成功，使用{mt_enum.phrase}")
         return self.answer(data=final_data)
 
     async def process_step_modes(self, uid, req: Request, magic_type: MagicType, monopoly: Monopoly):

@@ -89,7 +89,7 @@ class MakeAdOrder(GameAuthApi):
             "order_id": insert_data.get("ad_order_id"),
             "trade_time": tool_dt.cur_time(),
         }
-        self.info_log(uid, f"MakeAdOrder 创建{ao_enum.phrase}广告订单 成功")
+        self.log_info(uid, f"MakeAdOrder 创建{ao_enum.phrase}广告订单 成功")
         return self.answer(data=return_data)
 
 
@@ -122,7 +122,7 @@ class CompleteAdOrder(GameAuthApi):
             deal_func = map_func.get(ad_slot_id)
             if deal_func and callable(deal_func):
                 res = await deal_func(ad_slot_id, u_info, req)
-                self.info_log(uid, f"CompleteAdOrder {ao_enum.phrase} 领奖完成")
+                self.log_info(uid, f"CompleteAdOrder {ao_enum.phrase} 领奖完成")
                 (not res) and self.answer(self.sta_code.FAIL, hint="看广告失败，请联系客服")
                 # 暂用支付状态表示完成情况
                 update_done = {
@@ -140,7 +140,7 @@ class CompleteAdOrder(GameAuthApi):
                         if check_res == Switch.CLOSE:
                             await BaseUserRC.set_cool_down(uid)
                 except Exception as e:
-                    self.error_log(f"CompleteAdOrder 事务执行失败，原因：{e}")
+                    self.log_err(f"CompleteAdOrder 事务执行失败，原因：{e}")
                     self.answer(self.sta_code.FAIL, hint="广告发奖失败，请联系客服")
                 return self.answer(data=res)
             return self.answer(self.sta_code.FAIL, hint="看广告失败，请联系客服")
@@ -255,7 +255,7 @@ class SignInHandler(GameAuthApi):
         }
         return_data["sign_data"] = sign_data
 
-        self.info_log(uid, f"SignInHandler {at_enum.phrase}配置 / 用户签到数据 成功")
+        self.log_info(uid, f"SignInHandler {at_enum.phrase}配置 / 用户签到数据 成功")
         return self.answer(data=return_data)
 
     async def get_raffle_sign_conf(self, uid):
@@ -395,10 +395,10 @@ class SignInTotalComplete(GameAuthApi):
                 await UserBehaviorsRC.update_user_sign_in_records({"uid": uid, "award_type": award_type}, new_sign_info, sign_info)
                 up_goods = await UpAssets.update_assets(uid, awards, [], is_pack=True)
         except Exception as e:
-            cls.error_log(f"complete_sign_in_total {award_type}事务执行失败，原因：{e}")
+            cls.log_err(f"complete_sign_in_total {award_type}事务执行失败，原因：{e}")
             return False, f"{award_type}签到累计{achieved}发奖失败，请联系客服"
 
-        cls.info_log(uid, f"complete_sign_in_total {award_type}签到累计{achieved}发奖成功")
+        cls.log_info(uid, f"complete_sign_in_total {award_type}签到累计{achieved}发奖成功")
         return True, up_goods
 
 
@@ -494,7 +494,7 @@ class SignInComplete(GameAuthApi):
                     }
                     await UserBehaviorsRC.update_user_sign_in_records({"uid": uid, "award_type": award_type}, new_sign_info, sign_info)
         except Exception as e:
-            cls.error_log(f"complete_sign_in {award_type}事务执行失败，原因：{e}")
+            cls.log_err(f"complete_sign_in {award_type}事务执行失败，原因：{e}")
             return False, f"签到{award_type}发奖失败，请联系客服"
 
         # 5.处理奖励返回，特殊情况需要同时发累计奖
@@ -516,7 +516,7 @@ class SignInComplete(GameAuthApi):
         elif award_type == AwardType.SIGN_IN_RF:
             pro_data = sign_conf
 
-        cls.info_log(uid, f"签到{award_type}成功，是否免费：{is_free}，是否补签：{backdate_sign_date}")
+        cls.log_info(uid, f"签到{award_type}成功，是否免费：{is_free}，是否补签：{backdate_sign_date}")
         return True, pro_data
 
     @classmethod
@@ -561,7 +561,7 @@ class GetReliefConf(GameAuthApi):
             "relief_times": relief_conf.get("times") or 2,
             "relief_used_times": used_times
         }
-        self.info_log(uid, "GetReliefConf 加载救济金配置", relief_data)
+        self.log_info(uid, "GetReliefConf 加载救济金配置", relief_data)
         return self.answer(data=relief_data)
 
 
@@ -613,10 +613,10 @@ class GetReliefHandler(GameAuthApi):
                 up_goods = await UpAssets.update_assets(uid, awards, [], is_pack=True)
                 await BaseUserRC.cache_relief_count(uid, new_relief)
         except Exception as e:
-            cls.error_log(f"GetReliefHandler 事务执行失败，原因：{e}")
+            cls.log_err(f"GetReliefHandler 事务执行失败，原因：{e}")
             return False, "抽奖签到发奖失败，请联系客服"
 
-        cls.info_log(uid, f"GetReliefHandler 领取{relief_conf.get('count')}救济金成功")
+        cls.log_info(uid, f"GetReliefHandler 领取{relief_conf.get('count')}救济金成功")
         return True, up_goods
 
 
@@ -641,7 +641,7 @@ class GetCommonAwardsConf(GameAuthApi):
         common_awards['receive_times'] = watch_record.get(ao_enum.desc, 0) if watch_record else 0
 
         await GoodsManagerRC.pack_goods_conf([common_awards])
-        self.info_log(uid, "GetCommonAwardsConf 加载通用奖励配置", ad_slot_id)
+        self.log_info(uid, "GetCommonAwardsConf 加载通用奖励配置", ad_slot_id)
         return self.answer(data=common_awards)
 
 
@@ -687,10 +687,10 @@ class PullCommonAwards(GameAuthApi):
                 await UserAwardRC.update_user_award_records(query_params, new_pull_info, pull_info)
                 up_goods = await UpAssets.update_assets(uid, awards, [])
         except Exception as e:
-            self.error_log(f"PullCommonAwards 事务执行失败，原因：{e}")
+            self.log_err(f"PullCommonAwards 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="奖励领取失败，请联系客服")
 
-        self.info_log(uid, "PullCommonAwards 已领取奖励", award_id)
+        self.log_info(uid, "PullCommonAwards 已领取奖励", award_id)
         return self.answer(data=up_goods)
 
 
@@ -747,10 +747,10 @@ class OpenTreasureBox(GameAuthApi):
                 await BaseUserRC.deal_user_update_goods(uid, id_list=[bag_item.get('bag_id')], is_del=True,
                                                         key_name=UserBagRC.KEY_NEWLY)
         except Exception as e:
-            self.error_log(f"OpenTreasureBox 事务执行失败，原因：{e}")
+            self.log_err(f"OpenTreasureBox 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="宝盒开启失败，请联系客服")
 
-        self.info_log(uid, "OpenTreasureBox 宝盒开启成功")
+        self.log_info(uid, "OpenTreasureBox 宝盒开启成功")
         return self.answer(data=up_goods)
 
 

@@ -57,7 +57,7 @@ class SessionManager:
     def __del_room(self, tid):
         """ 删除房间 """
         self.__rooms.pop(tid, None)
-        self.info_log(f"回收房间：{tid}, 当前游戏房间：{self.__rooms.keys()}")
+        self.log_info(f"回收房间：{tid}, 当前游戏房间：{self.__rooms.keys()}")
 
     def create_player(self, c_player, uid, is_robot) -> BasePlayer or None:
         """ 创建玩家 """

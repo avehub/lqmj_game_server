@@ -205,10 +205,10 @@ class GetFunnelAnalysis(DataStats):
                 start_time, end_time, uid=uid, limit=limit, offset=offset)
 
             end_time = time.time()
-            self.conf.info_log("漏斗分析1耗时：", end_time - s)
+            self.log_info("漏斗分析1耗时：", end_time - s)
             stats, e2 = await StatsExpert.get_user_event_stats(start_time, end_time, uid=uid)
 
-            self.conf.info_log("漏斗分析2耗时：", time.time() - end_time)
+            self.log_info("漏斗分析2耗时：", time.time() - end_time)
             # 3. 错误处理
             if e1 != "OK" or e2 != "OK":
                 error_msg = f"获取漏斗分析结果错误：记录>>{e1}, 统计>>{e2}"

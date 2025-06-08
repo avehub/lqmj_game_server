@@ -183,30 +183,30 @@ class BaseRoom(metaclass=ABCMeta):
         return (self.__timer and self.__timer.left_seconds() or
                 self.__timer_robot and self.__timer_robot.left_seconds() or 0)
 
-    def info_log(self, *data):
-        self.__service.info_log(self.__tid, *data)
+    def log_info(self, *data):
+        self.__service.log_info(self.__tid, *data)
 
     def err_log(self, *data):
-        self.__service.error_log(self.__tid, *data)
+        self.__service.log_err(self.__tid, *data)
 
     def set_room_status(self, status: RoomStatus):
         self.__room_status = status
-        self.info_log("房间状态变动：", status, status.phrase)
+        self.log_info("房间状态变动：", status, status.phrase)
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.info_log("流程变动：", flow_status, flow_status.phrase)
+        self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
             return True
-        self.info_log("当前房间状态：", self.__room_status, room_status)
+        self.log_info("当前房间状态：", self.__room_status, room_status)
         return False
 
     def flow_status_is_equal(self, flow_status: BaseEnum):
         if self.__flow_status == flow_status:
             return True
-        self.info_log("当前流程状态：", self.__flow_status, flow_status)
+        self.log_info("当前流程状态：", self.__flow_status, flow_status)
         return False
 
     def in_flow_status(self, *status):
@@ -319,7 +319,7 @@ class BaseRoom(metaclass=ABCMeta):
     def player_quit_room(self, player, _):
         """ 玩家离开房间 """
         player.offline = True
-        self.info_log(player.uid, "玩家离开房间", player.is_out)
+        self.log_info(player.uid, "玩家离开房间", player.is_out)
 
     def set_cards_in_debug(self, data):
         """ 设牌调试 """
@@ -485,7 +485,7 @@ class BaseRoom(metaclass=ABCMeta):
         raise NotImplemented
 
     async def force_dismiss(self):
-        self.info_log("强制解散：", self.room_status, self.flow_status)
+        self.log_info("强制解散：", self.room_status, self.flow_status)
         if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS):
             return
         # 该条判断主要为了避免重复回收房间

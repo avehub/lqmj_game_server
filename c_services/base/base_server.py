@@ -73,7 +73,7 @@ class BaseServer(BasePubService, CommonApi):
         self.__service_info = server_info
         self.conf.set_conf(self.__service_name, self.__server_id)
         self.__listen_channel.append(f'{Channel.C_SERVICES}_{service_type}')
-        self.info_log(f"""
+        self.log_info(f"""
             启动服务: {self.__service_name}
             服务号: {self.service_type}
             监听频道：{self.__listen_channel}
@@ -101,16 +101,16 @@ class BaseServer(BasePubService, CommonApi):
             async for message in self.__listener_obj.listen():
                 try:
                     data = message["data"]  # 订阅成功返回1（忽略）
-                    self.info_log(f"收到消息：{message}")
+                    self.log_info(f"收到消息：{message}")
                     if data == 1:
                         continue
                     await self.receive_data_callback(data)
                 except Exception as e:
-                    self.error_log(f"message callback error:{traceback.format_exc()} \n e: {e}")
+                    self.log_err(f"message callback error:{traceback.format_exc()} \n e: {e}")
         except asyncio.exceptions.CancelledError:
             await self.on_signal_stop("xxx")
         except Exception as data:
-            self.error_log(f"read task error: {data}")
+            self.log_err(f"read task error: {data}")
             await asyncio.sleep(0.5)
 
     async def receive_data_callback(self, data: AnyStr):
@@ -157,7 +157,7 @@ class BaseServer(BasePubService, CommonApi):
                         return
                     await self.rep_by_rpc(cs_enum, res_data, message.reply_to, message.correlation_id)
             except Exception as e:
-                self.error_log(f"on_message_rpc error:{traceback.format_exc()} \n -->e: {e}")
+                self.log_err(f"on_message_rpc error:{traceback.format_exc()} \n -->e: {e}")
 
     async def start_server(self):
         """ 启动服务 """
@@ -190,7 +190,7 @@ class BaseServer(BasePubService, CommonApi):
 
     async def on_signal_stop(self, *args):
         """ 服务关闭时触发 """
-        self.info_log(f"{self.service_name} 服务关闭")
+        self.log_info(f"{self.service_name} 服务关闭")
         await connections.close_all()
         self.conf.rmq.close()
         await self.__listener_obj.close()
@@ -208,7 +208,7 @@ class BaseServer(BasePubService, CommonApi):
                 self.__listener_obj = obj
                 break
             except Exception as data:
-                self.error_log(f"sid {self.server_id} init_listen_channel error: {str(data)}")
+                self.log_err(f"sid {self.server_id} init_listen_channel error: {str(data)}")
                 await asyncio.sleep(2)
 
     async def publish_data(self, channel: str, cmd, uid, data: AnyStr):
@@ -217,7 +217,7 @@ class BaseServer(BasePubService, CommonApi):
         try:
             await self.conf.rds.publish(channel, pack_data)
         except Exception as data:
-            self.error_log(f"publish data error: {self.server_id} {data}")
+            self.log_err(f"publish data error: {self.server_id} {data}")
 
     async def cs2ws_by_rds(self, c_code, uid, code: StaCode, hint="", msg: AnyStr = None, req_id=""):
         """
@@ -291,9 +291,9 @@ class BaseServer(BasePubService, CommonApi):
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """
-        data = json_parse(data, self.error_log)
+        data = json_parse(data, self.log_err)
         if data.get("secret", "") != self.conf.SECRET_KEY:
-            self.info_log("非法调用！！！", cmd, uid, data)
+            self.log_info("非法调用！！！", cmd, uid, data)
             return {}
         # data.pop("secret")
         return data

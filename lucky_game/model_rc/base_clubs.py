@@ -39,7 +39,7 @@ class BaseClubRC(BaseCommonRC):
         try:
             club = await cls.db_model.get_or_none(name=name)
             if club:
-                # cls.conf.info_log(f"creat club: {name} 茶馆已存在")
+                # cls.conf.log_info(f"creat club: {name} 茶馆已存在")
                 return False, "茶馆名已存在"
 
             club_dick = {
@@ -47,7 +47,7 @@ class BaseClubRC(BaseCommonRC):
                 "uid": club_uid
             }
 
-            # cls.conf.info_log('creat club:', club_dick)
+            # cls.conf.log_info('creat club:', club_dick)
             row = await cls.db_model.add_one(club_dick)
             club_user, e = await ClubUsersRC.create_club_user(club_uid, row.id)
             if not club_user:

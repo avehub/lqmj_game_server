@@ -35,7 +35,7 @@ class MahjongServer(BaseCardService):
         if room.flow_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
                                 FlowStatus.T_IN_TIAN_TING,FlowStatus.T_IN_FOUR_BAO_TING):
             room.clear_record_operates(player.seat_id)
-            self.info_log(room.tid, player.uid, player.seat_id, "server 玩家选择过：", room.record_operates)
+            self.log_info(room.tid, player.uid, player.seat_id, "server 玩家选择过：", room.record_operates)
             if not room.record_operates:
                 return room.check_action_end()
 

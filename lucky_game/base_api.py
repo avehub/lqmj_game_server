@@ -54,7 +54,7 @@ class BaseApi(BaseHttpApi, CommonApi):
         因此，在处理涉及安全性的事务时，不能仅依赖于X-Forwarded-For来判断用户的真实性。
         """
         ip_list = req.headers.get("x-forwarded-for")
-        # cls.info_log("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
+        # cls.log_info("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
         if ip_list:
             return ip_list.split(',')[0]
         return cls.real_ip(req) or req.client_ip

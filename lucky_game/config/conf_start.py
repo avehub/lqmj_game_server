@@ -65,15 +65,3 @@ class ConfSrv(BaseConf):
     @classmethod
     def log_conf(cls):
         return
-
-    @classmethod
-    def info_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)
