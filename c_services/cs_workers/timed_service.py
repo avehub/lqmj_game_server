@@ -33,9 +33,8 @@ class TimedService():
             ConfSeasonRC, UserRankingRC, BaseRobotRC, DouYin, BaseAds, JuLiangAdsRC
         )
 
-    @classmethod
-    def log_info(cls, *data):
-        cls.conf.log_info("定时任务：", *data)
+    def log_info(self, *data):
+        self.__main_service.log_info("定时任务：", *data)
 
     @property
     def scheduler(self):

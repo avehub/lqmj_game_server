@@ -104,7 +104,7 @@ class MatchServer(BaseServer, LeisureService):
         if self.__timer:
             self.__timer.cancel()
             self.__timer = None
-        self.__timer = DelayCall(seconds, func, *params, **kwargs, log_handler=self.conf.log_err)
+        self.__timer = DelayCall(seconds, func, *params, **kwargs, log_handler=self.log_err)
         self.__timer.start()
 
     async def __init_data(self):

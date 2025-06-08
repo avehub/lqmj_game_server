@@ -78,17 +78,5 @@ class BaseConf(metaclass=SingleTon):
         model_list = [f'lucky_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
-    @classmethod
-    def log_info(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def log_err(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)
-
 
 base_conf = BaseConf()
