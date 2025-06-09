@@ -53,7 +53,8 @@ class BaseConf(metaclass=SingleTon):
         cls.rng = RngMaker
 
         cls.PROC_NAME = cls.SERVER_ID
-        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), proc_split=1, proc_tab=cls.PROC_NAME)
+        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), log_split=2, proc_split=1, keeps=4,
+                          proc_tab=cls.PROC_NAME)
         if cls.CONF_RDS:
             cls.rds = RdsClient.init(cls.CONF_RDS['default'], logs=cls.log)
         if cls.CONF_AMQP:
