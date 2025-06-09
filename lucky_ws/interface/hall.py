@@ -25,7 +25,7 @@ class WsHall(BaseWS):
         uid = user_info.get("uid") or 0
         subject_info = f"{uid}_{user_info.get('created')}"
         encrypt_token = UtilsTool.get_hash_secrets(s_key, subject_info)
-        # self.info_log(uid, "认证参数：", s_key, subject_info, "sign：", token, encrypt_token)
+        # self.log_info(uid, "认证参数：", s_key, subject_info, "sign：", token, encrypt_token)
         if token != encrypt_token:
             data = PbWsBaseRep.encode(self.sta_code.ERR_AUTH, hint="无效认证")
             await ws.send(self.fun_pack_msg(self.dft_type, self.reject_code, data))
@@ -36,14 +36,14 @@ class WsHall(BaseWS):
         #     self.conf.SERVER_SECRET_KEY, subject_info, user_info.get("created"), secrets_type="sha1")
         # token_message = PbWsAuth.pb_model(auth_token)
         # data = PbWsBaseRep.encode(self.sta_code.PASS, hint="ok", _any=token_message)
-        # self.info_log(f"玩家{uid}连接成功, {token_message}")
+        # self.log_info(f"玩家{uid}连接成功, {token_message}")
         return user_info
 
     async def client_listen(self, ws, _):
         """ 监听连接 """
         data = PbWsBaseRep.encode(self.sta_code.PASS, hint="ok")
         await ws.send(self.fun_pack_msg(self.dft_type, CmdWs.SUCCEED, data))
-        self.info_log(f"玩家上线", ws.ukey, ws.timestamp)
+        self.log_info(f"玩家上线", ws.ukey, ws.timestamp)
         await super().client_listen(ws, _)
 
 

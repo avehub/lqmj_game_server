@@ -104,7 +104,7 @@ class MatchServer(BaseServer, LeisureService):
         if self.__timer:
             self.__timer.cancel()
             self.__timer = None
-        self.__timer = DelayCall(seconds, func, *params, **kwargs, log_handler=self.conf.error_log)
+        self.__timer = DelayCall(seconds, func, *params, **kwargs, log_handler=self.log_err)
         self.__timer.start()
 
     async def __init_data(self):
@@ -153,7 +153,7 @@ class MatchServer(BaseServer, LeisureService):
         old_p = self.__players_map.get(p.uid)
         if old_p:
             del p
-            self.info_log('重复匹配拦截！')
+            self.log_info('重复匹配拦截！')
             return
         p.enter_time = tool_dt.cur_time()
         self.__players_map[p.uid] = p
@@ -190,7 +190,7 @@ class MatchServer(BaseServer, LeisureService):
         通知玩家匹配成功
         all_uid_list: 匹配完成的同房间uid
         """
-        self.info_log("匹配成功：", all_uid_list)
+        self.log_info("匹配成功：", all_uid_list)
         data_model = s2c_in_service_model(cs_type=cs_type, uid_list=all_uid_list)
         send_task = []
         for player in player_list:
@@ -251,7 +251,7 @@ class MatchServer(BaseServer, LeisureService):
             cs_type, play_type, level_id = p.s_key.split('_')
             cs_type, play_type, level_id = int(cs_type), int(play_type), int(level_id)
             session = await self.__get_session(cs_type, level_id, play_type)
-            self.info_log("重复匹配", p.uid, p.enter_time, p.s_key, session.players_ranking_pool)
+            self.log_info("重复匹配", p.uid, p.enter_time, p.s_key, session.players_ranking_pool)
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.ALREADY_DO, hint='已在匹配中，请勿重复操作', req_id=req_id)
 
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
@@ -466,12 +466,12 @@ class MatchServer(BaseServer, LeisureService):
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, '取消失败，请稍后再试~', req_id=req_id)
         session.rm_wait_player(player, self.__matching_mode)
         self.__rm_player(uid)
-        self.info_log(uid, "取消匹配成功！")
+        self.log_info(uid, "取消匹配成功！")
         return await self.cs2ws_by_rmq(cmd, uid, StaCode.PASS, 'ok', req_id=req_id)
 
     def __add_forbid_match(self, _, data):
         """ 增加禁止匹配：针对整个服务 """
-        data = tool.json_parse(data, self.error_log)
+        data = tool.json_parse(data, self.log_err)
         secret = data.get("secret") or ""
         if secret != self.__secret:
             return
@@ -486,7 +486,7 @@ class MatchServer(BaseServer, LeisureService):
         if not isinstance(cs_enum, ServiceEnum):
             return
         exp_str = KitDt.timestamp_2_time_str(exp_timestamp)
-        self.info_log(f"增加禁止匹配服务：{cs_enum}, 直到：{exp_str}", )
+        self.log_info(f"增加禁止匹配服务：{cs_enum}, 直到：{exp_str}", )
         self.__forbid_match_set[cs_type] = exp_str
         self.call_flow(seconds, self.__rm_forbid_match, 0, {"cs_type": cs_type})
 
@@ -496,5 +496,5 @@ class MatchServer(BaseServer, LeisureService):
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         if not isinstance(cs_enum, ServiceEnum):
             return
-        self.info_log("移除禁止匹配服务：", cs_type)
+        self.log_info("移除禁止匹配服务：", cs_type)
         self.__forbid_match_set.pop(cs_type, None)

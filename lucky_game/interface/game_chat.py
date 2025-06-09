@@ -47,7 +47,7 @@ class GetQuickChatConf(GameAuthApi):
             else:
                 pass
 
-        self.info_log(f"GetQuickChatConf 快捷聊天 {chat_type}，游戏 {cs_type}，场次 {level} 配置加载成功")
+        self.log_info(f"GetQuickChatConf 快捷聊天 {chat_type}，游戏 {cs_type}，场次 {level} 配置加载成功")
         return self.answer(data=chat_confs)
 
 

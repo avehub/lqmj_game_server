@@ -57,7 +57,7 @@ class Room(RoomComb):
     async def turn_to_someone(self, player):
         """ 轮到某人 """
         if not player:
-            self.info_log("没有下一家了")
+            self.log_info("没有下一家了")
             await self.enter_round_over()
             return
         self.curr_seat_id = player.seat_id
@@ -80,14 +80,14 @@ class Room(RoomComb):
         data_model.played_shi_fu = self.__played_shi_fu
         await self.inner_send(player, CmdRoom.TURN_TO, data_model)
 
-        self.info_log("turn_to", player.uid, yao_de_qi)
+        self.log_info("turn_to", player.uid, yao_de_qi)
         if not yao_de_qi:
             if len(player.cards) == 1:  # 最后一张系统自动捡
                 rs = 1
             else:
                 rs = random.randint(2, 5) if player.is_robot else 4
             code, hint = await self.delay_func(rs, self.player_pick_cards, player)
-            self.info_log(player.uid, "要不起捡牌", code, hint)
+            self.log_info(player.uid, "要不起捡牌", code, hint)
             return
         # 最后一张
         if len(player.cards) == 1:
@@ -150,7 +150,7 @@ class Room(RoomComb):
             "req_model_id": req_model_id,
         }
         # 使用rmq推送机器人预测出牌或捡牌
-        self.info_log(player.uid, "推送打妖怪机器人-[出牌]: ", req_model_id, legal_actions)
+        self.log_info(player.uid, "推送打妖怪机器人-[出牌]: ", req_model_id, legal_actions)
         await self.cs2cs_by_rmq(
             cs_type=ServiceEnum.ROBOT_MONSTER,
             c_code=CmdRobotMethods.CAL_ACTION.val,
@@ -198,7 +198,7 @@ class Room(RoomComb):
             "req_model_id": req_model_id,
         }
         # 使用rmq推送机器人预测出牌或捡牌
-        self.info_log(player.uid, "推送打妖怪机器人-[出牌]: ", req_model_id, legal_actions)
+        self.log_info(player.uid, "推送打妖怪机器人-[出牌]: ", req_model_id, legal_actions)
         await self.cs2cs_by_rmq(
             cs_type=ServiceEnum.ROBOT_MONSTER,
             c_code=CmdRobotMethods.CAL_ACTION.val,
@@ -267,7 +267,7 @@ class Room(RoomComb):
         else:
             can_chu_cards = self.get_legal_cards(player)
             if not can_chu_cards:
-                self.info_log(player.seat_id, "随机出牌无牌可出")
+                self.log_info(player.seat_id, "随机出牌无牌可出")
                 return
             cards = [can_chu_cards[0]]
         # 具体出牌
@@ -327,12 +327,12 @@ class Room(RoomComb):
         await super().do_trustee(p)  # 如果此处修改玩家状态未托管，说明玩家此前出与未托管中
         if p.seat_id == self.curr_seat_id and self.flow_status_is_equal(FlowStatus.T_IN_TURN_TO):
             if p.trustee:
-                self.info_log(p.uid, "玩家主动托管出牌")
+                self.log_info(p.uid, "玩家主动托管出牌")
                 if self.turn_cards and not Rule.yao_de_qi(self.turn_cards[-1][-1], p.cards):
                     return await self.player_pick_cards(p)
                 await self.play_card_by_rand(p)
             else:
-                self.info_log(p.uid, "轮到玩家出牌但是取消托管")
+                self.log_info(p.uid, "轮到玩家出牌但是取消托管")
                 self.cancel_timer_trustee()  # 取消托管timer
 
     async def player_play_cards(self, p, cards: list):
@@ -384,7 +384,7 @@ class Room(RoomComb):
         self.add_tribulation_val(1)
         self.add_table_cards(turn)
 
-        self.info_log(p.uid, "出牌成功: ", cards)
+        self.log_info(p.uid, "出牌成功: ", cards)
 
         card_str = Rule.get_card_str(card_value)
         self.__str_turn_cards += card_str
@@ -512,7 +512,7 @@ class Room(RoomComb):
 
         # pick_len = len(self.turn_cards)
         next_player = self.next_player(self.curr_seat_id)
-        self.info_log(p.uid, "捡牌")
+        self.log_info(p.uid, "捡牌")
         if not next_player:  # 如果没有下一个玩家，捡完牌结束
             return await self.pick_last_cards()
 

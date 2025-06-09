@@ -38,7 +38,7 @@ class LeisureService():
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         if not isinstance(cs_enum, ServiceEnum):
             return
-        self.info_log("刷新休闲场配置", data)
+        self.log_info("刷新休闲场配置", data)
         await self.__read_leisure_conf(cs_type)
 
 
@@ -70,7 +70,7 @@ class BaseLeisureService(BaseService, LeisureService):
             return False
         u_info = {"gold": player.gold, "uid": player.uid}
         sta_code, hint = await UserSafeBoxRC.safe_box_use_complement(u_info, safe_box_info)
-        self.info_log(player.uid, "自动补足", sta_code, hint)
+        self.log_info(player.uid, "自动补足", sta_code, hint)
         if sta_code == StaCode.PASS:
             await self.init_player(player)
             return True
@@ -84,7 +84,7 @@ class BaseLeisureService(BaseService, LeisureService):
         room_conf = await self.get_level_conf(level, play_type)
         extra_room_info = data.get("extra_room_info") or {}
         room = self.create_room(room, room_conf, **extra_room_info)
-        self.info_log("接收到新匹配：", data, "开启新桌子：", room.tid)
+        self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)
         player_list = []
         for u_info in user_list:
             uid = u_info.get("uid")

@@ -95,19 +95,19 @@ class WorkersServer(JsonBaseServer):
 
     @classmethod
     def red_dot_log(cls, *data):
-        cls.info_log("红点任务：", *data)
+        cls.log_info("红点任务：", *data)
 
     async def __update_game_times(self, uid, data):
         """ 更新游戏次数 """
         data.update({"uid": uid})
         res = await PlayerGameTimesRC.update_game_times(data)
-        self.info_log(uid, "更新玩家次数", res)
+        self.log_info(uid, "更新玩家次数", res)
 
     async def __insert_game_grade(self, _, data):
         """ 插入游戏战绩 """
         up_rank = data.pop('up_rank', False)
         grade_data = data.get('data')
-        self.info_log("插入玩家战绩", data, up_rank)
+        self.log_info("插入玩家战绩", data, up_rank)
         if up_rank:
             for one_data in grade_data:
                 rank_score = one_data.get("rank_score")
@@ -120,14 +120,14 @@ class WorkersServer(JsonBaseServer):
 
     async def __update_game_task(self, uid, data):
         """ 更新游戏任务 """
-        self.info_log(uid, "更新游戏任务", data)
+        self.log_info(uid, "更新游戏任务", data)
         finish_flag, old_task = await UserTaskRC.update_user_task_records(uid, data)
         if finish_flag:
             await self.__send_notice_to_task(uid, old_task.get("task_type"))
 
     async def __update_user_vip_level(self, uid, data):
         """ 更新VIP经验值 """
-        self.info_log(uid, "更新VIP经验值", data)
+        self.log_info(uid, "更新VIP经验值", data)
         _, up_flag = await UserVipRC.update_user_vip_level(uid, amount=data.get("amount"))
         if up_flag:
             await self.__notice_by_vip(uid, up_flag)
@@ -136,17 +136,17 @@ class WorkersServer(JsonBaseServer):
 
     async def __insert_gold_statement(self, uid, data):
         """ 插入金币流水 """
-        self.info_log(uid, "插入金币流水", data)
+        self.log_info(uid, "插入金币流水", data)
         await RecordsGoldStatement.insert_one(uid, **data)
 
     async def __insert_diamond_statement(self, uid, data):
         """ 插入钻石流水 """
-        self.info_log(uid, "插入钻石流水", data)
+        self.log_info(uid, "插入钻石流水", data)
         await RecordsDiamondStatement.insert_one(uid, **data)
 
     async def __new_user_give_gift(self, uid, data):
         """ 新用户赠送礼物 """
-        self.info_log(uid, "新用户赠送礼物", data)
+        self.log_info(uid, "新用户赠送礼物", data)
 
     async def __await_get_ws_id(self, uid, time_limit=60):
         re_time = tool_dt.cur_time()
@@ -380,7 +380,7 @@ class WorkersServer(JsonBaseServer):
     async def __process_safe_box(self, uid, _):
         """激活/升级/扩容保险箱"""
         top_conf = await UserActivityRC.check_top_lifetime_card(uid)
-        self.info_log(uid, "激活/升级/扩容保险箱", top_conf)
+        self.log_info(uid, "激活/升级/扩容保险箱", top_conf)
         if top_conf:
             vip_conf = await UserVipRC.get_vip_conf_by_uid(uid)
             await UserSafeBoxRC.process_safe_box(
@@ -389,7 +389,7 @@ class WorkersServer(JsonBaseServer):
     async def __update_item_order_count(self, uid, data):
         """ 更新玩家完成订单数 """
         res = await UserBehaviorsRC.update_user_order_count(uid, data)
-        self.info_log(uid, "更新玩家完成订单数", True if res else False)
+        self.log_info(uid, "更新玩家完成订单数", True if res else False)
 
     async def __update_bag_prop(self, uid, data):
         """ 更新背包物品 """
@@ -401,13 +401,13 @@ class WorkersServer(JsonBaseServer):
         for d in data:
             goods_id_list.append(d.get('goods_id'))
         await UserBagRC.batch_deal_new_props(uid, goods_id_list)
-        self.info_log(uid, "更新背包物品", data)
+        self.log_info(uid, "更新背包物品", data)
 
     async def __check_limited_goods(self, uid, data):
         """检查限时物品"""
         # 法相
         # sta = await UserSkinRC.deal_expire_skin(uid, data.get('cs_type'))
-        self.info_log(uid, "检查限时物品")
+        self.log_info(uid, "检查限时物品")
 
     async def __manager_send_mails(self, _, data):
         """管理员发邮件"""
@@ -454,7 +454,7 @@ class WorkersServer(JsonBaseServer):
         receivers：群发名单
         mails：邮件内容 （内容相同，则复制给所有收件人 / 内容各异，则正常发送）
         """
-        self.info_log("群发邮件及通知")
+        self.log_info("群发邮件及通知")
         receivers = data.get('receivers') or []
         mails = data.get('mails') or []
 
@@ -526,15 +526,15 @@ class WorkersServer(JsonBaseServer):
         off_season_time = data.get("off_season_time")
         condition = data.get("condition") or 30
         if not season_desc or not off_season_time:
-            self.info_log("新赛季名称或休赛期时长不能为空！")
+            self.log_info("新赛季名称或休赛期时长不能为空！")
             return
         if not isinstance(off_season_time, int) or not isinstance(condition, int):
-            self.info_log("场数限制或休赛期时长必须为整数！")
+            self.log_info("场数限制或休赛期时长必须为整数！")
             return
         flag, msg = await ConfSeasonRC.add_season(**data)
         if not flag:
-            return self.info_log(f"赛季添加失败：{msg}")
-        self.info_log(f"赛季添加成功：{season_desc}")
+            return self.log_info(f"赛季添加失败：{msg}")
+        self.log_info(f"赛季添加成功：{season_desc}")
 
     async def __ban_player(self, _, data):
         """ 封禁玩家 """
@@ -544,13 +544,13 @@ class WorkersServer(JsonBaseServer):
             return
         u_info = await BaseUserRC.cache_by_uid(uid)
         if not u_info:
-            self.info_log("封禁玩家失败，没有玩家信息", uid)
+            self.log_info("封禁玩家失败，没有玩家信息", uid)
             return
         await BaseUserRC.update_info(u_info, {"ban_time": ban_time})
         if ban_time == 0:
-            self.info_log("解禁玩家完成：", uid)
+            self.log_info("解禁玩家完成：", uid)
             return
-        self.info_log("封禁玩家：", uid)
+        self.log_info("封禁玩家：", uid)
         await self.inner_cs2ws(CmdWs.BAN_PLAYER, 1, data)
 
     async def __loop_game_announcement(self):
@@ -593,7 +593,7 @@ class WorkersServer(JsonBaseServer):
         # 1.检查是否完成签到
         task_info = await UserTaskRC.cache_task_record_by_id(uid, TaskId.ROOKIE_SEVEN_SIGN_IN.val)
         if task_info.get('task_sta') == CompleteSta.COMPLETED and task_info.get('cur_value', 0) >= 7:
-            self.info_log(uid, "七日签到已完成")
+            self.log_info(uid, "七日签到已完成")
             return
 
         # 2.检查今天签到情况
@@ -602,10 +602,10 @@ class WorkersServer(JsonBaseServer):
         sign_in_date, sign_in_achieved = UserBehaviorsRC.parse_sign_in_info(sign_info)
 
         if len(sign_in_achieved) >= 7:
-            self.info_log(uid, f"七日签到奖励已领完 {sign_in_achieved}")
+            self.log_info(uid, f"七日签到奖励已领完 {sign_in_achieved}")
             return
         if today_time_node in sign_in_date:
-            self.info_log(uid, f"今天的签到已完成 {today_time_node}")
+            self.log_info(uid, f"今天的签到已完成 {today_time_node}")
             return
 
         # 3.签到
@@ -616,7 +616,7 @@ class WorkersServer(JsonBaseServer):
             "award_type": award_type,
             "sign_in_date": json_encode(sign_in_date) if sign_in_date else '[]'
         }
-        self.info_log(uid, f"进行登陆签到 {today_time_node}")
+        self.log_info(uid, f"进行登陆签到 {today_time_node}")
         await UserBehaviorsRC.update_user_sign_in_records(query_params, new_sign_info, sign_info)
 
     @staticmethod
@@ -648,7 +648,7 @@ class WorkersServer(JsonBaseServer):
     async def __background_scheduled_task(self, _, data):
         cmd = data.get('cmd', None)
         func = self.cmd2func.get(cmd)
-        self.info_log("后台新增定时任务", cmd)
+        self.log_info("后台新增定时任务", cmd)
         if not func:
             return
         kwargs = {
@@ -673,9 +673,9 @@ class WorkersServer(JsonBaseServer):
             h_key = self.task_h_key(_, start_time)
             await self.conf.rds.drop_hash(self.TASK_DATE_KEY, h_key)
         except Exception as e:
-            self.error_log(f"取消后台定时任务 事务执行失败，原因：{e}")
+            self.log_err(f"取消后台定时任务 事务执行失败，原因：{e}")
 
-        self.info_log("取消后台定时任务！")
+        self.log_info("取消后台定时任务！")
 
     async def __fetch_active_mails(self, uid, _):
         mails_list = await RecordsAdminMailsRC.get_active_mails()
@@ -713,7 +713,7 @@ class WorkersServer(JsonBaseServer):
 
     async def __user_event_tracking(self, uid, data):
         """ 用户事件追踪 """
-        self.info_log("用户事件追踪:", uid, data)
+        self.log_info("用户事件追踪:", uid, data)
         event_tracking = data.get('event_tracking')
         et_enum = EventTracking.find_member_by_val(event_tracking)
         if not isinstance(et_enum, EventTracking):
@@ -725,20 +725,20 @@ class WorkersServer(JsonBaseServer):
                 {"uid": uid, "event_tracking": EventTracking.AFTER_REGISTER.val}, limit=1
             )
             if not reg_record:
-                self.info_log(f"用户 {uid} 属于老用户暂不统计")
+                self.log_info(f"用户 {uid} 属于老用户暂不统计")
                 return
         # 首次对局判断
         if event_tracking == EventTracking.AFTER_FIRST_GAME.val:
             game_record = await RecordsGameGrade.get_by_dict({"uid": uid}, limit=1)
             if game_record:
-                self.info_log(f"用户 {uid} 非首次对局")
+                self.log_info(f"用户 {uid} 非首次对局")
                 return
         # 首次付费判断
         elif event_tracking == EventTracking.AFTER_FIRST_PAY.val:
             pay_record = await RecordsTradeOrder.get_by_dict(
                 {"uid": uid, "order_status": OrderStatus.PAID.val}, limit=1)
             if pay_record:
-                self.info_log(f"用户 {uid} 非首次付费")
+                self.log_info(f"用户 {uid} 非首次付费")
                 return
 
         async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -762,6 +762,6 @@ class WorkersServer(JsonBaseServer):
             #             "event_desc": EventTracking.AFTER_REGISTER.phrase,
             #             "event_time": u_info.get('created')
             #         })
-            #         self.info_log(f"为用户 {uid} 补充注册记录")
+            #         self.log_info(f"为用户 {uid} 补充注册记录")
             #     else:
-            #         self.error_log(f"用户 {uid} 未注册，且未找到user表记录")
+            #         self.log_err(f"用户 {uid} 未注册，且未找到user表记录")

@@ -42,18 +42,6 @@ class ConfSrv(BaseConf):
         return
 
     @classmethod
-    def info_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)
-
-    @classmethod
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
