@@ -172,7 +172,6 @@ class BaseLogin(GameAuthApi):
 
     async def whether_through(self) -> List[Dict]:
         """ 是否通过 """
-        return []
         server_info: List[Dict] = await ServerAddrRC.cache_all()
         if not server_info or not server_info[0].get("status"):
             self.answer(hint="As server maintenance, please visit later, thank you.")
