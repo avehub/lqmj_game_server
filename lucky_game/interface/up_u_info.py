@@ -15,7 +15,7 @@ from lucky_game.handler.wechat import WeChat
 class BaseUserInfo(GameAuthApi):
 
     def format_response_info(self, user: dict):
-        self.info_log("format_response_info:", user)
+        self.log_info("format_response_info:", user)
         return self.answer(data=user)
 
 
@@ -44,7 +44,7 @@ class ModifyGeneralUserInfo(BaseUserInfo):
         p_info = await BaseUserRC.update_info(old_info, new_info)
         (not p_info) and self.answer(self.sta_code.PASS)
 
-        self.info_log('ModifyGeneralUserInfo suc:', p_info)
+        self.log_info('ModifyGeneralUserInfo suc:', p_info)
         return self.format_response_info(p_info)
 
 
@@ -65,7 +65,7 @@ class Certification(BaseUserInfo):
             self.answer(self.sta_code.HAD_CERTIFICATED)
 
         status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
-        self.info_log("实名结果：", result)
+        self.log_info("实名结果：", result)
         if not status:
             self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
 
@@ -80,12 +80,12 @@ class Certification(BaseUserInfo):
             new_info["pi"] = pi
         p_info = await BaseUserRC.update_info(u_info, new_info)
         # (not p_info) and self.answer(self.sta_code.WITHOUT_MODIFY, hint='Failed to modify info.')
-        self.info_log('Certification 实名认证 suc:', p_info)
+        self.log_info('Certification 实名认证 suc:', p_info)
         return self.format_response_info(p_info)
 
 
 class TestAddGold(BaseUserInfo):
-    """修改灵石（调试用）"""
+    """修改金币（调试用）"""
     decorators = [LimitTestCall, GameChecker]
 
     async def post(self, req, **kwargs):
@@ -97,7 +97,7 @@ class TestAddGold(BaseUserInfo):
                 "gold": 0
             }
             if u_info.get("gold") == 0:
-                self.answer(self.sta_code.ALREADY_DO, hint="灵石已经归零了")
+                self.answer(self.sta_code.ALREADY_DO, hint="金币已经归零了")
             p_info = await BaseUserRC.update_info(u_info, new_info)
         else:
             gold = self.check_int(req.json.get("gold"), require=True, p_name="gold")
@@ -109,7 +109,7 @@ class TestAddGold(BaseUserInfo):
         if not p_info:
             return self.answer(code=self.sta_code.FAIL)
 
-        self.info_log('TestAddGold 修改灵石成功')
+        self.log_info('TestAddGold 修改金币成功')
         return self.format_response_info(p_info)
 
 
@@ -131,7 +131,7 @@ class GetSessionKey(BaseUserInfo):
         else:
             return self.answer(self.sta_code.ERR_ARG, hint='Invalid platform.')
 
-        self.info_log(f'{platform} GetSessionKey res:', code, req_data)
+        self.log_info(f'{platform} GetSessionKey res:', code, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)

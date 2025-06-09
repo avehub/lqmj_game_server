@@ -59,7 +59,7 @@ class GetActivityHandler(GameAuthApi):
             "act_conf": act_datas,
             "extra_conf": json_encode(extra_conf)
         }
-        self.info_log(uid, "GetActivityHandler 获取活动配置 / 用户充值数据 成功", act_type, act_id)
+        self.log_info(uid, "GetActivityHandler 获取活动配置 / 用户充值数据 成功", act_type, act_id)
         return self.answer(data=data)
 
 
@@ -109,10 +109,10 @@ class GetActivityAwards(GameAuthApi):
                     await UserActivityRC.update_user_charge_records(uid, act_item, new_data)
                     up_goods = await UpAssets.update_assets(uid, act_awards, [], is_pack=True)
             except Exception as e:
-                self.error_log(f"GetActivityAwards 事务执行失败，原因：{e}")
+                self.log_err(f"GetActivityAwards 事务执行失败，原因：{e}")
                 self.answer(code=self.sta_code.FAIL, hint="奖励领取失败，请联系客服")
 
-            self.info_log(uid, act_item.get('desc', ''), '活动领取成功')
+            self.log_info(uid, act_item.get('desc', ''), '活动领取成功')
             return self.answer(data=up_goods)
         return self.answer(code=self.sta_code.FAIL)
 
@@ -244,7 +244,7 @@ class VipLevelHandler(GameAuthApi):
             "vip_conf": vip_items,
             "vip_data": vip_data
         }
-        self.info_log(uid, "VipLevelHandler 获取VIP配置 / 用户VIP数据 成功")
+        self.log_info(uid, "VipLevelHandler 获取VIP配置 / 用户VIP数据 成功")
         return self.answer(data=return_data)
 
 
@@ -316,8 +316,8 @@ class VipLevelPullAwards(GameAuthApi):
                 await UserVipRC.update_user_vip(uid, pull_info, u_vip_info)
                 up_goods = await UpAssets.update_assets(uid, awards, [], is_pack=True)
         except Exception as e:
-            self.error_log(f"VipLevelPullAwards 事务执行失败，原因：{e}")
+            self.log_err(f"VipLevelPullAwards 事务执行失败，原因：{e}")
             self.answer(code=self.sta_code.FAIL, hint="vip奖励领取失败，请联系客服")
 
-        self.info_log(uid, f"VipLevelPullAwards vip领取{level}奖成功")
+        self.log_info(uid, f"VipLevelPullAwards vip领取{level}奖成功")
         return self.answer(data=up_goods)

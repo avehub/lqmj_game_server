@@ -3,8 +3,8 @@ import asyncio
 
 from sanic import Request, json
 from lucky_game.base_api import GameAuthApi
-from lucky_game.model_rc.base_robot import BaseRobotRC
-from lucky_game.model_rc.base_user import BaseUserRC
+# from lucky_game.model_rc.base_robot import BaseRobotRC
+# from lucky_game.model_rc.base_user import BaseUserRC
 
 
 class TestApi(GameAuthApi):
@@ -25,7 +25,10 @@ class TestApi(GameAuthApi):
             "remote_addr": req.remote_addr,
             "req_ip": req.ip,
         }
-        return self.answer_json(data=data)
+
+        res = await self.conf.rds.get_item("test")
+
+        return json(data)
 
 
 

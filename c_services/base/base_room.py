@@ -25,7 +25,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__level_desc = room_conf.get("desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
 
-        self.__max_player_count = room_conf.get("rule_conf", {}).get("max_player") or 4
+        self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
         self.__total_round = room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
 
         self.__curr_seat_id = 0
@@ -183,30 +183,30 @@ class BaseRoom(metaclass=ABCMeta):
         return (self.__timer and self.__timer.left_seconds() or
                 self.__timer_robot and self.__timer_robot.left_seconds() or 0)
 
-    def info_log(self, *data):
-        self.__service.info_log(self.__tid, *data)
+    def log_info(self, *data):
+        self.__service.log_info(self.__tid, *data)
 
     def err_log(self, *data):
-        self.__service.error_log(self.__tid, *data)
+        self.__service.log_err(self.__tid, *data)
 
     def set_room_status(self, status: RoomStatus):
         self.__room_status = status
-        self.info_log("房间状态变动：", status, status.phrase)
+        self.log_info("房间状态变动：", status, status.phrase)
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.info_log("流程变动：", flow_status, flow_status.phrase)
+        self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
             return True
-        self.info_log("当前房间状态：", self.__room_status, room_status)
+        self.log_info("当前房间状态：", self.__room_status, room_status)
         return False
 
     def flow_status_is_equal(self, flow_status: BaseEnum):
         if self.__flow_status == flow_status:
             return True
-        self.info_log("当前流程状态：", self.__flow_status, flow_status)
+        self.log_info("当前流程状态：", self.__flow_status, flow_status)
         return False
 
     def in_flow_status(self, *status):
@@ -266,7 +266,7 @@ class BaseRoom(metaclass=ABCMeta):
                 if with_cards and not p.cards:
                     continue
                 return p
-        for i in range(self.max_player_count - 1, seat_id - 2, -1):  # 前包后不包，只到当前玩家的下一个玩家
+        for i in range(self.max_player_count - 1, seat_id - 1, -1):  # -1是当前玩家，不能包含当前玩家
             p = self.seats[i]
             if p:
                 if p.is_out:
@@ -319,28 +319,35 @@ class BaseRoom(metaclass=ABCMeta):
     def player_quit_room(self, player, _):
         """ 玩家离开房间 """
         player.offline = True
-        self.info_log(player.uid, "玩家离开房间", player.is_out)
+        self.log_info(player.uid, "玩家离开房间", player.is_out)
 
     def set_cards_in_debug(self, data):
         """ 设牌调试 """
         if LIVE_SERVER:
             return StaCode.FAIL, "不允许设牌"
+
         dealer_id = data.dealer_id
         cards = data.cards
+        if len(cards) != self.max_player_count + 1:
+            return StaCode.FAIL, "设牌数据结构错误"
+
         all_cards = []
         for c in cards:
             all_cards.extend(c)
         card2count = {}
+
         for c in all_cards:
             count = card2count.get(c, 0) + 1
             card2count[c] = count
-            if count > 4:
+            if count > self.__poker.CARDS_NUM:
                 return StaCode.FAIL, "设牌多于牌该有的数量"
-            if not self.poker.CARDS_ENUM.find_member_by_val(c):
+            card = self.__poker.CARDS_ENUM.find_member_by_val(c)
+            if not card:
                 return StaCode.FAIL, "设牌错误"
+
         if dealer_id > 0:
             pass  # todo 设置庄家
-        self.__poker.set_order_cards(cards, self.__max_player_count)  # 具体设置牌
+        self.__poker.set_order_cards(cards)  # 具体设置牌
         return StaCode.PASS, ""
 
     async def round_start(self):
@@ -478,7 +485,7 @@ class BaseRoom(metaclass=ABCMeta):
         raise NotImplemented
 
     async def force_dismiss(self):
-        self.info_log("强制解散：", self.room_status, self.flow_status)
+        self.log_info("强制解散：", self.room_status, self.flow_status)
         if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS):
             return
         # 该条判断主要为了避免重复回收房间
@@ -496,6 +503,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def clear_room(self):
         """ 清理房间 """
+        self.__service = None
         self.__room_status = RoomStatus.T_IDLE
         self.__flow_status = 0
         self.__curr_seat_id = 0
@@ -503,8 +511,9 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats.clear()
 
-    def refresh_room_conf(self, room_conf):
+    def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """
+        self.__service = service
         self.__room_conf = room_conf
         self.__room_type = room_conf.get("room_type") or RoomType.COMMON
         self.__play_type = room_conf.get("play_type") or 1

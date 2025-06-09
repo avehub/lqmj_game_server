@@ -1,8 +1,9 @@
-import multiprocessing
 import os
+from typing import Type
+
 from nsanic.libs.rds_client import RdsClient
 from nsanic.libs.mult_log import NLogger
-from nsanic.libs.random_maker import RngMaker
+from nsanic.libs.mk_random import RngMaker
 from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, USE_OBJ_POOL, C_SERVICE_SECRET_KEY
 from common.public.enum_const import DbKey
 from common.utils.meta_class import SingleTon
@@ -39,7 +40,7 @@ class BaseConf(metaclass=SingleTon):
     CONF_DB = CONF_DB
     CONF_AMQP = CONF_AMQP
 
-    rng: RngMaker = None
+    rng: Type[RngMaker] = None
     rds: RdsClient = None
     log: NLogger = NLogger
     rmq: Rmq = None
@@ -48,14 +49,12 @@ class BaseConf(metaclass=SingleTon):
     def set_conf(cls, server_name, server_id):
         cls.SERVER_NAME = server_name
         cls.SERVER_ID = f"{server_name}_{server_id}"
-        cls.rng = RngMaker(cls.SERVER_ID)
+        RngMaker.init(cls.SERVER_ID)
+        cls.rng = RngMaker
 
-        # name = multiprocessing.current_process().name
-        # name_arr = name.split('-')
-        # proc_name = f"{name_arr[-2]}{name_arr[-1]}" if len(name_arr) >= 2 else name
-        # cls.PROC_NAME = proc_name
         cls.PROC_NAME = cls.SERVER_ID
-        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), proc_split=1, proc_tab=cls.PROC_NAME)
+        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), log_split=2, proc_split=1, keeps=4,
+                          proc_tab=cls.PROC_NAME)
         if cls.CONF_RDS:
             cls.rds = RdsClient.init(cls.CONF_RDS['default'], logs=cls.log)
         if cls.CONF_AMQP:
@@ -79,18 +78,6 @@ class BaseConf(metaclass=SingleTon):
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
         model_list = [f'lucky_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
-
-    @classmethod
-    def info_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)
 
 
 base_conf = BaseConf()

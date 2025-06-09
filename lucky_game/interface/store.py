@@ -47,7 +47,7 @@ class StoreHandler(GameAuthApi):
                 (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                   hint='游戏商店加载失败，请稍后再试')
 
-        self.info_log(uid, f"StoreHandler {bs_enum.phrase}加载成功")
+        self.log_info(uid, f"StoreHandler {bs_enum.phrase}加载成功")
         return self.answer(data=items_lists)
 
 
@@ -100,7 +100,7 @@ class PayByRedemption(GameAuthApi):
         if pay_func and callable(pay_func):
             all_items, show_items = await pay_func(u_info, express.get("store_type"), int(express.get("price", 0)),
                                                    trade_item_count, conf_items)
-            self.info_log(uid, f'PayByRedemption {pt_enum.phrase}兑换结果', True if all_items and show_items else False)
+            self.log_info(uid, f'PayByRedemption {pt_enum.phrase}兑换结果', True if all_items and show_items else False)
             if all_items and show_items:
                 try:
                     async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -109,7 +109,7 @@ class PayByRedemption(GameAuthApi):
                         if buy_record:
                             await BaseUserRC.cache_count_buy_limit(uid, trade_item, buy_record)
                 except Exception as e:
-                    self.error_log(f'{pt_enum.phrase}事务执行失败，原因：{e}')
+                    self.log_err(f'{pt_enum.phrase}事务执行失败，原因：{e}')
                     self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
 
                 return self.answer(data=show_items)
@@ -152,7 +152,7 @@ class PayByRedemption(GameAuthApi):
         """金币兑换"""
         price = unit_price * trade_count  # 总价，单价 * 交易数量（默认1）
         gold = u_info.get("gold", 0)
-        (gold < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='灵石不足，请先购买灵石')
+        (gold < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='金币不足，请先购买金币')
 
         # 扣费
         cost_item = {
@@ -175,7 +175,7 @@ class PayByRedemption(GameAuthApi):
         """钻石兑换"""
         price = unit_price * trade_count  # 总价，单价 * 交易数量（默认1）
         diamond = u_info.get("diamond", 0)
-        (diamond < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='仙玉不足，请先购买仙玉')
+        (diamond < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='钻石不足，请先购买钻石')
 
         # 扣费
         cost_item = {

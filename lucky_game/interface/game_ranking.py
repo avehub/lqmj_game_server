@@ -71,7 +71,7 @@ class GetUserRankingInfo(GameAuthApi):
             'next_ranking_id': next_ranking.get("id") if next_ranking else 0,  # 此处给id，客户端可在all_ranking_data中取到
             'all_ranking_data': ranking_conf  # 所有排位信息
         }
-        self.info_log(uid, "GetUserRankingInfo 获取排位配置 / 用户排位数据 成功")
+        self.log_info(uid, "GetUserRankingInfo 获取排位配置 / 用户排位数据 成功")
         return self.answer(data=return_data)
 
 
@@ -92,7 +92,7 @@ class GetSeasonRankingConf(GameAuthApi):
             'season_conf': season_conf,  # 赛季信息
             'season_awards_items': season_awards_items  # 赛季奖励（段位奖/结算奖）
         }
-        self.info_log(f"GetSeasonRankingConf 获取S{season_id}赛季配置 成功")
+        self.log_info(f"GetSeasonRankingConf 获取S{season_id}赛季配置 成功")
         return self.answer(data=return_data)
 
 
@@ -171,10 +171,10 @@ class RankingPullAwards(GameAuthApi):
                 await UserRankingRC.update_user_ranking(uid, pull_info, ur_data)
                 up_goods = await UpAssets.update_assets(uid, awards, [], is_pack=True)
         except Exception as e:
-            self.error_log(f"RankingPullAwards 事务执行失败，原因：{e}")
+            self.log_err(f"RankingPullAwards 事务执行失败，原因：{e}")
             self.answer(code=self.sta_code.FAIL, hint="排位赛等级奖励领取失败，请联系客服")
 
-        self.info_log(uid, f"RankingPullAwards 排位赛等级奖励领奖 成功")
+        self.log_info(uid, f"RankingPullAwards 排位赛等级奖励领奖 成功")
         return self.answer(data=up_goods)
 
 
@@ -214,7 +214,7 @@ class GetRankingList(GameAuthApi):
                         return_data["self_ranking"] = idx + 1
                         break
 
-        self.info_log(uid, f"GetRankingList 获取 {region} 排行榜成功")
+        self.log_info(uid, f"GetRankingList 获取 {region} 排行榜成功")
         self.answer(data=return_data)
 
 
@@ -241,7 +241,7 @@ class ModifyUserRankingInfo(GameAuthApi):
         sta = await UserRankingRC.update_user_ranking(uid, new_info, ur_data, is_unrated=is_unrated)
         (not sta) and self.answer(self.sta_code.FAIL, hint='系统忙，请稍后重试！')
 
-        self.info_log(uid, "ModifyUserRankingInfo suc:", sta)
+        self.log_info(uid, "ModifyUserRankingInfo suc:", sta)
         return self.answer(hint='OK!')
 
 
@@ -263,7 +263,7 @@ class GetPlayerRankingInfo(GameAuthApi):
 
         for uid in query_uid_list:
             if not isinstance(uid, int):
-                self.info_log(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
+                self.log_info(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
                 return self.answer(self.sta_code.ERR_ARG, hint=f"非法的用户ID: {uid}")
 
         # 1.获取当前赛季配置
@@ -298,5 +298,5 @@ class GetPlayerRankingInfo(GameAuthApi):
             'player_ranking_data': ranking_data,  # 排位信息（只含ID）
             'all_ranking_data': ranking_conf if is_with_conf else []  # 所有排位信息
         }
-        self.info_log("GetPlayerRankingInfo 批量获取玩家排位信息 成功", is_with_conf)
+        self.log_info("GetPlayerRankingInfo 批量获取玩家排位信息 成功", is_with_conf)
         return self.answer(data=return_data)

@@ -13,9 +13,9 @@ from c_services.const.cs_enum_const import CmdRoom, CallCheck
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
-from lucky_game.model_rc.base_activity import UserActivityRC
+# from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
+# from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
 class BaseService(BaseServer, SessionManager):
@@ -42,7 +42,7 @@ class BaseService(BaseServer, SessionManager):
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
         self.register_rc_model(
-            BaseUserRC, ConfQuickChatRC, UserActivityRC
+            BaseUserRC,
         )
 
         self.__limit_call_tag = set()
@@ -54,7 +54,7 @@ class BaseService(BaseServer, SessionManager):
     async def __lost_connect(self, player, room, _):
         """ 离线处理 """
         player.offline = True
-        self.info_log(room.tid, player.uid, "玩家掉线")
+        self.log_info(room.tid, player.uid, "玩家掉线")
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
     @staticmethod
@@ -78,7 +78,7 @@ class BaseService(BaseServer, SessionManager):
 
         one_data = {}
         if quick_chat_model.chat_type == QuickChatType.HU_DONG:
-            data_list = await ConfQuickChatRC.cache_by_chat_type()
+            data_list = []  #await ConfQuickChatRC.cache_by_chat_type()
             for one_data in data_list:
                 if one_data.get("chat_id") == chat_id:
                     break
@@ -89,8 +89,8 @@ class BaseService(BaseServer, SessionManager):
             pay_type = one_data.get("pay_type")
             price = one_data.get("price") or one_data.get("leisure_rate") * room.base_score
 
-            free_type = await UserActivityRC.check_hu_dong_free_privilege(player.uid)
-            self.info_log(player.uid, "互动表情", free_type)
+            free_type = 1 #await UserActivityRC.check_hu_dong_free_privilege(player.uid)
+            self.log_info(player.uid, "互动表情", free_type)
             if free_type == ActivityType.LIFETIME_CARD:
                 price = 0
             elif free_type == ActivityType.WEEK_CARD:
@@ -110,7 +110,7 @@ class BaseService(BaseServer, SessionManager):
 
             elif pay_type == PayType.BY_DIAMOND:
                 if price > player.diamond:
-                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='仙玉不足！')
+                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='钻石不足！')
                 if price != 0:
                     u_info = await BaseUserRC.update_user_asset(player.uid, {"diamond": -price}, ReasonCostGold.QUICK_CHAT)
                     if u_info:
@@ -132,7 +132,7 @@ class BaseService(BaseServer, SessionManager):
         if player.trustee:
             await room.do_trustee(player)
 
-        self.info_log(player.uid, "__enter_room", player.tid, id(player))
+        self.log_info(player.uid, "__enter_room", player.tid, id(player))
 
         # 同步房间、玩家信息
         one_of_model.ParseFromString(data)
@@ -154,7 +154,7 @@ class BaseService(BaseServer, SessionManager):
             return
         room = self.get_room(room.tid)
         if not room:
-            self.info_log(player.uid, "房间强制解散失败，找不到该房间")
+            self.log_info(player.uid, "房间强制解散失败，找不到该房间")
             return
         await room.force_dismiss()
 
@@ -187,7 +187,7 @@ class BaseService(BaseServer, SessionManager):
 
     async def set_player_ws_id(self, player: BasePlayer):
         player.ws_id = await self.get_player_ws_id(player.uid)
-        self.info_log(player.uid, "设置玩家ws_id", player.ws_id)
+        self.log_info(player.uid, "设置玩家ws_id", player.ws_id)
 
     @staticmethod
     async def init_player(player):

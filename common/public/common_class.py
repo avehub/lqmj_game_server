@@ -2,26 +2,15 @@ from typing import Optional
 
 from aio_pika import DeliveryMode
 from nsanic.base_conf import BaseConf
+from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
 from common.public.enum_const import ServiceEnum, Channel, CacheKey
 from common.utils.utils import UtilsTool
 
 
-class CommonApi:
+class CommonApi(LogMeta):
     conf: BaseConf
-
-    @classmethod
-    def info_log(cls, *data):
-        if cls.conf.DEBUG_MODE:
-            return print(*data)
-        cls.conf.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.conf.DEBUG_MODE:
-            return print(*data)
-        cls.conf.log.error(*data)
 
     @classmethod
     async def get_player_ws_id(cls, uid):
@@ -100,7 +89,7 @@ class CommonApi:
         if not isinstance(msg, bytes):
             msg = json_encode(msg, u_byte=True)
         data = await cls.conf.rmq.req_by_rpc(cs_type, c_code, uid, msg, r_key)
-        return json_parse(data, log_fun=cls.error_log)
+        return json_parse(data, log_fun=cls.log_err)
 
     @classmethod
     async def rep_by_rpc(cls, cs_type: ServiceEnum, msg, r_key="", correlation_id=None):

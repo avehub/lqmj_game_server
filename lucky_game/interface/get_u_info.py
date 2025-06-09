@@ -237,7 +237,7 @@ class FetchRedDotsByOpportunity(GameAuthApi):
 
         await self.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, msg={"rd_type_list": rd_type_list}, uid=uid)
 
-        self.info_log(uid, '获取红点>>', rd_type_list)
+        self.log_info(uid, '获取红点>>', rd_type_list)
         return self.answer(hint="OK!")
 
 
@@ -279,7 +279,7 @@ class QueryUserSkinAmount(GameAuthApi):
 
         skin_amount = len(held_skins)
         if skin_amount < 4:
-            self.info_log(uid, f"玩家的持有法相数量{skin_amount}不足4个，请检查初始化")
+            self.log_info(uid, f"玩家的持有法相数量{skin_amount}不足4个，请检查初始化")
         one_of_model = get_one_of_model()
         one_of_model.skin_amount = skin_amount
         return self.answer(self.sta_code.PASS, data=one_of_model)

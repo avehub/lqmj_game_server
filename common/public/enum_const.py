@@ -15,6 +15,7 @@ class Sex(BaseEnum):
     FEMALE = 2, "女"
 
 
+
 class Switch(BaseEnum):
     DEFAULT = 0, "默认"
     CLOSE = 1, "关闭"
@@ -51,7 +52,7 @@ class StaCode(BaseCode):
     ALREADY_RAFFLE = -22, 0, '已经抽奖过'
     CONDITION_NOT_MET = -23, 0, '未满足指定条件'
     EMAIL_NOT_FOUND = -24, 0, '无此邮件'
-    DIAMOND_NOT_ENOUGH = -25, 0, '仙玉不足'
+    DIAMOND_NOT_ENOUGH = -25, 0, '钻石不足'
     ACTIVITY_NOT_EXIST = -26, 0, '活动不存在'
     NO_CONFIGURATION = -27, 0, '无配置数据'
     NOT_WITHIN_VALID_PERIOD = -28, 0, '不在有效期内'
@@ -60,7 +61,7 @@ class StaCode(BaseCode):
 
     # 以下主要为子游戏的状态码 之前的预留给web
     ALREADY_IN_SERVICE = -101, 0, '已经在某个服务（游戏）中'
-    GOLD_NOT_ENOUGH = -102, 0, '灵石不足'
+    GOLD_NOT_ENOUGH = -102, 0, '金币不足'
     NOT_YOUR_TURN = -103, 0, '未轮到你'
     RULE_ERR = -104, 0, '规则错误'
     FLOW_ERR = -105, 0, '流程错误'
@@ -89,6 +90,7 @@ class LoginWay(BaseEnum):
     TOKEN = 5, "Token登录"
     ALIPAY = 6, "支付宝登录"
     DOUYIN = 7, "抖音登录"
+    APPLE = 8, "AppleID登录"
 
 
 class PlayType(BaseEnum):
@@ -120,6 +122,7 @@ class ServiceEnum(BaseEnum):
 
     C_WATER_FISH = 20, "water_fish", GameType.LEISURE
     C_LANDLORDS = 21, "landlords", GameType.LEISURE
+    C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
@@ -158,15 +161,15 @@ class TaskId(BaseEnum):
     COMPLETE_GAME_18 = 6, "完成任意对局18次"
     BUY_PACKAGE_1 = 7, "购买任意礼包1个"
     # 每日任务（分享）
-    FIRST_SHARE_WX = 17, "每日首次分享（微信）"
-    FIRST_SHARE_DY = 18, "每日首次分享（抖音）"
-    FIRST_SHARE_AL = 19, "每日首次分享（阿里）"
+    FIRST_SHARE_WX = 17, "每日首次分享（微信）", "allow_update"
+    FIRST_SHARE_DY = 18, "每日首次分享（抖音）", "allow_update"
+    FIRST_SHARE_AL = 19, "每日首次分享（阿里）", "allow_update"
     # 新手任务
-    DOUYIN_REVISIT = 8, "抖音侧边栏复访"
-    ROOKIE_PART_FIRST = 9, "西游上篇新手引导"
-    ROOKIE_PART_SECOND_1 = 10, "西游下篇新手引导一"
-    ROOKIE_PART_SECOND_2 = 16, "西游下篇新手引导二"
-    ROOKIE_PART_MONOPOLY = 11, "漫漫西行路新手引导"
+    DOUYIN_REVISIT = 8, "抖音侧边栏复访", "allow_update"
+    ROOKIE_PART_FIRST = 9, "西游上篇新手引导", "allow_update"
+    ROOKIE_PART_SECOND_1 = 10, "西游下篇新手引导一", "allow_update"
+    ROOKIE_PART_SECOND_2 = 16, "西游下篇新手引导二", "allow_update"
+    ROOKIE_PART_MONOPOLY = 11, "漫漫西行路新手引导", "allow_update"
     ROOKIE_SEVEN_SIGN_IN = 15, "新人七日签到"
     # 大富翁任务
     MONOPOLY_ROLL_DICE_1 = 12, "掷1次骰子"

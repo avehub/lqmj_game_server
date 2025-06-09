@@ -10,7 +10,7 @@ from lucky_admin.url_main import MainBp
 
 signal_map = {}
 
-main_server = InitServer(conf, mws=[CorsMiddle], bps=[MainBp], excps=[CatchExpt])
+main_server = InitServer(conf, middlewares=[CorsMiddle], bp_arr=[MainBp], exceptions=[RCatchExpt])
 main_server.add_signal(signal_map)
 
 RepMiddle.set_conf(conf)
