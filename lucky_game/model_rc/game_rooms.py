@@ -3,7 +3,7 @@
 """
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import GameRooms
-from lucky_game.model_rc.base_rc import BaseCommonRC, BaseRedisRc
+from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.handler.random_utils import generate_natural_random
 from tortoise.transactions import in_transaction
