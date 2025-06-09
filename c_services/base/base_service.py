@@ -13,9 +13,9 @@ from c_services.const.cs_enum_const import CmdRoom, CallCheck
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
-from lucky_game.model_rc.base_activity import UserActivityRC
+# from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
+# from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
 class BaseService(BaseServer, SessionManager):
@@ -42,7 +42,7 @@ class BaseService(BaseServer, SessionManager):
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
         self.register_rc_model(
-            BaseUserRC, ConfQuickChatRC, UserActivityRC
+            BaseUserRC,
         )
 
         self.__limit_call_tag = set()
@@ -78,7 +78,7 @@ class BaseService(BaseServer, SessionManager):
 
         one_data = {}
         if quick_chat_model.chat_type == QuickChatType.HU_DONG:
-            data_list = await ConfQuickChatRC.cache_by_chat_type()
+            data_list = []  #await ConfQuickChatRC.cache_by_chat_type()
             for one_data in data_list:
                 if one_data.get("chat_id") == chat_id:
                     break
@@ -89,7 +89,7 @@ class BaseService(BaseServer, SessionManager):
             pay_type = one_data.get("pay_type")
             price = one_data.get("price") or one_data.get("leisure_rate") * room.base_score
 
-            free_type = await UserActivityRC.check_hu_dong_free_privilege(player.uid)
+            free_type = 1 #await UserActivityRC.check_hu_dong_free_privilege(player.uid)
             self.info_log(player.uid, "互动表情", free_type)
             if free_type == ActivityType.LIFETIME_CARD:
                 price = 0
@@ -110,7 +110,7 @@ class BaseService(BaseServer, SessionManager):
 
             elif pay_type == PayType.BY_DIAMOND:
                 if price > player.diamond:
-                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='仙玉不足！')
+                    return await room.inner_send(player, CmdRoom.BROADCAST_CHAT, code=StaCode.FAIL, hint='钻石不足！')
                 if price != 0:
                     u_info = await BaseUserRC.update_user_asset(player.uid, {"diamond": -price}, ReasonCostGold.QUICK_CHAT)
                     if u_info:

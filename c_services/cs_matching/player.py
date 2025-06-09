@@ -150,7 +150,7 @@ class Player:
     def init_prop_info(self, info: dict):
         """
         初始化道具信息：跟匹配有关
-        灵石：护盾卡、翻倍卡、保分卡
+        金币：护盾卡、翻倍卡、保分卡
         修为相关：固分卡、加速卡
         """
         self.__free_loss = info.get("free_loss")

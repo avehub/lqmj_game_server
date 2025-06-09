@@ -19,13 +19,13 @@ class RecordsGameUserLogin(DBModel):
 
 
 class RecordsGoldStatement(DBModel):
-    """ 灵石流水记录 """
+    """ 金币流水记录 """
     _SPLIT_TYPE = 2
 
     uid = fields.IntField(max_length=28, index=True, null=True, default=0, description='玩家ID')
     count = fields.DecimalField(max_digits=65, decimal_places=0, default=0, description="当前数量")
     res_count = fields.DecimalField(max_digits=65, decimal_places=0, default=0, description="剩余数量")
-    g_type = fields.SmallIntField(default=1, description="灵石类型：默认1")
+    g_type = fields.SmallIntField(default=1, description="金币类型：默认1")
     reason_id = fields.IntField(max_length=11, default=0, description='原因id')
     reason_desc = fields.CharField(max_length=28, default='', description='原因描述')
 
@@ -46,13 +46,13 @@ class RecordsGoldStatement(DBModel):
 
 
 class RecordsDiamondStatement(DBModel):
-    """ 仙玉流水记录 """
+    """ 钻石流水记录 """
     _SPLIT_TYPE = 2
 
     uid = fields.IntField(max_length=28, index=True, null=True, default=0, description='玩家ID')
     count = fields.IntField(max_length=32, default=0, description="当前数量")
     res_count = fields.IntField(max_length=64, default=0, description="剩余数量")
-    d_type = fields.SmallIntField(default=1, description="仙玉类型：默认1")
+    d_type = fields.SmallIntField(default=1, description="钻石类型：默认1")
     reason_id = fields.IntField(max_length=11, default=0, description='原因id')
     reason_desc = fields.CharField(max_length=28, default='', description='原因描述')
 

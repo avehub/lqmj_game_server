@@ -11,7 +11,7 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.vip_level import UserVipRC
+# from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.server_addr import ServerAddrRC
 from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
 from common.utils.utils import UtilsTool
@@ -19,7 +19,7 @@ from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
-
+from pprint import pprint
 
 class BaseLogin(GameAuthApi):
 
@@ -42,8 +42,6 @@ class BaseLogin(GameAuthApi):
     async def update_user_login_info(self, req, u_info, login_info):
         """ 更新玩家表登录数据 """
         updated = {'valid_key': self.rng.mk_str(16), 'ip': self.ori_ip(req)}
-        # ip_info = await self.request_get_ip_geo(req, u_info.get("ip"))  # 2024/11/19仅在玩家第一次登录游戏获取
-        # updated.update(ip_info)
         u_info = await BaseUserRC.update_info(u_info, updated)
 
         login_info.update({'uid': u_info.get('uid')})
@@ -72,26 +70,28 @@ class BaseLogin(GameAuthApi):
         """
         safe_key = self.rng.mk_str(18)
         valid_key = self.rng.mk_str(16)
+        dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
-            name = f"游客{self.conf.rng.mk_str(8, True)}"
+            name = f"游客{self.rng.mk_str(8, True)}"
+            user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
+            user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
+
 
         info = {
             'name': name,
             'safe_key': safe_key,
             'valid_key': valid_key,
-
             "ip": login_info.get("login_ip"),
             'address': login_info.get("address"),
             'region': login_info.get("region"),
             'country': login_info.get("country") or "CN",
             'tst_mark': login_info.get("tst_mark") or False,
-            "dev_ident": login_info.get("dev_id"),
-
-            "platform": user_info.get("platform") or PlatForm.DEFAULT,
+            "dev_ident": dev_ident,
+            "platform": user_info.get("platform"),
             "unionid": user_info.get("unionid"),
             "openid": user_info.get("openid")
         }
@@ -119,8 +119,8 @@ class BaseLogin(GameAuthApi):
             u_info.update({'token': token})
 
         # vip等级查询
-        vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
-        u_info.update({"vip_level": vip_info.get("level")})
+        # vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
+        # u_info.update({"vip_level": vip_info.get("level")})
 
         data = {"user_info": u_info, "server_info": server_info}
         self.info_log("user login: ", uid, u_info.get("token"))
@@ -142,10 +142,10 @@ class BaseLogin(GameAuthApi):
         login_info.update(ip_info)
 
         req_user_info = req_user_info or {}
-        req_user_info["platform"] = platform or PlatForm.DEFAULT
+        req_user_info["platform"] = platform
         u_dict = self.init_user_info(login_info, req_user_info)
 
-        # 新用户登录赠送灵石
+        # 新用户登录赠送金币
         gift_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_NEW_USER_GIFT)
         asset_gift = {'gold': gift_conf.get("gold"), 'diamond': gift_conf.get("diamond")}
         u_dict.update(asset_gift)
@@ -172,6 +172,7 @@ class BaseLogin(GameAuthApi):
 
     async def whether_through(self) -> List[Dict]:
         """ 是否通过 """
+        return []
         server_info: List[Dict] = await ServerAddrRC.cache_all()
         if not server_info or not server_info[0].get("status"):
             self.answer(hint="As server maintenance, please visit later, thank you.")
@@ -185,15 +186,15 @@ class LoginByGuest(BaseLogin):
     async def post(self, req: Request):
         server_info = await self.whether_through()
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
+        platform = req.json.get('platform') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        platform = PlatForm.TEST
+        self.check_str(platform, require=True, p_name="platform")
         q_params = {
             "dev_ident": dev_ident,
             "platform": platform,
         }
         u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_DEVICE_ID)
         login_info = await self.get_login_info(req, LoginWay.GUEST, dev_ident=dev_ident)
-
         if not u_info:
             u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform)
         else:

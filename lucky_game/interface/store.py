@@ -152,7 +152,7 @@ class PayByRedemption(GameAuthApi):
         """金币兑换"""
         price = unit_price * trade_count  # 总价，单价 * 交易数量（默认1）
         gold = u_info.get("gold", 0)
-        (gold < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='灵石不足，请先购买灵石')
+        (gold < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='金币不足，请先购买金币')
 
         # 扣费
         cost_item = {
@@ -175,7 +175,7 @@ class PayByRedemption(GameAuthApi):
         """钻石兑换"""
         price = unit_price * trade_count  # 总价，单价 * 交易数量（默认1）
         diamond = u_info.get("diamond", 0)
-        (diamond < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='仙玉不足，请先购买仙玉')
+        (diamond < price) and self.answer(self.sta_code.DIAMOND_NOT_ENOUGH, hint='钻石不足，请先购买钻石')
 
         # 扣费
         cost_item = {

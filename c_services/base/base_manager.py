@@ -14,8 +14,9 @@ class SessionManager:
         self.__room_pool = Optional[Deque]
         self.__player_pool = Optional[Deque]
         if use_pool:
-            self.__room_pool = deque(maxlen=500)  # 房间对象池
-            self.__player_pool = deque(maxlen=2000)  # 玩家对象池
+            room_num = 300
+            self.__room_pool = deque(maxlen=room_num)  # 房间对象池
+            self.__player_pool = deque(maxlen=room_num * 4)  # 玩家对象池
 
     async def new_match(self, *args, **kwargs):
         """ 接收新匹配 """
@@ -35,7 +36,7 @@ class SessionManager:
     def create_room(self, room, room_conf, **kwargs):
         if self.__room_pool:
             room_obj = self.__room_pool.popleft()
-            room_obj.refresh_room_conf(room_conf, **kwargs)
+            room_obj.refresh_room_conf(self, room_conf, **kwargs)
             tid = room_obj.tid + 1
             while self.__rooms.get(tid):
                 tid += 1
@@ -49,8 +50,8 @@ class SessionManager:
     def release_room(self, room):
         """ 释放房间 """
         self.__del_room(room.tid)
+        room.clear_room()
         if self.__use_pool:
-            room.clear_room()
             self.__room_pool.append(room)
 
     def __del_room(self, tid):
@@ -75,9 +76,9 @@ class SessionManager:
     def release_player(self, p):
         """ 释放玩家 """
         self.__del_player(p)
+        p.clear_player()  # 此处顺序不能调整！！！
         if self.__use_pool:
             self.__player_pool.append(p)  # 回收玩家对象到对象池
-            p.clear_player()  # 此处顺序不能调整！！！
 
     def __del_player(self, p: BasePlayer):
         """ 回收玩家 """

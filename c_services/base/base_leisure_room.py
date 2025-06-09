@@ -18,7 +18,7 @@ from lucky_game.model_rc.base_activity import ConfActivityRC
 class BaseLeisureRoom(BaseRoom):
     def __init__(self, tid, service, room_conf, extra_room_info, poker):
         super().__init__(tid, service, room_conf, poker)
-        self.__record_ori_gold = {}  # 记录玩家灵石信息
+        self.__record_ori_gold = {}  # 记录玩家金币信息
         self.__task_collect = {}  # 任务收集器
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
         self.__gift_conf = room_conf.get("gift_conf") or []
@@ -192,7 +192,7 @@ class BaseLeisureRoom(BaseRoom):
         """ 随机出牌 """
 
     def set_robot_random_gold(self, player, mean_real_player_gold):
-        """ 设置机器人随机灵石 """
+        """ 设置机器人随机金币 """
         min_take = self.room_conf.get("min_take")
         max_take = self.room_conf.get("max_take")
 
@@ -210,7 +210,7 @@ class BaseLeisureRoom(BaseRoom):
         b = min(max_take, max_real_player)
 
         if a > b:
-            self.info_log("机器人随机设置灵石数错误：", self.level_desc, min_take, max_take, mean_real_player_gold)
+            self.info_log("机器人随机设置金币数错误：", self.level_desc, min_take, max_take, mean_real_player_gold)
             a, b = b, a
         gold = random.randint(a, b)
 
@@ -226,7 +226,7 @@ class BaseLeisureRoom(BaseRoom):
         # await self.safe_box_auto_complement(player)
 
     async def do_check_gold(self, gold_info: dict, reason: ReasonCostGold):
-        """ 结算灵石 """
+        """ 结算金币 """
         update_task = []
         self.info_log("结算信息：", gold_info)
         for player in self.seats:
@@ -244,7 +244,7 @@ class BaseLeisureRoom(BaseRoom):
         """ 游戏结束 """
         self.set_room_status(RoomStatus.T_DISMISS)
         await self.inner_broadcast(CmdRoom.GAME_OVER)
-        not is_force and await self.round_over_check_gold_enough_or_not()  # 检测灵石是否足够6下发礼包等
+        not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
         await self.update_game_states()  # 更新游戏胜场/总场等
         await self.send_task()  # 发送任务
         await self.tigger_big_win_announcement()
@@ -253,7 +253,7 @@ class BaseLeisureRoom(BaseRoom):
     async def tigger_big_win_announcement(self):
         """
         触发大赢公告
-        玩家子游戏结束时，玩家赢取灵石数>=阈值倍率*底注，则触发大赢公告
+        玩家子游戏结束时，玩家赢取金币数>=阈值倍率*底注，则触发大赢公告
         """
         threshold_score = self.__ann_threshold_multiple * self.base_score
         data_list = []
@@ -400,7 +400,7 @@ class BaseLeisureRoom(BaseRoom):
             "gift_conf": self.room_conf.get("gift_conf")
         }
         # todo: 下发复仇礼包
-        ori_gold = self.record_ori_gold.get(player.seat_id) or ""  # 开局前的灵石
+        ori_gold = self.record_ori_gold.get(player.seat_id) or ""  # 开局前的金币
         result["ori_gold"] = str(ori_gold)
         data_model = S2CBrokeBroad.pb_model(**result)
         if cmd == CmdRoom.GO_BROKE:
@@ -505,11 +505,11 @@ class BaseLeisureRoom(BaseRoom):
         self.__task_collect.clear()
         super().clear_room()
 
-    def refresh_room_conf(self, room_conf, **extra_room_info):
+    def refresh_room_conf(self, service, room_conf, **extra_room_info):
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
         self.__gift_conf = room_conf.get("gift_conf") or []
         robot_interact = room_conf.get("rule_conf", {}).get("robot_interact", {})
         self.__robot_interact = {int(key): value for key, value in robot_interact.items()}
         self.__ann_threshold_multiple = room_conf.get("threshold_multiple") or 0  # 公告阈值倍率
 
-        super().refresh_room_conf(room_conf)
+        super().refresh_room_conf(service, room_conf)
