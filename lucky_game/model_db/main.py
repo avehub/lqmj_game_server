@@ -174,9 +174,10 @@ class ClubRoomTemplates(DBModel):
     platform = fields.SmallIntField(max_length=2, null=True, description='平台: 1微信小游戏 2APP 3H5')
     cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
     play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    room_rule = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
-    max_players = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
-    current_players = fields.SmallIntField(max_length=2, null=True, default=0, description='当前人数')
+    rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
+    max_player = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
+    total_round = fields.SmallIntField(max_length=6, null=True, default=0, description='总局数')
+    price = fields.SmallIntField(max_length=6, null=True, default=0, description='费用')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:

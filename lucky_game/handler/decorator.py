@@ -4,7 +4,6 @@ from nsanic.libs import tool_jwt, tool_dt
 from sanic.request import Request
 from nsanic.libs.mult_log import NLogger
 from nsanic.handler_http import BaseRps
-
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import JWType
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -25,6 +24,37 @@ class BaseDecorator(BaseRps):
         if isawaitable(response):
             response = await response
         return response
+
+    async def check_inner(
+            self,
+            val,
+            require=False,
+            default=None,
+            inner_list: tuple = (),
+            p_name='') -> int or str:
+        """
+        内部指定参数校验
+        :param val: 待校验对象
+        :param require: 是否必要参数 默认非必要
+        :param default: 非必要状态下的默认值
+        :param inner_list: 校验范围列表
+        :param p_name: 参数名
+        :return 转换的值--int
+        """
+        if not require:
+            return default
+        if val is None:
+            return self.answer(
+                code=self.conf.STA_CODE.ERR_ARG,
+                hint=f"The parameter {p_name} is required"
+            )
+        if not isinstance(val, inner_list):
+            return self.answer(
+                code=self.conf.STA_CODE.ERR_ARG,
+                hint=f"The parameter {p_name} is not within the range of parameter values"
+            )
+        return val
+
 
 
 class GameChecker(BaseDecorator):

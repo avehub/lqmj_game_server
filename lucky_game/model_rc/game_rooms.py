@@ -22,8 +22,51 @@ class GameRoomsRC(BaseCommonRC):
     KEY_CLUB_ID = 'club_id'
     SESSION_KEY = "room_player"
     SESSION_DISK_KEY = "room_player_uid"
+    RULE_DETAILS = {
+        "shang_xia_ji",
+        "ben_ji",
+        "wu_gu_ji",
+        "man_tang_ji",
+        "chong_feng_ji",
+        "zhan_ji",
+        "jian_gang_san",
+        "bao_ting",
+        "bi_men_yi_shou",
+        "shang_ga",
+        "gu_mai_score",
+        "suo_de_jia_1",
+        "hu_pai_ti_shi",
+        "huang_zhuang_bu_huang_ji",
+        "four_card_bao_ting",
+        "xiao_pai_bi_men",
+        "tui_zhang_can_hu",
+        "bao_ting_bi_men",
+        "exchange_three",
+        "exchange_cards_type"
+    }
 
+    SHANG_XIA_JI = (0, 1)  #上下鸡选项 0未选 1选
+    BEN_JI = (0, 1)  # 本鸡选项  0未选 1选
+    WU_GU_JI = (0, 1)  # 乌骨鸡选项 0未选 1选
+    MAN_TANG_JI = (0, 1)  # 满堂鸡选项 0未选 1选
+    CHONG_FENG_JI = (0, 1)  # 冲锋鸡选项 0未选 1选
+    ZHAN_JI = (0, 1)  # 站鸡选项 0未选 1选
+    JIAN_GANG_SAN = (0, 1)  # 见杠三选项 0未选 1选
+    BAO_TING = (0, 1)  # 报听选项 0未选 1选
+    BI_MEN_YI_SHOU = (0, 1)  # 必闷一手选项 0未选 1选
+    SHANG_GA = (0, 1)  # 估卖选项 0未选 1选
+    GU_MAI_SCORE = (0, 1, 2, 3, 4, 5)  # 所选卖分 0自由分 1-5对应1-5分
+    SUO_DE_JIA_1 = (0, 1)  # 所得加1选项 0未选 1选
+    HU_PAI_TI_SHI = (0, 1)  # 胡牌提示  捡漏血流才有选项 0未选 1选  闷胡血流固定是1
+    HUANG_ZHUANG_BU_HUANG_JI = (0, 1)  # 黄庄不黄鸡杠 0未选 1选
+    FOUR_CARD_BAO_TING = (0, 4)  # 四张报听 0未选 4选
+    XIAO_PAI_BI_MEN = (0, 1)  # 小牌必闷  闷胡血流才有 0未选 1选  捡漏血流固定是1
+    TUI_ZHANG_CAN_HU = (0, 1)  # 退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
+    BAO_TING_BI_MEN = (0, 1)  # 报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
+    EXCHANGE_THREE = (0, 1, 2, 3)  # 是否换三张  0不换 1换三张 2豹子换 3 黄牌换
+    EXCHANGE_CARDS_TYPE = (1, 2)  # 换三张方式  1任意牌 2同色牌
     NULL_MEG = "房间不存在"
+
 
     @classmethod
     async def cache_room_player_up(cls, room_id, value=1):
@@ -238,4 +281,6 @@ class GameRoomsRC(BaseCommonRC):
             return None, f"获取房间玩家失败: {str(e)}"
         return player, "成功"
 
-
+    @classmethod
+    async def oriupper(cls, val: str):
+        return val.upper()
