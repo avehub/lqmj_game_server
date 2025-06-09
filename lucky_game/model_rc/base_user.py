@@ -449,14 +449,14 @@ class BaseBanRC(BaseCommonRC):
                     await cls.conf.rds.set_item(key, json_encode(db_info), ex_time=cls.expired_sec)
                     return db_info
             except OperationalError:
-                cls.conf.info_log("cache_ban_records 暂无表")
+                cls.log_info("cache_ban_records 暂无表")
                 return []
             return []
 
         key = f'{cls.db_model.sheet_name()}:{uid}'
         info = await cls.conf.rds.get_item(key)
         if info:
-            return json_parse(info, cls.conf.error_log)
+            return json_parse(info, cls.log_err)
         return await cls.conf.rds.locked(key, fun=from_db)
 
     @classmethod

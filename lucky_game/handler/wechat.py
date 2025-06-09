@@ -1,3 +1,5 @@
+from nsanic.libs.component import LogMeta
+
 from common.public.base_enum import BaseEnum
 from enum import unique
 from common.public.conf import WeChatConf, H5_SERVER_ADDR, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
@@ -8,7 +10,7 @@ from common.utils.utils import UtilsTool
 from lucky_game.model_rc.base_user import BaseUserRC
 
 
-class WeChat:
+class WeChat(LogMeta):
     """ 微信相关 """
     conf: ConfSrv = conf_srv
     WECHAT_ACCESS_TOKEN = "wechat_access_token"  # access_token
@@ -271,7 +273,7 @@ class WeChat:
             return None
 
         new_openid = req_data.get("openid")
-        cls.conf.info_log('update_gzh_openid result:', errcode, new_openid)
+        cls.log_info('update_gzh_openid result:', errcode, new_openid)
         if new_openid:
             u_info["gzh_openid"] = new_openid
             await BaseUserRC.update_cache(u_info.get("uid"), u_info)

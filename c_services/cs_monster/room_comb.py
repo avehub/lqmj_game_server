@@ -87,28 +87,28 @@ class RoomComb(BaseLeisureRoom):
     async def deal_cards(self, set_dealer_card=None):
         """ 发牌 """
         if not self.flow_status_is_equal(FlowStatus.T_IN_IDLE):
-            self.info_log(f"flow error: {self.flow_status}")
+            self.log_info(f"flow error: {self.flow_status}")
             return
         await self.inner_deal_cards(set_dealer_card)
 
     async def turn_start(self, last_player=None, first=False):
         """ 一轮开始 """
         if not self.in_flow_status(FlowStatus.T_IN_DEAL_CARDS, FlowStatus.T_IN_TURN_TO, FlowStatus.T_IN_RECHARGE):
-            self.info_log(f"flow error: {self.flow_status}")
+            self.log_info(f"flow error: {self.flow_status}")
             return
         if self.flow_status == FlowStatus.T_IN_RECHARGE:
             if self.ren_shu_count == self.max_player_count - 1:
-                self.info_log("剩一人，其余玩家皆认输")
+                self.log_info("剩一人，其余玩家皆认输")
                 return await self.enter_round_over(is_force=True)
             # next_player = self.next_player(last_player.seat_id)
             # if not next_player:
-            #     self.info_log("都没牌了，直接结束")
+            #     self.log_info("都没牌了，直接结束")
             #     return await self.enter_round_over(is_force=True)
 
         self.set_flow_status(FlowStatus.T_IN_TURN_TO)
         self.__turn_cards = []
         turn_player = self.dealer() if first else last_player
-        # self.info_log("turn_start", turn_player.seat_id)
+        # self.log_info("turn_start", turn_player.seat_id)
         await self.turn_to_someone(turn_player)
 
     async def turn_next(self):
@@ -128,7 +128,7 @@ class RoomComb(BaseLeisureRoom):
 
     async def do_play_cards(self, player, cards: list, desc=""):
         code, msg = await self.player_play_cards(player, cards)
-        self.info_log(player.uid, desc, code, msg)
+        self.log_info(player.uid, desc, code, msg)
         if code == StaCode.PASS:
             return await self.turn_next()
 
@@ -137,7 +137,7 @@ class RoomComb(BaseLeisureRoom):
             return
         if player.seat_id != self.curr_seat_id:
             return
-        self.info_log(player.uid, "超时出牌：", player.trustee, desc)
+        self.log_info(player.uid, "超时出牌：", player.trustee, desc)
         not player.trustee and await super().do_trustee(player)
         await self.play_card_by_rand(player)
 
@@ -310,7 +310,7 @@ class RoomComb(BaseLeisureRoom):
                     mvp_score = self.__ranking_addition_mvp
 
                 p.ranking_score = ranking_score + all_addition_score + win_streak_addition_score + mvp_score
-                self.info_log(
+                self.log_info(
                     p.uid, "段位分结算：",
                     prop_addition, session_addition, vip_addition, lifetime_card_addition, sr_addition, all_addition,
                     win_streak_addition_score, mvp_score, ranking_score, p.ranking_score
@@ -323,7 +323,7 @@ class RoomComb(BaseLeisureRoom):
                     p.add_ranking_score_free_num(lose_score)
                     continue
                 p.ranking_score = -lose_score
-                self.info_log(p.uid, "段位分结算：", p.ranking_score)
+                self.log_info(p.uid, "段位分结算：", p.ranking_score)
 
     def judge_is_win_or_lose(self, field: str = 'pick_len'):
         """
@@ -344,7 +344,7 @@ class RoomComb(BaseLeisureRoom):
                 p.is_win = 0
 
         seat_id = self.__judge_mvp(pick_map_copy, field)
-        self.info_log("mvp：", seat_id, pick_map, pick_map_copy)
+        self.log_info("mvp：", seat_id, pick_map, pick_map_copy)
         return seat_id
 
     def __judge_mvp(self, min_pick_map: dict, field):
@@ -369,7 +369,7 @@ class RoomComb(BaseLeisureRoom):
         if self.season_status == SeasonStatus.ACTIVE_SEASON:
             self.do_check_ranking_score(mvp_seat_id)
         player_info = self.room_win_lose_data()
-        self.info_log('一局结束, 结算信息：', self.season_status)
+        self.log_info('一局结束, 结算信息：', self.season_status)
 
         data = {
             "check_infos": player_info,

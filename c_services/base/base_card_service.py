@@ -67,7 +67,7 @@ class BaseCardService(BaseService):
         player.offline = False  # 此处不改变状态，玩家收不到房间以下两条信息
         if player.trustee:
             await room.do_trustee(player)
-        self.info_log(player.uid, "enter_room", player.tid, id(player))
+        self.log_info(player.uid, "enter_room", player.tid, id(player))
         await self.notify_player_enter_room(room, player)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM)

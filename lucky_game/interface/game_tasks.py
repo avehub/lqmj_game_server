@@ -53,7 +53,7 @@ class GameTaskHandler(GameAuthApi):
             return_data["active_conf"] = active_conf
             return_data["active_data"] = active_data
 
-        self.info_log(uid, f"GameTaskHandler {tt_enum.phrase} 获取任务配置 / 用户日活数据 成功")
+        self.log_info(uid, f"GameTaskHandler {tt_enum.phrase} 获取任务配置 / 用户日活数据 成功")
         return self.answer(data=return_data)
 
 
@@ -177,10 +177,10 @@ class GameTaskComplete(GameAuthApi):
                 if event_tracking:
                     await self.push_task2worker(CmdWorkers.USER_EVENT_TRACKING, uid=uid, msg={'event_tracking': event_tracking})
         except Exception as e:
-            self.error_log(f"GameTaskComplete 事务执行失败，原因：{e}")
+            self.log_err(f"GameTaskComplete 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="任务完成发奖失败，请联系客服")
 
-        self.info_log(uid, f"GameTaskComplete {ti_enum.phrase} 任务完成领奖成功")
+        self.log_info(uid, f"GameTaskComplete {ti_enum.phrase} 任务完成领奖成功")
         return self.answer(data=up_goods)
 
 
@@ -232,8 +232,8 @@ class GameActiveComplete(GameAuthApi):
                 await UserBehaviorsRC.update_user_active_records(active_params, pull_info, old_active)
                 up_goods = await UpAssets.update_assets(uid, awards, [])
         except Exception as e:
-            self.error_log(f"GameActiveComplete 事务执行失败，原因：{e}")
+            self.log_err(f"GameActiveComplete 事务执行失败，原因：{e}")
             return self.answer(self.sta_code.FAIL, hint="活跃达成发奖失败，请联系客服")
 
-        self.info_log(uid, f"GameActiveComplete 活跃{cur_score}达成领奖成功 {active_achieved}")
+        self.log_info(uid, f"GameActiveComplete 活跃{cur_score}达成领奖成功 {active_achieved}")
         return self.answer(data=up_goods)

@@ -88,7 +88,7 @@ class BaseLeisureRoom(BaseRoom):
         for p in self.seats:
             self.__record_ori_gold[p.seat_id] = p.gold
             seat2uid[p.seat_id] = p.uid
-        self.info_log("游戏开始", seat2uid, self.__record_ori_gold)
+        self.log_info("游戏开始", seat2uid, self.__record_ori_gold)
         await self.inner_broadcast(CmdRoom.ROUND_START)
 
     async def do_trustee(self, player):
@@ -100,10 +100,10 @@ class BaseLeisureRoom(BaseRoom):
     def try_round_start(self, rs: int = 0, is_cut_tickets=True):
         """ 尝试开始游戏 """
         if not self.room_status_is_equal(RoomStatus.T_IDLE):
-            self.info_log("房间必须在空闲中才能开始游戏，当前流程为：", self.flow_status)
+            self.log_info("房间必须在空闲中才能开始游戏，当前流程为：", self.flow_status)
             return False
         if self.in_room_count != self.max_player_count:
-            self.info_log("人数不够开始游戏")
+            self.log_info("人数不够开始游戏")
             return False
         self.call_flow(rs, self.round_start, is_cut_tickets)
 
@@ -120,7 +120,7 @@ class BaseLeisureRoom(BaseRoom):
         if player.is_out:
             # self.__seats[player.seat_id - 1] = None
             player.tid = 0  # 清除玩家房间号 防止check in table时房间号错乱
-            self.info_log(player.uid, "玩家认输退出房间", id(player))
+            self.log_info(player.uid, "玩家认输退出房间", id(player))
             await self.service.del_player_in_service(player.uid)
             await self.try_round_over()
 
@@ -131,7 +131,7 @@ class BaseLeisureRoom(BaseRoom):
                 continue
             if not (player.is_out and player.offline):
                 return  # 但凡有真实玩家 没有 破产和离线则不解散房间
-        self.info_log("房间内已经没有真人玩家，enter force_dismiss")
+        self.log_info("房间内已经没有真人玩家，enter force_dismiss")
         await self.delay_func(0.5, self.force_dismiss)
 
     async def deduct_tickets(self):
@@ -176,9 +176,9 @@ class BaseLeisureRoom(BaseRoom):
             player.cards = all_cards[i]
             if not player.is_out and set_dealer_card and set_dealer_card in player.cards:
                 self.dealer_id = player.seat_id
-                self.info_log("设置庄为：", self.dealer_id, player.uid)
+                self.log_info("设置庄为：", self.dealer_id, player.uid)
 
-            self.info_log(player.uid, player.seat_id, "玩家发牌：", player.cards)
+            self.log_info(player.uid, player.seat_id, "玩家发牌：", player.cards)
             if player.is_robot:
                 continue
             data = {"cards": player.cards, "seat_id": player.seat_id}
@@ -210,7 +210,7 @@ class BaseLeisureRoom(BaseRoom):
         b = min(max_take, max_real_player)
 
         if a > b:
-            self.info_log("机器人随机设置金币数错误：", self.level_desc, min_take, max_take, mean_real_player_gold)
+            self.log_info("机器人随机设置金币数错误：", self.level_desc, min_take, max_take, mean_real_player_gold)
             a, b = b, a
         gold = random.randint(a, b)
 
@@ -228,7 +228,7 @@ class BaseLeisureRoom(BaseRoom):
     async def do_check_gold(self, gold_info: dict, reason: ReasonCostGold):
         """ 结算金币 """
         update_task = []
-        self.info_log("结算信息：", gold_info)
+        self.log_info("结算信息：", gold_info)
         for player in self.seats:
             if player.is_out:
                 continue
@@ -258,7 +258,7 @@ class BaseLeisureRoom(BaseRoom):
         threshold_score = self.__ann_threshold_multiple * self.base_score
         data_list = []
         for p in self.seats:
-            self.info_log("大赢公告", p.uid, p.total_score, threshold_score)
+            self.log_info("大赢公告", p.uid, p.total_score, threshold_score)
             if p.total_score >= threshold_score:
                 content = {
                     "sentence_pattern": GameAnnouncement.rand_choice_member(),
@@ -362,7 +362,7 @@ class BaseLeisureRoom(BaseRoom):
                 conf_items = data.get("conf_items")
                 if conf_items:
                     gold = conf_items[0].get("goods_count")
-                    self.info_log(player.uid, "机器人复活", activity_id, gold)
+                    self.log_info(player.uid, "机器人复活", activity_id, gold)
                     sale_limit = data.get("sale_limit")
                     multiple = sale_limit.get("multiple") or 1
                     if multiple > 1:
@@ -421,7 +421,7 @@ class BaseLeisureRoom(BaseRoom):
         """ 判断是否复仇"""
         # 判断破产玩家，弹出充值，充值继续，不充值认输
         self.set_room_status(RoomStatus.T_RECHARGE_ING)
-        self.info_log(player.uid, player.seat_id, "进入是否复仇")
+        self.log_info(player.uid, player.seat_id, "进入是否复仇")
         sec = 30
         await self.notify_buy_gift_pack(player, seconds=sec)
         self.call_flow(sec, self.player_give_up, player)
@@ -433,7 +433,7 @@ class BaseLeisureRoom(BaseRoom):
 
         # 更新破产玩家并从剩余卡牌中将其移除
         await self.inner_broadcast(CmdRoom.GIVE_UP, m)
-        self.info_log(player.uid, player.seat_id, "放弃")
+        self.log_info(player.uid, player.seat_id, "放弃")
         await self.turn_end()
 
     async def player_recharge_ing(self, player):
@@ -484,7 +484,7 @@ class BaseLeisureRoom(BaseRoom):
         for player in self.seats:
             if not player.is_robot:
                 if player.gold < self.room_conf.get("min_take"):
-                    self.info_log(player.uid, "游戏结束下发返还礼包")
+                    self.log_info(player.uid, "游戏结束下发返还礼包")
                     send_list.append(self.notify_buy_gift_pack(player, CmdRoom.GOLD_NOT_ENOUGH))
         send_list and await asyncio.gather(*send_list)
 

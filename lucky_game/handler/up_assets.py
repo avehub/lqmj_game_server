@@ -57,7 +57,7 @@ class UpAssets(CommonApi):
         # # 3.资产添加流水原因
         # StatFlow.stat_transaction_flow(express, trade_item, goods=conf_items, gifts=conf_gifts)
         #
-        # cls.info_log(uid, "stat_express 得物：", conf_items, "赠品：", conf_gifts)
+        # cls.log_info(uid, "stat_express 得物：", conf_items, "赠品：", conf_gifts)
         return conf_items, conf_gifts
 
     @classmethod
@@ -141,7 +141,7 @@ class UpAssets(CommonApi):
         更新任务收集为多个协程对象 update_task 并发执行；
         """
         if not goods:
-            cls.info_log(uid, "商品缺货，请联系客服")
+            cls.log_info(uid, "商品缺货，请联系客服")
             return False
         # 1.统计累加物品
         goods_copy = goods.copy()
@@ -168,7 +168,7 @@ class UpAssets(CommonApi):
             put_type = ag.get("put_type")
             pt_enum = PutType.find_member_by_val(put_type)
             if not isinstance(pt_enum, PutType):
-                cls.info_log('PutType 不存在', all_goods)
+                cls.log_info('PutType 不存在', all_goods)
                 continue
             group_express.setdefault(put_type, []).append(ag)
 
@@ -204,10 +204,10 @@ class UpAssets(CommonApi):
                 p_info = await BaseUserRC.update_user_asset(uid, new_info, reason)
             else:
                 p_info = await BaseUserRC.update_user_asset(uid, new_info)
-                cls.info_log('add_to_wallet 捕捉没有加入流水的出处以供解决', uid, new_info)
+                cls.log_info('add_to_wallet 捕捉没有加入流水的出处以供解决', uid, new_info)
 
             if p_info:
-                cls.info_log(uid, 'add_to_wallet 添加钱包成功')
+                cls.log_info(uid, 'add_to_wallet 添加钱包成功')
         return True
 
     @classmethod
@@ -215,7 +215,7 @@ class UpAssets(CommonApi):
         """物流发货 3：道具，发往背包"""
         # b_info = await UserBagRC.update_user_bag(uid, express, is_notice=is_notice)
         # if b_info:
-        #     cls.info_log(uid, 'add_to_bag 添加背包成功')
+        #     cls.log_info(uid, 'add_to_bag 添加背包成功')
         #     if not is_notice:
         #         return True
         #
@@ -238,7 +238,7 @@ class UpAssets(CommonApi):
         """物流发货 4：装扮，发往装扮"""
         # p_info = await UserCosmeticRC.update_user_cosmetic(uid, express, is_notice=is_notice)
         # if p_info:
-        #     cls.info_log(uid, 'add_to_cosmetic 添加装扮成功')
+        #     cls.log_info(uid, 'add_to_cosmetic 添加装扮成功')
         #     if is_notice:
         #         await cls.send_express_notice(uid, [RedDotType.RD_PERSONAL])
         #     return True
@@ -249,7 +249,7 @@ class UpAssets(CommonApi):
         """物流发货 5：皮肤，发往法相系统，如果已获得则兑换成精魄"""
         # new_skin = await UserSkinRC.update_user_skin(uid, express, is_notice=is_notice)
         # if new_skin:
-        #     cls.info_log(uid, 'add_to_skin 添加皮肤成功')
+        #     cls.log_info(uid, 'add_to_skin 添加皮肤成功')
         #     if is_notice:
         #         await cls.send_express_notice(uid, [RedDotType.RD_SKIN])
         #     return True

@@ -47,7 +47,7 @@ class StoreHandler(GameAuthApi):
                 (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                   hint='游戏商店加载失败，请稍后再试')
 
-        self.info_log(uid, f"StoreHandler {bs_enum.phrase}加载成功")
+        self.log_info(uid, f"StoreHandler {bs_enum.phrase}加载成功")
         return self.answer(data=items_lists)
 
 
@@ -100,7 +100,7 @@ class PayByRedemption(GameAuthApi):
         if pay_func and callable(pay_func):
             all_items, show_items = await pay_func(u_info, express.get("store_type"), int(express.get("price", 0)),
                                                    trade_item_count, conf_items)
-            self.info_log(uid, f'PayByRedemption {pt_enum.phrase}兑换结果', True if all_items and show_items else False)
+            self.log_info(uid, f'PayByRedemption {pt_enum.phrase}兑换结果', True if all_items and show_items else False)
             if all_items and show_items:
                 try:
                     async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -109,7 +109,7 @@ class PayByRedemption(GameAuthApi):
                         if buy_record:
                             await BaseUserRC.cache_count_buy_limit(uid, trade_item, buy_record)
                 except Exception as e:
-                    self.error_log(f'{pt_enum.phrase}事务执行失败，原因：{e}')
+                    self.log_err(f'{pt_enum.phrase}事务执行失败，原因：{e}')
                     self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
 
                 return self.answer(data=show_items)

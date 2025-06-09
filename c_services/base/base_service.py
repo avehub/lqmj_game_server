@@ -54,7 +54,7 @@ class BaseService(BaseServer, SessionManager):
     async def __lost_connect(self, player, room, _):
         """ 离线处理 """
         player.offline = True
-        self.info_log(room.tid, player.uid, "玩家掉线")
+        self.log_info(room.tid, player.uid, "玩家掉线")
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
     @staticmethod
@@ -90,7 +90,7 @@ class BaseService(BaseServer, SessionManager):
             price = one_data.get("price") or one_data.get("leisure_rate") * room.base_score
 
             free_type = 1 #await UserActivityRC.check_hu_dong_free_privilege(player.uid)
-            self.info_log(player.uid, "互动表情", free_type)
+            self.log_info(player.uid, "互动表情", free_type)
             if free_type == ActivityType.LIFETIME_CARD:
                 price = 0
             elif free_type == ActivityType.WEEK_CARD:
@@ -132,7 +132,7 @@ class BaseService(BaseServer, SessionManager):
         if player.trustee:
             await room.do_trustee(player)
 
-        self.info_log(player.uid, "__enter_room", player.tid, id(player))
+        self.log_info(player.uid, "__enter_room", player.tid, id(player))
 
         # 同步房间、玩家信息
         one_of_model.ParseFromString(data)
@@ -154,7 +154,7 @@ class BaseService(BaseServer, SessionManager):
             return
         room = self.get_room(room.tid)
         if not room:
-            self.info_log(player.uid, "房间强制解散失败，找不到该房间")
+            self.log_info(player.uid, "房间强制解散失败，找不到该房间")
             return
         await room.force_dismiss()
 
@@ -187,7 +187,7 @@ class BaseService(BaseServer, SessionManager):
 
     async def set_player_ws_id(self, player: BasePlayer):
         player.ws_id = await self.get_player_ws_id(player.uid)
-        self.info_log(player.uid, "设置玩家ws_id", player.ws_id)
+        self.log_info(player.uid, "设置玩家ws_id", player.ws_id)
 
     @staticmethod
     async def init_player(player):

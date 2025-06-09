@@ -53,7 +53,8 @@ class BaseConf(metaclass=SingleTon):
         cls.rng = RngMaker
 
         cls.PROC_NAME = cls.SERVER_ID
-        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), proc_split=1, proc_tab=cls.PROC_NAME)
+        cls.log.init_conf(base_path=cls.LOG_PATH, folder=cls.SERVER_NAME.lower(), log_split=2, proc_split=1, keeps=4,
+                          proc_tab=cls.PROC_NAME)
         if cls.CONF_RDS:
             cls.rds = RdsClient.init(cls.CONF_RDS['default'], logs=cls.log)
         if cls.CONF_AMQP:
@@ -77,18 +78,6 @@ class BaseConf(metaclass=SingleTon):
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
         model_list = [f'lucky_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
-
-    @classmethod
-    def info_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)
 
 
 base_conf = BaseConf()

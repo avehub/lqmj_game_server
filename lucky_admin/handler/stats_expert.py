@@ -3,6 +3,8 @@
 """
 import asyncio
 from datetime import datetime, timedelta
+
+from nsanic.libs.component import LogMeta
 from tortoise.transactions import in_transaction
 from common.public.enum_const import UserSource, ServiceEnum, DbKey
 from common.utils.kit_dt import KitDt
@@ -14,7 +16,7 @@ from lucky_game.model_db.main import RecordsTradeOrder, StatsUserDataAnalysis, U
     RecordsAdsEvent, StatsGameTimes, StatsRetentionOwnUser
 
 
-class StatsExpert():
+class StatsExpert(LogMeta):
     conf: ConfSrv = conf_srv
 
     RETENTION_DAYS = [1, 3, 7, 14, 30]
@@ -98,7 +100,7 @@ class StatsExpert():
         }
         # 4. 单次写入
         await StatsUserDataAnalysis.update_or_create(time_node=start, defaults=stats_res)
-        cls.conf.info_log(f"{start} 用户数据分析（优化版）{stats_res}")
+        cls.log_info(f"{start} 用户数据分析（优化版）{stats_res}")
 
     @classmethod
     async def _get_active_user_by_date(cls, target_date):
@@ -174,7 +176,7 @@ class StatsExpert():
             # 2.检查活跃用户
             main_record, _ = await StatsRetentionOwnUser.get_or_create(time_node=start)
             if not active_users:
-                cls.conf.info_log(f"{start} 留存统计（优化版）, 无活跃用户")
+                cls.log_info(f"{start} 留存统计（优化版）, 无活跃用户")
                 return
 
             # 4.并行计算各留存指标
@@ -192,7 +194,7 @@ class StatsExpert():
 
             # 执行更新
             await StatsRetentionOwnUser.filter(id=main_record.id).update(**updates)
-        cls.conf.info_log(f"{start} 留存统计（优化版）, 新增用户数: {len(new_users)}, 活跃用户数: {len(active_users)}")
+        cls.log_info(f"{start} 留存统计（优化版）, 新增用户数: {len(new_users)}, 活跃用户数: {len(active_users)}")
 
     @classmethod
     async def _cal_single_retention(cls, target_date, old_user_ids):
@@ -841,7 +843,7 @@ class StatsExpert():
                                                 defaults={"game_times": 0, "avg_game_times": 0})
                 for cs_type in cls.GAME_TYPES
             ])
-            cls.conf.info_log(f"{start} 统计游戏总量（优化版）, 活跃用户 {active_user_count}")
+            cls.log_info(f"{start} 统计游戏总量（优化版）, 活跃用户 {active_user_count}")
             return
 
         # 4.计算各游戏类型数据
@@ -865,7 +867,7 @@ class StatsExpert():
             StatsGameTimes.update_or_create(time_node=start, cs_type=u.get("cs_type"), defaults=u)
             for u in updates
         ])
-        cls.conf.info_log(f"{start} 统计游戏总量（优化版）, {updates}")
+        cls.log_info(f"{start} 统计游戏总量（优化版）, {updates}")
 
     @classmethod
     def cal_and_process_ring_ratio(cls, current_data, previous_data):
