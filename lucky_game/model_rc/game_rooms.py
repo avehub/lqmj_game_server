@@ -12,7 +12,6 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
 from lucky_game.const.const import PlatForm
-from common.redis.redis_client import RedisClient
 
 
 class GameRoomsRC(BaseCommonRC):

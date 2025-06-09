@@ -4,8 +4,6 @@ from nsanic.orm.rc_model import RCModel
 from tortoise.expressions import Q
 from tortoise.exceptions import OperationalError
 from common.public.common_class import CommonApi
-from common.redis.redis_client import RedisClient
-
 
 
 class BaseRC(RCModel):
@@ -306,67 +304,3 @@ class BaseCommonRC(RCModel, CommonApi):
         return True, "更新成功"
 
 
-class BaseRedisRc(RCModel):
-    redis_client: RedisClient = None
-
-    @classmethod
-    def init_redis_client(cls):
-        """初始化Redis客户端"""
-        if not cls.redis_client:
-            cls.redis_client = RedisClient()
-        return cls.redis_client
-
-    @classmethod
-    async def sadd(cls, key: str, *values: Union[str, int]) -> int:
-        """
-        添加一个或多个成员到集合中，已经存在的成员将被忽略
-
-        Args:
-            key: 集合的键名
-            *values: 要添加的成员
-
-        Returns:
-            被添加到集合的新成员的数量
-        """
-        return await cls.redis_client.sadd(key, *values)
-
-    @classmethod
-    async def srem(cls, key: str, *values: Union[str, int]) -> int:
-        """
-        移除集合中的一个或多个成员
-
-        Args:
-            key: 集合的键名
-            *values: 要移除的成员
-
-        Returns:
-            被成功移除的成员的数量
-        """
-        return await cls.redis_client.srem(key, *values)
-
-    @classmethod
-    async def smembers(cls, key: str) -> set:
-        """
-        返回集合中的所有成员
-
-        Args:
-            key: 集合的键名
-
-        Returns:
-            集合中的所有成员
-        """
-        return await cls.redis_client.smembers(key)
-
-    @classmethod
-    async def sismember(cls, key: str, value: Union[str, int]) -> bool:
-        """
-        判断成员是否是集合的成员
-
-        Args:
-            key: 集合的键名
-            value: 要检查的成员
-
-        Returns:
-            如果是集合的成员，返回 True，否则返回 False
-        """
-        return await cls.redis_client.sismember(key, value)
