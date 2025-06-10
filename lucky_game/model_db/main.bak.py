@@ -1,4 +1,5 @@
 from nsanic.libs import tool_dt
+from nsanic.libs.mk_random import RngMaker
 from nsanic.orm.db_model import DBModel
 from tortoise import fields
 from tortoise.fields.base import OnDelete
@@ -815,7 +816,7 @@ class RecordsTradeOrder(DBModel):
     async def gen_insert_data(cls, **kwargs):
         """ 生成插入数据 """
         data = {
-            "order_id": await conf.rng.gen_num(str_len=32),
+            "order_id": await RngMaker.gen_num(str_len=32),
             "uid": kwargs.get("uid"),
             "trade_item": kwargs.get("trade_item"),
             "trade_item_count": kwargs.get("trade_item_count"),
