@@ -1,10 +1,10 @@
+from nsanic.libs.mk_random import RngMaker
 from nsanic.orm.db_model import DBModel
 from tortoise import fields
 from nsanic.libs import tool_dt
 from common.public.enum_const import ServiceEnum, PlayType
 from lucky_game.const import AwardType, EventTracking
 from lucky_game.const import OrderStatus, PayType, PayMode, DeliverStatus, PlatForm, AchieveType
-from lucky_game.config import conf_srv as conf
 
 
 class RecordsTrade(DBModel):
@@ -36,7 +36,7 @@ class RecordsTrade(DBModel):
     async def gen_insert_data(cls, **kwargs):
         """ 生成插入数据 """
         data = {
-            "order_id": await conf.rng.gen_num(str_len=32),
+            "order_id": await RngMaker.gen_num(str_len=32),
             "uid": kwargs.get("uid"),
             "trade_item": kwargs.get("trade_item"),
             "trade_item_count": kwargs.get("trade_item_count"),
@@ -101,7 +101,7 @@ class RecordsAdOrder(DBModel):
     async def gen_insert_data(cls, **kwargs):
         """ 生成插入数据 """
         data = {
-            "ad_order_id": await conf.rng.gen_num(str_len=32),
+            "ad_order_id": await RngMaker.gen_num(str_len=32),
             "uid": kwargs.get("uid"),
             "ad_slot_id": kwargs.get("ad_slot_id"),
             "ad_achieve_type": kwargs.get("ad_achieve_type"),

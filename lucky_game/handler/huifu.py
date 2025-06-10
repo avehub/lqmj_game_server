@@ -2,11 +2,11 @@ import asyncio
 import adapay
 import dg_sdk
 from functools import partial
-from common.utils.kit_dt import KitDt
-from lucky_game.config import conf_srv, ConfSrv
-from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
 
-conf: ConfSrv = conf_srv
+from nsanic.libs.mk_random import RngMaker
+
+from common.utils.kit_dt import KitDt
+from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
 
 
 class DouGongPay:
@@ -86,7 +86,7 @@ class DouGongPay:
         request = DG_SDK.V2MerchantBusiConfigRequest()
         request.huifu_id = HuiFuConf.DOUGONG_SYS_ID
         request.req_date = KitDt.get_date_str()
-        request.req_seq_id = await conf.rng.gen_num(str_len=32)
+        request.req_seq_id = await RngMaker.gen_num(str_len=32)
         request.fee_type = '01'
         request.wx_woa_app_id = WeChatConf.WE_CHAT_GZH_APP_ID
         request.wx_woa_secret = WeChatConf.WE_CHAT_GZH_APP_SECRET
