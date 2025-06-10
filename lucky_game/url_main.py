@@ -37,6 +37,8 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo
 from lucky_game.interface.game_room import CreateRoom, JoinRoom
+from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
+    RoomTemplateDelete
 from lucky_game.interface.user import UserInfo
 
 
@@ -58,7 +60,7 @@ class MainBp(BaseBlue):
         Urls("/ClubApply/", ClubApply),  # 茶馆申请
         Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
         Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
-        Urls("/ClubCheckList/", ClubCheckList),  # 茶馆房间创建
+        Urls("/ClubCheckList/", ClubCheckList),  # 茶馆审批列表
         Urls("/ClubList/", ClubList),  # 我的茶馆列表
         Urls("/ClubHall/", ClubHall),  # 茶馆大厅
         Urls("/ClubSearch/", ClubSearch),  # 茶馆搜索
@@ -66,6 +68,10 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomJoin/", JoinRoom),  # 茶馆房间加入
         # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
+        Urls("/ClubRoomTemplateCreate/", RoomTemplateCreate),  # 茶馆房间模板创建
+        Urls("/ClubRoomTemplateList/", RoomTemplateList),  # 茶馆房间模板列表
+        Urls("/ClubRoomTemplateDelete/", RoomTemplateDelete),  # 茶馆房间模板删除
+        Urls("/ClubRoomTemplateUpdate/", RoomTemplateUpdate),  # 茶馆房间模板更新
 
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息

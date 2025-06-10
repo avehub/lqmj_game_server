@@ -22,51 +22,30 @@ class GameRoomsRC(BaseCommonRC):
     KEY_CLUB_ID = 'club_id'
     SESSION_KEY = "room_player"
     SESSION_DISK_KEY = "room_player_uid"
+    SESSION_ROOM_KEY = "game_room"
     RULE_DETAILS = {
-        "shang_xia_ji",
-        "ben_ji",
-        "wu_gu_ji",
-        "man_tang_ji",
-        "chong_feng_ji",
-        "zhan_ji",
-        "jian_gang_san",
-        "bao_ting",
-        "bi_men_yi_shou",
-        "shang_ga",
-        "gu_mai_score",
-        "suo_de_jia_1",
-        "hu_pai_ti_shi",
-        "huang_zhuang_bu_huang_ji",
-        "four_card_bao_ting",
-        "xiao_pai_bi_men",
-        "tui_zhang_can_hu",
-        "bao_ting_bi_men",
-        "exchange_three",
-        "exchange_cards_type"
+        "shang_xia_ji": {0, 1},  #上下鸡选项 0未选 1选
+        "ben_ji": {0, 1},  # 本鸡选项  0未选 1选
+        "wu_gu_ji": {0, 1},  #乌骨鸡选项 1选 0未选
+        "man_tang_ji": {0, 1},  #满堂鸡选项 0未选 1选
+        "chong_feng_ji": {0, 1},  #冲锋鸡选项 0未选 1选
+        "zhan_ji": {0, 1},  #站鸡选项 0未选 1选
+        "jian_gang_san": {0, 1},  #见杠三选项 0未选 1选
+        "bao_ting": {0, 1},  #报听选项 0未选 1选
+        "bi_men_yi_shou": {0, 1},  #必闷一手选项 0未选 1选
+        "shang_ga": {0, 1},  #估卖选项 0未选 1选
+        "gu_mai_score": {0, 1, 2, 3, 4, 5},  #所选卖分 0自由分 1-5对应1-5分
+        "suo_de_jia_1": {0, 1},  #所得加1选项 0未选 1选
+        "hu_pai_ti_shi": {0, 1},  #胡牌提示  捡漏血流才有选项 0未选 1选  闷胡血流固定是1
+        "huang_zhuang_bu_huang_ji": {0, 1},  #黄庄不黄鸡杠 0未选 1选
+        "four_card_bao_ting": {0, 4},  #四张报听 0未选 4选
+        "xiao_pai_bi_men": {0, 1},  #小牌必闷  闷胡血流才有 0未选 1选  捡漏血流固定是1
+        "tui_zhang_can_hu": {0, 1},  #退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
+        "bao_ting_bi_men": {0, 1},  #报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
+        "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
+        "exchange_cards_type": {1, 2}  # 换三张方式  1任意牌 2同色牌
     }
-
-    SHANG_XIA_JI = (0, 1)  #上下鸡选项 0未选 1选
-    BEN_JI = (0, 1)  # 本鸡选项  0未选 1选
-    WU_GU_JI = (0, 1)  # 乌骨鸡选项 0未选 1选
-    MAN_TANG_JI = (0, 1)  # 满堂鸡选项 0未选 1选
-    CHONG_FENG_JI = (0, 1)  # 冲锋鸡选项 0未选 1选
-    ZHAN_JI = (0, 1)  # 站鸡选项 0未选 1选
-    JIAN_GANG_SAN = (0, 1)  # 见杠三选项 0未选 1选
-    BAO_TING = (0, 1)  # 报听选项 0未选 1选
-    BI_MEN_YI_SHOU = (0, 1)  # 必闷一手选项 0未选 1选
-    SHANG_GA = (0, 1)  # 估卖选项 0未选 1选
-    GU_MAI_SCORE = (0, 1, 2, 3, 4, 5)  # 所选卖分 0自由分 1-5对应1-5分
-    SUO_DE_JIA_1 = (0, 1)  # 所得加1选项 0未选 1选
-    HU_PAI_TI_SHI = (0, 1)  # 胡牌提示  捡漏血流才有选项 0未选 1选  闷胡血流固定是1
-    HUANG_ZHUANG_BU_HUANG_JI = (0, 1)  # 黄庄不黄鸡杠 0未选 1选
-    FOUR_CARD_BAO_TING = (0, 4)  # 四张报听 0未选 4选
-    XIAO_PAI_BI_MEN = (0, 1)  # 小牌必闷  闷胡血流才有 0未选 1选  捡漏血流固定是1
-    TUI_ZHANG_CAN_HU = (0, 1)  # 退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
-    BAO_TING_BI_MEN = (0, 1)  # 报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
-    EXCHANGE_THREE = (0, 1, 2, 3)  # 是否换三张  0不换 1换三张 2豹子换 3 黄牌换
-    EXCHANGE_CARDS_TYPE = (1, 2)  # 换三张方式  1任意牌 2同色牌
     NULL_MEG = "房间不存在"
-
 
     @classmethod
     async def cache_room_player_up(cls, room_id, value=1):
@@ -75,6 +54,18 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def cache_room_player_get(cls, room_id):
         return await cls.conf.rds.get_item(f"{cls.SESSION_KEY}:{room_id}")
+
+    @classmethod
+    async def cache_room_set(cls, room_id, value):
+        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}", value)
+
+    @classmethod
+    async def cache_room_get(cls, room_id):
+        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+
+    @classmethod
+    async def cache_room_drop(cls, room_id):
+        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,
@@ -91,11 +82,9 @@ class GameRoomsRC(BaseCommonRC):
                     "play_type": play_type,
                     "total_round": total_round,
                     "rule_details": json_encode(rule_details) if rule_details else "{}",
-                    "max_player": kwargs.get("max_player", 4),
-                    "game_type": kwargs.get("game_type", 1),
-                    "pay_type": kwargs.get("pay_type", 1),
-                    "price": kwargs.get("price", 1),
-                    "m_game_name": kwargs.get("m_game_name", 1),
+                    "max_player": kwargs.get("max_player"),
+                    "pay_type": kwargs.get("pay_type"),
+                    "price": kwargs.get("price"),
                     "cs_type": kwargs.get("cs_type", 0)
                 }
                 new_room = await cls.db_model.add_one(room_data)
@@ -103,6 +92,8 @@ class GameRoomsRC(BaseCommonRC):
                     return None, "创建失败"
         except OperationalError as e:
             return None, f"房间创建失败: {str(e)}"
+        # 将房间信息缓存
+        await cls.cache_room_set(room_data["room_id"], room_data)
         return room_data["room_id"], "成功"
 
     @classmethod
@@ -137,7 +128,8 @@ class GameRoomsRC(BaseCommonRC):
         if room_data["club_id"] and room_data["club_id"] > 0:
             # 扣除茶馆基金
             if room_data["pay_type"] == 2:
-                up_room_card = await BaseClubRC.update_club_int_field(room_data["club_id"], key, room_data["price"], "sub")
+                up_room_card = await BaseClubRC.update_club_int_field(room_data["club_id"], key, room_data["price"],
+                                                                      "sub")
             else:
                 room_card = userinfo[key] - room_data['price']
                 up_room_card = await BaseUserRC.update_info(userinfo, {key: room_card})
@@ -165,7 +157,6 @@ class GameRoomsRC(BaseCommonRC):
             return False, "房卡结算失败"
         return True, "成功"
 
-
     @classmethod
     async def delete_game_room(cls, room_id: int):
         """删除游戏房间"""
@@ -181,15 +172,15 @@ class GameRoomsRC(BaseCommonRC):
     async def update_game_room(cls, room_id: int, **kwargs):
         """更新房间信息"""
         try:
-            room, e= await cls.get_game_room_by_room_id(room_id)
+            room, e = await cls.get_game_room_by_room_id(room_id)
             if not room:
-                return False, cls.NULL_MEG
-
-            valid_fields = ["status", "player_count", "rule_details"]
+                return False, e
+            valid_fields = ["status", "player_count", "rule_details", "play_type", "max_player", "pay_type", "price", "cs_type"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
-
             if update_data:
                 await cls.db_model.filter(room_id=room_id).update(**update_data)
+            # 删除缓存
+            await cls.cache_room_drop(room_id)
         except OperationalError as e:
             return False, f"房间更新失败: {str(e)}"
         return True, "成功"
@@ -198,9 +189,12 @@ class GameRoomsRC(BaseCommonRC):
     async def get_game_room_by_room_id(cls, room_id: int):
         """根据ID获取房间详情"""
         try:
-            room = await cls.db_model.get_or_none(room_id=room_id)
+            room = await cls.cache_room_get(room_id)
             if not room:
-                return None, cls.NULL_MEG
+                room = await cls.db_model.get_or_none(room_id=room_id)
+                if not room:
+                    return None, cls.NULL_MEG
+                await cls.cache_room_set(room_id, room)
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return room, "成功"
@@ -280,7 +274,3 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return player, "成功"
-
-    @classmethod
-    async def oriupper(cls, val: str):
-        return val.upper()

@@ -461,9 +461,3 @@ class ConfServerAddr(DBModel):
 
     class Meta:
         table = "conf_server_addr"
-
-
-
-
-
-
