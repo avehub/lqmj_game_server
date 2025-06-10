@@ -10,14 +10,12 @@ from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from c_services.const.cs_enum_const import CmdRoom
+from lucky_game.const.const import PlatForm
+from lucky_game.handler.decorator import BaseDecorator
+from pprint import pprint
 
 
-class GameRoomBase(GameAuthApi):
-    """游戏房间基础类"""
-    PAY_TYPE = 1 #支付方式
-
-
-class GameRoomAPI(GameRoomBase):
+class RoomTemplateAPI(GameAuthApi):
 
     async def _before_create_room(self, creator, price, club_id, u_info, rule_details):
         """创建游戏房间前的预处理"""
@@ -46,73 +44,52 @@ class GameRoomAPI(GameRoomBase):
                     return self.answer(StaCode.FAIL, hint="房卡不足")
         return True
 
+    async def _check_rule_detail(self, rule_details):
+        """游侠房间规则校验"""
+        for k in GameRoomsRC.RULE_DETAILS:
+            BaseDecorator.check_inner(
+                val=rule_details.get(k),
+                require=True,
+                inner_list=GameRoomsRC.oriupper(k),
+                p_name=k
+            )
 
-class CreateRoom(GameRoomAPI):
+
+class CreateRoomTemplate(GameAuthApi):
     """创建房间（支持普通房间和茶馆房间）"""
     async def post(self, req: Request, **kwargs):
         # 公共参数
         u_info = kwargs.get("u_info")
-        creator = u_info.get("uid")
-        platform = req.json.get("platform")
-        game_type = req.json.get("game_type")
-        play_type = req.json.get("play_type")
-        pay_type = req.json.get("pay_type")
-        price = req.json.get("price")
-        m_game_name = req.json.get("m_game_name")
-        total_round = req.json.get("total_round", 4)
-        max_player = req.json.get("max_player", 4)
-        rule_details = req.json.get("rule_details", 0)
-        club_id = req.json.get("club_id")
-        cs_type = req.json.get("cs_type")
-        self.check_int(platform, require=True, minval=1, maxval=3, p_name="平台")
-        self.check_int(game_type, require=True, p_name="游戏类型")
-        self.check_int(play_type, require=True, p_name="玩法类型")
-        self.check_int(club_id, require=False, minval=100000, p_name="茶馆ID")
-        self.check_int(max_player, require=True, p_name="最大人数")
-        self.check_str(rule_details, require=True, p_name="规则详情")
-        self.check_str(m_game_name, require=True, p_name="游戏名称")
-        self.check_int(total_round, require=True, p_name="总局数")
-        self.check_int(pay_type, require=True, p_name="支付方式")
-        self.check_int(price, require=True, p_name="支付金额")
+        uid = u_info.get("uid")
+        platform = BaseDecorator.check_inner(val=req.json.get("platform"), require=True, inner_list=PlatForm, p_name="平台")
+        game_type = self.check_int(req.json.get("game_type"), require=True, p_name="游戏类型")
+        play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
+        max_player = self.check_int(req.json.get("max_player"), require=True, p_name="最大人数")
+        rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
+        total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
+        price = self.check_int(req.json.get("price"), require=True, p_name="支付金额")
         # 预处理
-        await self._before_create_room(
-            creator=creator,
-            price=int(price),
-            club_id=club_id,
-            u_info=u_info,
-            rule_details=json_parse(rule_details)
-        )
+        await self._check_rule_detail(rule_details)
 
         # 创建房间
-        new_room, err = await GameRoomsRC.create_game_room(
+        new, err = await ClubRoomTemplatesRC.create_template(
             platform=platform,
-            creator=creator,
             game_type=game_type,
             play_type=play_type,
-            pay_type=pay_type,
             price=price,
-            m_game_name=m_game_name,
             total_round=total_round,
             max_player=max_player,
             rule_details=rule_details,
             club_id=club_id
         )
-        if not new_room:
+        if not new:
             return self.answer(StaCode.FAIL, hint=err)
-        cs_enum = ServiceEnum.find_member_by_val(cs_type)
-        if not cs_enum:
-            await GameRoomsRC.delete_game_room(new_room)
-            return self.answer(StaCode.FAIL, hint="非法服务")
-        await self.cs2cs_by_rmq(
-            cs_enum,
-            CmdRoom.NEW_MATCH,
-            await GameRoomsRC.get_game_room_by_room_id(new_room),
-            creator,
-        )
-        return self.answer(data={"room_id": new_room})
+
+        return self.answer(data={"template_id": new})
 
 
-class RoomList(GameRoomAPI):
+class RoomList(GameAuthApi):
     """房间列表（合并模板和现有房间）"""
     async def get(self, req: Request):
         club_id = req.args.get("club_id", 0)
@@ -127,7 +104,7 @@ class RoomList(GameRoomAPI):
         })
 
 
-class JoinRoom(GameRoomAPI):
+class JoinRoom(GameAuthApi):
     """加入房间"""
     async def post(self, req: Request, **kwargs):
         room_id = req.json.get("room_id")
@@ -153,7 +130,7 @@ class JoinRoom(GameRoomAPI):
         return self.answer()
 
 
-class LeaveRoom(GameRoomAPI):
+class LeaveRoom(GameAuthApi):
     """离开房间"""
     async def post(self, req: Request, **kwargs):
         room_id = req.json.get("room_id")
@@ -167,7 +144,7 @@ class LeaveRoom(GameRoomAPI):
         return self.answer()
 
 
-class DismissRoom(GameRoomAPI):
+class DismissRoom(GameAuthApi):
     """解散房间"""
     async def post(self, req: Request):
         room_id = req.json.get("room_id")

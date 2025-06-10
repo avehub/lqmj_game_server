@@ -27,15 +27,15 @@ class ClubRoomTemplatesRC(BaseCommonRC):
 
     @classmethod
     async def create_template(cls, club_id: int, platform: int, play_type: int, 
-                             room_rule: dict, max_players: int, **kwargs):
+                             rule_details: dict, max_player: int, **kwargs):
         """创建茶馆房间模板"""
         try:
             template_data = {
                 "club_id": club_id,
                 "platform": platform,
                 "play_type": play_type,
-                "room_rule": json_encode(room_rule),
-                "max_players": max_players,
+                "rule_details": json_encode(rule_details),
+                "max_player": max_player,
                 "current_players": kwargs.get('current_players', 0),
                 "cs_type": kwargs.get('cs_type', 0)
             }
@@ -63,11 +63,11 @@ class ClubRoomTemplatesRC(BaseCommonRC):
     async def update_template(cls, template_id: int, **kwargs):
         """更新模板信息"""
         try:
-            valid_fields = ["max_players", "room_rule", "platform", "current_players"]
+            valid_fields = ["max_player", "rule_details", "platform", "current_players"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
             
-            if 'room_rule' in update_data:
-                update_data['room_rule'] = json_encode(update_data['room_rule'])
+            if 'rule_details' in update_data:
+                update_data['rule_details'] = json_encode(update_data['rule_details'])
                 
             if update_data:
                 await cls.db_model.filter(id=template_id).update(**update_data)
