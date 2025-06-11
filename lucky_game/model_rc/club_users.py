@@ -19,6 +19,8 @@ class ClubUsersRC(BaseCommonRC):
     ROLE_MANAGE = 1  # 管理员
     ROLE_HOST = 9  # 茶馆主
 
+    STATUS_NORMAL = 0  # 正常
+
     @classmethod
     async def cache_session_uid_set(cls, uid, value):
         """根据用户ID缓存用户茶馆关系列表"""

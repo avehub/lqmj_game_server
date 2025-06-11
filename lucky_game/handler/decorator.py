@@ -8,6 +8,7 @@ from common.public.conf import LIVE_SERVER
 from common.public.enum_const import JWType
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.config import conf_srv, ConfSrv
+from nsanic.libs.consts import StaCode
 
 
 class BaseDecorator(BaseRps):
@@ -27,17 +28,17 @@ class BaseDecorator(BaseRps):
 
     async def check_inner(
             self,
-            val,
-            require=False,
-            default=None,
-            inner_list: tuple = (),
+            val: any,
+            require: bool = False,
+            default: any = None,
+            inner_dick: tuple = (),
             p_name='') -> int or str:
         """
         内部指定参数校验
         :param val: 待校验对象
         :param require: 是否必要参数 默认非必要
         :param default: 非必要状态下的默认值
-        :param inner_list: 校验范围列表
+        :param inner_dick: 校验范围列表
         :param p_name: 参数名
         :return 转换的值--int
         """
@@ -45,16 +46,16 @@ class BaseDecorator(BaseRps):
             return default
         if val is None:
             return self.answer(
-                code=self.conf.STA_CODE.ERR_ARG,
+                code=StaCode.ERR_ARG,
                 hint=f"The parameter {p_name} is required"
             )
-        if not isinstance(val, inner_list):
+        if val in inner_dick:
+            return val
+        else:
             return self.answer(
-                code=self.conf.STA_CODE.ERR_ARG,
+                code=StaCode.ERR_ARG,
                 hint=f"The parameter {p_name} is not within the range of parameter values"
             )
-        return val
-
 
 
 class GameChecker(BaseDecorator):

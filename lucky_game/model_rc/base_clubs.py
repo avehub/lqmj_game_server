@@ -43,7 +43,8 @@ class BaseClubRC(BaseCommonRC):
                 return False, "茶馆名已存在"
             club_dick = {
                 "name": name,
-                "uid": club_uid
+                "uid": club_uid,
+                "other": {"pay_type": 1, "host_power_room": 1}
             }
             # cls.conf.info_log('creat club:', club_dick)
             row = await cls.db_model.add_one(club_dick)
