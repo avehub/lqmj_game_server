@@ -15,15 +15,18 @@ class ConfGameRoomRulesRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_set(cls, rule_id, value):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{rule_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{rule_id}", value)
 
     @classmethod
     async def cache_session_get(cls, rule_id):
-        return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{rule_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{rule_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_drop(cls, rule_id):
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{rule_id}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{rule_id}")
 
     @classmethod
     async def create_rule(cls, pip: int, rule_type: int, rule_name: str, rule_info: dict):
@@ -99,7 +102,7 @@ class ConfGameRoomRulesRC(BaseCommonRC):
     async def get_by_child(cls, ids: list):
         """根据IDS获取配置列表"""
         try:
-            rules = await cls.db_model.filter(pip__in=ids).all()
+            rules = await cls.db_model.filter(pip__in=ids).values()
             if not rules:
                 return rules, "暂无规则配置"
         except OperationalError as e:
@@ -113,17 +116,18 @@ class ConfGameRoomRulesRC(BaseCommonRC):
         children, e = await cls.get_by_child(child_ids)
         if children:
             for val in rule:
-                rule["child"] = []
+                val["child"] = []
                 for child in children:
                     if val['id'] == child['pip']:
-                        rule["child"].append(child)
-                    await cls._child(child)
+                        val["child"].append(child)
+                    await cls._child(children)
         return rule
+
     @classmethod
     async def get_by_type(cls, rule_type: int):
         """根据规则类型获取配置列表"""
         try:
-            rules = await cls.db_model.filter(rule_type=rule_type).all()
+            rules = await cls.db_model.filter(rule_type=rule_type).values()
             if not rules:
                 return rules, "暂无规则配置"
         except OperationalError as e:
@@ -141,9 +145,9 @@ class ConfGameRoomRulesRC(BaseCommonRC):
                 query["pip"] = pip
             if rule_type is not None:
                 query["type"] = rule_type
-            rules, e = await cls.db_model.filter(**query).values()
+            rules = await cls.db_model.filter(**query).values()
             if not rules:
-                return result, f"查询失败: {str(e)}"
+                return result, "暂无配置"
             result = await cls._child(rules)
         except OperationalError as e:
             return result, f"查询失败: {str(e)}"

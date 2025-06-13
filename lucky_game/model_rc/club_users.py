@@ -4,8 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ClubUsers
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from pprint import pprint
-from nsanic.libs.tool import json_encode
+from nsanic.libs.tool import json_encode, json_parse
 
 
 class ClubUsersRC(BaseCommonRC):
@@ -24,32 +23,38 @@ class ClubUsersRC(BaseCommonRC):
     @classmethod
     async def cache_session_uid_set(cls, uid, value):
         """根据用户ID缓存用户茶馆关系列表"""
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION_UID}:{uid}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION_UID}:{uid}", value)
 
     @classmethod
     async def cache_session_uid_get(cls, uid):
         """根据用户ID获取用户茶馆关系列表"""
-        await cls.conf.rds.get_item(f"{cls.KEY_SESSION_UID}:{uid}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION_UID}:{uid}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_uid_drop(cls, uid):
         """根据用户ID删除用户茶馆关系列表"""
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_UID}:{uid}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_UID}:{uid}")
 
     @classmethod
     async def cache_session_clubid_set(cls, club_id, value):
         """根据茶馆ID缓存用户茶馆关系列表"""
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}", value)
 
     @classmethod
     async def cache_session_clubid_get(cls, club_id):
         """根据茶馆ID缓存用户茶馆关系列表"""
-        await cls.conf.rds.get_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_clubid_drop(cls, club_id):
         """根据茶馆ID缓存用户茶馆关系列表"""
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
     @classmethod
     async def check_club_user(cls, uid, club_id):

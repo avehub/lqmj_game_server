@@ -40,7 +40,7 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_key(cls, uid, session_key):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{uid}", session_key, ex_time=7 * 86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{uid}", session_key, ex_time=7 * 86400)
 
     @classmethod
     async def get_session_key(cls, uid):
@@ -49,7 +49,7 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
         """缓存平台的支付信息"""
-        await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
 
     @classmethod
     async def get_user_pay_info(cls, uid, order_id):

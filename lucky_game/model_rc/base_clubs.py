@@ -21,7 +21,7 @@ class BaseClubRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_set(cls, club_id, value):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{club_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{club_id}", value)
 
     @classmethod
     async def cache_session_get(cls, club_id):
@@ -57,7 +57,6 @@ class BaseClubRC(BaseCommonRC):
                 return False, e
         except OperationalError as e:
             return False, f"失败：{str(e)}"
-
         return True, "创建成功"
 
     @classmethod
@@ -92,12 +91,23 @@ class BaseClubRC(BaseCommonRC):
             if not club:
                 return False, e
             sta = await cls.db_model.update_by_pk(club_id, up_data, old_data=club)
-            if sta:
-                club.update(up_data)
-                await cls.cache_session_set(club_id, club)
-                return club, "成功"
+            if not sta:
+                return None, "失败"
+            club.update(up_data)
+            await cls.cache_session_set(club_id, club)
         except OperationalError as e:
             return None, f"失败：{str(e)}"
+        return club, "成功"
+
+    @classmethod
+    async def delete_club(cls, club_id: int):
+        """删除茶馆信息"""
+        try:
+            await cls.db_model.del_by_pk(club_id)
+            await cls.cache_session_drop(club_id)
+        except OperationalError as e:
+            return None, f"失败：{str(e)}"
+        return True, "成功"
 
     @classmethod
     async def update_club_int_field(cls, club_id: int, field_name: str, value: int, operation: str = 'add'):

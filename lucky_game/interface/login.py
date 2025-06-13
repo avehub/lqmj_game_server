@@ -57,7 +57,7 @@ class BaseLogin(GameAuthApi):
             'dev_id': dev_ident,
             'login_ip': ip,  # req.remote_addr or req.ip,
             'tst_mark': True if login_way == LoginWay.GUEST else False,
-            'platform': req.args.get('c_platform') or req.json.get('c_platform') or req.headers.get('c_platform') or "",
+            'platform': req.args.get('platform') or req.json.get('platform') or req.headers.get('platform') or "",
             'dev_name': req.args.get('c_os') or req.json.get('c_os') or req.headers.get('c_os') or ""
         }
         return login_info

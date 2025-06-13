@@ -15,7 +15,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_set(cls, club_id, value):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{club_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{club_id}", value)
 
     @classmethod
     async def cache_session_get(cls, club_id):
@@ -27,7 +27,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_drop(cls, club_id):
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{club_id}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{club_id}")
 
     @classmethod
     async def create_template(cls, club_id: int, platform: int, play_type: int,

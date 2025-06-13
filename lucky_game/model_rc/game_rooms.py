@@ -50,23 +50,29 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def cache_room_player_up(cls, room_id, value=1):
-        await cls.conf.rds.incr(f"{cls.SESSION_KEY}:{room_id}", value)
+        return await cls.conf.rds.incr(f"{cls.SESSION_KEY}:{room_id}", value)
 
     @classmethod
     async def cache_room_player_get(cls, room_id):
-        return await cls.conf.rds.get_item(f"{cls.SESSION_KEY}:{room_id}")
+        data = await cls.conf.rds.get_item(f"{cls.SESSION_KEY}:{room_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_room_set(cls, room_id, value):
-        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}", value)
 
     @classmethod
     async def cache_room_get(cls, room_id):
-        await cls.conf.rds.get_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        data = await cls.conf.rds.get_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_room_drop(cls, room_id):
-        await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        return await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,

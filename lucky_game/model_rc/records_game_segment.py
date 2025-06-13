@@ -12,5 +12,64 @@ class RecordsGameSegmentRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
 
     KEY_GAME_ROOM_ID = 'record_rid'
-    KEY_GAME_TOTAL_ID = 'record_tid'
+    KEY_GAME_TOTAL_ID = 'record_sid'
     KEY_GAME_SEGMENT_ID = 'record_sid'
+
+    @classmethod
+    async def get_records_segment_by_id(cls, record_sid: int):
+        """根据ID获取单条子局战绩"""
+        try:
+            record = await cls.db_model.get_by_pk(record_sid)
+            if not record:
+                return None, "战绩不存在"
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return record, "成功"
+
+    @classmethod
+    async def get_records_segment_by_filter(cls, greater_round_ranking: int = None, greater_round_score: int = None,
+                                            uid: any = None, record_rid: any = None, record_tid: any = None, record_sid: any = None):
+        """根据条件获取子局战绩列表"""
+        try:
+            query = {}
+            if greater_round_ranking is not None:
+                query["round_ranking__gte"] = greater_round_ranking
+            if greater_round_score is not None:
+                query["greater_round_score_gte"] = greater_round_score
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if record_rid is not None:
+                if isinstance(record_rid, list):
+                    query["record_rid__in"] = record_rid
+                else:
+                    query["record_rid"] = record_rid
+            if record_tid is not None:
+                if isinstance(record_tid, list):
+                    query["record_tid__in"] = record_tid
+                else:
+                    query["record_tid"] = record_tid
+            if record_sid is not None:
+                if isinstance(record_sid, list):
+                    query["record_sid__in"] = record_sid
+                else:
+                    query["record_sid"] = record_sid
+            records = await cls.db_model.filter(**query).values()
+            if not records:
+                return records, "暂无战绩"
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return records, "成功"
+
+    @classmethod
+    async def delete_record_game_segment(cls, record_sid: int):
+        """删除战绩子局记录"""
+        try:
+            record = await cls.db_model.del_by_pk(record_sid)
+            if not record:
+                return record, "删除失败"
+        except OperationalError as e:
+            return False, f"删除失败: {str(e)}"
+        return record, "删除成功"

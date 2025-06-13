@@ -10,6 +10,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from c_services.const.cs_enum_const import CmdRoom
 from lucky_game.interface.club_room_template import RoomTemplateBase
+from common.public.conf import C_SERVICE_SECRET_KEY
 
 
 class GameRoomAPI(RoomTemplateBase):
@@ -108,14 +109,14 @@ class CreateRoom(GameRoomAPI):
         if not cs_enum:
             await GameRoomsRC.delete_game_room(new_room)
             return self.answer(StaCode.FAIL, hint="非法服务")
+        room_data["secret"] = C_SERVICE_SECRET_KEY
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdRoom.NEW_MATCH,
-            await GameRoomsRC.get_game_room_by_room_id(new_room),
+            room_data,
             creator,
         )
-        data = await GameRoomsRC.get_game_room_by_room_id(new_room)
-        return self.answer(data=data)
+        return self.answer(data=room_data)
 
 
 class RoomList(GameRoomAPI):
@@ -146,6 +147,7 @@ class JoinRoom(GameRoomAPI):
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(room_data['cs_type'])
+        room_data["secret"] = C_SERVICE_SECRET_KEY
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdRoom.ENTER_ROOM,

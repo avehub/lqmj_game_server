@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraClubEvent
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from nsanic.libs.tool import json_parse
 
 class ExtraClubEventRC(BaseCommonRC):
     db_model = ExtraClubEvent
@@ -20,15 +21,18 @@ class ExtraClubEventRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_set(cls, event_id, value):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{event_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{event_id}", value)
 
     @classmethod
     async def cache_session_get(cls, event_id):
-        return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{event_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{event_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_drop(cls, event_id):
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{event_id}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{event_id}")
 
     @classmethod
     async def create_event(cls, club_id: int, event_type: int, uid: int, explain: str):

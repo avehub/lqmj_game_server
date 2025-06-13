@@ -17,15 +17,18 @@ class ExtraGameRoomRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_set(cls, room_id, value):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{room_id}", value)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{room_id}", value)
 
     @classmethod
     async def cache_session_get(cls, room_id):
-        return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{room_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{room_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_drop(cls, room_id):
-        await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{room_id}")
+        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{room_id}")
 
     @classmethod
     async def create_extra_game_room(cls, room_id: int, club_id: int, room_rule: dict, 
