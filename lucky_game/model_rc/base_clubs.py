@@ -5,6 +5,7 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_users import ClubUsersRC
+from nsanic.libs.tool import json_encode, json_parse
 
 
 class BaseClubRC(BaseCommonRC):
@@ -24,7 +25,10 @@ class BaseClubRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_get(cls, club_id):
-        return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{club_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{club_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_session_drop(cls, club_id):

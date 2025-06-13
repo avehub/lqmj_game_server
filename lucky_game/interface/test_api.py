@@ -1,10 +1,7 @@
 # coding=utf-8
-import asyncio
-
 from sanic import Request, json
 from lucky_game.base_api import GameAuthApi
-# from lucky_game.model_rc.base_robot import BaseRobotRC
-# from lucky_game.model_rc.base_user import BaseUserRC
+from common.public.enum_const import StaCode
 
 
 class TestApi(GameAuthApi):
@@ -28,7 +25,7 @@ class TestApi(GameAuthApi):
 
         res = await self.conf.rds.get_item("test")
 
-        return json(data)
+        return self.answer(StaCode.DEFAULT, data=data)
 
 
 

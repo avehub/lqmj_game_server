@@ -89,15 +89,62 @@ class ConfGameRoomRulesRC(BaseCommonRC):
         """根据父级ID获取子规则列表"""
         try:
             rules = await cls.db_model.filter(pip=pip).all()
-            return rules, None
+            if not rules:
+                return rules, "暂无规则配置"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
+        return rules, "成功"
 
+    @classmethod
+    async def get_by_child(cls, ids: list):
+        """根据IDS获取配置列表"""
+        try:
+            rules = await cls.db_model.filter(pip__in=ids).all()
+            if not rules:
+                return rules, "暂无规则配置"
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return rules, "成功"
+
+    @classmethod
+    async def _child(cls, rule: list):
+        """根据结果自动获取子集配置列表"""
+        child_ids = [val['id'] for val in rule]
+        children, e = await cls.get_by_child(child_ids)
+        if children:
+            for val in rule:
+                rule["child"] = []
+                for child in children:
+                    if val['id'] == child['pip']:
+                        rule["child"].append(child)
+                    await cls._child(child)
+        return rule
     @classmethod
     async def get_by_type(cls, rule_type: int):
         """根据规则类型获取配置列表"""
         try:
             rules = await cls.db_model.filter(rule_type=rule_type).all()
-            return rules, None
+            if not rules:
+                return rules, "暂无规则配置"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
+        return rules, "成功"
+
+
+    @classmethod
+    async def get_all(cls, pip: int = None, rule_type: int = None):
+        """获取所有规则列表"""
+        result = []
+        try:
+            query = {}
+            if pip is not None:
+                query["pip"] = pip
+            if rule_type is not None:
+                query["type"] = rule_type
+            rules, e = await cls.db_model.filter(**query).values()
+            if not rules:
+                return result, f"查询失败: {str(e)}"
+            result = await cls._child(rules)
+        except OperationalError as e:
+            return result, f"查询失败: {str(e)}"
+        return result, "成功"

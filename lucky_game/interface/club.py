@@ -56,17 +56,16 @@ class ClubHall(BaseClub):
         self.check_int(club_id, require=True, p_name="茶馆ID")
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
-        # 创建的房间
+        # 游戏房间
         room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
-        # 数据合并
+        # 玩法模板和游戏房间列表合并
         result = []
         if isinstance(templates, list):
             result.extend(templates)
         if isinstance(room_list, list):
             for room in room_list:
                 user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])
-                room["user_list"] = user_uids if user_uids else []
-
+                room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
         return self.answer(data=result)
 
@@ -84,8 +83,6 @@ class ClubSearch(BaseClub):
         if club is None:
             return self.answer(hint=e)
         # 茶馆和用户关系
-        if isinstance(club, bytes):
-            club = json_parse(club.decode())
         club_user, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
         data = {"club": club, "join_status": 0}
         if club_user:

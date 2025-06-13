@@ -2,7 +2,6 @@
 游戏房间接口
 """
 from sanic import Request
-from lucky_game.base_api import GameAuthApi
 from common.public.enum_const import StaCode, ServiceEnum
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.game_rooms import GameRoomsRC
@@ -28,7 +27,7 @@ class GameRoomAPI(RoomTemplateBase):
             if not club_user:
                 return self.answer(StaCode.FAIL, hint=e)
             # 权限&规则校验
-            club = await BaseClubRC.cache_session_get(club_id)
+            club, _ = await BaseClubRC.get_club_by_id(club_id)
             club = json_parse(club)
             if club['uid'] != creator and club['other'].get("host_power_room") in [0, 2]:
                 return self.answer(StaCode.FAIL, hint="无法创建房间")
@@ -64,22 +63,23 @@ class CreateRoom(GameRoomAPI):
         u_info = kwargs.get("u_info")
         creator = u_info.get("uid")
         template_id = self.check_int(req.json.get("template_id"), require=False, p_name="模板ID")
+        is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
+        is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否开启位置")
         if not template_id:
-            platform, game_type, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
             pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
         else:
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.room_clone(template_id, creator, **kwargs)
             club, _ = await BaseClubRC.get_club_by_id(club_id)
-            if isinstance(club, bytes):
-                club = json_parse(club.decode())
             pay_type = club["other"]["pay_type"]
         # 预处理
+        rule_details = await self.verify_rule_detail(rule_details)
         await self._before_create_room(
             creator=creator,
             price=int(price),
             club_id=club_id,
             u_info=u_info,
-            rule_details=json_parse(rule_details)
+            rule_details=rule_details
         )
         # 创建房间
         new_room, err = await GameRoomsRC.create_game_room(
@@ -91,10 +91,19 @@ class CreateRoom(GameRoomAPI):
             total_round=total_round,
             max_player=max_player,
             rule_details=rule_details,
-            club_id=club_id
+            club_id=club_id,
+            is_location=is_location,
+            is_friend=is_friend,
+            cs_type=cs_type,
+            room_type=2,
         )
         if not new_room:
             return self.answer(StaCode.FAIL, hint=err)
+        # 创建房间后直接加入
+        room_data, _ = await GameRoomsRC.get_game_room_by_room_id(new_room)
+        sta, e = await GameRoomsRC.join_room(room_data, creator)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         if not cs_enum:
             await GameRoomsRC.delete_game_room(new_room)
@@ -105,6 +114,7 @@ class CreateRoom(GameRoomAPI):
             await GameRoomsRC.get_game_room_by_room_id(new_room),
             creator,
         )
+
         return self.answer(data={"room_id": new_room})
 
 
@@ -112,15 +122,12 @@ class RoomList(GameRoomAPI):
     """房间列表（合并模板和现有房间）"""
     async def get(self, req: Request):
         club_id = req.args.get("club_id", 0)
-        
-        # 获取模板和房间
-        templates, _ = await ClubRoomTemplatesRC.get_by_club(club_id)
-        rooms, _ = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
-        
-        return self.answer(data={
-            "templates": templates or [],
-            "active_rooms": rooms or []
-        })
+        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
+        if isinstance(room_list, list):
+            for room in room_list:
+                user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])
+                room["seats"] = user_uids if user_uids else []
+        return self.answer(data=room_list)
 
 
 class JoinRoom(GameRoomAPI):
@@ -132,7 +139,7 @@ class JoinRoom(GameRoomAPI):
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
         if not room_data:
             return self.answer(StaCode.FAIL, hint=e)
-        if room_data.rule_details.get("pay_type") == 1:
+        if room_data["pay_type"] == 1:
             if u_info.get("room_card") < room_data['price']:
                 return self.answer(StaCode.FAIL, hint="房卡不足")
         uid = u_info.get("uid")

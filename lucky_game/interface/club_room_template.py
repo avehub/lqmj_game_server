@@ -4,7 +4,7 @@
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from common.public.enum_const import StaCode
-from nsanic.libs.tool import json_parse
+from nsanic.libs.tool import json_parse, json_encode
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -33,16 +33,15 @@ class RoomTemplateBase(GameAuthApi):
 
     async def verify_params(self, req: Request, **kwargs):
         """游戏房间常规参数校验"""
-        platform = self.check_int(req.json.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
-        game_type = self.check_int(req.json.get("game_type"), require=True, p_name="游戏类型")
+        platform = self.check_int(req.args.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
+        cs_type = self.check_int(req.json.get("cs_type"), require=True, p_name="子服务类型")
         play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
         club_id = self.check_int(req.json.get("club_id"), minval=100000, require=True, p_name="茶馆ID")
         max_player = self.check_int(req.json.get("max_player"), require=True, p_name="最大人数")
         rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
         total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
         price = self.check_int(req.json.get("price"), require=True, p_name="支付金额")
-        cs_type = self.check_int(req.json.get("cs_type", 0), require=False, p_name="子服务类型")
-        return platform, game_type, play_type, club_id, max_player, rule_details, total_round, price, cs_type
+        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
     
     async def check_authority(self, uid, club_id):
         """校验权限"""
@@ -60,20 +59,19 @@ class RoomTemplateCreate(RoomTemplateBase):
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        platform, game_type, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
         rule_dick = await self.verify_rule_detail(rule_details)
         await self.check_authority(uid, club_id)
         # 创建模板
         new, err = await ClubRoomTemplatesRC.create_template(
             platform=platform,
-            game_type=game_type,
             play_type=play_type,
             cs_type=cs_type,
             price=price,
             total_round=total_round,
             max_player=max_player,
             rule_details=rule_dick,
-            club_id=club_id
+            club_id=club_id,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -86,12 +84,11 @@ class RoomTemplateUpdate(RoomTemplateBase):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         template_id = self.check_int(req.json.get("template_id"), require=True, p_name="模板ID")
-        platform, game_type, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
         await self.check_authority(uid, club_id)
         rule_dick = await self.verify_rule_detail(rule_details)
         new, err = await ClubRoomTemplatesRC.update_template(
             template_id=template_id,
-            game_type=game_type,
             play_type=play_type,
             cs_type=cs_type,
             price=price,

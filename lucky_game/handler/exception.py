@@ -52,9 +52,9 @@ class RCatchExpt():
         req_id and cls.conf.rds and cls.conf.rds.drop_item(f"{cls.conf.PROCESSING_REQ}:{req_id}")
         headers = HeaderSet.out(cls.conf)
         hasattr(expt, 'headers') and expt.headers and headers.update(expt.headers)
-        if isinstance(expt, RdsError):
-            data = PbBaseRep.encode(code=500, msg='Invalid Cache Server. Please contact administrator.')
-            return response.json(data, status=500, headers=headers)
+        # if isinstance(expt, RdsError):
+        #     data = PbBaseRep.encode(code=500, msg='Invalid Cache Server. Please contact administrator.')
+        #     return response.json(data, status=500, headers=headers)
         if isinstance(expt, JsonFinish):
             body = {'code': expt.code.val, 'data': expt.data, 'msg': expt.hint or expt.code.msg}
             return response.json(body, status=expt.code.http, headers=headers)
