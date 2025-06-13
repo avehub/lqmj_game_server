@@ -7,6 +7,7 @@ from nsanic.libs.tool import json_encode, json_parse
 
 from common.public.enum_const import ServiceEnum, Channel, CacheKey
 from common.utils.utils import UtilsTool
+from pprint import pprint
 
 
 class CommonApi(LogMeta):

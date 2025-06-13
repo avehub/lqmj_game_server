@@ -19,7 +19,11 @@ class ClubRoomTemplatesRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_get(cls, club_id):
-        return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{club_id}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{club_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
+
 
     @classmethod
     async def cache_session_drop(cls, club_id):

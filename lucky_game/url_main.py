@@ -40,7 +40,7 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo
-
+from lucky_game.interface.game_rule import GameRuleAll
 
 class MainBp(BaseBlue):
     # 路由请添加在这里
@@ -84,6 +84,7 @@ class MainBp(BaseBlue):
         # Urls("/GetWeChatGzhOpenid/", GetWeChatGzhOpenid),  # 获取微信公众号的Openid
         #
         # # 游戏相关
+        Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
         # Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
         # Urls("/QueryUserGameStates/", QueryUserGameStates),  # 获取玩家游戏次数等
         # Urls("/QueryUserAllNumOfGames/", QueryUserAllNumOfGames),  # 查询玩家总对局数

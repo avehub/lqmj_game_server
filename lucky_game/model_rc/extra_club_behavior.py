@@ -148,4 +148,5 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                     return False, "更新茶馆信息失败"
         except OperationalError as e:
             return False, f"失败：{str(e)}"
+        return True, "成功"
 

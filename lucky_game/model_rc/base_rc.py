@@ -296,7 +296,7 @@ class BaseCommonRC(RCModel, CommonApi):
                 return False, "数值不能小于0"
             # 更新数据
             update_data = {field_name: new_value}
-            up = await cls.db_model.update_by_pk(club_id, update_data, old_data=data)
+            up = await cls.db_model.update_by_pk(club_id, update_data)
             if not up:
                 return False, "更新失败"
         except OperationalError as e:

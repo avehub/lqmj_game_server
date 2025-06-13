@@ -3,11 +3,12 @@
 """
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import GameRooms
-from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.base_rc import BaseRC, BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.handler.random_utils import generate_natural_random
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
@@ -43,7 +44,7 @@ class GameRoomsRC(BaseCommonRC):
         "tui_zhang_can_hu": {0, 1},  #退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
         "bao_ting_bi_men": {0, 1},  #报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
         "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
-        "exchange_cards_type": {1, 2}  # 换三张方式  1任意牌 2同色牌
+        "exchange_cards_type": {0, 1, 2}  # 换三张方式  1任意牌 2同色牌
     }
     NULL_MEG = "房间不存在"
 
@@ -61,11 +62,11 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def cache_room_get(cls, room_id):
-        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        await cls.conf.rds.get_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
     @classmethod
     async def cache_room_drop(cls, room_id):
-        await cls.conf.rds.set_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,
@@ -81,11 +82,14 @@ class GameRoomsRC(BaseCommonRC):
                     "platform": platform,
                     "play_type": play_type,
                     "total_round": total_round,
-                    "rule_details": json_encode(rule_details) if rule_details else "{}",
+                    "rule_details": rule_details,
                     "max_player": kwargs.get("max_player"),
                     "pay_type": kwargs.get("pay_type"),
                     "price": kwargs.get("price"),
-                    "cs_type": kwargs.get("cs_type", 0)
+                    "cs_type": kwargs.get("cs_type"),
+                    "is_location": kwargs.get("is_location"),
+                    "is_friend": kwargs.get("is_friend"),
+                    "room_type": kwargs.get("room_type"),
                 }
                 new_room = await cls.db_model.add_one(room_data)
                 if not new_room:
@@ -164,6 +168,7 @@ class GameRoomsRC(BaseCommonRC):
             sta = await cls.db_model.filter(room_id=room_id).delete()
             if not sta:
                 return False, cls.NULL_MEG
+            await cls.cache_room_drop(room_id)
         except OperationalError as e:
             return False, f"房间删除失败: {str(e)}"
         return True, "成功"
@@ -191,7 +196,7 @@ class GameRoomsRC(BaseCommonRC):
         try:
             room = await cls.cache_room_get(room_id)
             if not room:
-                room = await cls.db_model.get_or_none(room_id=room_id)
+                room = await cls.db_model.get_or_none(room_id=room_id).values()
                 if not room:
                     return None, cls.NULL_MEG
                 await cls.cache_room_set(room_id, room)
@@ -222,14 +227,11 @@ class GameRoomsRC(BaseCommonRC):
     async def join_room(cls, room_data: dict, uid: int):
         """加入房间"""
         try:
-            if room_data.status != 0:
+            if room_data["status"] != 0:
                 return False, "房间已满"
-            room_id = room_data.room_id
-            max_player = room_data.max_player
-            disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
-            if uid in disk_uid:
-                return False, "用户已加入房间"
-            sta = await cls.conf.rds.set_hash(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            room_id = room_data["room_id"]
+            max_player = room_data["max_player"]
+            sta = await cls.conf.rds.sadd(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
             if sta == 0:
                 return False, "用户已加入房间或加入房间失败"
             disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
@@ -271,6 +273,11 @@ class GameRoomsRC(BaseCommonRC):
             if not room_data:
                 return None, e
             player = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+            if player:
+                # 1. 将字节字符串转换为普通字符串
+                player = [p.decode('utf-8') for p in player]
+                # 2. 将字符串转换为整数
+                player = [int(p) for p in player]
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return player, "成功"

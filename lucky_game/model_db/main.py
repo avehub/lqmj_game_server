@@ -198,6 +198,9 @@ class GameRooms(DBModel):
     total_round = fields.SmallIntField(max_length=6, null=True, default=0, description='总局数')
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
     max_player = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
+    is_location = fields.SmallIntField(max_length=2, null=True, default=0, description='是否开启定位：0否 1是')
+    is_friend = fields.SmallIntField(max_length=2, null=True, default=0, description='是否只允许好友可进：0否 1是')
+    room_type = fields.SmallIntField(max_length=2, null=True, default=0, description='房间类型：1普通房间（通过匹配） 2自建房间')
     status = fields.IntEnumField(enum_type=RoomStatus, default=RoomStatus.T_IDLE, index=True, description='房间状态')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
