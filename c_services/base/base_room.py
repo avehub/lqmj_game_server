@@ -26,7 +26,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__base_score = room_conf.get("base_score") or 1  # 底分
 
         self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
 
         self.__curr_seat_id = 0
         self.__dealer = 0
@@ -243,7 +243,10 @@ class BaseRoom(metaclass=ABCMeta):
     def sit_down(self, player, seat):
         player.tid = self.__tid
         player.seat_id = seat
-        self.__seats.append(player)
+        if self.room_type == RoomType.COMMON:
+            self.__seats.append(player)
+        else:
+            self.__seats[seat] = player
 
     def dealer(self):
         return self.get_player_by_seat_id(self.__dealer)
@@ -364,6 +367,7 @@ class BaseRoom(metaclass=ABCMeta):
         await self.__service.cs2ws_by_rmq(c_code, p.uid, code, hint, data, req_id, ws_id=p.ws_id)
 
     async def inner_broadcast(self, c_code, data=None, code: StaCode = StaCode.PASS, hint="ok", exclude_uid=0):
+        return
         """ 房间内广播 """
         task_list = []
         send_player_list = []
@@ -520,7 +524,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__level = room_conf.get("level") or 1
         self.__level_desc = room_conf.get("desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
-        self.__max_player_count = room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
 
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()

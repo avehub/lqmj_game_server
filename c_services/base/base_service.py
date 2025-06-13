@@ -184,6 +184,7 @@ class BaseService(BaseServer, SessionManager):
         if player:
             await self.set_player_ws_id(player)
         await room.notify_player_enter_room(player)
+        await room.notify_distance()
 
     async def set_player_ws_id(self, player: BasePlayer):
         player.ws_id = await self.get_player_ws_id(player.uid)

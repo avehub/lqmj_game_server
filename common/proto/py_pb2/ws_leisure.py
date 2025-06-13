@@ -542,7 +542,16 @@ class S2CRoomInfo03Mahjong:
         obj.owner = kwargs.get("owner") or 0
         obj.left_count = kwargs.get("left_count") or 0
         obj.last_card = kwargs.get("last_card") or 0
+        obj.dice_num.extend(kwargs.get("dice_num") or [])
         return obj
+
+def pack_table_cards(obj, **kwargs):
+    table_cards = kwargs.get("table_cards") or []
+    for cards in table_cards:
+        table = obj.table_cards.add()
+        table.from_seat_id = cards.get("from_seat_id") or 0
+        table.card = cards.get("card") or 0
+        table.act_type = cards.get("act_type") or 0
 
 class S2CPlayerInfo04Mahjong:
     @classmethod
@@ -559,6 +568,14 @@ class S2CPlayerInfo04Mahjong:
         obj.ze_ren_ji = kwargs.get("ze_ren_ji") or 0
         obj.ze_ren_wu_gu_ji = kwargs.get("ze_ren_wu_gu_ji") or 0
         obj.is_lock_cards = kwargs.get("is_lock_cards") or False
+        obj.operates.extend(kwargs.get("operates") or [])
+        obj.is_bi_hu = kwargs.get("is_bi_hu") or False
+        obj.out_cards.extend(kwargs.get("out_cards") or [])
+        pack_table_cards(obj, **kwargs)
+        men_cards = kwargs.get("men_cards") or []
+        for men_data in men_cards:
+            men_card = obj.men_cards.add()
+            men_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
         return obj
 
 class S2CRoundStartMahjong:
@@ -566,7 +583,7 @@ class S2CRoundStartMahjong:
     @classmethod
     def pb_model(cls,**kwargs):
         obj = ws_leisure_pb2.S2CRoundStartMahjong()
-        obj.seq = kwargs.get("seq") or 1
+        obj.round_idx = kwargs.get("round_idx") or 1
         obj.dealer = kwargs.get("dealer") or 0
         obj.dice_num.extend(kwargs.get("agree_seats") or [])
         return obj
@@ -593,8 +610,8 @@ class S2CDealCardsMahjong:
     def pb_model(cls,**kwargs):
         obj = ws_leisure_pb2.S2CDealCardsMahjong()
         obj.hand_cards.extend(kwargs.get("hand_cards") or [])
-        obj.mo_pai = kwargs.get("mo_pai") or -1
-        obj.cards_count = kwargs.get("cards_count") or {}
+        obj.mo_pai = kwargs.get("mo_pai") or 0
+        obj.cards_count.update(kwargs.get("cards_count") or {})
         return obj
 
 class S2CPublicOperatesMahjong:
@@ -610,6 +627,7 @@ class S2CPublicOperatesMahjong:
         obj.gang_hou_mo_pai = kwargs.get("gang_hou_mo_pai") or 0
         obj.is_show_bao_ting = kwargs.get("is_show_bao_ting") or 0
         obj.can_gang_list.extend(kwargs.get("can_gang_list") or [])
+        obj.hand_cards.extend(kwargs.get("hand_cards") or [])
         return obj
 
 class S2CTurnToMahjong:
@@ -769,7 +787,7 @@ class S2CRoundOverInfo:
     @classmethod
     def pb_model(cls,**kwargs):
         obj = ws_leisure_pb2.S2CRoundOverInfo()
-        obj.seq = kwargs.get("seq") or 0
+        obj.round_idx = kwargs.get("round_idx") or 0
         obj.has_next_round = kwargs.get("has_next_round") or 0
         obj.finish_type = kwargs.get("finish_type") or 0
         obj.curr_card = kwargs.get("curr_card") or 0
@@ -789,14 +807,11 @@ class S2CRoundOverInfo:
             seat.hu_type = data.get("hu_type") or 0
             seat.ji_pai.extend(data.get("ji_pai") or [])
             men_cards = data.get("men_cards") or []
-            table_cards = data.get("table_cards") or []
             seat.hand_cards.extend(data.get("hand_cards") or [])
             for men_data in men_cards:
-                men = seat.men_cards.add()
-                men = S2CMenInfoMahjong.pb_model(**men_data)
-            for table_data in table_cards:
-                table = seat.table_cards.add()
-                table = S2CGangInfo.pb_model(**table_data)
+                men_card = seat.men_cards.add()
+                men_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
+            pack_table_cards(obj, **kwargs)
             account_data = data.get("account") or {}
             seat.account.total_score = account_data.get("total_score") or 0
             ming_xi_data = account_data.get("ming_xi") or {}
@@ -807,6 +822,15 @@ class S2CRoundOverInfo:
             cls.pack_ming_xi_info(other_obj,other_list)
             cls.pack_ming_xi_info(self_obj,self_list)
 
+        return obj
+
+class S2CReqDismissRoom:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CReqDismissRoom()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.agree = kwargs.get("agree") or False
+        obj.agree_seats.extend(kwargs.get("agree_seats") or [])
         return obj
 
 

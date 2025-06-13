@@ -2,6 +2,8 @@ from copy import deepcopy
 
 from c_services.base.base_leisure_player import BaseLeisurePlayer
 from c_services.cs_mahjong.const import ActionType
+from common.utils import earth_position
+from common.utils.utils import UtilsTool
 
 
 class Player(BaseLeisurePlayer):
@@ -46,6 +48,9 @@ class Player(BaseLeisurePlayer):
         self.__ze_ren_wgj = 0
         self.__is_ready = False
         self.__hu_info = {}  # 胡开信息
+
+        self.__x = earth_position.X_NA  # 玩家经度
+        self.__y = earth_position.Y_NA  # 玩家纬度
 
     @property
     def has_shang_ga(self):
@@ -132,8 +137,14 @@ class Player(BaseLeisurePlayer):
     def can_tian_ting(self, can_tian_ting):
         self.__can_tian_ting = can_tian_ting
 
+    @property
     def operates(self):
-        return self.__operates
+        return deepcopy(self.__operates)
+
+    @operates.setter
+    def operates(self, opts):
+        self.__operates.clear()
+        self.__operates.extend(opts)
 
     def can_operates(self):
         return len(self.__operates) > 0
@@ -182,16 +193,15 @@ class Player(BaseLeisurePlayer):
         self.__men_cards.append(data)
         card = data["card"]
         self.__zi_mo_cards.append(card)
-        self.__remove_cards([card])
+        self.rm_cards([card])
         if not is_zha:
             self.__zi_mo_count += 1
 
-    def __remove_cards(self, cards, chu_pai=False):
-        for card in cards:
-            if card in self.__cards:
-                self.__cards.remove(card)
-                chu_pai and self.__chu_cards.append(card)
-                self.__all_chu_cards.append(card)
+    def rm_cards(self, cards,chu_pai=False):
+        super().rm_cards(cards)
+        chu_pai and self.__chu_cards.extend(cards)
+        self.__all_chu_cards.extend(cards)
+
 
     @property
     def zi_mo_cards(self):
@@ -241,6 +251,7 @@ class Player(BaseLeisurePlayer):
         self.on_round_over_clear()
 
     def mo_pai_can_operates(self):
+        """两个集合有交集返回True,即至少有其中一个操作"""
         operates_map = set(self.__operates)
         target_actions = {
             ActionType.ACTION_TYPE_PENG,
@@ -322,10 +333,20 @@ class Player(BaseLeisurePlayer):
     def set_lock_cards(self, lock_cards):
         """ 锁牌，锁住除lock_cards的牌 """
         self.__lock_cards = []
-        temp_cards = deepcopy(self.__cards)
+        temp_cards = deepcopy(self.cards)
         for card in lock_cards:
             temp_cards.remove(card)
         self.__lock_cards = temp_cards
+
+    def set_position(self, x, y):
+        if x is None or y is None:
+            return
+        self.__x = UtilsTool.check_float(x)
+        self.__y = UtilsTool.check_float(y)
+
+    @property
+    def position(self):
+        return self.__x, self.__y
 
     def card_is_lock(self):
         return self.tian_ting or len(self.men_cards) > 0
@@ -360,7 +381,7 @@ class Player(BaseLeisurePlayer):
         self.__table_cards.append(cards)
 
     def ming_gang(self, card, from_seat_id=0):
-        if 3 != self.__cards.count(card):
+        if 3 != self.cards.count(card):
             return False
         cards = [card, card, card, card]
         self.rm_cards([card] * 3)
@@ -369,7 +390,7 @@ class Player(BaseLeisurePlayer):
         return True
 
     def an_gang(self, card):  # 暗杠
-        if self.__cards.count(card) < 4:
+        if self.cards.count(card) < 4:
             return False
         cards = [card, card, card, card]
         self.rm_cards([card] * 4)
@@ -386,7 +407,7 @@ class Player(BaseLeisurePlayer):
 
     def check_an_gang(self, card) -> bool:
         """ 仅检测当前牌能否暗杠 """
-        if self.__cards.count(card) < 4:
+        if self.cards.count(card) < 4:
             return False
         return True
 
@@ -527,7 +548,7 @@ class Player(BaseLeisurePlayer):
         """
         # 手牌
         stand_ji = []
-        for card in self.__cards:
+        for card in self.cards:
             if card in default_ji:
                 stand_ji.append(card)
 
@@ -603,13 +624,18 @@ class Player(BaseLeisurePlayer):
         p_info["ze_ren_ji"] = self.__ze_ren_ji
         p_info["ze_ren_wu_gu_ji"] = self.__ze_ren_wgj
         p_info["is_lock_cards"] = self.__tian_ting or bool(public_men_cards)
+        p_info["table_cards"] = self.get_table_cards()
+        p_info["out_cards"] = deepcopy(self.__chu_cards)
+        p_info["lock_cards"] = self.__lock_cards
+        p_info["operates"] = self.operates[:]
+        p_info["men_cards"] = self.__men_cards
         return p_info
 
     def round_over_data(self):
         return {
             "seat_id": self.__seat_id,
             "hand_cards": self.cards,
-            "table_cards": self.__get_cheng_pai(),
+            "table_cards": self.get_table_cards(),
             "round_score": self.round_score,
             "total_score": self.total_score,
             "jiao_pai": self.__jiao_pai,
@@ -635,8 +661,8 @@ class Player(BaseLeisurePlayer):
             "fang_gang_count": self.__zhuan_wan_gang_count,  # 转弯杠次数
         }
 
-    def __get_cheng_pai(self):
-        data = self.__get_public_pai()
+    def get_table_cards(self):
+        data = self.get_public_pai()
         result = []
         for table_cards in data:
             act_type = table_cards[0]
@@ -656,7 +682,7 @@ class Player(BaseLeisurePlayer):
                 result.append(item)
         return result
 
-    def __get_public_pai(self):
+    def get_public_pai(self):
         return [deepcopy(item) for item in self.__table_cards]
 
 

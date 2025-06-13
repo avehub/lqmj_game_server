@@ -27,7 +27,6 @@ class MahjongServer(BaseCardService):
         })
 
 
-
     async def __on_player_pass(self, player, room):
         code, msg = await room.on_player_pass(player)
         if code != StaCode.PASS:

@@ -46,14 +46,18 @@ class BaseCardRoom(BaseRoom):
         await self.force_dismiss()
 
     async def player_join_room(self, players: list):
-        return await super(BaseCardRoom, self).player_join_room(players)
+        sta = await super(BaseCardRoom, self).player_join_room(players)
+        return sta
 
     async def player_quit_room(self,player,data):
-        await super(BaseCardRoom, self).player_quit_room(player, data)
         if not self.game_began:
             self.seats[player.seat_id - 1] = None
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             self.service.release_player(player)
+            one_of_model = s2c_one_of_model()
+            one_of_model.seat_id = self.curr_seat_id
+            await self.inner_broadcast(CmdRoom.QUIT_ROOM,one_of_model)
+        await super(BaseCardRoom, self).player_quit_room(player, data)
 
     def agree_dismiss_count(self):
         return len(self.__agree_dismiss_seats)
@@ -119,36 +123,8 @@ class BaseCardRoom(BaseRoom):
 
     @staticmethod
     def get_player_info(player):
-        pass
+        """ 子类实现 """
 
-    async def try_round_over(self):
-        """ 尝试解散房间 """
-        for player in self.seats:
-            if player.is_robot:
-                continue
-            if not (player.is_out and player.offline):
-                return  # 但凡有真实玩家 没有 破产和离线则不解散房间
-        self.log_info("房间内已经没有真人玩家，enter force_dismiss")
-        await self.delay_func(0.5, self.force_dismiss)
-
-
-    async def do_deal_cards(self, all_cards, set_dealer_card=None, extra_data=None):
-        send_list = []
-        for i, player in enumerate(self.seats):
-            player.cards = all_cards[i]
-            if set_dealer_card and set_dealer_card in player.cards:
-                self.dealer_id = player.seat_id
-                self.log_info("设置庄为：", self.dealer_id, player.uid)
-
-            self.log_info(player.uid, player.seat_id, "玩家发牌：", player.cards)
-            if player.is_robot:
-                continue
-            data = {"cards": player.cards, "seat_id": player.seat_id}
-            if extra_data:
-                data.update(extra_data)
-            data_model = S2CDealCards.pb_model(**data)
-            send_list.append(self.inner_send(player, CmdRoom.DEALER_CARDS, data_model))
-        await asyncio.gather(*send_list)
 
     async def play_card_by_rand(self, player):
         """ 随机出牌 """

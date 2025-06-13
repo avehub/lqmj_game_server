@@ -94,31 +94,31 @@ class SuitType(BaseEnum):
     SUIT_JIAN = 5, "剑"
 
 @unique
-class FlowStatus(IntEnum):
+class FlowStatus(BaseEnum):
     """ 游戏流程状态 """
-    T_IN_IDLE = 0  # 无状态
-    T_IN_CHU_PAI = 1  # 在出牌中
-    T_IN_PUBLIC_OPRATE = 2  # 公共操作过程中
-    T_IN_MO_PAI = 3  # 在摸牌中暗(未公示)
-    T_IN_MO_PAI_CALL = 4  # 在摸牌后的呼叫中
-    T_IN_MING_GANG_PAI_CALL = 5  # 抢杠胡判断流程
-    T_IN_ZHUAN_WAN_GANG_PAI_CALL = 6  # 抢杠胡判断流程
-    T_IN_AN_GANG_PAI_CALL = 7  # 抢杠胡判断流程
-    T_IN_ROUND_START = 8  # 一局开始
-    T_IN_DEAL_CARDS = 9  # 发牌中
-    T_IN_EXCHANGE_CARDS = 10  # 换牌流程
-    T_IN_WILL_BEGIN_OPTION = 11  # 开局前的玩家操作选项
-    T_IN_TIAN_HU = 12  # 庄家天胡
-    T_IN_DI_HU_CHU_PAI = 13  # 庄家天胡结束出牌 地胡判断阶段
-    T_IN_CHECK_OUT = 14  # 结算中
-    T_IN_TIAN_TING = 15  # 天听中
-    T_IN_DING_QUE = 16  # 定缺
-    T_IN_GU_MAI = 17  # 估卖
-    T_IN_FOUR_BAO_TING = 18  # 4张牌报听中
-    T_IN_FAN_JI = 19  # todo:牌摸完之后翻鸡
-    T_IN_HUI_TOU_YI_XIAO = 20  # 回头一笑流程
-    T_IN_DING_JING = 21  # 定精牌流程
-    T_IN_WAIT_CHONG_ZHI = 22  # 充值等待
+    T_IN_IDLE = 0,"无状态"
+    T_IN_CHU_PAI = 1,"在出牌中"
+    T_IN_PUBLIC_OPRATE = 2,"公共操作过程中"
+    T_IN_MO_PAI = 3,"在摸牌中暗(未公示)"
+    T_IN_MO_PAI_CALL = 4,"在摸牌后的呼叫中"
+    T_IN_MING_GANG_PAI_CALL = 5 ,"抢杠胡判断流程"
+    T_IN_ZHUAN_WAN_GANG_PAI_CALL = 6,"抢杠胡判断流程"
+    T_IN_AN_GANG_PAI_CALL = 7,"抢杠胡判断流程"
+    T_IN_ROUND_START = 8 ,"一局开始"
+    T_IN_DEAL_CARDS = 9 ,"发牌中"
+    T_IN_EXCHANGE_CARDS = 10 ,"换牌流程"
+    T_IN_WILL_BEGIN_OPTION = 11 ,"开局前的玩家操作选项"
+    T_IN_TIAN_HU = 12 ,"庄家天胡"
+    T_IN_DI_HU_CHU_PAI = 13,"庄家天胡结束出牌 地胡判断阶段"
+    T_IN_CHECK_OUT = 14 ,"结算中"
+    T_IN_TIAN_TING = 15 ,"天听中"
+    T_IN_DING_QUE = 16,"定缺"
+    T_IN_GU_MAI = 17,"估卖"
+    T_IN_FOUR_BAO_TING = 18,"4张牌报听中"
+    T_IN_FAN_JI = 19,"牌摸完之后翻鸡"
+    T_IN_HUI_TOU_YI_XIAO = 20,"回头一笑流程"
+    T_IN_DING_JING = 21,"定精牌流程"
+    T_IN_WAIT_CHONG_ZHI = 22,"充值等待"
 
 class TimerDelay(IntEnum):
     """ 延时时间 """
