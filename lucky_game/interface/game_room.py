@@ -114,8 +114,8 @@ class CreateRoom(GameRoomAPI):
             await GameRoomsRC.get_game_room_by_room_id(new_room),
             creator,
         )
-
-        return self.answer(data={"room_id": new_room})
+        data = await GameRoomsRC.get_game_room_by_room_id(new_room)
+        return self.answer(data=data)
 
 
 class RoomList(GameRoomAPI):
@@ -133,8 +133,7 @@ class RoomList(GameRoomAPI):
 class JoinRoom(GameRoomAPI):
     """加入房间"""
     async def post(self, req: Request, **kwargs):
-        room_id = req.json.get("room_id")
-        self.check_int(room_id, require=True, p_name="房间ID")
+        room_id = self.check_int(req.json.get("room_id"), require=True, p_name="房间ID")
         u_info = kwargs.get("u_info")
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
         if not room_data:
@@ -153,7 +152,7 @@ class JoinRoom(GameRoomAPI):
             room_data,
             uid,
         )
-        return self.answer()
+        return self.answer(data=room_data)
 
 
 class LeaveRoom(GameRoomAPI):

@@ -90,6 +90,7 @@ class GameRoomsRC(BaseCommonRC):
                     "is_location": kwargs.get("is_location"),
                     "is_friend": kwargs.get("is_friend"),
                     "room_type": kwargs.get("room_type"),
+                    "status": kwargs.get("status", 0),
                 }
                 new_room = await cls.db_model.add_one(room_data)
                 if not new_room:
