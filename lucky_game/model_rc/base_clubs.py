@@ -37,14 +37,7 @@ class BaseClubRC(BaseCommonRC):
     @classmethod
     async def create_club(cls, name: str, club_uid: int, room_card: int):
         """创建茶馆"""
-        if room_card < cls.KEY_CLUB_CARD_LIMIT:
-            return False, "房卡不足"
-
         try:
-            club = await cls.db_model.get_or_none(name=name)
-            if club:
-                # cls.conf.info_log(f"creat club: {name} 茶馆已存在")
-                return False, "茶馆名已存在"
             club_dick = {
                 "name": name,
                 "uid": club_uid,

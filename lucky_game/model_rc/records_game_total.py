@@ -4,7 +4,12 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameTotal
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
+from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from nsanic.libs.tool import json_encode, json_parse
+from tortoise.transactions import in_transaction
+from common.public.enum_const import DbKey
+from datetime import datetime, timedelta
 
 
 class RecordsGameTotalRC(BaseCommonRC):
@@ -15,7 +20,41 @@ class RecordsGameTotalRC(BaseCommonRC):
     KEY_GAME_TOTAL_ID = 'record_tid'
 
     @classmethod
-    async def get_records_total_by_id(cls, record_tid: int):
+    async def create_record_game_total(cls, record_rid: int, uid: int, final_status: int, final_score: int, final_ranking: int,
+                                       final_grade: int, final_result: str, ):
+        """创建战绩总局记录"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                record = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
+                record_data = {
+                    "record_rid": record["record_rid"],
+                    "room_id": record["room_id"],
+                    "club_id": record["club_id"],
+                    "uid": uid,
+                    "cs_type": record["cs_type"],
+                    "final_status": final_status,
+                    "final_score": final_score,
+                    "final_ranking": final_ranking,
+                    "final_grade": final_grade,
+                    "final_result": final_result,
+                }
+                new_record = await cls.db_model.add_one(record_data)
+                if not new_record:
+                    return new_record, "创建失败"
+                segment_data = await RecordsGameSegmentRC.get_records_segment_by_rid(record_rid)
+                up_segment_sta = await RecordsGameSegmentRC.update_record_game_segment(record_rid, final_status=final_status)
+                up_room_sta = await RecordsGameRoomRC.update_record_game_room(
+                    segment_data,
+                    end_time=int(datetime.now().timestamp())
+                )
+                if not up_room_sta or not up_segment_sta:
+                    return new_record, "创建失败"
+        except OperationalError as e:
+            return None, f"创建失败: {str(e)}"
+        return new_record, "成功"
+
+    @classmethod
+    async def get_record_total_by_id(cls, record_tid: int):
         """根据ID获取单条总局战绩"""
         try:
             record = await cls.db_model.get_by_pk(record_tid)
@@ -26,8 +65,10 @@ class RecordsGameTotalRC(BaseCommonRC):
         return record, "成功"
 
     @classmethod
-    async def get_records_total_by_filter(cls, club_id: any = None, room_id: any = None, uid: any = None,
-                                          record_rid: any = None, record_tid: any = None):
+    async def get_record_total_by_filter(cls, club_id: any = None, room_id: any = None, uid: any = None,
+                                          record_rid: any = None, record_tid: any = None, start_time: int = None,
+                                          end_time: int = None, cs_type: int = None, final_score: int = None,
+                                          order_field: str = None):
         """根据条件获取总局战绩列表"""
         try:
             query = {}
@@ -56,8 +97,17 @@ class RecordsGameTotalRC(BaseCommonRC):
                     query["record_tid__in"] = record_tid
                 else:
                     query["record_tid"] = record_tid
-
-            records = await cls.db_model.filter(**query).values()
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lt"] = end_time
+            if cs_type is not None:
+                query["cs_type"] = cs_type
+            if final_score is not None:
+                query["final_score__gte"] = final_score
+            if order_field is None:
+                order_field = "record_tid"
+            records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
                 return records, "暂无战绩"
         except OperationalError as e:

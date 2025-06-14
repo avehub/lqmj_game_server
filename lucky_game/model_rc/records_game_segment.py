@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameSegment
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from nsanic.libs.tool import json_encode, json_parse
 
 
@@ -16,10 +17,62 @@ class RecordsGameSegmentRC(BaseCommonRC):
     KEY_GAME_SEGMENT_ID = 'record_sid'
 
     @classmethod
+    async def create_record_game_segment(cls, record_rid: int, uid: int, round_num: int, round_status: int,
+                                         round_score: int, round_ranking: int, round_result: str, replay_msg: str):
+        """创建战绩子局记录"""
+        try:
+            record = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
+            record_data = {
+                "record_rid": record["record_rid"],
+                "record_tid": 0,
+                "uid": uid,
+                "cs_type": record["cs_type"],
+                "round_num": round_num,
+                "round_status": round_status,
+                "round_score": round_score,
+                "round_ranking": round_ranking,
+                "round_result": round_result,
+                "replay_msg": replay_msg,
+            }
+            new_record = await cls.db_model.add_one(record_data)
+            if not new_record:
+                return new_record, "创建失败"
+        except OperationalError as e:
+            return None, f"创建失败: {str(e)}"
+        return new_record, "成功"
+
+    @classmethod
+    async def update_record_game_segment(cls, record_sid: int, **kwargs):
+        """更新子局战绩记录"""
+        try:
+            record_tid = kwargs.get("record_tid")
+            if record_tid:
+                up_sta = await cls.db_model.update_by_pk(record_sid, {"record_tid": record_tid})
+                if not up_sta:
+                    return up_sta, "更新失败"
+        except OperationalError as e:
+            return None, f"更新失败: {str(e)}"
+        return True, "成功"
+
+    @classmethod
     async def get_records_segment_by_id(cls, record_sid: int):
         """根据ID获取单条子局战绩"""
         try:
             record = await cls.db_model.get_by_pk(record_sid)
+            if not record:
+                return None, "战绩不存在"
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return record, "成功"
+
+    @classmethod
+    async def get_records_segment_by_rid(cls, record_rid: int):
+        """根据ID获取单条子局战绩"""
+        try:
+            query = {
+                "record_rid": record_rid
+            }
+            record = await cls.db_model.filter(**query).first()
             if not record:
                 return None, "战绩不存在"
         except OperationalError as e:

@@ -6,6 +6,7 @@ from lucky_game.model_db.main import ConfGameRoomRules
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
 
+
 class ConfGameRoomRulesRC(BaseCommonRC):
     db_model = ConfGameRoomRules
     tb_name = db_model.sheet_name()
@@ -49,11 +50,13 @@ class ConfGameRoomRulesRC(BaseCommonRC):
     async def delete_rule(cls, rule_id: int):
         """删除规则配置"""
         try:
-            await cls.db_model.filter(id=rule_id).delete()
+            sta = await cls.db_model.del_by_pk(rule_id)
+            if not sta:
+                return False, "删除失败"
             await cls.cache_session_drop(rule_id)
-            return True, None
         except OperationalError as e:
             return None, f"规则删除失败: {str(e)}"
+        return True, "成功"
 
     @classmethod
     async def update_rule(cls, rule_id: int, **kwargs):
@@ -61,10 +64,8 @@ class ConfGameRoomRulesRC(BaseCommonRC):
         try:
             valid_fields = ["pip", "rule_type", "rule_name", "rule_info"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
-            
             if 'rule_info' in update_data:
                 update_data['rule_info'] = json_encode(update_data['rule_info'])
-                
             if update_data:
                 await cls.db_model.filter(id=rule_id).update(**update_data)
                 await cls.cache_session_drop(rule_id)

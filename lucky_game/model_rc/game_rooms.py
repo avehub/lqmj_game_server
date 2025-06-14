@@ -3,8 +3,8 @@
 """
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import GameRooms
-from lucky_game.model_rc.base_rc import BaseRC, BaseCommonRC
-from nsanic.libs.tool import json_encode, json_parse
+from lucky_game.model_rc.base_rc import BaseCommonRC
+from nsanic.libs.tool import json_parse
 from lucky_game.handler.random_utils import generate_natural_random
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
@@ -13,6 +13,7 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
 from lucky_game.const.const import PlatForm
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 
 
 class GameRoomsRC(BaseCommonRC):
@@ -101,6 +102,10 @@ class GameRoomsRC(BaseCommonRC):
                 new_room = await cls.db_model.add_one(room_data)
                 if not new_room:
                     return None, "创建失败"
+                # 预扣除房卡
+                room_card_sta, e = cls.settle_room_card(room_data)
+                if not room_card_sta:
+                    return False, e
         except OperationalError as e:
             return None, f"房间创建失败: {str(e)}"
         # 将房间信息缓存
@@ -116,16 +121,13 @@ class GameRoomsRC(BaseCommonRC):
                 return False, e
             if room['status'] != RoomStatus.T_PLAYING:
                 return False, "房间状态异常"
-            # 房卡结算
-            room_card_sta, e = cls.settle_room_card(room)
-            if not room_card_sta:
-                return False, e
             # TODO 用户资源结算 需对接游戏服务器或根据战绩
-            result = kwargs.get("result")
-            for uid in result:
-                user_resource_sta, e = cls.settle_user_resource(uid, **kwargs)
-                if not room_card_sta:
-                    return False, e
+            # result = kwargs.get("result")
+            # for uid in result:
+            #     user_resource_sta, e = ExtraUserResourceChangesRC.change_user_resource(uid, "room_card", room['price'],
+            #                                                                             "sub")
+            #     if not room_card_sta:
+            #         return False, e
         except OperationalError as e:
             return False, f"房间结算失败: {str(e)}"
         return True, "成功"
@@ -133,40 +135,44 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def settle_room_card(cls, room_data):
         """结算房卡"""
-        # 扣除房卡
         key = "room_card"
         userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
         if room_data["club_id"] and room_data["club_id"] > 0:
             # 扣除茶馆基金
             if room_data["pay_type"] == 2:
-                up_room_card = await BaseClubRC.update_club_int_field(room_data["club_id"], key, room_data["price"],
-                                                                      "sub")
+                up_room_card = await BaseClubRC.update_club_int_field(
+                    room_data["club_id"],
+                    key,
+                    room_data["price"],
+                    "sub"
+                )
+                # TODO 记录茶馆资金变动&同上直接封装
             else:
-                room_card = userinfo[key] - room_data['price']
-                up_room_card = await BaseUserRC.update_info(userinfo, {key: room_card})
+                up_room_card = ExtraUserResourceChangesRC.change_user_resource(
+                    room_data["creator"],
+                    key,
+                    room_data['price'],
+                    "sub"
+                )
         else:
-            # 扣除普通房卡
+            # 扣除黄钻
             if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
-                # 微信小程序
                 key = "yellow_diamond"
-            room_card = userinfo[key] - room_data['price']
-            up_room_card = await BaseUserRC.update_info(userinfo, {key: room_card})
+            up_room_card = ExtraUserResourceChangesRC.change_user_resource(
+                room_data["creator"],
+                key,
+                room_data['price'],
+                "sub"
+            )
         if not up_room_card:
             return False, "房卡结算失败"
         return True, "成功"
 
     @classmethod
-    async def settle_user_resource(cls, uid: int, **kwargs):
+    async def settle_user_resource(cls, uid: int, settle_type: int = None, gold: int = None, diamond: int = None,
+                                   room_card: int = None, yellow_diamond: int = None):
         """用户资源结算"""
-        # 金币
-        key = "gold"
-        val = kwargs.get("gold", 0)
-        operation = kwargs.get("operation")
-        creator_info = await BaseUserRC.cache_by_pk(uid)
-        up_user, e = await BaseUserRC.update_user_int_field(uid, key, val, operation)
-        if not up_user:
-            return False, "房卡结算失败"
-        return True, "成功"
+        pass
 
     @classmethod
     async def delete_game_room(cls, room_id: int):

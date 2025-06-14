@@ -4,7 +4,10 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraUserResourceChanges
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import GoodsItem
+from tortoise.transactions import in_transaction
+from common.public.enum_const import DbKey
 
 
 class ExtraUserResourceChangesRC(BaseCommonRC):
@@ -18,20 +21,22 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         3: "room_card",      # 房卡
         4: "yellow_diamond"  # 黄钻
     }
+    OPERATION_MAP = {
+        "sub": 0,
+        "add": 1,
+    }
 
     @classmethod
-    async def create_change_record(cls, uid: int, status: int, currency: int, 
-                                  num: int, explain: str = ""):
+    async def create_change_record(cls, uid: int, operation: str, currency: int, num: int, explain: str = ""):
         """创建资源变动记录"""
         try:
             record_data = {
                 "uid": uid,
-                "status": 1 if status > 0 else 0,  # 1=充值 0=消耗
+                "status": cls.OPERATION_MAP.get(operation),
                 "currency": currency,
                 "num": abs(num),
                 "explain": explain
             }
-            
             new_record = await cls.db_model.add_one(record_data)
             return new_record, None
         except OperationalError as e:
@@ -45,6 +50,24 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
             return records, None
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
+
+    @classmethod
+    async def change_user_resource(cls, uid: int, change_field: str, change_value: int, operation: str = 'add', explain: str = ""):
+        """用户资源变更"""
+        if change_field not in cls.CURRENCY_MAP.values():
+            return False, "无效的资源类型"
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                u_sta, e = await BaseUserRC.update_user_int_field(uid, change_field, change_value, operation)
+                if not u_sta:
+                    return False, "资源变更失败"
+                currency = next((k for k, v in cls.CURRENCY_MAP.items() if v == change_field), 0)
+                c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain)
+                if not c_sta:
+                    return False, "资源变更生成失败"
+        except OperationalError as e:
+            return False, f"操作失败: {str(e)}"
+        return True, "成功"
 
     @classmethod
     async def batch_create_from_asset_change(cls, uid: int, asset_changes: dict, 

@@ -25,13 +25,19 @@ class ClubCreate(BaseClub):
 
     async def post(self, req: Request, **kwargs):
         # 参数校验
-        name = req.json.get("name")
-        self.check_str(name, require=True, minlen=2, maxlen=10, p_name="茶馆名称")
-
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
+        name = req.json.get("name")
+        self.check_str(name, require=True, minlen=2, maxlen=10, p_name="茶馆名称")
+        has = self.conf.sw.contain_sensitive_words(name)
+        if has:
+            return False, "茶馆名包含敏感词"
         room_card = u_info.get("room_card")
-        # 保存到数据库
+        if room_card < BaseClubRC.KEY_CLUB_CARD_LIMIT:
+            return False, "房卡不足"
+        club = await BaseClubRC.db_model.get_or_none(name=name)
+        if club:
+            return False, "茶馆名已存在"
         suc, e = await BaseClubRC.create_club(name, uid, room_card)
         if not suc:
             return self.answer(StaCode.FAIL, hint=e)

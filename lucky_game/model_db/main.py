@@ -204,7 +204,6 @@ class GameRooms(DBModel):
     status = fields.IntEnumField(enum_type=RoomStatus, default=RoomStatus.T_IDLE, index=True, description='房间状态')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
-
     class Meta:
         table = "game_rooms"
 
@@ -227,12 +226,12 @@ class RecordsGameRoom(DBModel):
     room_id = fields.IntField(index=True, description='房间ID', )
     creator = fields.IntField(description='房主ID', )
     round_total = fields.SmallIntField(description='总局数', )
-    current_player = fields.SmallIntField(description='对局人数', )
+    max_player = fields.SmallIntField(description='对局人数', )
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储', )
     play_type = fields.SmallIntField(description='玩法类型', )
     cs_type = fields.IntField(description='子服务类型', )
-    start_time = fields.BigIntField(default=0, description='开始时间', )
-    ent_time = fields.BigIntField(default=0, description='结束时间', )
+    start_time = fields.BigIntField(default=0, index=True, description='开始时间', )
+    end_time = fields.BigIntField(default=0, index=True, description='结束时间', )
     pay_type = fields.SmallIntField(description='支付方式：0房主 1冠军支付 2茶馆基金 3AA支付', )
     price = fields.SmallIntField(description='费用', )
     updated = fields.BigIntField(default=0, description='更新时间', )

@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameRoom
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from nsanic.libs.tool import json_encode, json_parse
 
 
@@ -12,6 +13,45 @@ class RecordsGameRoomRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
 
     KEY_GAME_ROOM_ID = 'record_rid'
+
+    @classmethod
+    async def create_record_game_room(cls, room_id: int, start_time: int, end_time: int = 0):
+        """创建房间战绩记录"""
+        try:
+            game_room = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            record_data = {
+                "room_id": room_id,
+                "club_id": game_room["club_id"],
+                "play_type": game_room["play_type"],
+                "cs_type": game_room["cs_type"],
+                "pay_type": game_room["pay_type"],
+                "creator": game_room["creator"],
+                "round_total": game_room["round_total"],
+                "max_player": game_room["max_player"],
+                "rule_details": game_room["rule_details"],
+                "price": game_room["price"],
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+            new_record = await cls.db_model.add_one(record_data)
+            if not new_record:
+                return new_record, "创建失败"
+        except OperationalError as e:
+            return None, f"创建失败: {str(e)}"
+        return new_record, "成功"
+
+    @classmethod
+    async def update_record_game_room(cls, record_rid: int, **kwargs):
+        """更新房间战绩记录"""
+        try:
+            end_time = kwargs.get("end_time")
+            if end_time:
+                up_sta = await cls.db_model.update_by_pk(record_rid, {"end_time": end_time})
+                if not up_sta:
+                    return up_sta, "更新失败"
+        except OperationalError as e:
+            return None, f"更新失败: {str(e)}"
+        return True, "成功"
 
     @classmethod
     async def get_record_room_by_id(cls, record_rid: int):
@@ -26,8 +66,8 @@ class RecordsGameRoomRC(BaseCommonRC):
 
     @classmethod
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
-                                        , ent_time: any = None, play_type: any = None, cs_type: any = None,
-                                        creator: any = None, record_rid: any = None):
+                                        , end_time: any = None, play_type: any = None, cs_type: any = None,
+                                        creator: any = None, record_rid: any = None, order_field: any = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -63,9 +103,11 @@ class RecordsGameRoomRC(BaseCommonRC):
                     query["creator"] = creator
             if start_time is not None:
                 query["start_time__gte"] = start_time
-            if ent_time is not None:
-                query["ent_time__lte"] = ent_time
-            records = await cls.db_model.filter(**query).values()
+            if end_time is not None:
+                query["end_time__lt"] = end_time
+            if order_field is None:
+                order_field = "record_rid"
+            records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
                 return records, "暂无战绩"
         except OperationalError as e:
