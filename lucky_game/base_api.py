@@ -1,4 +1,5 @@
 # coding=utf-8
+from nsanic.orm.rc_model import RCModel
 from sanic.request import Request
 from nsanic.handler_http import BaseHttpApi
 from nsanic.base_ws import BaseWebsocket
@@ -8,27 +9,12 @@ from common.public.enum_const import StaCode
 from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
-from lucky_game.model_rc.base_user import BaseUserRC, BaseBanRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.base_clubs import BaseClubRC
-from lucky_game.model_rc.club_users import ClubUsersRC
-from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
-from lucky_game.model_rc.game_rooms import GameRoomsRC
-from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
-from lucky_game.model_rc.conf_game_room_rules import ConfGameRoomRulesRC
-from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
-from lucky_game.model_rc.extra_game_room import ExtraGameRoomRC
-from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+from lucky_game.model_rc.base_user import BaseUserRC
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
-    init_model = [
-        BaseUserRC, BaseBanRC, ConfJsonRC, BaseClubRC, ClubUsersRC, ExtraClubBehaviorRC, GameRoomsRC,
-        ClubRoomTemplatesRC, ConfGameRoomRulesRC, ExtraClubEventRC, ExtraGameRoomRC, ExtraUserResourceChangesRC
-    ]
-    for m in init_model:
-        m.conf = conf
+    RCModel.set_conf(conf)
 
     async def check_solid_params(self, req: Request):
         """ 检查固有参数 """
