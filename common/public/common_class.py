@@ -108,3 +108,8 @@ class CommonApi(LogMeta):
         result = [int(p) for p in data]
         return result
 
+    @classmethod
+    def merge_by_key(cls, arr1: list, arr2: list, key: str):
+        index = {item[key]: item for item in arr2}
+        return [{**item, **index.get(item[key], {})} for item in arr1]
+

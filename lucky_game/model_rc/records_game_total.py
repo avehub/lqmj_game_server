@@ -21,11 +21,11 @@ class RecordsGameTotalRC(BaseCommonRC):
 
     @classmethod
     async def create_record_game_total(cls, record_rid: int, uid: int, final_status: int, final_score: int, final_ranking: int,
-                                       final_grade: int, final_result: str, ):
+                                       final_grade: int, final_result: dict, ):
         """创建战绩总局记录"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                record = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
+                record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
                 record_data = {
                     "record_rid": record["record_rid"],
                     "room_id": record["room_id"],
@@ -41,10 +41,9 @@ class RecordsGameTotalRC(BaseCommonRC):
                 new_record = await cls.db_model.add_one(record_data)
                 if not new_record:
                     return new_record, "创建失败"
-                segment_data = await RecordsGameSegmentRC.get_records_segment_by_rid(record_rid)
-                up_segment_sta = await RecordsGameSegmentRC.update_record_game_segment(record_rid, final_status=final_status)
-                up_room_sta = await RecordsGameRoomRC.update_record_game_room(
-                    segment_data,
+                up_segment_sta, _ = await RecordsGameSegmentRC.update_record_game_segment(record_rid, record_tid=new_record.record_tid)
+                up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
+                    record_rid,
                     end_time=int(datetime.now().timestamp())
                 )
                 if not up_room_sta or not up_segment_sta:
@@ -113,7 +112,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                 if total > 0:
                     offset = (page - 1) * page_size
                     records = await cls.db_model.filter(**query).order_by(order_field).offset(offset).limit(page_size).values()
-                result = cls.page_result(page, page_size, total, records)
+                result = await cls.page_result(page, page_size, total, records)
             else:
                 result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:

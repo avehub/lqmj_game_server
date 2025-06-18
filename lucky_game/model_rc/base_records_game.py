@@ -11,6 +11,7 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from nsanic.libs.tool import json_encode, json_parse
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from common.public.common_class import CommonApi
 
 
 class BaseRecordsGameRC(BaseCommonRC):
@@ -34,7 +35,14 @@ class BaseRecordsGameRC(BaseCommonRC):
         """新增游戏战绩"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                pass
+                # 测试数据
+                room_id = 961365
+                start_time = 1722756800
+                end_time = 1722856800
+                uid = 100000
+                r_record, _ = await RecordsGameRoomRC.create_record_game_room(room_id, start_time, end_time)
+                s_record, _ = await RecordsGameSegmentRC.create_record_game_segment(r_record.record_rid, uid, 1, 1, 1, 0, {"gold":100, "other":456}, "http://123.cc")
+                t_record, _ = await RecordsGameTotalRC.create_record_game_total(r_record.record_rid, uid, 1, 1, 1, 1, {"gold":100, "other":456})
                 data = True
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
@@ -46,8 +54,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         """根据用户ID获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
-                start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_record_total_by_filter(
+                start_time, end_time = await cls.default_time()
+            data, e = await RecordsGameTotalRC.get_record_total_by_filter(
                 uid=uid,
                 start_time=start_time,
                 end_time=end_time,
@@ -55,8 +63,13 @@ class BaseRecordsGameRC(BaseCommonRC):
                 page_size=page_size,
                 page=page,
             )
-            if not data:
-                return data, e
+            # TODO 暂时注释 根据前端联调数据需要做调整
+            # if data.get("total") > 0:
+            #     ids = [item["record_rid"] for item in data["list"]]
+            #     room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
+            #         record_rid=ids,
+            #     )
+            #     data["list"] = CommonApi.merge_by_key(data["list"], room_data, "record_rid")
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
@@ -68,8 +81,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         """根据房间号获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
-                start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_record_total_by_filter(
+                start_time, end_time = await cls.default_time()
+            data, e = await RecordsGameTotalRC.get_record_total_by_filter(
                 room_id=room_id,
                 uid=uid,
                 start_time=start_time,
@@ -91,8 +104,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         """根据茶ID馆获取 (默认七日内)战绩"""
         try:
             if start_time is None and end_time is None:
-                start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_record_total_by_filter(
+                start_time, end_time = await cls.default_time()
+            data, e = await RecordsGameTotalRC.get_record_total_by_filter(
                 club_id=club_id,
                 room_id=room_id,
                 uid=uid,
@@ -104,8 +117,6 @@ class BaseRecordsGameRC(BaseCommonRC):
                 page_size=page_size,
                 page=page,
             )
-            if not data:
-                return data, e
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
@@ -115,8 +126,8 @@ class BaseRecordsGameRC(BaseCommonRC):
                                 uid: int = None, cs_type: int = None, final_score: int = None):
         try:
             if start_time is None and end_time is None:
-                start_time, end_time = cls.default_time()
-            result, e = RecordsGameTotalRC.get_record_total_by_filter(
+                start_time, end_time = await cls.default_time()
+            result, e = await RecordsGameTotalRC.get_record_total_by_filter(
                 uid=uid,
                 club_id=club_id,
                 room_id=room_id,

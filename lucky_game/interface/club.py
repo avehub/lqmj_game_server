@@ -38,10 +38,10 @@ class ClubCreate(BaseClub):
         club = await BaseClubRC.db_model.get_or_none(name=name)
         if club:
             return self.answer(StaCode.FAIL, hint="茶馆名已存在")
-        suc, e = await BaseClubRC.create_club(name, uid, room_card)
-        if not suc:
+        new, e = await BaseClubRC.create_club(name, uid, room_card)
+        if not new:
             return self.answer(StaCode.FAIL, hint=e)
-        return self.answer()
+        return self.answer(data={"club_id": new.id})
 
 
 class ClubList(BaseClub):

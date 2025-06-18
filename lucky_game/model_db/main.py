@@ -225,7 +225,7 @@ class RecordsGameRoom(DBModel):
     club_id = fields.IntField(index=True, description='茶馆ID，玩家无茶馆值为0', )
     room_id = fields.IntField(index=True, description='房间ID', )
     creator = fields.IntField(description='房主ID', )
-    round_total = fields.SmallIntField(description='总局数', )
+    total_round = fields.SmallIntField(description='总局数', )
     max_player = fields.SmallIntField(description='对局人数', )
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储', )
     play_type = fields.SmallIntField(description='玩法类型', )
@@ -267,7 +267,7 @@ class RecordsGameSegment(DBModel):
     round_score = fields.IntField(description='当局分数', )
     round_ranking = fields.IntField(description='当局名次', )
     round_result = fields.JSONField(null=True, description='详细结果：JSON存储', )
-    replay_msg = fields.JSONField(null=True, description='回放数据', )
+    replay_msg = fields.TextField(null=True, description='回放数据', )
     cs_type = fields.IntField(description='子服务类型', )
 
     class Meta:

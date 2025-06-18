@@ -52,7 +52,7 @@ class BaseClubRC(BaseCommonRC):
                 return False, e
         except OperationalError as e:
             return False, f"失败：{str(e)}"
-        return True, "创建成功"
+        return row, "创建成功"
 
     @classmethod
     async def get_club_by_uid(cls, uid: int, in_role: list = []):

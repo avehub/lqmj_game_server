@@ -51,12 +51,12 @@ class TotalRecords(RecordBase):
             page_size=page_size,
         )
         total = complete = score = 0
-        if data:
-            for item in data:
+        if data["total"] > 0:
+            for item in data["list"]:
                 total += 1
                 score += item["final_score"]
         result = {
-            "list": data,
+            "data": data,
             "total": total,
             "complete": complete,
             "score": score,

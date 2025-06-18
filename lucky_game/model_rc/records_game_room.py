@@ -18,7 +18,7 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def create_record_game_room(cls, room_id: int, start_time: int, end_time: int = 0):
         """创建房间战绩记录"""
         try:
-            game_room = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            game_room, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
             record_data = {
                 "room_id": room_id,
                 "club_id": game_room["club_id"],
@@ -26,7 +26,7 @@ class RecordsGameRoomRC(BaseCommonRC):
                 "cs_type": game_room["cs_type"],
                 "pay_type": game_room["pay_type"],
                 "creator": game_room["creator"],
-                "round_total": game_room["round_total"],
+                "total_round": game_room["total_round"],
                 "max_player": game_room["max_player"],
                 "rule_details": game_room["rule_details"],
                 "price": game_room["price"],
@@ -44,9 +44,12 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def update_record_game_room(cls, record_rid: int, **kwargs):
         """更新房间战绩记录"""
         try:
+            record, _ = await cls.get_record_room_by_id(record_rid)
+            if not record:
+                return None, "战绩不存在"
             end_time = kwargs.get("end_time")
             if end_time:
-                up_sta = await cls.db_model.update_by_pk(record_rid, {"end_time": end_time})
+                up_sta = await cls.db_model.update_by_pk(record_rid, {"end_time": end_time}, old_data=record)
                 if not up_sta:
                     return up_sta, "更新失败"
         except OperationalError as e:
@@ -114,7 +117,7 @@ class RecordsGameRoomRC(BaseCommonRC):
                 if total > 0:
                     offset = (page - 1) * page_size
                     records = await cls.db_model.filter(**query).order_by(order_field).limit(page_size).offset(offset).values()
-                result = cls.page_result(page, page_size, total, records)
+                result = await cls.page_result(page, page_size, total, records)
             else:
                 result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
@@ -131,20 +134,6 @@ class RecordsGameRoomRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return count, "成功",
-
-    @classmethod
-    async def update_record_game_room(cls, record_rid: int, **kwargs):
-        """更新房间战绩信息"""
-        try:
-            record = await cls.db_model.get_or_none(record_rid=record_rid)
-            if not record:
-                return None, "战绩不存在"
-            sta = await record.update_by_pk(record_rid, kwargs)
-            if not sta:
-                return sta, "更新失败"
-        except OperationalError as e:
-            return None, f"更新失败: {str(e)}"
-        return sta, "成功"
 
     @classmethod
     async def delete_record_game_room(cls, record_rid: int):

@@ -18,10 +18,10 @@ class RecordsGameSegmentRC(BaseCommonRC):
 
     @classmethod
     async def create_record_game_segment(cls, record_rid: int, uid: int, round_num: int, round_status: int,
-                                         round_score: int, round_ranking: int, round_result: str, replay_msg: str):
+                                         round_score: int, round_ranking: int, round_result: dict, replay_msg: str):
         """创建战绩子局记录"""
         try:
-            record = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
+            record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
             record_data = {
                 "record_rid": record["record_rid"],
                 "record_tid": 0,
@@ -42,12 +42,17 @@ class RecordsGameSegmentRC(BaseCommonRC):
         return new_record, "成功"
 
     @classmethod
-    async def update_record_game_segment(cls, record_sid: int, **kwargs):
+    async def update_record_game_segment(cls, record_rid: int, **kwargs):
         """更新子局战绩记录"""
         try:
             record_tid = kwargs.get("record_tid")
             if record_tid:
-                up_sta = await cls.db_model.update_by_pk(record_sid, {"record_tid": record_tid})
+                count, _ = await cls.count_record_segment(record_rid=record_rid)
+                up_sta = await cls.db_model.update_by_cond(
+                    {"record_rid": record_rid},
+                    {"record_tid": record_tid},
+                    count,
+                )
                 if not up_sta:
                     return up_sta, "更新失败"
         except OperationalError as e:
@@ -81,9 +86,9 @@ class RecordsGameSegmentRC(BaseCommonRC):
 
     @classmethod
     async def get_record_segment_by_filter(cls, greater_round_ranking: int = None, greater_round_score: int = None,
-                                            uid: any = None, record_rid: any = None, record_tid: any = None,
-                                            replay_msg: str = None, record_sid: any = None, page: int = None,
-                                            page_size: int = None):
+                                           uid: any = None, record_rid: any = None, record_tid: any = None,
+                                           replay_msg: str = None, record_sid: any = None, page: int = None,
+                                           page_size: int = None):
         """根据条件获取子局战绩列表"""
         try:
             query = {}
@@ -119,7 +124,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
                 if total > 0:
                     offset = (page - 1) * page_size
                     records = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
-                result = cls.page_result(page, page_size, total, records)
+                result = await cls.page_result(page, page_size, total, records)
             else:
                 result = records = await cls.db_model.filter(**query).values()
             if not records:

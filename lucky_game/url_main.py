@@ -9,7 +9,7 @@ from nsanic.handler_http import Urls
 # from lucky_game.interface.interaction import AnnouncementsHandler
 # from lucky_game.interface.player_skin import SkinDharmaForm, SkinDharmaAppear, UseSkinItem, UpgradeSkinItem, \
 #     GetGameSkinUsedItems, GetSkinAllStarItems, UseLimitedTimeSkin
-from lucky_game.interface.test_api import TestApi
+from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 # from lucky_game.interface.get_u_info import QueryUserInfo, RefreshAssets, QueryUserGameStates, \
 #     QueryUserAllNumOfGames, QueryUserGameGrade, QueryUserIsInCService, GetLeisureList, QueryUserVipLevel, \
 #     QueryUserAdditionInfo, FetchRedDotsByOpportunity, QueryUserSkinAmount, QueryUserAdFreePrivilege
@@ -50,6 +50,7 @@ class MainBp(BaseBlue):
     DEFAULT_APIS = [
         # 结构为: 接口路由地址, 接口视图处理器, 版本号(可选), 接口命名(可选)
         Urls("/testapi", TestApi),
+        Urls("/TestCreatGameRecords", TestCreatGameRecords),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
