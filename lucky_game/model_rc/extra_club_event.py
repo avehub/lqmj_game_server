@@ -6,33 +6,23 @@ from lucky_game.model_db.main import ExtraClubEvent
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
 
+
 class ExtraClubEventRC(BaseCommonRC):
     db_model = ExtraClubEvent
     tb_name = db_model.sheet_name()
 
     KEY_EVENT_ID = 'event_id'
-    KEY_SESSION = "club_event_session"
 
     EVENT_TYPE = {
         'FUND_RECHARGE': 1,  # 基金充值
         'FUND_CONSUME': 2,   # 基金消耗
         'APPROVAL_LOG': 3    # 入馆审批
     }
-
-    @classmethod
-    async def cache_session_set(cls, event_id, value):
-        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{event_id}", value)
-
-    @classmethod
-    async def cache_session_get(cls, event_id):
-        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{event_id}")
-        if isinstance(data, bytes):
-            data = json_parse(data.decode())
-        return data
-
-    @classmethod
-    async def cache_session_drop(cls, event_id):
-        return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{event_id}")
+    EVENT_MSG = {
+        1: "{name}玩家（ID：{uid}）为茶馆充值基金{price}",
+        2: "{name}玩家（ID：{uid}）消耗{price}基金创建了{cs_type}玩法（房间号：room_id）",
+        3: "记录{check_name}管理员（ID：{check_uid}）通过{name}玩家（ID：{uid}）加入茶馆",
+    }
 
     @classmethod
     async def create_event(cls, club_id: int, event_type: int, uid: int, explain: str):
@@ -46,10 +36,36 @@ class ExtraClubEventRC(BaseCommonRC):
             }
             
             new_event = await cls.db_model.add_one(event_data)
-            await cls.cache_session_set(new_event.id, new_event)
             return new_event, None
         except OperationalError as e:
             return None, f"事件记录创建失败: {str(e)}"
+
+    @classmethod
+    async def delete_event(cls, club_id: int, event_type: int, uid: int):
+        """删除茶馆事件记录"""
+        try:
+            query = {
+                "club_id": club_id,
+                "type": event_type,
+                "uid": uid,
+            }
+            event = await cls.db_model.filter(**query).order_by("id").first()
+            if not event:
+                return True, "未找到相关事件"
+            return await cls.delete_event_by_id(event.id)
+        except OperationalError as e:
+            return None, f"事件记录创建失败: {str(e)}"
+
+    @classmethod
+    async def delete_event_by_id(cls, event_id: int):
+        """通过ID删除茶馆事件记录"""
+        try:
+            sta = await cls.db_model.del_by_pk(event_id)
+            if not sta:
+                return sta, "删除失败"
+        except OperationalError as e:
+            return None, f"事件记录创建失败: {str(e)}"
+        return sta, "成功"
 
     @classmethod
     async def get_by_club(cls, club_id: int, limit: int = 50):

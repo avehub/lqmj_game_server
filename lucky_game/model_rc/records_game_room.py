@@ -67,7 +67,8 @@ class RecordsGameRoomRC(BaseCommonRC):
     @classmethod
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
                                         , end_time: any = None, play_type: any = None, cs_type: any = None,
-                                        creator: any = None, record_rid: any = None, order_field: any = None):
+                                        creator: any = None, record_rid: any = None, order_field: any = None,
+                                        page: int = None, page_size: int = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -107,12 +108,29 @@ class RecordsGameRoomRC(BaseCommonRC):
                 query["end_time__lt"] = end_time
             if order_field is None:
                 order_field = "record_rid"
-            records = await cls.db_model.filter(**query).order_by(order_field).values()
+            if page and page_size:
+                total, _ = await cls.count_record_room(**query)
+                records = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    records = await cls.db_model.filter(**query).order_by(order_field).limit(page_size).offset(offset).values()
+                result = cls.page_result(page, page_size, total, records)
+            else:
+                result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
-                return records, "暂无战绩"
+                return result, "暂无战绩"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return records, "成功"
+        return result, "成功"
+
+    @classmethod
+    async def count_record_room(cls, **perms):
+        """获取房间战绩数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return count, "成功",
 
     @classmethod
     async def update_record_game_room(cls, record_rid: int, **kwargs):

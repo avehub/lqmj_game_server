@@ -7,7 +7,6 @@ from nsanic.libs.tool import json_encode, json_parse
 
 from common.public.enum_const import ServiceEnum, Channel, CacheKey
 from common.utils.utils import UtilsTool
-from pprint import pprint
 
 
 class CommonApi(LogMeta):
@@ -98,3 +97,14 @@ class CommonApi(LogMeta):
         if not isinstance(msg, bytes):
             msg = json_encode(msg, u_byte=True)
         await cls.conf.rmq.rep_by_rpc(cs_type, msg, r_key, correlation_id=correlation_id)
+
+    @classmethod
+    async def bytes_by_int_list(cls, bytes_list):
+        """批量获取bytes"""
+        result = []
+        if not bytes_list or not isinstance(bytes_list, bytes):
+            return result
+        data = [p.decode('utf-8') for p in bytes_list]
+        result = [int(p) for p in data]
+        return result
+

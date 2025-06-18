@@ -36,11 +36,14 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo
-from lucky_game.interface.game_room import CreateRoom, JoinRoom
+from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo
 from lucky_game.interface.game_rule import GameRuleAll
+from lucky_game.interface.game_user import QueryUserIsInCService
+from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
+    UserAggregateRanks, ClubAggregateRanks
 
 class MainBp(BaseBlue):
     # 路由请添加在这里
@@ -67,6 +70,7 @@ class MainBp(BaseBlue):
         Urls("/ClubUserInfo/", ClubUserInfo),  # 茶馆搜索
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomJoin/", JoinRoom),  # 茶馆房间加入
+        Urls("/ClubRoomLeave/", LeaveRoom),  # 茶馆房间离开
         # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
         Urls("/ClubRoomTemplateCreate/", RoomTemplateCreate),  # 茶馆房间模板创建
         Urls("/ClubRoomTemplateList/", RoomTemplateList),  # 茶馆房间模板列表
@@ -88,8 +92,14 @@ class MainBp(BaseBlue):
         # Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
         # Urls("/QueryUserGameStates/", QueryUserGameStates),  # 获取玩家游戏次数等
         # Urls("/QueryUserAllNumOfGames/", QueryUserAllNumOfGames),  # 查询玩家总对局数
-        # Urls("/QueryUserGameGrade/", QueryUserGameGrade),  # 获取玩家游戏战绩
-        # Urls("/QueryUserIsInCService/", QueryUserIsInCService),  # 查询玩家是否在游戏中
+        Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩
+        Urls("/QueryTotalRecords/", TotalRecords),  # 获取总局游戏战绩
+        Urls("/QuerySegmentRecords/", SegmentRecords),  # 获取子局游戏战绩
+        Urls("/QueryClubRanks/", ClubRanks),  # 获取茶馆战绩排行榜
+        Urls("/QueryPastRanks/", PastRanks),  # 获取茶馆、我的历史战绩
+        Urls("/QueryUserAggregateRanks/", UserAggregateRanks),  # 获取用户战绩总计
+        Urls("/QueryClubAggregateRanks/", ClubAggregateRanks),  # 获取茶馆战绩总计
+        Urls("/QueryUserIsInCService/", QueryUserIsInCService),  # 查询玩家是否在游戏中
         # Urls("/QueryUserAdditionInfo/", QueryUserAdditionInfo),  # 查询玩家加成信息
         # Urls("/GetReliefHandler/", GetReliefHandler),  # 领取救济金
         # Urls("/GetReliefConf/", GetReliefConf),  # 救济金配置

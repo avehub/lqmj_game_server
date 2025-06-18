@@ -35,7 +35,6 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         99: "通过"
     }
 
-
     @classmethod
     async def _type_re_status(cls, behavior_type):
         """类型和状态对应关系"""

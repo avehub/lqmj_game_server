@@ -68,7 +68,7 @@ class RecordsGameTotalRC(BaseCommonRC):
     async def get_record_total_by_filter(cls, club_id: any = None, room_id: any = None, uid: any = None,
                                           record_rid: any = None, record_tid: any = None, start_time: int = None,
                                           end_time: int = None, cs_type: int = None, final_score: int = None,
-                                          order_field: str = None):
+                                          order_field: str = None, page: int = None, page_size: int = None):
         """根据条件获取总局战绩列表"""
         try:
             query = {}
@@ -107,12 +107,30 @@ class RecordsGameTotalRC(BaseCommonRC):
                 query["final_score__gte"] = final_score
             if order_field is None:
                 order_field = "record_tid"
-            records = await cls.db_model.filter(**query).order_by(order_field).values()
+            if page and page_size:
+                total, _ = await cls.count_record_total(**query)
+                records = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    records = await cls.db_model.filter(**query).order_by(order_field).offset(offset).limit(page_size).values()
+                result = cls.page_result(page, page_size, total, records)
+            else:
+                result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
-                return records, "暂无战绩"
+                return result, "暂无战绩"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return records, "成功"
+        return result, "成功"
+
+    @classmethod
+    async def count_record_total(cls, **perms):
+        """获取房间战绩数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return count, "成功",
+
 
     @classmethod
     async def delete_record_game_total(cls, record_tid: int):

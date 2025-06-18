@@ -48,42 +48,6 @@ class ModifyGeneralUserInfo(BaseUserInfo):
         return self.format_response_info(p_info)
 
 
-class Certification(BaseUserInfo):
-    """ 实名认证 """
-    decorators = [CurrentLimiting, GameChecker]
-
-    async def post(self, req, **kwargs):
-        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="id_card")
-        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="real_name")
-
-        res = UtilsTool.check_id_card(id_card)
-        not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
-        res = UtilsTool.validate_name(real_name)
-        not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
-        u_info = kwargs.get("u_info") or {}
-        if u_info.get("id_card"):
-            self.answer(self.sta_code.HAD_CERTIFICATED)
-
-        status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
-        self.log_info("实名结果：", result)
-        if not status:
-            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
-
-        pi = result.get('data').get('result').get('pi')
-        sex = UtilsTool.determine_gender(id_card)
-        new_info = {
-            "sex": sex,
-            "id_card": id_card,
-            "real_name": real_name,
-        }
-        if pi:
-            new_info["pi"] = pi
-        p_info = await BaseUserRC.update_info(u_info, new_info)
-        # (not p_info) and self.answer(self.sta_code.WITHOUT_MODIFY, hint='Failed to modify info.')
-        self.log_info('Certification 实名认证 suc:', p_info)
-        return self.format_response_info(p_info)
-
-
 class TestAddGold(BaseUserInfo):
     """修改金币（调试用）"""
     decorators = [LimitTestCall, GameChecker]

@@ -2,7 +2,7 @@
 游戏房间接口
 """
 from sanic import Request
-from common.public.enum_const import StaCode, ServiceEnum
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
@@ -10,6 +10,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from c_services.const.cs_enum_const import CmdRoom
 from lucky_game.interface.club_room_template import RoomTemplateBase
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from common.public.conf import C_SERVICE_SECRET_KEY
 
 
@@ -18,9 +19,9 @@ class GameRoomAPI(RoomTemplateBase):
     async def _before_create_room(self, creator, price, club_id, u_info, rule_details):
         """创建游戏房间前的预处理"""
         # 是否已有创建房间
-        room, e = await GameRoomsRC.get_game_rooms_by_filter(creator=creator)
-        if room:
-            return self.answer(StaCode.FAIL, data=room, hint="已有创建房间")
+        cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, u_info.get("uid"), jsparse=True)
+        if cs_info:
+            self.answer(self.sta_code.FAIL, data=cs_info, hint="已有在游戏房间")
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
             # 校验茶馆成员身份
@@ -56,6 +57,18 @@ class GameRoomAPI(RoomTemplateBase):
         rule_details = template.rule_details
         cs_type = template.cs_type
         return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
+
+    async def check_group(self, uid: int, club_id: int, **kwargs):
+        """校验是否是有隔离成员"""
+        behavior, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
+            uid=uid,
+            club_id=club_id,
+            type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+        )
+        if behavior:
+            return True
+        return False
+
 
 
 class CreateRoom(GameRoomAPI):
@@ -158,7 +171,7 @@ class JoinRoom(GameRoomAPI):
 
 
 class LeaveRoom(GameRoomAPI):
-    """离开房间"""
+    """离开、解散房间(主动)"""
     async def post(self, req: Request, **kwargs):
         room_id = self.check_int(req.json.get("room_id"), require=True, p_name="房间ID")
         u_info = kwargs.get("u_info")
@@ -171,16 +184,16 @@ class LeaveRoom(GameRoomAPI):
 
 
 class DismissRoom(GameRoomAPI):
-    """解散房间"""
+    """解散房间(被动)"""
     async def post(self, req: Request):
-        room_id = req.json.get("room_id")
-        user_id = req.ctx.user.uid
-        
-        # 校验房主身份
-        room, _ = await GameRoomsRC.get_game_room_by_id(room_id)
-        if room.creator != user_id:
-            return self.answer(StaCode.FAIL, hint="只有房主可解散房间")
-        
-        # 删除房间
-        await GameRoomsRC.delete_game_room(room_id)
-        return self.answer()
+        room_ids = self.check_str(req.json.get("room_ids"), require=True, p_name="房间ID")
+        room_ids = json_parse(room_ids)
+        failed_ids = []
+        for room_id in room_ids:
+            sta, e = await GameRoomsRC.abnormal_room(room_id)
+            if not sta:
+                failed_ids.append(room_id)
+                continue
+        return self.answer(data={"failed_ids": failed_ids})
+
+

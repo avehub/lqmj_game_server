@@ -4,6 +4,7 @@ from nsanic.orm.rc_model import RCModel
 from tortoise.expressions import Q
 from tortoise.exceptions import OperationalError
 from common.public.common_class import CommonApi
+import math
 
 
 class BaseRC(RCModel):
@@ -261,12 +262,35 @@ class BaseRC(RCModel):
 class BaseCommonRC(RCModel, CommonApi):
 
     @classmethod
-    async def update_int_field(cls, club_id: int, field_name: str, value: int, operation: str = 'add'):
+    async def page_result(cls, page: int, page_size: int, total: int, data: list):
+        """
+        分页查询
+
+        Args:
+            page (int): 当前页码
+            page_size (int): 每页显示的记录数
+            total (int): 总数据数量
+            data (list): 数据列表
+
+        Returns:
+            tuple: (int, int, int, list) - (每页数量, 当前页, 总页数, 分页结果)
+
+        """
+        result = {
+            "data": data,
+            "page": page,
+            "page_size": page_size,
+            "total": math.ceil(total / page_size) if total else 0,
+        }
+        return result
+
+    @classmethod
+    async def update_int_field(cls, pk_id: int, field_name: str, value: int, operation: str = 'add'):
         """
         更新数据表的整型字段
 
         Args:
-            club_id (int): 茶馆ID
+            pk_id (int): 主键ID
             field_name (str): 要修改的字段名
             value (int): 修改的值
             operation (str): 操作类型，'add' 或 'sub'，默认为'add'
@@ -278,12 +302,12 @@ class BaseCommonRC(RCModel, CommonApi):
             return False, "无效的操作类型，只支持'add'或'sub'"
         try:
             # 获取当前值
-            data = await cls.db_model.get_or_none(id=club_id)
+            data = await cls.db_model.get_by_pk(pk_id)
             if not data:
                 return False, "数据不存在"
 
             # 获取当前字段值
-            current_value = getattr(data, field_name)
+            current_value = data[field_name]
             if not isinstance(current_value, (int, float)):
                 return False, f"字段{field_name}不是数值类型"
 
@@ -296,7 +320,7 @@ class BaseCommonRC(RCModel, CommonApi):
                 return False, "数值不能小于0"
             # 更新数据
             update_data = {field_name: new_value}
-            up = await cls.db_model.update_by_pk(club_id, update_data)
+            up = await cls.db_model.update_by_pk(pk_id, update_data)
             if not up:
                 return False, "更新失败"
         except OperationalError as e:

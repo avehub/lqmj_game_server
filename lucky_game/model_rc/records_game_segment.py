@@ -80,8 +80,10 @@ class RecordsGameSegmentRC(BaseCommonRC):
         return record, "成功"
 
     @classmethod
-    async def get_records_segment_by_filter(cls, greater_round_ranking: int = None, greater_round_score: int = None,
-                                            uid: any = None, record_rid: any = None, record_tid: any = None, record_sid: any = None):
+    async def get_record_segment_by_filter(cls, greater_round_ranking: int = None, greater_round_score: int = None,
+                                            uid: any = None, record_rid: any = None, record_tid: any = None,
+                                            replay_msg: str = None, record_sid: any = None, page: int = None,
+                                            page_size: int = None):
         """根据条件获取子局战绩列表"""
         try:
             query = {}
@@ -109,12 +111,31 @@ class RecordsGameSegmentRC(BaseCommonRC):
                     query["record_sid__in"] = record_sid
                 else:
                     query["record_sid"] = record_sid
-            records = await cls.db_model.filter(**query).values()
+            if replay_msg is not None:
+                query["replay_msg"] = replay_msg
+            if page and page_size:
+                total, _ = await cls.count_record_segment(**query)
+                records = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    records = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
+                result = cls.page_result(page, page_size, total, records)
+            else:
+                result = records = await cls.db_model.filter(**query).values()
             if not records:
-                return records, "暂无战绩"
+                return result, "暂无战绩"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return records, "成功"
+        return result, "成功"
+
+    @classmethod
+    async def count_record_segment(cls, **perms):
+        """获取房间战绩数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return count, "成功",
 
     @classmethod
     async def delete_record_game_segment(cls, record_sid: int):

@@ -41,16 +41,19 @@ class BaseRecordsGameRC(BaseCommonRC):
         return data, "成功"
 
     @classmethod
-    async def get_by_uid(cls, uid: int, start_time: int = None, end_time: int = None, cs_type: int = None):
+    async def get_by_uid(cls, uid: int, start_time: int = None, end_time: int = None, cs_type: int = None,
+                         page_size: int = None, page: int = None):
         """根据用户ID获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
                 start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_records_total_by_filter(
+            data, e = RecordsGameTotalRC.get_record_total_by_filter(
                 uid=uid,
                 start_time=start_time,
                 end_time=end_time,
-                cs_type=cs_type
+                cs_type=cs_type,
+                page_size=page_size,
+                page=page,
             )
             if not data:
                 return data, e
@@ -60,17 +63,20 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_by_room_id(cls, room_id: int = None, uid: int = None,  start_time: int = None,
-                                         end_time: int = None, cs_type: int = None):
+                             end_time: int = None, cs_type: int = None, page_size: int = None,
+                             page: int = None):
         """根据房间号获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
                 start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_records_total_by_filter(
+            data, e = RecordsGameTotalRC.get_record_total_by_filter(
                 room_id=room_id,
                 uid=uid,
                 start_time=start_time,
                 end_time=end_time,
-                cs_type=cs_type
+                cs_type=cs_type,
+                page_size=page_size,
+                page=page,
             )
             if not data:
                 return data, e
@@ -80,12 +86,13 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_by_club_id(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
-                             cs_type: int = None, uid: int = None, final_score: int = None, order_field: str = None):
+                             cs_type: int = None, uid: int = None, final_score: int = None, order_field: str = None,
+                             page_size: int = None, page: int = None):
         """根据茶ID馆获取 (默认七日内)战绩"""
         try:
             if start_time is None and end_time is None:
                 start_time, end_time = cls.default_time()
-            data, e = RecordsGameTotalRC.get_records_total_by_filter(
+            data, e = RecordsGameTotalRC.get_record_total_by_filter(
                 club_id=club_id,
                 room_id=room_id,
                 uid=uid,
@@ -94,6 +101,8 @@ class BaseRecordsGameRC(BaseCommonRC):
                 cs_type=cs_type,
                 final_score=final_score,
                 order_field=order_field,
+                page_size=page_size,
+                page=page,
             )
             if not data:
                 return data, e
@@ -103,26 +112,25 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_by_club_count(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
-                                cs_type: int = None, final_score: int = None):
+                                uid: int = None, cs_type: int = None, final_score: int = None):
         try:
             if start_time is None and end_time is None:
                 start_time, end_time = cls.default_time()
-            result, e = RecordsGameRoomRC.get_record_room_by_filter(
+            result, e = RecordsGameTotalRC.get_record_total_by_filter(
+                uid=uid,
                 club_id=club_id,
                 room_id=room_id,
                 start_time=start_time,
                 end_time=end_time,
                 cs_type=cs_type,
-                final_score=final_score,
             )
             if not result:
                 return None, e
             for item in result:
                 pass
-            return result, e
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return data, "成功"
+        return result, "成功"
 
 
     @classmethod
