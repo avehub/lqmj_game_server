@@ -181,68 +181,73 @@ class GameRoomsRC(BaseCommonRC):
     async def refund_room_card(cls, room_id: int, **kwargs):
         """回退房卡"""
         try:
-            room_data, e = await cls.get_game_room_by_room_id(room_id)
-            if not room_data:
-                return False, e
-            key = "room_card"
-            userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
-            if room_data["club_id"] and room_data["club_id"] > 0:
-                # 退还茶馆基金
-                if room_data["pay_type"] == 2:
-                    up_room_card = await BaseClubRC.update_club_int_field(
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                room_data, e = await cls.get_game_room_by_room_id(room_id)
+                if not room_data:
+                    return False, e
+                key = "room_card"
+                if room_data["club_id"] and room_data["club_id"] > 0:
+                    # 退还茶馆基金
+                    if room_data["pay_type"] == 2:
+                        up_room_card = await BaseClubRC.update_club_int_field(
+                            room_data["club_id"],
+                            key,
+                            room_data["price"],
+                            "add"
+                        )
+                    else:
+                        up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
+                            room_data["creator"],
+                            key,
+                            room_data['price'],
+                            "add"
+                        )
+                    # 删除茶馆事件记录
+                    event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
+                    add_club_behavior, _ = await ExtraClubEventRC.delete_event(
                         room_data["club_id"],
-                        key,
-                        room_data["price"],
-                        "add"
+                        event_type,
+                        room_data["creator"],
                     )
                 else:
+                    # 退还黄钻
+                    if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+                        key = "yellow_diamond"
                     up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
                         room_data["creator"],
                         key,
                         room_data['price'],
                         "add"
                     )
-                # 删除茶馆事件记录
-                event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-                add_club_behavior, _ = await ExtraClubEventRC.delete_event(
-                    room_data["club_id"],
-                    event_type,
-                    room_data["creator"],
-                )
-            else:
-                # 退还黄钻
-                if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
-                    key = "yellow_diamond"
-                up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
-                    room_data["creator"],
-                    key,
-                    room_data['price'],
-                    "add"
-                )
-            if not up_room_card:
-                return False, "房卡回退失败"
+                if not up_room_card:
+                    return False, "房卡回退失败"
         except OperationalError as e:
             return False, f"房卡回退失败: {str(e)}"
         return True, "成功"
 
     @classmethod
-    async def delete_game_room(cls, room_id: int):
+    async def delete_game_room(cls, room_id: int, delete: bool = False):
         """删除游戏房间"""
         try:
-            sta = await cls.db_model.filter(room_id=room_id).delete()
-            if not sta:
-                return False, cls.NULL_MEG
-            await cls.cache_room_drop(room_id)
-            # 删除缓存
-            uids = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
-            if uids:
-                uids = CommonApi.bytes_by_int_list(uids)
-                for uid in uids:
-                    await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
-                    await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
-            await cls.conf.rds.del_item(f"{cls.SESSION_DISK_KEY}:{room_id}")
-            await cls.cache_room_drop(f"{cls.SESSION_ROOM_KEY}:{room_id}")
-            await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                if delete:
+                    sta = await cls.db_model.filter(room_id=room_id).delete()
+                else:
+                    sta, _ = await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
+                if not sta:
+                    return False, cls.NULL_MEG
+                # TODO 游戏战绩标记
+
+                # 删除缓存
+                uids = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+                if uids:
+                    uids = await CommonApi.bytes_by_int_list(uids)
+                    for uid in uids:
+                        await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+                        await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+                await cls.conf.rds.del_item(f"{cls.SESSION_DISK_KEY}:{room_id}")
+                await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.cache_room_drop(room_id)
         except OperationalError as e:
             return False, f"房间删除失败: {str(e)}"
         return True, "成功"
@@ -279,7 +284,8 @@ class GameRoomsRC(BaseCommonRC):
         return room, "成功"
 
     @classmethod
-    async def get_game_rooms_by_filter(cls, club_id: int = None, status: int = None, creator: int = None):
+    async def get_game_rooms_by_filter(cls, club_id: int = None, status: int = None, creator: int = None,
+                                       cs_type: int = None):
         """多条件查询房间列表"""
         try:
             query = {}
@@ -289,6 +295,8 @@ class GameRoomsRC(BaseCommonRC):
                 query["status"] = status
             if creator is not None:
                 query["creator"] = creator
+            if cs_type is not None:
+                query["cs_type"] = cs_type
 
             rooms = await cls.db_model.filter(**query).order_by("status").values()
             if not rooms:
@@ -339,7 +347,7 @@ class GameRoomsRC(BaseCommonRC):
                 # 关闭房间
                 await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
                 await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
-                await cls.cache_room_drop(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+                await cls.cache_room_drop(room_id)
             await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
             await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
         except OperationalError as e:
@@ -389,9 +397,30 @@ class GameRoomsRC(BaseCommonRC):
             # 关闭房间
             await cls.delete_game_room(room_id)
             # 记录日志
-
+            cls.conf.info_log(msg + f"房间ID: {room_id}")
         except OperationalError as e:
             return None, f"房间处理失败: {str(e)}"
         return True, "成功"
+
+    @classmethod
+    async def abnormal_cs_type(cls, cs_type: int, msg: str = "服务异常"):
+        """服务异常情况处理"""
+        try:
+            room_data, _ = await cls.get_game_rooms_by_filter(cs_type=cs_type, status=RoomStatus.T_PLAYING)
+            failed_ids = []
+            if room_data:
+                for room in room_data:
+                    sta, e = await cls.abnormal_room(room["room_id"], msg)
+                    if not sta:
+                        failed_ids.append(room["room_id"])
+                        continue
+        except OperationalError as e:
+            return None, f"服务处理失败: {str(e)}"
+        return True, failed_ids
+
+
+
+
+
 
 

@@ -102,7 +102,7 @@ class CommonApi(LogMeta):
     async def bytes_by_int_list(cls, bytes_list):
         """批量获取bytes"""
         result = []
-        if not bytes_list or not isinstance(bytes_list, bytes):
+        if not bytes_list:
             return result
         data = [p.decode('utf-8') for p in bytes_list]
         result = [int(p) for p in data]

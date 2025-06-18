@@ -10,7 +10,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from c_services.const.cs_enum_const import CmdRoom
 from lucky_game.interface.club_room_template import RoomTemplateBase
-from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
+from lucky_game.model_rc.club_group import ClubGroupRC
 from common.public.conf import C_SERVICE_SECRET_KEY
 
 
@@ -58,15 +58,17 @@ class GameRoomAPI(RoomTemplateBase):
         cs_type = template.cs_type
         return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
 
-    async def check_group(self, uid: int, club_id: int, **kwargs):
+    async def check_group(self, uid: int, club_id: int, room_id: int):
         """校验是否是有隔离成员"""
-        behavior, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
-            uid=uid,
-            club_id=club_id,
-            type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-        )
-        if behavior:
-            return True
+        room_ids = await self.conf.rds.smembers(f"{GameRoomsRC.SESSION_DISK_KEY}:{room_id}")
+        for r_id in room_ids:
+            sta, group_ids = await ClubGroupRC.check_group_by_uid(
+                uid=uid,
+                r_uid=r_id,
+                club_id=club_id,
+            )
+            if sta:
+                return True
         return False
 
 

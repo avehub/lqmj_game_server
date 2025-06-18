@@ -20,7 +20,7 @@ class ExtraClubEventRC(BaseCommonRC):
     }
     EVENT_MSG = {
         1: "{name}玩家（ID：{uid}）为茶馆充值基金{price}",
-        2: "{name}玩家（ID：{uid}）消耗{price}基金创建了{cs_type}玩法（房间号：room_id）",
+        2: "{name}玩家（ID：{uid}）消耗{price}基金创建了{cs_type}玩法（房间号：{room_id}）",
         3: "记录{check_name}管理员（ID：{check_uid}）通过{name}玩家（ID：{uid}）加入茶馆",
     }
 

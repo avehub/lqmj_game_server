@@ -132,12 +132,12 @@ class ClubUsers(DBModel):
 
 class ClubGroups(DBModel):
     """茶馆隔离组表"""
-    id = fields.IntField(max_length=10, pk=True, description='分组ID')
+    gid = fields.IntField(max_length=10, pk=True, description='分组ID')
+    name = fields.CharField(max_length=32, null=True, default=0, description="分组名称")
     club_id = fields.IntField(max_length=6, null=True, description='茶馆ID')
-    uid = fields.IntField(max_length=28, null=True, description='玩家ID')
+    u_ids = fields.TextField( null=True, description='多个玩家ID')
 
     class Meta:
-        unique_together = (("club_id", "uid"),)  # 联合主键
         table = "club_groups"
 
 

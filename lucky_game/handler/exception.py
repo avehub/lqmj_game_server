@@ -48,7 +48,6 @@ class RCatchExpt():
 
     @classmethod
     def catch_req(cls, req: Request, expt):
-        print(req.args.get)
         req_id = req.headers.get('req_id')
         req_id and cls.conf.rds and cls.conf.rds.drop_item(f"{cls.conf.PROCESSING_REQ}:{req_id}")
         headers = HeaderSet.out(cls.conf)
