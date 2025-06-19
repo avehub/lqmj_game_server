@@ -60,15 +60,18 @@ class GameRoomAPI(RoomTemplateBase):
 
     async def check_group(self, uid: int, club_id: int, room_id: int):
         """校验是否是有隔离成员"""
+        # 当前房间存在的用户ID
         room_ids = await self.conf.rds.smembers(f"{GameRoomsRC.SESSION_DISK_KEY}:{room_id}")
-        for r_id in room_ids:
-            sta, group_ids = await ClubGroupRC.check_group_by_uid(
-                uid=uid,
-                r_uid=r_id,
-                club_id=club_id,
-            )
-            if sta:
-                return True
+        if room_ids:
+            room_ids = await self.bytes_by_int_list(room_ids)
+            for r_id in room_ids:
+                sta, group_ids = await ClubGroupRC.check_group_by_uid(
+                    uid=uid,
+                    r_uid=r_id,
+                    club_id=club_id,
+                )
+                if sta:
+                    return True
         return False
 
 

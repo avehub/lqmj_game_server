@@ -363,7 +363,7 @@ class GameRoomsRC(BaseCommonRC):
                 return None, e
             player = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
             if player:
-                player = CommonApi.bytes_by_int_list(player)
+                player = await CommonApi.bytes_by_int_list(player)
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return player, "成功"

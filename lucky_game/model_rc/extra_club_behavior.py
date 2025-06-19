@@ -96,6 +96,42 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
+    async def more_delete_club_behavior(cls, **kwargs):
+        """批量删除茶馆行为"""
+        try:
+            query = {}
+            behavior_id = kwargs.get("behavior_id")
+            club_id = kwargs.get("club_id")
+            uid = kwargs.get("uid")
+            behavior_type = kwargs.get("type")
+            status = kwargs.get("status")
+            if behavior_id is not None:
+                if isinstance(behavior_id, list):
+                    query["id__in"] = behavior_id
+                else:
+                    query["id"] = behavior_id
+            if club_id is not None:
+                if isinstance(club_id, list):
+                    query["club_id__in"] = club_id
+                else:
+                    query["club_id"] = club_id
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if behavior_type is not None:
+                query["type"] = behavior_type
+            if status is not None:
+                query["status"] = status
+            sta = await cls.db_model.filter(**query).delete()
+            if not sta:
+                return False, "删除失败"
+        except OperationalError as e:
+            return False, f"失败：{str(e)}"
+        return True, "成功"
+
+    @classmethod
     async def get_behavior_by_id(cls, behavior_id: int):
         """根据ID获取茶馆行为"""
         try:
