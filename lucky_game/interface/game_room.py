@@ -12,6 +12,7 @@ from c_services.const.cs_enum_const import CmdRoom
 from lucky_game.interface.club_room_template import RoomTemplateBase
 from lucky_game.model_rc.club_group import ClubGroupRC
 from common.public.conf import C_SERVICE_SECRET_KEY
+from c_services.const.cs_enum_const import RoomStatus
 
 
 class GameRoomAPI(RoomTemplateBase):
@@ -140,8 +141,11 @@ class CreateRoom(GameRoomAPI):
 class RoomList(GameRoomAPI):
     """房间列表（合并模板和现有房间）"""
     async def get(self, req: Request):
-        club_id = req.args.get("club_id", 0)
-        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
+        club_id = self.check_int(req.args.get("club_id"), require=False, default=None, p_name="茶馆ID")
+        status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, default=None, p_name="房间状态")
+        if status is None:
+            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
+        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id, status=status)
         if isinstance(room_list, list):
             for room in room_list:
                 user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])

@@ -284,7 +284,7 @@ class GameRoomsRC(BaseCommonRC):
         return room, "成功"
 
     @classmethod
-    async def get_game_rooms_by_filter(cls, club_id: int = None, status: int = None, creator: int = None,
+    async def get_game_rooms_by_filter(cls, club_id: int = None, status: any = None, creator: int = None,
                                        cs_type: int = None):
         """多条件查询房间列表"""
         try:
@@ -292,7 +292,10 @@ class GameRoomsRC(BaseCommonRC):
             if club_id is not None:
                 query["club_id"] = club_id
             if status is not None:
-                query["status"] = status
+                if isinstance(status, list):
+                    query["status__in"] = status
+                else:
+                    query["status"] = status
             if creator is not None:
                 query["creator"] = creator
             if cs_type is not None:

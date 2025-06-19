@@ -11,7 +11,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_encode, json_parse
-from pprint import pprint
+from c_services.const.cs_enum_const import RoomStatus
 
 
 class BaseClub(GameAuthApi):
@@ -58,12 +58,17 @@ class ClubList(BaseClub):
 class ClubHall(BaseClub):
     """茶馆大厅"""
     async def get(self, req: Request, **kwargs):
-        club_id = req.args.get("club_id")
-        self.check_int(club_id, require=True, p_name="茶馆ID")
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
+        if status is None:
+            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
         # 游戏房间
-        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id)
+        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(
+            club_id=club_id,
+            status=status,
+        )
         # 玩法模板和游戏房间列表合并
         result = []
         if isinstance(templates, list):
