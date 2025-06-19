@@ -172,7 +172,7 @@ class JoinRoom(GameRoomAPI):
         room_data["secret"] = C_SERVICE_SECRET_KEY
         await self.cs2cs_by_rmq(
             cs_enum,
-            CmdRoom.ENTER_ROOM,
+            CmdRoom.NEW_MATCH,
             room_data,
             uid,
         )

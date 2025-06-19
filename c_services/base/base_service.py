@@ -10,11 +10,14 @@ from common.utils.utils import UtilsTool
 from c_services.base.base_player import BasePlayer
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CmdRoom, CallCheck
-from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2
+from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2, enter_room_model, set_cards_model
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
 # from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
+
+
 # from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
@@ -29,25 +32,25 @@ class BaseService(BaseServer, SessionManager):
         super().__init__()
         SessionManager.__init__(self, use_pool=self.conf.USE_OBJ_POOL)
         self.add_handlers({
-            CmdRoom.NEW_MATCH.val: self.__on_new_match,
+            CmdRoom.NEW_MATCH.val: self._on_new_match,
 
             CmdRoom.LOST_CONNECT.val: self.__lost_connect,
             CmdRoom.TRUSTEE.val: self.__on_trustee,
             CmdRoom.BROADCAST_CHAT.val: self.__on_broadcast_chat,
             CmdRoom.QUERY_PLAYER_IN_SERVICE.val: self.__on_query_player_is_in_service,
 
-            CmdRoom.ENTER_ROOM.val: self.__enter_room,
+            CmdRoom.ENTER_ROOM.val: self.enter_room,
             CmdRoom.QUIT_ROOM.val: self.__on_quit_room,
             CmdRoom.FORCE_DISMISS.val: self.__on_force_dismiss,
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
         self.register_rc_model(
-            BaseUserRC,
+            BaseUserRC,GameRoomsRC,
         )
 
         self.__limit_call_tag = set()
 
-    async def __on_new_match(self, _, data):
+    async def _on_new_match(self, _, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
         await self.new_match(self.ROOM, self.PLAYER, data)
 
@@ -125,21 +128,23 @@ class BaseService(BaseServer, SessionManager):
         rec_seat_id = quick_chat_model.rec_seat_id
         await room.send_quit_chat(player.seat_id, rec_seat_id, one_data, quick_chat_model)
 
-    async def __enter_room(self, player, room, data):
+    async def enter_room(self, player, room, data):
         """ 进入房间 """
         # 离开房间则断线，重进则上线
         player.offline = False  # 此处不改变状态，玩家收不到房间以下两条信息
         if player.trustee:
             await room.do_trustee(player)
 
-        self.log_info(player.uid, "__enter_room", player.tid, id(player))
+        self.log_info(player.uid, "enter_room", player.tid, id(player),"最大人数",room.max_player_count)
 
         # 同步房间、玩家信息
-        one_of_model.ParseFromString(data)
-        req_id = one_of_model.req_id
-        await self.notify_player_enter_room(room, player)
+        enter_room_model.ParseFromString(data)
+        req_id = enter_room_model.req_id or ""
+        reenter = enter_room_model.reenter or False
+        await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
+        await room.notify_distance()
 
     @staticmethod
     async def __on_quit_room(player, room, data):
@@ -165,7 +170,8 @@ class BaseService(BaseServer, SessionManager):
 
     async def __on_set_cards(self, player, room, data):
         """ 设牌 """
-        code, msg = room.set_cards_in_debug(data)
+        set_cards_data = set_cards_model.ParseFromString(data)
+        code, msg = room.set_cards_in_debug(set_cards_data)
         if code != StaCode.PASS:
             await self.cs2ws_by_rmq(CmdRoom.SET_CARDS_IN_DEBUG, player.uid, code, msg, ws_id=player.ws_id)
 
@@ -179,12 +185,12 @@ class BaseService(BaseServer, SessionManager):
             return False, False, False
         return player, room, cards
 
-    async def notify_player_enter_room(self, room, player=None):
+    async def notify_player_enter_room(self, room, player=None, reenter=False):
         """ 玩家进入房间通知 """
         if player:
             await self.set_player_ws_id(player)
-        await room.notify_player_enter_room(player)
-        await room.notify_distance()
+        await room.notify_player_enter_room(player,reenter)
+        # await room.notify_distance()
 
     async def set_player_ws_id(self, player: BasePlayer):
         player.ws_id = await self.get_player_ws_id(player.uid)

@@ -1,52 +1,41 @@
+from asyncio import sleep
+
 from c_services.base.base_service import BaseService
 from c_services.const.cs_enum_const import CmdRoom, RoomStatus
 from c_services.cs_mahjong.const import OverType
-from common.proto.py_pb2.ws_c2s import req_dismiss_model
+from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
 from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
 from common.public.enum_const import StaCode
-
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 
 
 class BaseCardService(BaseService):
     def __init__(self):
         super().__init__()
-        self.tid_test = 0
         self.add_handlers({
             CmdRoom.REQ_DISMISS.val: self.__req_dismiss_room,
         })
-        import asyncio
-        data = {"tid": 0,"room_type":2,"play_type":1,"max_player":3,
-                "rule_details":{"shang_xia_ji":0,"ben_ji":1,"wu_gu_ji":0,"man_tang_ji":0,
-                                "chong_feng_ji":1,"zhan_ji":1,"jian_gang_san":1,"bao_ting":1,
-                                "bi_men_yi_shou":1,"shang_ga":1,"gu_mai_score":2,"suo_de_jia_1":1,
-                                "hu_pai_ti_shi":1,"huang_zhuang_bu_huang_ji":1,"four_card_bao_ting":0,
-                                "tui_zhang_can_hu":1,"bao_ting_bi_men":1,"exchange_three":0,
-                                "exchange_cards_type":1}}
-        uid = 123
-        count = 0
-        while 1:
-            asyncio.create_task(self.new_match(uid+count, data))
-            count += 1
-            if count == 3:
-                break
-            asyncio.sleep(2)
 
+    async def _on_new_match(self, uid, data):
+        """ 新匹配（服务器内部使用，不能给其它人调用） """
+        await self.new_match(uid, data)
 
-    async def new_match(self,uid,data):
-        tid = data.get("tid")
-        if tid ==0:
-            tid = self.tid_test
+    async def new_match(self, uid, data):
+        print(uid)
+        tid = data.get("room_id")
+        print("tid",tid)
         room = self.get_room(tid)
         if not room:
-            room = self.create_room(self.ROOM,data)
-            self.log_info(f"创建房间{tid}")
-            self.tid_test = room.tid
+            room = self.create_room(self.ROOM, data,tid = tid)
+            self.log_info(f"创建房间{room.tid}")
             room.creator = uid
         else:
             player = self.get_player(uid)
             if player and player.tid == tid:
                 player.set_position(data.get("x", 0), data.get("y", 0))
-                await self.enter_room(player, room)
+                enter_room_model.reenter = True
+                reenter = enter_room_model.SerializeToString()
+                await self.enter_room(player, room, reenter)
                 return
             if room.in_room_count == room.max_player_count:
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint="房间已满")
@@ -55,25 +44,19 @@ class BaseCardService(BaseService):
         player = self.get_or_create_player(uid, self.PLAYER)
         player.set_position(data.get("x", 0), data.get("y", 0))
         if player.seat_id <= 0:
-            sta = await room.player_join_room([player])
-            if sta:
-                await room.inner_send(player, CmdRoom.ENTER_ROOM)
-        self.log_info(f"进入房间{player.uid}",player.seat_id)
-        await room.on_player_ready(player)
-        if player.uid == 125:
-            await room.try_start_game()
+            await room.player_join_room([player])
+        self.log_info("玩家加入房间", player.uid, player.seat_id,"最大人数",room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)
 
 
-
-    def get_or_create_player(self,uid,c_player):
+    def get_or_create_player(self, uid, c_player):
         player = self.get_player(uid)
         if player:
             return player
-        return self.create_player(c_player,uid,False)
+        return self.create_player(c_player, uid, False)
 
     @staticmethod
-    async def __req_dismiss_room(player,room,data):
+    async def __req_dismiss_room(player, room, data):
         if not room.agree_dismiss_seats and not room.timer_dismiss:
             room.call_dismiss(120, room.force_dismiss, OverType.REQ_DISMISS)
 
@@ -95,11 +78,6 @@ class BaseCardService(BaseService):
         if room.agree_dismiss_count() == room.max_player_count:
             return await room.force_dismiss(OverType.REQ_DISMISS)
 
-
-
-    async def enter_room(self,player,room):
-        player.offline = False  # 此处不改变状态，玩家收不到房间以下两条信息
-        if player.trustee:
-            await room.do_trustee(player)
-        self.log_info(player.uid, "enter_room", player.tid, id(player))
-        await self.notify_player_enter_room(room, player)
+    async def clear_in_service(self):
+        await GameRoomsRC.abnormal_cs_type(self.service_type,"重启子游戏服务")
+        await super().clear_in_service()

@@ -76,8 +76,8 @@ def pack_base_room_info(obj, **kwargs):
     room_conf = kwargs.get("room_conf", {})
     rule_conf = room_conf.get("rule_conf", {})
 
-    obj.base_room_info.room_conf.max_player = rule_conf.get("max_player")
-    obj.base_room_info.room_conf.total_round = rule_conf.get("total_round")
+    obj.base_room_info.room_conf.max_player = rule_conf.get("max_player") or room_conf.get("max_player")
+    obj.base_room_info.room_conf.total_round = rule_conf.get("total_round") or room_conf.get("max_player")
 
     obj.base_room_info.min_take = room_conf.get("min_take") or 0
     obj.base_room_info.max_take = room_conf.get("max_take") or 0
@@ -525,20 +525,15 @@ class S2CReady07Mahjong:
         obj.is_ready = kwargs.get("is_ready") or False
         return obj
 
-class S2CRoomInfo03Mahjong:
-
-    @staticmethod
-    def pack_dismiss_info(obj, kwargs):
-        """ 打包请求解散房间信息 """
-        dismiss_info = kwargs.get("dismiss_info", {})
-        obj.dismiss_info.agree_seats.extend(dismiss_info.get("agree_seats") or [])
-        obj.dismiss_info.req_dismiss_left_sec = dismiss_info.get("req_dismiss_left_sec") or 0
+class S2CRoomInfo04Mahjong:
 
     @classmethod
     def pb_model(cls, **kwargs):
-        obj = ws_leisure_pb2.S2CRoomInfo03Mahjong()
+        obj = ws_leisure_pb2.S2CRoomInfo04Mahjong()
         pack_base_room_info(obj, **kwargs)
-        cls.pack_dismiss_info(obj, **kwargs)
+        dismiss_info = kwargs.get("dismiss_info", {})
+        obj.dismiss_info.agree_seats.extend(dismiss_info.get("agree_seats") or [])
+        obj.dismiss_info.req_dismiss_left_sec = dismiss_info.get("req_dismiss_left_sec") or 0
         obj.owner = kwargs.get("owner") or 0
         obj.left_count = kwargs.get("left_count") or 0
         obj.last_card = kwargs.get("last_card") or 0
@@ -553,29 +548,31 @@ def pack_table_cards(obj, **kwargs):
         table.card = cards.get("card") or 0
         table.act_type = cards.get("act_type") or 0
 
-class S2CPlayerInfo04Mahjong:
+class S2CPlayerInfo05Mahjong:
     @classmethod
-    def pb_model(cls, **kwargs):
-        obj = ws_leisure_pb2.S2CPlayerInfo04Mahjong()
-        pack_base_player_info(obj, **kwargs)
-        obj.is_ready = kwargs.get("is_ready") or False
-        obj.shang_ga = kwargs.get("shang_ga") or 0
-        obj.shang_ga_score = kwargs.get("last_card") or 0
-        obj.is_bao_ting = kwargs.get("is_bao_ting") or False
-        obj.mo_pai = kwargs.get("mo_pai") or 0
-        obj.first_ji = kwargs.get("first_ji") or 0
-        obj.first_wu_gu_ji = kwargs.get("first_wu_gu_ji") or 0
-        obj.ze_ren_ji = kwargs.get("ze_ren_ji") or 0
-        obj.ze_ren_wu_gu_ji = kwargs.get("ze_ren_wu_gu_ji") or 0
-        obj.is_lock_cards = kwargs.get("is_lock_cards") or False
-        obj.operates.extend(kwargs.get("operates") or [])
-        obj.is_bi_hu = kwargs.get("is_bi_hu") or False
-        obj.out_cards.extend(kwargs.get("out_cards") or [])
-        pack_table_cards(obj, **kwargs)
-        men_cards = kwargs.get("men_cards") or []
-        for men_data in men_cards:
-            men_card = obj.men_cards.add()
-            men_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
+    def pb_model(cls, data:list):
+        obj = ws_leisure_pb2.S2CPlayerInfo05Mahjong()
+        for one_data in data:
+            p_info = obj.player_info.add()
+            pack_base_player_info(p_info, **one_data)
+            p_info.is_ready = one_data.get("is_ready") or False
+            p_info.shang_ga = one_data.get("shang_ga") or False
+            p_info.shang_ga_score = one_data.get("shang_ga_score") or 0
+            p_info.is_bao_ting = one_data.get("is_bao_ting") or False
+            p_info.mo_pai = one_data.get("mo_pai") or 0
+            p_info.first_ji = one_data.get("first_ji") or 0
+            p_info.first_wu_gu_ji = one_data.get("first_wu_gu_ji") or 0
+            p_info.ze_ren_ji = one_data.get("ze_ren_ji") or 0
+            p_info.ze_ren_wu_gu_ji = one_data.get("ze_ren_wu_gu_ji") or 0
+            p_info.is_lock_cards = one_data.get("is_lock_cards") or False
+            p_info.operates.extend(one_data.get("operates") or [])
+            p_info.is_bi_hu = one_data.get("is_bi_hu") or False
+            p_info.out_cards.extend(one_data.get("out_cards") or [])
+            pack_table_cards(p_info, **one_data)
+            men_cards = one_data.get("men_cards") or []
+            for men_data in men_cards:
+                men_card = p_info.men_cards.add()
+                men_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
         return obj
 
 class S2CRoundStartMahjong:
@@ -585,7 +582,7 @@ class S2CRoundStartMahjong:
         obj = ws_leisure_pb2.S2CRoundStartMahjong()
         obj.round_idx = kwargs.get("round_idx") or 1
         obj.dealer = kwargs.get("dealer") or 0
-        obj.dice_num.extend(kwargs.get("agree_seats") or [])
+        obj.dice_num.extend(kwargs.get("dice_num") or [])
         return obj
 
 class S2CShangGaMahjong:
@@ -737,14 +734,6 @@ class S2CHuBaseInfo:
         pack_hu_base_info(obj, kwargs)
         return obj
 
-class S2CShangGaInfo:
-    @classmethod
-    def pb_model(cls,**kwargs):
-        obj = ws_leisure_pb2.S2CShangGaInfo()
-        obj.seat_id = kwargs.get("seat_id") or 0
-        obj.shang_ga = kwargs.get("shang_ga") or 0
-        return obj
-
 class S2CExchangeCardsInfo:
     @classmethod
     def pb_model(cls,**kwargs):
@@ -769,20 +758,28 @@ class S2CStartDingQueInfo:
         obj.seconds = kwargs.get("seconds") or 0
         return obj
 
+class S2CDingQueInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CDingQueInfo()
+        obj.que = kwargs.get("que") or 0
+        obj.seat_id = kwargs.get("seat_id") or 0
+
 class S2CRoundOverInfo:
 
     @staticmethod
     def pack_ming_xi_info(obj, data_list:list):
         """ 打包结算明细信息 """
         for other_data in data_list:
-            obj.check_type = other_data.get("check_type") or 0
-            obj.card = other_data.get("card") or 0
-            obj.score = other_data.get("score") or 0
-            obj.hu_type = other_data.get("hu_type") or 0
-            obj.get_bearer = other_data.get("get_bearer") or 0
-            obj.lose_to = other_data.get("lose_to") or 0
-            obj.extra_hu_type.extend(other_data.get("extra_hu_type") or [])
-            obj.win_from.extend(other_data.get("win_from") or [])
+            new_obj = obj.add()
+            new_obj.check_type = other_data.get("check_type") or 0
+            new_obj.card = other_data.get("card") or 0
+            new_obj.score = other_data.get("score") or 0
+            new_obj.hu_type = other_data.get("hu_type") or 0
+            new_obj.get_bearer = other_data.get("get_bearer") or 0
+            new_obj.lose_to = other_data.get("lose_to") or 0
+            new_obj.extra_hu_type.extend(other_data.get("extra_hu_type") or [])
+            new_obj.win_from.extend(other_data.get("win_from") or [])
 
     @classmethod
     def pb_model(cls,**kwargs):
@@ -817,10 +814,8 @@ class S2CRoundOverInfo:
             ming_xi_data = account_data.get("ming_xi") or {}
             other_list = ming_xi_data.get("other") or []
             self_list = ming_xi_data.get("self") or []
-            other_obj = seat.account.ming_xi.other.add()
-            self_obj = seat.account.ming_xi.other.add()
-            cls.pack_ming_xi_info(other_obj,other_list)
-            cls.pack_ming_xi_info(self_obj,self_list)
+            cls.pack_ming_xi_info(seat.account.ming_xi.other,other_list)
+            cls.pack_ming_xi_info(seat.account.ming_xi.self,self_list)
 
         return obj
 
@@ -831,6 +826,35 @@ class S2CReqDismissRoom:
         obj.seat_id = kwargs.get("seat_id") or 0
         obj.agree = kwargs.get("agree") or False
         obj.agree_seats.extend(kwargs.get("agree_seats") or [])
+        return obj
+
+class S2CNotifyPosition:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CNotifyPosition()
+        obj.distances.extend(kwargs.get("distances") or [])
+        return obj
+
+class S2CGameOverInfo:
+
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CGameOverInfo()
+        obj.time_stamp = kwargs.get("time_stamp") or 0
+        obj.tid = kwargs.get("tid") or 0
+        seats_data = kwargs.get("seats") or []
+        for data in seats_data:
+            seat = obj.seats.add()
+            seat.seat_id = data.get("seat_id") or 0
+            seat.uid = data.get("uid") or 0
+            seat.total_score = data.get("total_score") or 0
+            seat.diao_pao_count = data.get("diao_pao_count") or 0
+            seat.jie_pao_count = data.get("jie_pao_count") or 0
+            seat.zi_mo_count = data.get("zi_mo_count") or 0
+            seat.ming_gang_count = data.get("ming_gang_count") or 0
+            seat.dian_gang_count = data.get("dian_gang_count") or 0
+            seat.an_gang_count = data.get("an_gang_count") or 0
+            seat.zhuan_wan_gang_count = data.get("zhuan_wan_gang_count") or 0
         return obj
 
 

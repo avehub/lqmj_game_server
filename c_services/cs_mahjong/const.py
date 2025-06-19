@@ -13,6 +13,9 @@ XUE_LIU_LEFT_BI_HU = 3
 class PlayType(BaseEnum):
     XING_YI_MJ = 1,"兴义麻将"
     AN_LONG_XUE_ZHAN = 2,"血流麻将"
+    GUI_YANG_4 = 3,"贵阳麻将"
+    GUI_YANG_3 = 4,"三丁拐"
+    GUI_YANG_2 = 5,"两丁拐"
 
 
 class ActionType(BaseEnum):
@@ -253,6 +256,49 @@ class PlayerStatusType(IntEnum):
     NO_JIAO_2 = 5  # 2个均未叫（赔）
     JIAO_2 = 6  # 2个都叫牌
 
+@unique
+class CheckType(IntEnum):
+    """
+    结算明细type
+    """
+    CHECK_HU_ZI_MO = 1001  # 结算胡自摸类型
+    CHECK_HU_ZI_MO_ZHA = 1002  # 炸胡自摸开牌
+    CHECK_HU_DIAN_PAO = 1003  # 结算点炮类型
+    CHECK_HU_DIAN_PAO_ZHA = 1004  # 结算点炮类型
+    CHECK_MEN = 1005  # 结算闷类型
+    CHECK_MEN_ZHA = 1006  # 结算炸闷闷类型
+    CHECK_JIAN = 1007  # 结算捡类型
+    CHECK_JIAN_ZHA = 1008  # 结算炸捡类型
+    LOU_MEN = 1000  # 结算漏闷类型
+    LOU_JIAN = 1010  # 结算漏捡类型
+    CHECK_LIU_JU_CHA_JIAO = 1011  # 结算查叫类型
+    CHECK_CHONG_FENG_JI = 1012  # 结算冲锋鸡
+    CHECK_ZE_REN_JI = 1013  # 结算责任鸡
+    CHECK_JI = 1014  # 结算鸡类型(翻牌鸡)
+    CHECK_MING_GANG = 1015  # 明杠
+    CHECK_SUO_GANG = 1016  # 转弯杠
+    CHECK_AN_GANG = 1017  # 暗杠
+    CHECK_GU_MAI = 1018  # 估卖
+    CHECK_KAI_HU_BAO = 1019  # 开胡炸胡包牌
+    CHECK_LIAN_ZHUANG = 1020  # 连庄
+    CHECK_CHA_QUE = 1021  # 查缺
+    CHECK_YUAN_QUE = 1022  # 原缺
+    CHECK_YING_HU = 1023  # 硬胡
+    CHECK_YING_JIAO = 1024  # 硬叫
+    CHECK_LAI_ZI_PENG = 1025  # 赖子碰
+    CHECK_LAI_ZI_GNAG = 1026  # 赖子杠
+    CHECK_LAI_ZI_JI = 1027  # 赖子鸡
+    CHECK_LAI_ZI_CHONG_XI = 1028  # 赖子冲喜
+    CHECK_MAI_LEI_JING = 1029  # 埋雷精
+    CHECK_TYSG_JING = 1030  # 同一首歌精
+    CHECK_HTYX_JING = 1031  # 回头一笑精
+    CHECK_BA_WANG_JING = 1032  # 霸王精
+    CHECK_ZHAO_JING_ZI_JING = 1033  # 照镜子
+    CHECK_SHAI_YUE_LIANG_JING = 1034  # 晒月亮
+    CHECK_CHONG_GUAN_JING = 1035  # 冲关
+    CHECK_SHANG_JING = 1036  # 上精
+    CHECK_JING_GANG = 1037  # 精杠
+
 
 # 鸡牌分
 JI_PAI_SCORE = {
@@ -271,6 +317,7 @@ JI_PAI_SCORE = {
     JiType.WU_GU_ZRJ: 2,
     JiType.WU_GU_JIN_JI: 4,
     JiType.WU_GU_CF_JIN_JI: 8,
+    JiType.YIN_JI: 2,  # 银鸡2分
     # 此处给3分，其余外面逻辑判断
     JiType.AN_GANG: 3,
     JiType.MING_GANG: 3,
@@ -324,48 +371,6 @@ PAI_XING_SCORE_MAP = {
     HuType.QING_JIN_GOU: 20,
 }
 
-@unique
-class CheckType(IntEnum):
-    """
-    结算明细type
-    """
-    CHECK_HU_ZI_MO = 1001  # 结算胡自摸类型
-    CHECK_HU_ZI_MO_ZHA = 1002  # 炸胡自摸开牌
-    CHECK_HU_DIAN_PAO = 1003  # 结算点炮类型
-    CHECK_HU_DIAN_PAO_ZHA = 1004  # 结算点炮类型
-    CHECK_MEN = 1005  # 结算闷类型
-    CHECK_MEN_ZHA = 1006  # 结算炸闷闷类型
-    CHECK_JIAN = 1007  # 结算捡类型
-    CHECK_JIAN_ZHA = 1008  # 结算炸捡类型
-    LOU_MEN = 1000  # 结算漏闷类型
-    LOU_JIAN = 1010  # 结算漏捡类型
-    CHECK_LIU_JU_CHA_JIAO = 1011  # 结算查叫类型
-    CHECK_CHONG_FENG_JI = 1012  # 结算冲锋鸡
-    CHECK_ZE_REN_JI = 1013  # 结算责任鸡
-    CHECK_JI = 1014  # 结算鸡类型(翻牌鸡)
-    CHECK_MING_GANG = 1015  # 明杠
-    CHECK_SUO_GANG = 1016  # 转弯杠
-    CHECK_AN_GANG = 1017  # 暗杠
-    CHECK_GU_MAI = 1018  # 估卖
-    CHECK_KAI_HU_BAO = 1019  # 开胡炸胡包牌
-    CHECK_LIAN_ZHUANG = 1020  # 连庄
-    CHECK_CHA_QUE = 1021  # 查缺
-    CHECK_YUAN_QUE = 1022  # 源缺
-    CHECK_YING_HU = 1023  # 硬胡
-    CHECK_YING_JIAO = 1024  # 硬叫
-    CHECK_LAI_ZI_PENG = 1025  # 赖子碰
-    CHECK_LAI_ZI_GNAG = 1026  # 赖子杠
-    CHECK_LAI_ZI_JI = 1027  # 赖子鸡
-    CHECK_LAI_ZI_CHONG_XI = 1028  # 赖子冲喜
-    CHECK_MAI_LEI_JING = 1029  # 埋雷精
-    CHECK_TYSG_JING = 1030  # 同一首歌精
-    CHECK_HTYX_JING = 1031  # 回头一笑精
-    CHECK_BA_WANG_JING = 1032  # 霸王精
-    CHECK_ZHAO_JING_ZI_JING = 1033  # 照镜子
-    CHECK_SHAI_YUE_LIANG_JING = 1034  # 晒月亮
-    CHECK_CHONG_GUAN_JING = 1035  # 冲关
-    CHECK_SHANG_JING = 1036  # 上精
-    CHECK_JING_GANG = 1037  # 精杠
 
 # 动作优先级（仅房卡场）
 ACTION_PRIORITY = {

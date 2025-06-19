@@ -157,7 +157,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
     def add_ranking_score_free_num(self, num: int):
         self.__ranking_score_free_num += num
 
-    def player_info(self):
+    def player_info(self,contain_cards = True):
         """ 玩家信息：子类必须实现 """
         data = super().player_info()
         data["gold"] = self.__gold

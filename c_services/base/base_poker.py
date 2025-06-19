@@ -6,9 +6,12 @@ from c_services.const.base_card import BaseCard
 class BasePoker:
     CARDS_ENUM: BaseCard
 
-    def __init__(self):
+    def __init__(self,not_include=0):
         self.__cursor = 0
-        self.__cards = self.CARDS_ENUM.all_cards()
+        card_list = self.CARDS_ENUM.all_cards()
+        if not_include!= 0:
+            card_list = [card for card in card_list if card.suit != not_include]
+        self.__cards = card_list
         self.__cards_count = len(self.__cards)
         self.__set_cards_list = []
 

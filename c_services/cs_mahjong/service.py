@@ -3,6 +3,7 @@ from c_services.const.cs_enum_const import CmdRoom
 from c_services.cs_mahjong.player import Player
 from c_services.cs_mahjong.room_base import Room
 from common.public.enum_const import StaCode
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .const import FlowStatus
 from ..base.base_card_service import BaseCardService
 
@@ -27,7 +28,7 @@ class MahjongServer(BaseCardService):
         })
 
 
-    async def __on_player_pass(self, player, room):
+    async def __on_player_pass(self, player, room,_):
         code, msg = await room.on_player_pass(player)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_PASS, player.uid, code, msg, ws_id=player.ws_id)
@@ -36,43 +37,49 @@ class MahjongServer(BaseCardService):
             room.clear_record_operates(player.seat_id)
             self.log_info(room.tid, player.uid, player.seat_id, "server 玩家选择过：", room.record_operates)
             if not room.record_operates:
-                return room.check_action_end()
+                return await room.check_action_end()
 
-    async def __on_player_peng(self, player, room):
+    async def __on_player_peng(self, player, room,_):
         code, msg = await room.on_player_peng(player)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_PENG, player.uid, code, msg, ws_id=player.ws_id)
+        await room.check_action_end()
 
     async def __on_player_gang(self, player, room, data):
         code, msg = await room.on_player_gang(player,data)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_GANG, player.uid, code, msg, ws_id=player.ws_id)
+        await room.check_action_end()
 
-    async def __on_player_hu(self,player, room):
+    async def __on_player_hu(self,player, room,_):
         code, msg = await room.on_player_hu(player)
         if code != StaCode.Pass:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_HU, player.uid, code, msg, ws_id=player.ws_id)
+        await room.check_action_end()
 
-    async def __on_player_men(self,player, room):
+
+    async def __on_player_men(self,player, room,_):
         code, msg = await room.on_player_men(player)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_MEN,player.uid, code, msg, ws_id=player.ws_id)
+        await room.check_action_end()
 
-    async def __on_player_jian(self, player, room):
+    async def __on_player_jian(self, player, room,_):
         code, msg =await room.on_player_jian(player)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_JIAN, player.uid, code, msg, ws_id=player.ws_id)
+        await room.check_action_end()
 
     async def __on_player_shang_ga(self,player, room, data):
         code, msg = await room.on_player_shang_ga(player, data)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_SHANG_GA, player.uid, code, msg, ws_id=player.ws_id)
 
-    async def __on_player_ready(self,player,room):
+    async def __on_player_ready(self,player,room,_):
         code, msg = await room.on_player_ready(player)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.READY, player.uid, code, msg, ws_id=player.ws_id)
-        room.try_start_game()
+        await room.try_start_game()
 
     async def __on_player_exchange_cards(self,player, room, data):
         code, msg = await room.on_player_exchange_cards(player, data)
@@ -90,8 +97,8 @@ class MahjongServer(BaseCardService):
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_TIAN_TING,player.uid, code, msg, ws_id = player.ws_id)
         if player.cards_len == 13:
-            room.check_tian_ting_end()
+            await room.check_tian_ting_end()
         else:
-            room.check_action_end()
+            await room.check_action_end()
 
 

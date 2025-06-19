@@ -2,6 +2,8 @@ from c_services.base.base_player import BasePlayer
 from typing import Optional, Deque
 from collections import deque
 
+from c_services.const.cs_enum_const import RoomType
+
 
 class SessionManager:
     """ 游戏玩家、房间 会话管理 """
@@ -34,6 +36,8 @@ class SessionManager:
                 return room.new(tid, self, room_conf, **kwargs)
 
     def create_room(self, room, room_conf, **kwargs):
+        room_type = room_conf.get("room_type")
+        tid = kwargs.pop("tid") if room_type == RoomType.SELF_BUILD else 0
         if self.__room_pool:
             room_obj = self.__room_pool.popleft()
             room_obj.refresh_room_conf(self, room_conf, **kwargs)
@@ -42,8 +46,10 @@ class SessionManager:
                 tid += 1
             room_obj.set_tid(tid)
         else:
-            room_obj = self.__create_room(room, room_conf, **kwargs)
-
+            if room_type == RoomType.SELF_BUILD:
+                room_obj = room.new(tid,self, room_conf, **kwargs)
+            else:
+                room_obj = self.__create_room(room, room_conf, **kwargs)
         self.__rooms[room_obj.tid] = room_obj
         return room_obj
 

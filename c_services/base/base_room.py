@@ -3,6 +3,7 @@ from c_services.const.cs_enum_const import RoomStatus, RoomType, CmdRoom
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import StaCode, BaseEnum, ServiceEnum
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .base_player import BasePlayer
 from .base_service import BaseService
 from typing import List, Optional
@@ -13,7 +14,7 @@ from abc import ABCMeta, abstractmethod
 class BaseRoom(metaclass=ABCMeta):
     """ 基础玩法类 """
 
-    def __init__(self, tid, service: BaseService, room_conf, poker):
+    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0):
         self.__tid = tid
         self.__service = service
         self.__room_status = RoomStatus.T_IDLE
@@ -33,7 +34,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
-        self.__poker = poker()
+        self.__poker = poker(not_include)
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer
@@ -367,11 +368,12 @@ class BaseRoom(metaclass=ABCMeta):
         await self.__service.cs2ws_by_rmq(c_code, p.uid, code, hint, data, req_id, ws_id=p.ws_id)
 
     async def inner_broadcast(self, c_code, data=None, code: StaCode = StaCode.PASS, hint="ok", exclude_uid=0):
-        return
         """ 房间内广播 """
         task_list = []
         send_player_list = []
         for p in self.__seats:
+            if not p:
+                continue
             if p.offline:
                 continue
             if p.is_robot:
@@ -419,11 +421,11 @@ class BaseRoom(metaclass=ABCMeta):
         """ 子类实现 """
         raise NotImplementedError
 
-    async def notify_player_enter_room(self, player):
+    async def notify_player_enter_room(self, player,reenter = False):
         # 房间信息
         await self.notify_room_info(player)
         # 发送房间内所有玩家信息给当前玩家
-        await self.notify_player_info(player)
+        await self.notify_player_info(player,reenter)
 
     async def notify_room_info(self, player=None):
         data = self.serialize_room_info()
@@ -432,26 +434,24 @@ class BaseRoom(metaclass=ABCMeta):
         else:
             await self.inner_broadcast(CmdRoom.ROOM_INFO, data)
 
-    async def notify_player_info(self, curr_player=None):
+    async def notify_player_info(self, curr_player=None, reenter = False):
         """ 通知玩家信息 """
         if curr_player:
             # 断线重进房间
             room_player_info = self.room_player_info(curr_player)
             data = self.serialize_player_info(room_player_info)
             await self.inner_send(curr_player, CmdRoom.PLAYER_INFO, data)
+            if not reenter:
+                curr_p_info = curr_player.player_info(contain_cards=False)
+                data = self.serialize_player_info([curr_p_info])
+                await self.inner_broadcast(CmdRoom.PLAYER_INFO,data  ,exclude_uid=curr_player.uid)
             return
 
         task_list = []
         for player in self.seats:
             if player.is_robot:
                 continue
-            room_player_info = [player.player_info()]
-            for other_p in self.seats:
-                if player.seat_id != other_p.seat_id:
-                    other_info = other_p.player_info()
-                    other_info["cards"] = []  # 过滤其它玩家手牌
-                    room_player_info.append(other_info)
-
+            room_player_info = self.room_player_info(player)
             data = self.serialize_player_info(room_player_info)
             task_list.append(self.inner_send(player, CmdRoom.PLAYER_INFO, data))
         if task_list:
@@ -460,10 +460,10 @@ class BaseRoom(metaclass=ABCMeta):
     def room_player_info(self, curr_player=None):
         result = []
         for player in self.seats:
-            info = player.player_info()
-            if curr_player and player.seat_id != curr_player.seat_id:
-                info["cards"] = []
-            result.append(info)
+            if player:
+                contain_cards = curr_player and player.seat_id == curr_player.seat_id or False
+                info = player.player_info(contain_cards)
+                result.append(info)
         return result
 
     def room_info(self):
@@ -498,9 +498,9 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def game_over(self):
         """ 游戏结束 """
-        self.cancel_all_timer()
         for p in self.__seats:
             if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
+                await GameRoomsRC.leave_room(p.tid, p.uid)
                 await self.service.del_player_in_service(p.uid)
             self.service.release_player(p)
         self.service.release_room(self)
