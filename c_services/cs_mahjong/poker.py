@@ -48,8 +48,8 @@ class Cards(BaseCard):
 class Poker(BasePoker):
     CARDS_ENUM = Cards
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self,not_include=0):
+        super().__init__(not_include)
 
     def deal_cards(self, player_count: int = 4, card_count: int = 13, extra_count=0):
         """

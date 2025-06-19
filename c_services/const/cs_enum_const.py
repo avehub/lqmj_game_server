@@ -127,6 +127,7 @@ class CmdRoom(BaseEnum):
     ZHA_MEN = 92,"炸闷","麻将"
     REQ_DISMISS = 93,"请求解散房间","麻将"
     NOTIFY_POSITION = 94,"开局通知定位","麻将"
+    PLAYER_DING_QUE = 95,"玩家定缺","麻将"
 
 
 class CmdWorkers(BaseEnum):

@@ -123,6 +123,7 @@ class ServiceEnum(BaseEnum):
     C_WATER_FISH = 20, "water_fish", GameType.LEISURE
     C_LANDLORDS = 21, "landlords", GameType.LEISURE
     C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
+    C_MAHJONG_GY = 23,"mahjong_gy",GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'

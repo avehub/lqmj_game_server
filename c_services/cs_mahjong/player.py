@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from c_services.base.base_leisure_player import BaseLeisurePlayer
 from c_services.cs_mahjong.const import ActionType
+from c_services.cs_mahjong.poker import Poker
 from common.utils import earth_position
 from common.utils.utils import UtilsTool
 
@@ -10,6 +11,7 @@ class Player(BaseLeisurePlayer):
     def __init__(self, uid, is_robot):
         super().__init__(uid, is_robot)
         self.__que = 0
+        self.__yuan_que = 0
         self.__is_lock = False
         self.__tian_ting =0
         self.__tian_hu = 0
@@ -18,10 +20,9 @@ class Player(BaseLeisurePlayer):
         self.__jiao_pai = 0
         self.__men_cards = []  #闷、捡牌都在里面
         self.__zi_mo_cards = [] #玩家闷的牌
-        self.__has_shang_ga = -1
+        self.__has_shang_ga = False
         self.__can_tian_ting = 0
         self.__operates = [] #玩家能做的操作
-        self.__has_shang_ga = -1
         self.__shang_ga_score = 0
         self.__table_cards = []  # 玩家桌牌
         self.__all_chu_cards = []  # 所有出牌记录
@@ -40,7 +41,7 @@ class Player(BaseLeisurePlayer):
         self.__jian_next_player_card = 0  # 一圈内是否捡过下家牌 轮到自己重置为0 1为捡过
         self.__zha_hu = 0
         self.__fang_pao = 0
-        self.__hu_type =-1
+        self.__hu_type = 0
         self.__ji_pai = []
         self.__chong_feng_ji = 0
         self.__chong_feng_wgj = 0
@@ -48,6 +49,7 @@ class Player(BaseLeisurePlayer):
         self.__ze_ren_wgj = 0
         self.__is_ready = False
         self.__hu_info = {}  # 胡开信息
+        self.__shao_tong_xing_zheng = 0  # 烧通行证
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
@@ -58,7 +60,7 @@ class Player(BaseLeisurePlayer):
 
     @has_shang_ga.setter
     def has_shang_ga(self, shang_ga):
-        if shang_ga not in (0, 1, 2, 3, 4, 5):
+        if not shang_ga:
             return
         self.__has_shang_ga = shang_ga
 
@@ -77,6 +79,10 @@ class Player(BaseLeisurePlayer):
     @que.setter
     def que(self,que:int):
         self.__que = que
+
+    @property
+    def yuan_que(self):
+        return self.__yuan_que
 
     @property
     def is_lock(self):
@@ -170,7 +176,7 @@ class Player(BaseLeisurePlayer):
 
     @jiao_pai.setter
     def jiao_pai(self,jiao_pai:int):
-        self.jiao_pai = jiao_pai
+        self.__jiao_pai = jiao_pai
 
     @property
     def men_cards(self):
@@ -230,10 +236,15 @@ class Player(BaseLeisurePlayer):
         }
         return not target_actions.isdisjoint(operates_map)
 
+    def set_shao_txz(self, flag: int = 1):
+        """ 设置烧通行证 """
+        print(self.__uid, "玩家被烧通行证")
+        self.__shao_tong_xing_zheng = flag
+
 
     def on_round_over_clear(self):
         self.is_lock = False
-        self.__has_shang_ga = -1
+        self.__has_shang_ga = False
         self.__shang_ga_score = 0
         self.__ting_list = []
         self.__fang_pao = 0
@@ -245,6 +256,7 @@ class Player(BaseLeisurePlayer):
         self.__ze_ren_ji = 0
         self.__ze_ren_wgj = 0
         self.__hu_info = {}
+        self.__shao_tong_xing_zheng = 0
 
     def clear_data_round_over(self):
         super().clear_data_round_over()
@@ -605,12 +617,12 @@ class Player(BaseLeisurePlayer):
     def is_ready(self,is_ready:bool):
         self.__is_ready = is_ready
 
-    def player_info(self):
+    def player_info(self,contain_cards = True):
         public_men_cards = []
         for men_cards in self.__men_cards:
             data = deepcopy(men_cards)
             if data.get("is_zi_mo"):
-                data["card"] = -1
+                data["card"] = 0
             public_men_cards.append(data)
 
         p_info = super().player_info()
@@ -633,7 +645,7 @@ class Player(BaseLeisurePlayer):
 
     def round_over_data(self):
         return {
-            "seat_id": self.__seat_id,
+            "seat_id": self.seat_id,
             "hand_cards": self.cards,
             "table_cards": self.get_table_cards(),
             "round_score": self.round_score,
@@ -658,7 +670,7 @@ class Player(BaseLeisurePlayer):
             "ming_gang_count": self.__ming_gang_count,  # 明杠次数
             "dian_gang_count": self.__dian_gang_count,  # 点杠次数
             "an_gang_count": self.__an_gang_count,  # 暗杠次数
-            "fang_gang_count": self.__zhuan_wan_gang_count,  # 转弯杠次数
+            "zhuan_wan_gang_count": self.__zhuan_wan_gang_count,  # 转弯杠次数
         }
 
     def get_table_cards(self):
@@ -696,3 +708,31 @@ class Player(BaseLeisurePlayer):
 
     def set_hu_info(self, info: dict):
         self.__hu_info = info
+
+    def check_has_permit(self):
+        """ 检测是否有通行证(杠牌) """
+        for combo in self.__table_cards:
+            if combo[0] in (ActionType.ACTION_TYPE_AN_GANG, ActionType.ACTION_TYPE_MING_GANG,
+                            ActionType.ACTION_TYPE_ZHUAN_WAN_GANG):
+                return True
+        return False
+
+    def que_count(self):
+        """
+        检查玩家是否完成缺
+        return: 0 表示已经完成，> 0表示还有缺牌
+        """
+        suit_count = Poker.cal_card_suit_count(self.__cards)
+        return suit_count.get(self.__que, 0)
+
+    def set_is_yuan_que(self):
+        """ 判断起手是不是原缺(手牌只有一种或两种花色且不是缺牌花色) """
+        if self.__que == 0:
+            return False
+        cards_to_count = Poker.cal_card_suit_count(self.__cards)
+        if len(cards_to_count) <= 2:
+            # 手中没有缺的牌才算源缺
+            if not cards_to_count.get(self.__que):
+                self.__yuan_que = self.__que
+                return True
+        return False
