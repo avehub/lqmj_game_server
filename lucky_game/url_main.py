@@ -44,6 +44,7 @@ from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
     UserAggregateRanks, ClubAggregateRanks
+from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
 
 class MainBp(BaseBlue):
     # 路由请添加在这里
@@ -72,11 +73,14 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomCreate/", CreateRoom),  # 茶馆房间创建
         Urls("/ClubRoomJoin/", JoinRoom),  # 茶馆房间加入
         Urls("/ClubRoomLeave/", LeaveRoom),  # 茶馆房间离开
-        # Urls("/ClubRoomLeave/", ClubRoomLeave),  # 茶馆房间离开
         Urls("/ClubRoomTemplateCreate/", RoomTemplateCreate),  # 茶馆房间模板创建
         Urls("/ClubRoomTemplateList/", RoomTemplateList),  # 茶馆房间模板列表
         Urls("/ClubRoomTemplateDelete/", RoomTemplateDelete),  # 茶馆房间模板删除
         Urls("/ClubRoomTemplateUpdate/", RoomTemplateUpdate),  # 茶馆房间模板更新
+        Urls("/ClubGroupCreate/", CreatGroup),  # 创建隔离组
+        Urls("/ClubGroupGet/", GetGroup),  # 获取隔离组
+        Urls("/ClubGroupUpdate/", UpdateGroup),  # 更新隔离组
+        Urls("/ClubGroupDelete/", DelGroup),  # 删除隔离组
 
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息

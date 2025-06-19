@@ -17,25 +17,40 @@ class ClubGroupRC(RCModel):
     tb_name = db_model.sheet_name()
 
     @classmethod
+    async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list):
+        """批量将茶馆隔离组数据写入行为表"""
+        rows = []
+        for u_id in u_ids:
+            rows.append(
+                {
+                    "type": ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                    "uid": u_id,
+                    "club_id": club_id,
+                    "check_uid": uid,
+                }
+            )
+        sta, e = await ExtraClubBehaviorRC.bulk_create_club_behavior(rows)
+        return sta, e
+
+    @classmethod
     async def creat_club_group(cls, club_id: int, name: str, u_ids: set, uid: int = None):
         """创建茶馆隔离组"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
+                has, e = await cls.get_club_group_by_filter(club_id=club_id, name=name)
+                if has:
+                    return None, "组名已存在"
                 group = await cls.db_model.add_one({
                     "club_id": club_id,
                     "name": name,
-                    "u_ids": json_encode(list(u_ids)),
+                    "u_ids": json_encode(u_ids),
                 })
                 if not group:
                     return group, "创建失败"
                 if uid:
-                    for u_id in u_ids:
-                        await ExtraClubBehaviorRC.create_club_behavior(
-                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                            uid=u_id,
-                            club_id=club_id,
-                            check_uid=uid,
-                        )
+                    sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids))
+                    if not sta:
+                        return None, e
         except OperationalError as e:
             return None, f"创建失败: {str(e)}"
         return group.gid, "成功"
@@ -49,28 +64,44 @@ class ClubGroupRC(RCModel):
                 if not group:
                     return None, "组不存在"
                 # 删除原有的用户
-                await ExtraClubBehaviorRC.more_delete_club_behavior(
+                # await ExtraClubBehaviorRC.more_delete_club_behavior(
+                #     behavior_type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                #     club_id=group.club_id,
+                #     uid=json_parse(group.u_ids),
+                # )
+                if name is not None:
+                    group.name = name
+                if u_ids is not None:
+                    group.u_ids = json_encode(u_ids)
+                await group.save()
+                if uid:
+                    sta, e = await cls._bulk_behavior(club_id=group.club_id, uid=uid, u_ids=list(u_ids))
+                    if not sta:
+                        return None, e
+        except OperationalError as e:
+            return None, f"更新失败: {str(e)}"
+        return group.gid, "成功"
+
+    @classmethod
+    async def delete_group(cls, gid: int):
+        """删除茶馆隔离组"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                group = await cls.db_model.get_by_pk(gid)
+                if not group:
+                    return None, "组不存在"
+                await group.delete()
+                # 删除原有的用户
+                sta, e = await ExtraClubBehaviorRC.more_delete_club_behavior(
                     behavior_type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
                     club_id=group.club_id,
                     uid=json_parse(group.u_ids),
                 )
-
-                if name is not None:
-                    group.name = name
-                if u_ids is not None:
-                    group.u_ids = json_encode(list(u_ids))
-                await group.save()
-                if uid:
-                    for u_id in list(u_ids):
-                        await ExtraClubBehaviorRC.create_club_behavior(
-                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                            uid=u_id,
-                            club_id=group.club_id,
-                            check_uid=uid,
-                        )
+                if not sta:
+                    return None, e
         except OperationalError as e:
-            return None, f"更新失败: {str(e)}"
-        return group.gid, "成功"
+            return None, f"删除失败: {str(e)}"
+        return True, "成功"
 
     @classmethod
     async def get_club_group_by_id(cls, gid: int):

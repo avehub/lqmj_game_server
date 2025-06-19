@@ -183,7 +183,7 @@ class GameRoomsRC(BaseCommonRC):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 room_data, e = await cls.get_game_room_by_room_id(room_id)
-                if not room_data:
+                if not room_data or room_data["status"]:
                     return False, e
                 key = "room_card"
                 if room_data["club_id"] and room_data["club_id"] > 0:
@@ -259,7 +259,8 @@ class GameRoomsRC(BaseCommonRC):
             room, e = await cls.get_game_room_by_room_id(room_id)
             if not room:
                 return False, e
-            valid_fields = ["status", "player_count", "rule_details", "play_type", "max_player", "pay_type", "price", "cs_type"]
+            valid_fields = ["status", "player_count", "rule_details", "play_type", "max_player", "pay_type", "price",
+                            "cs_type"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
             if update_data:
                 await cls.db_model.filter(room_id=room_id).update(**update_data)
@@ -400,7 +401,7 @@ class GameRoomsRC(BaseCommonRC):
             # 关闭房间
             await cls.delete_game_room(room_id)
             # 记录日志
-            cls.conf.info_log(msg + f"房间ID: {room_id}")
+            # cls.conf.info_log(msg + f"房间ID: {room_id}")
         except OperationalError as e:
             return None, f"房间处理失败: {str(e)}"
         return True, "成功"
@@ -409,7 +410,16 @@ class GameRoomsRC(BaseCommonRC):
     async def abnormal_cs_type(cls, cs_type: int, msg: str = "服务异常"):
         """服务异常情况处理"""
         try:
-            room_data, _ = await cls.get_game_rooms_by_filter(cs_type=cs_type, status=RoomStatus.T_PLAYING)
+            room_data, _ = await cls.get_game_rooms_by_filter(
+                cs_type=cs_type,
+                status=[
+                    RoomStatus.T_IDLE,
+                    RoomStatus.T_READY,
+                    RoomStatus.T_PLAYING,
+                    RoomStatus.T_RECHARGE_ING,
+                    RoomStatus.T_CHECK_OUT,
+                ]
+            )
             failed_ids = []
             if room_data:
                 for room in room_data:
@@ -420,10 +430,3 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"服务处理失败: {str(e)}"
         return True, failed_ids
-
-
-
-
-
-
-
