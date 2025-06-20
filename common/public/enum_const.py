@@ -15,7 +15,6 @@ class Sex(BaseEnum):
     FEMALE = 2, "女"
 
 
-
 class Switch(BaseEnum):
     DEFAULT = 0, "默认"
     CLOSE = 1, "关闭"
@@ -119,10 +118,11 @@ class ServiceEnum(BaseEnum):
     C_MONSTER_MANY = 7, "monster_many", GameType.LEISURE
     C_NOTICE = 8, "notice", '通知服务号，不以服务启动，只作为消息通知服务号'
     C_CHAT = 9, "chat", '聊天服务'
+    C_CLUB = 10, "club", '俱乐部服务'
 
     C_WATER_FISH = 20, "water_fish", GameType.LEISURE
     C_LANDLORDS = 21, "landlords", GameType.LEISURE
-    C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
+    C_MAHJONG_XY = 22, "mahjong_xy", GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
