@@ -6,7 +6,6 @@ from typing import Union, Iterable
 from datetime import datetime, date
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
-from nsanic.orm.rc_model import RCModel
 from c_services.const.cs_enum_const import CmdWorkers
 from common.public.enum_const import BaseEnum, CacheKey, BanType
 from common.utils.kit_dt import KitDt

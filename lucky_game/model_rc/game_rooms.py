@@ -16,7 +16,7 @@ from lucky_game.const.const import PlatForm
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from nsanic.libs import tool_dt
-from common.public.enum_const import ServiceEnum, CacheKey
+from common.public.enum_const import CacheKey
 
 
 class GameRoomsRC(BaseCommonRC):

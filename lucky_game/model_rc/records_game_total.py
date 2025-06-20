@@ -8,7 +8,7 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class RecordsGameTotalRC(BaseCommonRC):

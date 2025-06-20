@@ -4,7 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ClubUsers
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from nsanic.libs.tool import json_encode, json_parse
+from nsanic.libs.tool import json_parse
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey

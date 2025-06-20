@@ -6,6 +6,7 @@ from lucky_game.model_db.main import ClubRoomTemplates
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
 
+
 class ClubRoomTemplatesRC(BaseCommonRC):
     db_model = ClubRoomTemplates
     tb_name = db_model.sheet_name()

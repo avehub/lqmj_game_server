@@ -5,7 +5,6 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraUserResourceChanges
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.const import GoodsItem
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 

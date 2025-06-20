@@ -3,7 +3,6 @@
 """
 from nsanic.orm.rc_model import RCModel
 from lucky_game.model_db.main import ClubGroups
-from lucky_game.const import CompleteSta
 from nsanic.libs.tool import json_encode, json_parse
 from tortoise.exceptions import OperationalError
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC

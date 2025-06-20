@@ -4,7 +4,6 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraClubEvent
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from nsanic.libs.tool import json_parse
 
 
 class ExtraClubEventRC(BaseCommonRC):

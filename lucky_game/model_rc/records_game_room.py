@@ -5,7 +5,6 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameRoom
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
-from nsanic.libs.tool import json_encode, json_parse
 
 
 class RecordsGameRoomRC(BaseCommonRC):

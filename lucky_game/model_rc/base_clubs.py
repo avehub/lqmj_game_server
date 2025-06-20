@@ -5,7 +5,7 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_users import ClubUsersRC
-from nsanic.libs.tool import json_encode, json_parse
+from nsanic.libs.tool import json_parse
 
 
 class BaseClubRC(BaseCommonRC):
