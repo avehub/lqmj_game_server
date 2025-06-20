@@ -22,13 +22,11 @@ class BaseClub(GameAuthApi):
 
 class ClubCreate(BaseClub):
     """创建茶馆"""
-
     async def post(self, req: Request, **kwargs):
         # 参数校验
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        name = req.json.get("name")
-        self.check_str(name, require=True, minlen=2, maxlen=10, p_name="茶馆名称")
+        name = self.check_str(req.json.get("name"), require=True, minlen=2, maxlen=10, p_name="茶馆名称")
         has = self.conf.sw.contain_sensitive_words(name)
         if has:
             return self.answer(StaCode.FAIL, hint="茶馆名包含敏感词")
@@ -42,6 +40,16 @@ class ClubCreate(BaseClub):
         if not new:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer(data={"club_id": new.id})
+
+
+class UpdateClub(BaseClub):
+    """更新茶馆信息"""
+    async def post(self, req: Request, **kwargs):
+        # 参数校验
+        uid = kwargs.get("u_info").get("uid")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
+        name = self.check_str(req.json.get("name"), require=True, minlen=2, maxlen=10, p_name="茶馆名称")
+
 
 
 class ClubList(BaseClub):

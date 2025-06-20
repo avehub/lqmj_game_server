@@ -27,6 +27,7 @@ class ClubGroupRC(RCModel):
                     "uid": u_id,
                     "club_id": club_id,
                     "check_uid": uid,
+                    "status": ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 }
             )
         sta, e = await ExtraClubBehaviorRC.bulk_create_club_behavior(rows)
@@ -63,42 +64,32 @@ class ClubGroupRC(RCModel):
                 group = await cls.db_model.get_by_pk(gid)
                 if not group:
                     return None, "组不存在"
-                # 删除原有的用户
-                # await ExtraClubBehaviorRC.more_delete_club_behavior(
-                #     behavior_type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                #     club_id=group.club_id,
-                #     uid=json_parse(group.u_ids),
-                # )
+                up_data = {}
                 if name is not None:
-                    group.name = name
+                    has, e = await cls.get_club_group_by_filter(club_id=group["club_id"], name=name)
+                    if has and gid not in [item["gid"] for item in has]:
+                        return None, "组名已存在"
+                    up_data["name"] = name
                 if u_ids is not None:
-                    group.u_ids = json_encode(u_ids)
-                await group.save()
+                    up_data["u_ids"] = json_encode(u_ids)
+                if up_data:
+                    await cls.db_model.update_by_pk(gid, up_data)
                 if uid:
-                    sta, e = await cls._bulk_behavior(club_id=group.club_id, uid=uid, u_ids=list(u_ids))
+                    sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids))
                     if not sta:
                         return None, e
         except OperationalError as e:
             return None, f"更新失败: {str(e)}"
-        return group.gid, "成功"
+        return gid, "成功"
 
     @classmethod
     async def delete_group(cls, gid: int):
         """删除茶馆隔离组"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                group = await cls.db_model.get_by_pk(gid)
-                if not group:
-                    return None, "组不存在"
-                await group.delete()
-                # 删除原有的用户
-                sta, e = await ExtraClubBehaviorRC.more_delete_club_behavior(
-                    behavior_type=ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                    club_id=group.club_id,
-                    uid=json_parse(group.u_ids),
-                )
+                sta = await cls.db_model.del_by_pk(gid)
                 if not sta:
-                    return None, e
+                    return sta, "删除失败"
         except OperationalError as e:
             return None, f"删除失败: {str(e)}"
         return True, "成功"

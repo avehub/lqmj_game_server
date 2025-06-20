@@ -25,15 +25,15 @@ class CreatGroup(GameAuthApi):
         u_ids = self.check_str(req.json.get("u_ids"), require=True, p_name="被隔离用户ID")
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         name = self.check_str(req.json.get("name"), maxlen=16, require=True, p_name="隔离组名")
-        group, e = await ClubGroupRC.creat_club_group(
+        gid, e = await ClubGroupRC.creat_club_group(
             uid=uid,
             u_ids=await dict_u_ids(u_ids),
             club_id=club_id,
             name=name,
         )
-        if not group:
+        if not gid:
             return self.answer(StaCode.FAIL, hint=e)
-        return self.answer(data={"gid": group.gid})
+        return self.answer(data={"gid": gid})
 
 
 class UpdateGroup(GameAuthApi):

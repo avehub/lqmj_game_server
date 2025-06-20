@@ -6,6 +6,8 @@ from lucky_game.model_db.main import RecordsGameSegment
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from nsanic.libs.tool import json_encode, json_parse
+from tortoise.transactions import in_transaction
+from common.public.enum_const import DbKey
 
 
 class RecordsGameSegmentRC(BaseCommonRC):
@@ -40,6 +42,17 @@ class RecordsGameSegmentRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"创建失败: {str(e)}"
         return new_record, "成功"
+
+    @classmethod
+    async def bulk_create_record_game_segment(cls, new_data: list):
+        """批量写入战绩子局记录"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                instances = [cls.db_model(**data) for data in new_data]
+                await cls.db_model.bulk_create(instances)
+        except OperationalError as e:
+            return False, f"失败：{str(e)}"
+        return True, "成功"
 
     @classmethod
     async def update_record_game_segment(cls, record_rid: int, **kwargs):

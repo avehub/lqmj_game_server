@@ -46,6 +46,7 @@ from lucky_game.interface.records_game import UserRecords, TotalRecords, Segment
     UserAggregateRanks, ClubAggregateRanks
 from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
 
+
 class MainBp(BaseBlue):
     # 路由请添加在这里
     DEFAULT_APIS = [
@@ -78,7 +79,7 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomTemplateDelete/", RoomTemplateDelete),  # 茶馆房间模板删除
         Urls("/ClubRoomTemplateUpdate/", RoomTemplateUpdate),  # 茶馆房间模板更新
         Urls("/ClubGroupCreate/", CreatGroup),  # 创建隔离组
-        Urls("/ClubGroupGet/", GetGroup),  # 获取隔离组
+        Urls("/ClubGroupGet/", GetGroup),  # 获取隔离组列表
         Urls("/ClubGroupUpdate/", UpdateGroup),  # 更新隔离组
         Urls("/ClubGroupDelete/", DelGroup),  # 删除隔离组
 

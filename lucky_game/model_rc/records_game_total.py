@@ -53,6 +53,17 @@ class RecordsGameTotalRC(BaseCommonRC):
         return new_record, "成功"
 
     @classmethod
+    async def bulk_create_record_game_total(cls, new_data: list):
+        """批量写入战绩总局记录"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                instances = [cls.db_model(**data) for data in new_data]
+                await cls.db_model.bulk_create(instances)
+        except OperationalError as e:
+            return False, f"失败：{str(e)}"
+        return True, "成功"
+
+    @classmethod
     async def get_record_total_by_id(cls, record_tid: int):
         """根据ID获取单条总局战绩"""
         try:

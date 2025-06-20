@@ -44,6 +44,7 @@ class GameRoomAPI(RoomTemplateBase):
                     return self.answer(StaCode.FAIL, hint="房卡不足")
         return True
 
+
     async def room_clone(self, template_id, uid, **kwargs):
         """房间克隆"""
         template, e = await ClubRoomTemplatesRC.get_by_id(template_id)
@@ -74,7 +75,6 @@ class GameRoomAPI(RoomTemplateBase):
                 if sta:
                     return True
         return False
-
 
 
 class CreateRoom(GameRoomAPI):

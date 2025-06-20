@@ -64,12 +64,9 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     async def bulk_create_club_behavior(cls, new_data: list):
         """批量新增茶馆行为"""
         try:
-            instances = [cls.db_model(**data) for data in new_data]
-            print(instances)
-            row = await cls.db_model.bulk_create(instances)
-            print(row)
-            if not row:
-                return False, "创建失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                instances = [cls.db_model(**data) for data in new_data]
+                await cls.db_model.bulk_create(instances)
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"
