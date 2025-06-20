@@ -3,12 +3,10 @@
 """
 from sanic import Request
 from common.public.enum_const import StaCode
-from datetime import datetime, timedelta
 from lucky_game.base_api import GameAuthApi
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from nsanic.libs.tool import json_encode, json_parse
-
 
 
 class JoinBlack(GameAuthApi):
@@ -25,7 +23,7 @@ class JoinBlack(GameAuthApi):
         )
         if not behavior_id:
             return self.answer(StaCode.FAIL, hint=e)
-        return self.answer(data={"behavior_id": behavior_id})
+        return self.answer()
 
 
 class CancelBlack(GameAuthApi):
@@ -44,9 +42,9 @@ class UpdateRelation(GameAuthApi):
         u_info = kwargs.get("u_info")
         creator = u_info.get("uid")
         relation_id = self.check_int(req.json.get("relation_id"), require=True, p_name="关系ID")
-        satus = self.check_int(req.args.get("satus"), require=False, default=None, p_name="成员状态")
-        role = self.check_int(req.args.get("role"), require=False, default=None, p_name="角色")
-        if satus == ClubUsersRC.STATUS_BLACK:
+        status = self.check_int(req.json.get("status"), require=False, default=None, minval=0, maxval=1, p_name="成员状态")
+        role = self.check_int(req.json.get("role"), require=False, default=None, minval=0, maxval=1, p_name="角色")
+        if status == ClubUsersRC.STATUS_BLACK:
             relation, e = await ClubUsersRC.get_club_user_by_id(relation_id)
             if not relation:
                 return self.answer(StaCode.FAIL, hint=e)
@@ -59,7 +57,7 @@ class UpdateRelation(GameAuthApi):
                 return self.answer(StaCode.FAIL, hint=e)
         sta, e = await ClubUsersRC.update_club_user(
             relation_id=relation_id,
-            satus=satus,
+            status=status,
             role=role,
         )
         if not sta:
@@ -81,14 +79,18 @@ class GetClubUser(GameAuthApi):
     """获取茶馆用户列表"""
     async def get(self, req: Request, **kwargs):
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
-        uid = self.check_int(req.args.get("uid"), require=True, default=None, p_name="用户ID")
-        satus = self.check_int(req.args.get("satus"), require=False, default=ClubUsersRC.STATUS_NORMAL, p_name="成员状态")
+        uid = self.check_int(req.args.get("uid"), require=False, default=None, p_name="用户ID")
+        status = self.check_int(req.args.get("status"), require=False, default=ClubUsersRC.STATUS_NORMAL, p_name="成员状态")
         role = self.check_int(req.args.get("role"), require=False, default=None, p_name="角色")
+        page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
+        page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
         data, e = await ClubUsersRC.get_club_user_by_filter(
             club_id=club_id,
             uid=uid,
             role=role,
-            status=satus,
+            status=status,
+            page=page,
+            page_size=page_size,
         )
         return self.answer(data=data, hint=e)
 

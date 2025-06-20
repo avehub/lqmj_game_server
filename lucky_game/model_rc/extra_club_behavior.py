@@ -5,8 +5,6 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraClubBehavior
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from lucky_game.model_rc.club_users import ClubUsersRC
-from lucky_game.model_rc.base_clubs import BaseClubRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 
@@ -44,14 +42,16 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         return status
 
     @classmethod
-    async def create_club_behavior(cls, behavior_type: int, uid: int, club_id: int, check_uid: int = 0):
+    async def create_club_behavior(cls, behavior_type: int, uid: int, club_id: int, check_uid: int = 0, status: int = None):
         """新增茶馆行为"""
         try:
+            if status is not None:
+                status = await cls._type_re_status(behavior_type)
             row = await cls.db_model.add_one({
                 "uid": uid,
                 "club_id": club_id,
                 "type": behavior_type,
-                "status": await cls._type_re_status(behavior_type),
+                "status": status,
                 "check_uid": check_uid,
             })
             if not row:
@@ -154,7 +154,8 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None):
+    async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None,
+                                     page: int = None, page_size: int = None):
         """多条件查询茶馆操作行为列表"""
         try:
             query = {}
@@ -169,17 +170,27 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 query["uid"] = uid
             if type is not None:
                 query["type"] = type
-            data = await cls.db_model.filter(**query).order_by("status").values()
+            if page and page_size:
+                total = await cls.db_model.get_count(query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by("status").offset(offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by("status").values()
             if not data:
-                return [], "未找到符合条件的数据"
+                return result, "暂无数据"
         except OperationalError as e:
             return False, f"查询失败: {str(e)}"
-        return data, "成功"
+        return result, "成功"
 
     @classmethod
     async def _behavior_after(cls, behavior_data: dict, up_status: int = 0):
         """根据茶馆行为进行之后的操作"""
         try:
+            from lucky_game.model_rc.base_clubs import BaseClubRC  # 延迟导入
+            from lucky_game.model_rc.club_users import ClubUsersRC
             club_id = behavior_data.get("club_id")
             uid = behavior_data.get("uid")
             behavior_type = behavior_data.get("type")

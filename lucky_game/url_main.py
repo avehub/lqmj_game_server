@@ -35,7 +35,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
-    ClubCheckList, ClubUserInfo
+    ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
@@ -45,6 +45,8 @@ from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
     UserAggregateRanks, ClubAggregateRanks
 from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
+from lucky_game.interface.club_behavior import GetBehaviorExtra
+from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
 
 
 class MainBp(BaseBlue):
@@ -63,6 +65,8 @@ class MainBp(BaseBlue):
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
+        Urls("/ClubUpdate/", ClubUpdate),  # 编辑茶馆
+        Urls("/ClubDetail/", ClubDetail),  # 茶馆详情
         Urls("/ClubApply/", ClubApply),  # 茶馆申请
         Urls("/ClubApplyList/", ClubApplyList),  # 茶馆申请列表
         Urls("/ClubCheck/", ClubCheck),  # 茶馆审批
@@ -82,6 +86,12 @@ class MainBp(BaseBlue):
         Urls("/ClubGroupGet/", GetGroup),  # 获取隔离组列表
         Urls("/ClubGroupUpdate/", UpdateGroup),  # 更新隔离组
         Urls("/ClubGroupDelete/", DelGroup),  # 删除隔离组
+        Urls("/ClubBehaviorExtra/", GetBehaviorExtra),  # 获取用户行为记录列表
+        Urls("/ClubJoinBlack/", JoinBlack),  # 加入小黑屋
+        Urls("/ClubCancelBlack/", CancelBlack),  # 取消小黑屋
+        Urls("/ClubUpdateRelation/", UpdateRelation),  # 编辑茶馆与用户关系
+        Urls("/ClubKickRelation/", KickRelation),  # 踢出茶馆
+        Urls("/ClubUserList/", GetClubUser),  # 获取茶馆与用户关系列表
 
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息

@@ -147,7 +147,7 @@ class ExtraClubBehavior(DBModel):
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1加入茶馆申请 2小黑屋 3隔离')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态，类型==1：0未审批 1拒绝 2取消 99通过，类型==2/3:99成功')
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态，类型==1：0未审批 1拒绝 2取消 99通过')
     check_uid = fields.IntField(max_length=28, null=True, default=0, description='审批/操作玩家ID')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 

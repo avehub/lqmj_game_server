@@ -3,15 +3,12 @@
 """
 from datetime import datetime, timedelta
 from tortoise.exceptions import OperationalError
-from lucky_game.model_db.main import RecordsGameRoom
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
-from nsanic.libs.tool import json_encode, json_parse
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
-from common.public.common_class import CommonApi
 
 
 class BaseRecordsGameRC(BaseCommonRC):

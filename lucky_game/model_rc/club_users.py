@@ -91,21 +91,21 @@ class ClubUsersRC(BaseCommonRC):
         return True, "添加成功"
 
     @classmethod
-    async def update_club_user(cls, relation_id: int, **kwargs):
+    async def update_club_user(cls, relation_id: int, role: int = None, status: int = None):
         """更新用户茶馆关系"""
         try:
             data, e = await cls.get_club_user_by_id(relation_id)
             if not data:
                 return False, e
             up_data = {}
-            if kwargs.get("role") is not None:
-                up_data["role"] = kwargs.get("role")
-            if kwargs.get("status") is not None:
-                up_data["status"] = kwargs.get("status")
+            if role is not None:
+                up_data["role"] = role
+            if status is not None:
+                up_data["status"] = status
             if up_data:
                 await cls.db_model.update_by_pk(relation_id, up_data)
-                await cls.cache_session_uid_drop(data.uid)
-                await cls.cache_session_clubid_drop(data.club_id)
+                await cls.cache_session_uid_drop(data["uid"])
+                await cls.cache_session_clubid_drop(data["club_id"])
         except OperationalError as e:
             return False, e
         return True, "更新成功"
@@ -121,12 +121,13 @@ class ClubUsersRC(BaseCommonRC):
                 query["uid"] = uid
             if club_id is not None:
                 query["club_id"] = club_id
-            data, e = await cls.get_club_user_by_filter(**query)
-            if not data:
-                return False, e
-            await cls.db_model.filter(**query).delete()
-            await cls.cache_session_uid_drop(uid)
-            await cls.cache_session_clubid_drop(club_id)
+            data = await cls.db_model.filter(**query).first()
+            if data:
+                # if data.role == cls.ROLE_HOST:
+                #     return False, "无法删除茶馆主"
+                await cls.db_model.del_by_pk(data.id)
+                await cls.cache_session_uid_drop(data.uid)
+                await cls.cache_session_clubid_drop(data.club_id)
         except OperationalError as e:
             return False, e
         return True, "删除成功"
@@ -193,7 +194,8 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_filter(cls, uid: int = None, club_id: int = None, role: int = None, status: int = None):
+    async def get_club_user_by_filter(cls, uid: int = None, club_id: int = None, role: int = None, status: int = None,
+                                      page: int = None, page_size: int = None):
         """获取用户茶馆关系"""
         try:
             query = {}
@@ -205,12 +207,41 @@ class ClubUsersRC(BaseCommonRC):
                 query["role"] = role
             if status is not None:
                 query["status"] = status
-            result = await cls.db_model.filter(**query).values()
-            if not result:
+            if page and page_size:
+                data = []
+                count = await cls.db_model.get_count(query)
+                if count > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, count, data)
+            else:
+                result = data = await cls.db_model.filter(**query).values()
+            if not data:
                 return result, "暂无数据"
         except OperationalError as e:
             return False, e
         return result, "成功"
+
+    @classmethod
+    async def count_club_user(cls, uid: int = None, club_id: int = None, role: int = None, status: int = None):
+        """获取符合条件的用户数量"""
+        count = 0
+        try:
+            query = {}
+            if uid is not None:
+                query["uid"] = uid
+            if club_id is not None:
+                query["club_id"] = club_id
+            if role is not None:
+                query["role"] = role
+            if status is not None:
+                query["status"] = status
+            if query:
+                count = await cls.db_model.get_count(query)
+        except OperationalError as e:
+            return count, f"{str(e)}"
+        return count, "成功"
+
 
     @classmethod
     async def join_black(cls, club_id: int, uid: int, check_uid: int = 0):
@@ -220,9 +251,9 @@ class ClubUsersRC(BaseCommonRC):
                 club_user, e = await cls.get_club_user_by_one(uid, club_id)
                 if not club_user:
                     return False, e
-                if club_user["status"] == cls.STATUS_BLACK:
+                if club_user.status == cls.STATUS_BLACK:
                     return False, "用户已在黑名单中"
-                sta = await cls.update_club_user(club_user["id"], status=cls.STATUS_BLACK)
+                sta = await cls.update_club_user(club_user.id, status=cls.STATUS_BLACK)
                 if not sta:
                     return False, "加入黑名单失败"
                 if check_uid:
@@ -239,17 +270,28 @@ class ClubUsersRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def cancel_black(cls, relation_id: int):
+    async def cancel_black(cls, relation_id: int, check_uid: int = 0):
         """取消小黑屋"""
         try:
-            club_user, e = await cls.get_club_user_by_id(relation_id)
-            if not club_user:
-                return False, e
-            if club_user["status"] == cls.STATUS_NORMAL:
-                return False, "用户已在黑名单中"
-            sta = await cls.update_club_user(club_user["id"], status=cls.STATUS_NORMAL)
-            if not sta:
-                return False, "移除黑名单失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                club_user, e = await cls.get_club_user_by_id(relation_id)
+                if not club_user:
+                    return False, e
+                if club_user["status"] == cls.STATUS_NORMAL:
+                    return False, "用户不在黑名单中"
+                sta = await cls.update_club_user(club_user["id"], status=cls.STATUS_NORMAL)
+                if not sta:
+                    return False, "移除黑名单失败"
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
+                    club_user["uid"],
+                    club_user["club_id"],
+                    check_uid,
+                    ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                )
+                if not sta:
+                    return False, e
         except OperationalError as e:
             return False, e
         return True, "成功"
+

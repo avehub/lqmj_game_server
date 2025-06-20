@@ -6,8 +6,6 @@ from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from nsanic.libs.tool import json_encode, json_parse
-from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
 
 class BaseClubRC(BaseCommonRC):
@@ -35,6 +33,25 @@ class BaseClubRC(BaseCommonRC):
     @classmethod
     async def cache_session_drop(cls, club_id):
         return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION}:{club_id}")
+
+    @classmethod
+    async def check_club_name(cls, name: str, club_id: int = None):
+        """检查茶馆名称是否存在"""
+        try:
+            has = cls.conf.sw.contain_sensitive_words(name)
+            if has:
+                return False, "茶馆名包含敏感词"
+            club = await cls.db_model.get_or_none(name=name)
+            if club_id is not None:
+                if club and club.id != club_id:
+                    return False, "茶馆名已存在"
+            else:
+                if club:
+                    return False, "茶馆名已存在"
+        except OperationalError as e:
+            return False, f"失败：{str(e)}"
+        return True, "校验成功"
+
 
     @classmethod
     async def create_club(cls, name: str, club_uid: int, room_card: int):
@@ -79,17 +96,23 @@ class BaseClubRC(BaseCommonRC):
         return club, "成功"
 
     @classmethod
-    async def update_club(cls, club_id: int, up_data: dict):
+    async def update_club(cls, club_id: int, name: str = None, other: dict = None):
         """更新茶馆信息"""
         try:
             club, e = await cls.get_club_by_id(club_id)
             if not club:
                 return False, e
-            sta = await cls.db_model.update_by_pk(club_id, up_data, old_data=club)
-            if not sta:
-                return None, "失败"
-            club.update(up_data)
-            await cls.cache_session_set(club_id, club)
+            up_data = {}
+            if name:
+                up_data["name"] = name
+            if other:
+                up_data["other"] = other
+            if up_data:
+                sta = await cls.db_model.update_by_pk(club_id, up_data, old_data=club)
+                if not sta:
+                    return None, "失败"
+                club.update(up_data)
+                await cls.cache_session_set(club_id, club)
         except OperationalError as e:
             return None, f"失败：{str(e)}"
         return club, "成功"

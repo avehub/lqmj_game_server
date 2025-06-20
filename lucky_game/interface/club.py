@@ -15,9 +15,19 @@ from c_services.const.cs_enum_const import RoomStatus
 
 
 class BaseClub(GameAuthApi):
-    async def check_solid_params(self, req: Request):
-        """ 检查固有参数 """
-        pass
+    async def _check_other_params(self, other):
+        """ 检查其他参数 """
+        if "'" in other:
+            # 将单引号转换为双引号
+            other_str = other.replace("'", "\"")
+        else:
+            other_str = other
+        other_dict = json_parse(other_str)
+        if not isinstance(other_dict, dict):
+            return self.answer(StaCode.FAIL, hint="other参数格式错误")
+        self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
+        self.check_int(other_dict.get("host_power_room"), require=True, minval=0, maxval=2,  p_name="host_power_room")
+        return other_dict
 
 
 class ClubCreate(BaseClub):
@@ -27,29 +37,47 @@ class ClubCreate(BaseClub):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         name = self.check_str(req.json.get("name"), require=True, minlen=2, maxlen=10, p_name="茶馆名称")
-        has = self.conf.sw.contain_sensitive_words(name)
-        if has:
-            return self.answer(StaCode.FAIL, hint="茶馆名包含敏感词")
+        check_sta, e = await BaseClubRC.check_club_name(name)
+        if not check_sta:
+            return self.answer(StaCode.FAIL, hint=e)
         room_card = u_info.get("room_card")
         if room_card < BaseClubRC.KEY_CLUB_CARD_LIMIT:
             return self.answer(StaCode.FAIL, hint="房卡不足")
-        club = await BaseClubRC.db_model.get_or_none(name=name)
-        if club:
-            return self.answer(StaCode.FAIL, hint="茶馆名已存在")
         new, e = await BaseClubRC.create_club(name, uid, room_card)
         if not new:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer(data={"club_id": new.id})
 
 
-class UpdateClub(BaseClub):
+class ClubUpdate(BaseClub):
     """更新茶馆信息"""
     async def post(self, req: Request, **kwargs):
         # 参数校验
         uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
-        name = self.check_str(req.json.get("name"), require=True, minlen=2, maxlen=10, p_name="茶馆名称")
+        other = self.check_str(req.json.get("other"), require=False, p_name="配置内容")
+        name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="茶馆名称")
+        check_sta, e = await BaseClubRC.check_club_name(name, club_id)
+        if not check_sta:
+            return self.answer(StaCode.FAIL, hint=e)
+        if name or other:
+            other_dict = {}
+            if other:
+                other_dict = await self._check_other_params(other)
+            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
 
+
+class ClubDetail(BaseClub):
+    """获取茶馆详情"""
+    async def get(self, req: Request, **kwargs):
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        result, e = await BaseClubRC.get_club_by_id(club_id)
+        if result is False:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer(data=result)
 
 
 class ClubList(BaseClub):
