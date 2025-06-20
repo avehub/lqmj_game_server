@@ -15,7 +15,6 @@ class Sex(BaseEnum):
     FEMALE = 2, "女"
 
 
-
 class Switch(BaseEnum):
     DEFAULT = 0, "默认"
     CLOSE = 1, "关闭"
@@ -119,6 +118,7 @@ class ServiceEnum(BaseEnum):
     C_MONSTER_MANY = 7, "monster_many", GameType.LEISURE
     C_NOTICE = 8, "notice", '通知服务号，不以服务启动，只作为消息通知服务号'
     C_CHAT = 9, "chat", '聊天服务'
+    C_CLUB = 10, "club", '俱乐部服务'
 
     C_WATER_FISH = 20, "water_fish", GameType.LEISURE
     C_LANDLORDS = 21, "landlords", GameType.LEISURE
