@@ -25,13 +25,14 @@ class GameRoomAPI(RoomTemplateBase):
             self.answer(self.sta_code.FAIL, data=cs_info, hint="已有在游戏房间")
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
-            # 校验茶馆成员身份
-            club_user, e = await ClubUsersRC.check_club_user(creator, club_id)
-            if not club_user:
+            # 校验茶馆成员身份信息
+            club_user, e = await ClubUsersRC.get_club_user_by_one(creator, club_id)
+            if not club_user or club_user.club_user == ClubUsersRC.STATUS_BLACK:
                 return self.answer(StaCode.FAIL, hint=e)
             # 权限&规则校验
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             club = json_parse(club)
+            # 茶馆创建房间配置权限校验
             if club['uid'] != creator and club['other'].get("host_power_room") in [0, 2]:
                 return self.answer(StaCode.FAIL, hint="无法创建房间")
             if club['other'].get("pay_type") == 1 and u_info.get("room_card") < price:
@@ -59,22 +60,6 @@ class GameRoomAPI(RoomTemplateBase):
         rule_details = template.rule_details
         cs_type = template.cs_type
         return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
-
-    async def check_group(self, uid: int, club_id: int, room_id: int):
-        """校验是否是有隔离成员"""
-        # 当前房间存在的用户ID
-        room_ids = await self.conf.rds.smembers(f"{GameRoomsRC.SESSION_DISK_KEY}:{room_id}")
-        if room_ids:
-            room_ids = await self.bytes_by_int_list(room_ids)
-            for r_id in room_ids:
-                sta, group_ids = await ClubGroupRC.check_group_by_uid(
-                    uid=uid,
-                    r_uid=r_id,
-                    club_id=club_id,
-                )
-                if sta:
-                    return True
-        return False
 
 
 class CreateRoom(GameRoomAPI):
@@ -140,12 +125,14 @@ class CreateRoom(GameRoomAPI):
 
 class RoomList(GameRoomAPI):
     """房间列表（合并模板和现有房间）"""
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
+        uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), require=False, default=None, p_name="茶馆ID")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, default=None, p_name="房间状态")
         if status is None:
             status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
-        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id, status=status)
+        not_rooms = await GameRoomsRC.before_room(club_id, uid)
+        room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id, status=status, not_room_id=not_rooms)
         if isinstance(room_list, list):
             for room in room_list:
                 user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])

@@ -7,6 +7,7 @@ from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from datetime import datetime
 
 
 class ExtraUserResourceChangesRC(BaseCommonRC):
@@ -40,6 +41,34 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
             return new_record, None
         except OperationalError as e:
             return None, f"记录创建失败: {str(e)}"
+
+    @classmethod
+    async def bulk_register_change_record(cls, uid: int, gifts: dict, register_type: int = 0, explain: str = "注册奖励"):
+        """用户注册批量创建资源变动记录"""
+        try:
+            if not gifts:
+                return True, None
+            tmp = {v: k for k, v in cls.CURRENCY_MAP.items()}
+            record_data = []
+            date_time = int(datetime.now().timestamp())
+            for currency, num in gifts.items():
+                if num == 0:
+                    continue
+                record_data.append(
+                    {
+                        "uid": uid,
+                        "status": 1,
+                        "currency": tmp[currency],
+                        "num": abs(num),
+                        "explain": explain,
+                        "created": date_time,
+                    }
+                )
+            await cls.db_model.bulk_create([cls.db_model(**r) for r in record_data])
+        except OperationalError as e:
+            return None, f"记录创建失败: {str(e)}"
+        return True, "成功"
+
 
     @classmethod
     async def get_records_by_uid(cls, uid: int, limit: int = 50):

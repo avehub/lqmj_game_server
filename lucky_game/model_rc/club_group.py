@@ -8,6 +8,7 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from datetime import datetime
 
 
 class ClubGroupRC(RCModel):
@@ -19,6 +20,7 @@ class ClubGroupRC(RCModel):
     async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list):
         """批量将茶馆隔离组数据写入行为表"""
         rows = []
+        date_time = int(datetime.now().timestamp())
         for u_id in u_ids:
             rows.append(
                 {
@@ -27,6 +29,7 @@ class ClubGroupRC(RCModel):
                     "club_id": club_id,
                     "check_uid": uid,
                     "status": ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    "created": date_time,
                 }
             )
         sta, e = await ExtraClubBehaviorRC.bulk_create_club_behavior(rows)
@@ -121,15 +124,19 @@ class ClubGroupRC(RCModel):
         return groups, "成功"
 
     @classmethod
-    async def check_group_by_uid(cls, club_id: int, uid: int, r_uid: int):
+    async def check_uid_by_club(cls, club_id: int, uid: int):
         """检测用户是否在茶馆隔离组中"""
         try:
+            group_uid = set()
             groups, _ = await cls.get_club_group_by_filter(club_id)
             if groups:
-                for item in groups.values():
+                for item in groups:
                     ids = json_parse(item["u_ids"])
-                    if uid in ids and r_uid in ids:
-                        return True, ids
+                    if uid in ids:
+                        group_uid.update(ids)
         except OperationalError as e:
             return None, []
-        return False, []
+        sta = False
+        if group_uid:
+            sta = True
+        return sta, group_uid

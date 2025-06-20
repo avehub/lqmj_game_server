@@ -60,18 +60,6 @@ class ClubUsersRC(BaseCommonRC):
         """根据茶馆ID缓存用户茶馆关系列表"""
         return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
-    @classmethod
-    async def check_club_user(cls, uid, club_id):
-        """检查用户是否在茶馆"""
-        try:
-            club_user = await cls.db_model.get_or_none(uid=uid, club_id=club_id)
-            if not club_user:
-                return False, "茶馆用户关系不存在"
-            if club_user.status != 0:
-                return False, "茶馆成员状态异常"
-        except OperationalError as e:
-            return False, e
-        return True, "茶馆用户关系已存在"
 
     @classmethod
     async def create_club_user(cls, uid: int, club_id: int, role: int = 0, status: int = 0):
@@ -123,8 +111,8 @@ class ClubUsersRC(BaseCommonRC):
                 query["club_id"] = club_id
             data = await cls.db_model.filter(**query).first()
             if data:
-                # if data.role == cls.ROLE_HOST:
-                #     return False, "无法删除茶馆主"
+                if data.role == cls.ROLE_HOST:
+                    return False, "无法删除茶馆主"
                 await cls.db_model.del_by_pk(data.id)
                 await cls.cache_session_uid_drop(data.uid)
                 await cls.cache_session_clubid_drop(data.club_id)

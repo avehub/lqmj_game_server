@@ -35,7 +35,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
-    ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail
+    ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
@@ -92,6 +92,7 @@ class MainBp(BaseBlue):
         Urls("/ClubUpdateRelation/", UpdateRelation),  # 编辑茶馆与用户关系
         Urls("/ClubKickRelation/", KickRelation),  # 踢出茶馆
         Urls("/ClubUserList/", GetClubUser),  # 获取茶馆与用户关系列表
+        Urls("/ClubDismiss/", ClubDismiss),  # 解散茶馆
 
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息

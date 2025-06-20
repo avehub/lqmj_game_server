@@ -94,6 +94,7 @@ class ClubList(BaseClub):
 class ClubHall(BaseClub):
     """茶馆大厅"""
     async def get(self, req: Request, **kwargs):
+        uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
@@ -101,9 +102,11 @@ class ClubHall(BaseClub):
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
         # 游戏房间
+        not_rooms = await GameRoomsRC.before_room(club_id, uid)
         room_list, e = await GameRoomsRC.get_game_rooms_by_filter(
             club_id=club_id,
             status=status,
+            not_room_id=not_rooms,
         )
         # 玩法模板和游戏房间列表合并
         result = []
@@ -230,8 +233,14 @@ class ClubUserInfo(BaseClub):
         return self.answer(data=data)
 
 
-class ClubLeave(BaseClub):
-    """离开茶馆"""
+class ClubDismiss(BaseClub):
+    """解散茶馆"""
     async def post(self, req: Request, **kwargs):
-        pass
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
+        data, e = await BaseClubRC.delete_club(club_id)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
 

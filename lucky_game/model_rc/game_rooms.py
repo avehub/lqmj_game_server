@@ -17,6 +17,7 @@ from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceCha
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from nsanic.libs import tool_dt
 from common.public.enum_const import CacheKey
+from lucky_game.model_rc.club_group import ClubGroupRC
 
 
 class GameRoomsRC(BaseCommonRC):
@@ -26,10 +27,10 @@ class GameRoomsRC(BaseCommonRC):
     KEY_ROOM_ID = 'room_id'
     KEY_CLUB_ID = 'club_id'
     SESSION_KEY = "room_player"
-    SESSION_DISK_KEY = "room_player_uid"
-    SESSION_ROOM_KEY = "game_room"
-    SESSION_ROOM_USER_KEY = "game_room_user"
-    SESSION_ROOM_NUMBER_KEY = "game_room_number"
+    SESSION_DISK_KEY = "room_player_uid"  # 单个游戏房间号内的用户ID集合
+    SESSION_ROOM_KEY = "game_room" # 游戏房间信息缓存
+    SESSION_ROOM_USER_KEY = "game_room_user"  # 游戏房间中的用户ID集合
+    SESSION_ROOM_NUMBER_KEY = "game_room_number"  # 游戏中的房间ID集合
     RULE_DETAILS = {
         "shang_xia_ji": {0, 1},  #上下鸡选项 0未选 1选
         "ben_ji": {0, 1},  # 本鸡选项  0未选 1选
@@ -89,6 +90,32 @@ class GameRoomsRC(BaseCommonRC):
             if not has:
                 await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
                 return room_id
+
+    @classmethod
+    async def before_room(cls, club_id: int, uid: int):
+        """可以在加入房间前做一些操作"""
+        # 获取除隔离组用户以外的房间
+        not_join_room = set()
+        # 获取用户所在的所有隔离组关联用户ID
+        sta, group_ids = await ClubGroupRC.check_uid_by_club(
+            uid=uid,
+            club_id=club_id,
+        )
+        if not sta:
+            return not_join_room
+        # 过滤隔离组内在线用户
+        on_line_ids = await BaseUserRC.get_online_uid(group_ids)
+        if on_line_ids:
+            # 过滤出在房间内的用户
+            u_ids = await cls.get_room_user_group(on_line_ids)
+            if not u_ids:
+                return not_join_room
+            for uid in u_ids:
+                room_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
+                if room_info:
+                    not_join_room.add(room_info["room_id"])
+        return not_join_room
+
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,
@@ -286,7 +313,7 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def get_game_rooms_by_filter(cls, club_id: int = None, status: any = None, creator: int = None,
-                                       cs_type: int = None):
+                                       cs_type: int = None, not_room_id: any = None):
         """多条件查询房间列表"""
         try:
             query = {}
@@ -301,6 +328,8 @@ class GameRoomsRC(BaseCommonRC):
                 query["creator"] = creator
             if cs_type is not None:
                 query["cs_type"] = cs_type
+            if not_room_id is not None:
+                query["room_id__not_in"] = not_room_id
 
             rooms = await cls.db_model.filter(**query).order_by("status").values()
             if not rooms:
@@ -382,6 +411,19 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return data, "成功"
+
+    @classmethod
+    async def get_room_user_group(cls, u_ids: list):
+        """过滤隔离组内所有在房间用户"""
+        ids = set()
+        data, _ = await cls.get_room_user_all()
+        if data:
+            print(data)
+            for uid in u_ids:
+                if uid in data:
+                    ids.update(uid)
+        return ids
+
 
     @classmethod
     async def check_uid_room_user(cls, uid: int):

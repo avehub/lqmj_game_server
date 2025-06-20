@@ -20,6 +20,7 @@ from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
 from pprint import pprint
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 
 class BaseLogin(GameAuthApi):
 
@@ -79,8 +80,6 @@ class BaseLogin(GameAuthApi):
             name = f"游客{self.rng.mk_str(8, True)}"
             user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
             user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
-
-
         info = {
             'name': name,
             'safe_key': safe_key,
@@ -99,18 +98,6 @@ class BaseLogin(GameAuthApi):
 
     async def format_login_info(self, u_info: dict, server_info: list, jwt_type=JWType.USER, issued=True):
         uid = u_info.get("uid")
-        # -- snip --
-        # todo: 临时代码(上线去掉)
-        # if LIVE_SERVER:
-        #     if tool_dt.cur_time() < ONLINE_TIME:
-        #         flag = await self.rds.conn.sismember('white_list', uid)
-        #         if not flag:
-        #             hint = f"游戏将于{ONLINE_TIME_STR}开启\n请玩家耐心等待……({uid})"
-        #             self.answer(code=self.sta_code.FAIL, hint=hint)
-        #     else:
-        #         await self.rds.drop_item('white_list')
-        # -- snip --
-
         if issued:  # 未签发走这里，签发jwt
             safe_key = u_info.pop('safe_key')
             subject_info = f"{u_info.get('created')}_{uid}"  # client_info
@@ -165,7 +152,8 @@ class BaseLogin(GameAuthApi):
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
         await self.push_task2worker(
             CmdWorkers.USER_EVENT_TRACKING, uid=uid, msg={'event_tracking': EventTracking.AFTER_REGISTER.val})
-
+        # 赠送金币记录入库
+        await ExtraUserResourceChangesRC.bulk_register_change_record(uid, asset_gift)
         await self.push_task2worker(CmdWorkers.FETCH_ACTIVE_MAILS, uid=uid)
         u_info["new_user"] = True
         return u_info

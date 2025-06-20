@@ -6,6 +6,7 @@ from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from nsanic.libs.tool import json_parse
+from c_services.const.cs_enum_const import RoomStatus
 
 
 class BaseClubRC(BaseCommonRC):
@@ -96,7 +97,7 @@ class BaseClubRC(BaseCommonRC):
         return club, "成功"
 
     @classmethod
-    async def update_club(cls, club_id: int, name: str = None, other: dict = None):
+    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None):
         """更新茶馆信息"""
         try:
             club, e = await cls.get_club_by_id(club_id)
@@ -107,6 +108,8 @@ class BaseClubRC(BaseCommonRC):
                 up_data["name"] = name
             if other:
                 up_data["other"] = other
+            if status:
+                up_data["status"] = status
             if up_data:
                 sta = await cls.db_model.update_by_pk(club_id, up_data, old_data=club)
                 if not sta:
@@ -121,7 +124,26 @@ class BaseClubRC(BaseCommonRC):
     async def delete_club(cls, club_id: int):
         """删除茶馆信息"""
         try:
-            await cls.db_model.del_by_pk(club_id)
+            club, e = await cls.get_club_by_id(club_id)
+            # 茶馆基金
+            if club["room_card"] > 0:
+                return None, "无法解散，还有未消耗的房卡基金"
+            # 存在游戏中的房间则无法解散
+            from lucky_game.model_rc.game_rooms import GameRoomsRC
+            rooms, _ = await GameRoomsRC.get_game_rooms_by_filter(
+                club_id=club_id,
+                status=[
+                    RoomStatus.T_IDLE,
+                    RoomStatus.T_READY,
+                    RoomStatus.T_PLAYING,
+                    RoomStatus.T_RECHARGE_ING,
+                    RoomStatus.T_CHECK_OUT,
+                    RoomStatus.T_DISMISS,
+                ]
+            )
+            if rooms:
+                return None, "无法解散，还有未结束的游戏房间"
+            await cls.db_model.update_by_pk(club_id, {"status": 1})
             await cls.cache_session_drop(club_id)
         except OperationalError as e:
             return None, f"失败：{str(e)}"
