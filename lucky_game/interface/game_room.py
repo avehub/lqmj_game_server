@@ -27,7 +27,7 @@ class GameRoomAPI(RoomTemplateBase):
         if club_id and club_id > 0:
             # 校验茶馆成员身份信息
             club_user, e = await ClubUsersRC.get_club_user_by_one(creator, club_id)
-            if not club_user or club_user.club_user == ClubUsersRC.STATUS_BLACK:
+            if not club_user or club_user.status == ClubUsersRC.STATUS_BLACK:
                 return self.answer(StaCode.FAIL, hint=e)
             # 权限&规则校验
             club, _ = await BaseClubRC.get_club_by_id(club_id)
