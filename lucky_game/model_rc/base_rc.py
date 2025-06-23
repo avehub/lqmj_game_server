@@ -5,6 +5,7 @@ from tortoise.expressions import Q
 from tortoise.exceptions import OperationalError
 from common.public.common_class import CommonApi
 import math
+from decimal import Decimal
 
 
 class BaseRC(RCModel):
@@ -308,7 +309,7 @@ class BaseCommonRC(RCModel, CommonApi):
 
             # 获取当前字段值
             current_value = data[field_name]
-            if not isinstance(current_value, (int, float)):
+            if not isinstance(current_value, (int, Decimal)):
                 return False, f"字段{field_name}不是数值类型"
 
             # 计算新值

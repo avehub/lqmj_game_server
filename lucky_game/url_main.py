@@ -39,7 +39,7 @@ from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply,
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
-from lucky_game.interface.user import UserInfo
+from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -97,7 +97,7 @@ class MainBp(BaseBlue):
         # 用户数据相关
         # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息
         # Urls("/Certification/", Certification),  # 实名认证
-        # Urls("/TestAddGold/", TestAddGold),  # 修改金币（测试）
+        Urls("/TestUpdateUserResource/", UpdateUserResource),  # 更新用户资源（测试）
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         # Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产

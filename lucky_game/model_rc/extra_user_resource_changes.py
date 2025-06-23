@@ -27,6 +27,26 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     }
 
     @classmethod
+    async def change_field(cls):
+        """获取变更字段"""
+        return list(cls.CURRENCY_MAP.values())
+
+    @classmethod
+    async def change_operation(cls):
+        """获取变更方式"""
+        return list(cls.OPERATION_MAP.keys())
+
+    @classmethod
+    async def check_change_field(cls, val: str = None):
+        """变更字段校验"""
+        return val in await cls.change_field()
+
+    @classmethod
+    async def check_change_operation(cls, val: str = None):
+        """变更方式校验"""
+        return val in await cls.change_operation()
+
+    @classmethod
     async def create_change_record(cls, uid: int, operation: str, currency: int, num: int, explain: str = ""):
         """创建资源变动记录"""
         try:
