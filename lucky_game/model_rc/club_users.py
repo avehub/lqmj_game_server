@@ -65,7 +65,7 @@ class ClubUsersRC(BaseCommonRC):
     async def create_club_user(cls, uid: int, club_id: int, role: int = 0, status: int = 0):
         """添加用户至茶馆"""
         try:
-            club_user, e = await cls.check_club_user(uid, club_id)
+            club_user, e = await cls.get_club_user_by_one(uid, club_id)
             if club_user:
                 return False, e
             await cls.db_model.add_one({
