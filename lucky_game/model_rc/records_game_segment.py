@@ -54,14 +54,18 @@ class RecordsGameSegmentRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def update_record_game_segment(cls, record_rid: int, **kwargs):
+    async def update_record_game_segment(cls, record_rid: int, uid: int,**kwargs):
         """更新子局战绩记录"""
         try:
             record_tid = kwargs.get("record_tid")
+            query = {
+                "record_rid": record_rid,
+                "uid": uid,
+            }
             if record_tid:
-                count, _ = await cls.count_record_segment(record_rid=record_rid)
+                count, _ = await cls.count_record_segment(**query)
                 up_sta = await cls.db_model.update_by_cond(
-                    {"record_rid": record_rid},
+                    query,
                     {"record_tid": record_tid},
                     count,
                 )

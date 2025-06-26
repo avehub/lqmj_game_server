@@ -40,7 +40,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                 new_record = await cls.db_model.add_one(record_data)
                 if not new_record:
                     return new_record, "创建失败"
-                up_segment_sta, _ = await RecordsGameSegmentRC.update_record_game_segment(record_rid, record_tid=new_record.record_tid)
+                up_segment_sta, _ = await RecordsGameSegmentRC.update_record_game_segment(record_rid, uid, record_tid=new_record.record_tid)
                 up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
                     record_rid,
                     end_time=int(datetime.now().timestamp())
