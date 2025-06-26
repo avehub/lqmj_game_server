@@ -54,7 +54,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def update_record_game_segment(cls, record_rid: int, uid: int,**kwargs):
+    async def update_record_game_segment(cls, record_rid: int, uid: int, **kwargs):
         """更新子局战绩记录"""
         try:
             record_tid = kwargs.get("record_tid")
