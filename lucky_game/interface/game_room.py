@@ -8,11 +8,27 @@ from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
-from c_services.const.cs_enum_const import CmdRoom
-from lucky_game.interface.club_room_template import RoomTemplateBase
-from lucky_game.model_rc.club_group import ClubGroupRC
+from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdNotice
+from lucky_game.interface.club_room_template import RoomTemplateBase, verify_rule_detail
 from common.public.conf import C_SERVICE_SECRET_KEY
-from c_services.const.cs_enum_const import RoomStatus
+from c_services.base.base_server import BaseServer
+from common.public.common_class import CommonApi
+
+
+async def again_mq(again_uid, room_data, cs_server: BaseServer = None):
+    room_data["secret"] = C_SERVICE_SECRET_KEY
+    u_ids = await CommonApi.json_by_dict(again_uid)
+    if u_ids:
+        if cs_server is None:
+            cs_server = BaseServer()
+        for uid in u_ids:
+            ws_id = await CommonApi.get_player_ws_id(uid)
+            await cs_server.cs2ws_by_rmq(
+                c_code=CmdNotice.INVITE_ROOM,
+                uid=uid,
+                msg=room_data,
+                ws_id=ws_id,
+            )
 
 
 class GameRoomAPI(RoomTemplateBase):
@@ -45,7 +61,6 @@ class GameRoomAPI(RoomTemplateBase):
                     return self.answer(StaCode.FAIL, hint="房卡不足")
         return True
 
-
     async def room_clone(self, template_id, uid, **kwargs):
         """房间克隆"""
         template, e = await ClubRoomTemplatesRC.get_by_id(template_id)
@@ -70,15 +85,17 @@ class CreateRoom(GameRoomAPI):
         template_id = self.check_int(req.json.get("template_id"), require=False, p_name="模板ID")
         is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
         is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否开启位置")
-        if not template_id:
-            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
-            pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
-        else:
+        again = self.check_int(req.json.get("is_again"), require=False, minval=0, maxval=1, p_name="开启再来一局")
+        again_uid = self.check_str(req.json.get("again_uid"), require=False, p_name="再来一局玩家ID")
+        if template_id:
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.room_clone(template_id, creator, **kwargs)
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             pay_type = club["other"]["pay_type"]
+        else:
+            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+            pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
         # 预处理
-        rule_details = await self.verify_rule_detail(rule_details)
+        rule_details = await verify_rule_detail(rule_details)
         await self._before_create_room(
             creator=creator,
             price=int(price),
@@ -120,6 +137,8 @@ class CreateRoom(GameRoomAPI):
             room_data,
             creator,
         )
+        if again == 1 and again_uid:
+            await again_mq(again_uid, room_data)
         return self.answer(data=room_data)
 
 
@@ -146,7 +165,7 @@ class JoinRoom(GameRoomAPI):
         room_id = self.check_int(req.json.get("room_id"), require=True, p_name="房间ID")
         u_info = kwargs.get("u_info")
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
-        if not room_data:
+        if not room_data or room_data["status"] not in [RoomStatus.T_IDLE, RoomStatus.T_READY]:
             return self.answer(StaCode.FAIL, hint=e)
         if room_data["pay_type"] == 1:
             if u_info.get("room_card") < room_data['price']:

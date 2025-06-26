@@ -4,32 +4,28 @@
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from common.public.enum_const import StaCode
-from nsanic.libs.tool import json_parse, json_encode
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.handler.decorator import BaseDecorator
+from common.public.common_class import CommonApi
+
+
+async def verify_rule_detail(rule_details) -> dict:
+    """游侠房间规则校验"""
+    rule = await CommonApi.json_by_dict(rule_details)
+    decorator = BaseDecorator(None)
+    for k, v in GameRoomsRC.RULE_DETAILS.items():
+        await decorator.check_inner(
+            val=rule.get(k),
+            require=True,
+            inner_dick=v,
+            p_name=k
+        )
+    return rule
 
 
 class RoomTemplateBase(GameAuthApi):
-    async def verify_rule_detail(self, rule_details):
-        """游侠房间规则校验"""
-        # 检查是否包含单引号
-        if "'" in rule_details:
-            # 将单引号转换为双引号
-            rule_str = rule_details.replace("'", "\"")
-        else:
-            rule_str = rule_details
-        rule = json_parse(rule_str)
-        decorator = BaseDecorator(None)
-        for k, v in GameRoomsRC.RULE_DETAILS.items():
-            await decorator.check_inner(
-                val=rule.get(k),
-                require=True,
-                inner_dick=v,
-                p_name=k
-            )
-        return rule
 
     async def verify_params(self, req: Request, **kwargs):
         """游戏房间常规参数校验"""
@@ -60,7 +56,7 @@ class RoomTemplateCreate(RoomTemplateBase):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
-        rule_dick = await self.verify_rule_detail(rule_details)
+        rule_dick = await verify_rule_detail(rule_details)
         await self.check_authority(uid, club_id)
         # 创建模板
         new, err = await ClubRoomTemplatesRC.create_template(
@@ -86,7 +82,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
         template_id = self.check_int(req.json.get("template_id"), require=True, p_name="模板ID")
         platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
         await self.check_authority(uid, club_id)
-        rule_dick = await self.verify_rule_detail(rule_details)
+        rule_dick = await verify_rule_detail(rule_details)
         new, err = await ClubRoomTemplatesRC.update_template(
             template_id=template_id,
             play_type=play_type,

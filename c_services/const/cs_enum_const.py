@@ -177,6 +177,8 @@ class CmdNotice(BaseEnum):
     FU_LI = 13, "福利活动"
     FRIEND_MSG = 14, "好友消息"
     AD_GOT_VIP = 15, "看广告获得VIP经验"
+    INVITE_ROOM = 16, "邀请加入房间"
+
 
 
 class RedDotType(BaseEnum):

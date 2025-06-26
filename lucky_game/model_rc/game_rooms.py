@@ -53,7 +53,7 @@ class GameRoomsRC(BaseCommonRC):
         "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
         "exchange_cards_type": {0, 1, 2}  # 换三张方式  1任意牌 2同色牌
     }
-    NULL_MEG = "房间不存在"
+    NULL_MEG = "房间已解散"
 
     @classmethod
     async def cache_room_player_up(cls, room_id, value=1):

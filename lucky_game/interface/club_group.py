@@ -3,19 +3,9 @@
 """
 from sanic import Request
 from common.public.enum_const import StaCode
-from datetime import datetime, timedelta
 from lucky_game.base_api import GameAuthApi
 from lucky_game.model_rc.club_group import ClubGroupRC
-from lucky_game.model_rc.base_user import BaseUserRC
-from nsanic.libs.tool import json_encode, json_parse
-
-
-async def dict_u_ids(u_ids):
-    if "'" in u_ids:
-        str_ids = u_ids.replace("'", "\"")
-    else:
-        str_ids = u_ids
-    return json_parse(str_ids)
+from common.public.common_class import CommonApi
 
 
 class CreatGroup(GameAuthApi):
@@ -27,7 +17,7 @@ class CreatGroup(GameAuthApi):
         name = self.check_str(req.json.get("name"), maxlen=16, require=True, p_name="隔离组名")
         gid, e = await ClubGroupRC.creat_club_group(
             uid=uid,
-            u_ids=await dict_u_ids(u_ids),
+            u_ids=await CommonApi.json_by_dict(u_ids),
             club_id=club_id,
             name=name,
         )
@@ -47,7 +37,7 @@ class UpdateGroup(GameAuthApi):
             uid=uid,
             gid=gid,
             name=name,
-            u_ids=await dict_u_ids(u_ids),
+            u_ids=await CommonApi.json_by_dict(u_ids),
         )
         if not group:
             return self.answer(StaCode.FAIL, hint=e)

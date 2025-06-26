@@ -109,7 +109,16 @@ class CommonApi(LogMeta):
         return result
 
     @classmethod
-    def merge_by_key(cls, arr1: list, arr2: list, key: str):
+    async def merge_by_key(cls, arr1: list, arr2: list, key: str):
         index = {item[key]: item for item in arr2}
         return [{**item, **index.get(item[key], {})} for item in arr1]
+
+    @classmethod
+    async def json_by_dict(cls, data: str):
+        """ json转dict  """
+        if "'" in data:
+            str_json = data.replace("'", "\"")
+        else:
+            str_json = data
+        return json_parse(str_json)
 

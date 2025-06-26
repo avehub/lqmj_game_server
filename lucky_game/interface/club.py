@@ -5,24 +5,19 @@ from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from common.public.enum_const import StaCode
 from lucky_game.model_rc.base_clubs import BaseClubRC
-from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
-from nsanic.libs.tool import json_encode, json_parse
+from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus
+from common.public.common_class import CommonApi
 
 
 class BaseClub(GameAuthApi):
     async def _check_other_params(self, other):
         """ 检查其他参数 """
-        if "'" in other:
-            # 将单引号转换为双引号
-            other_str = other.replace("'", "\"")
-        else:
-            other_str = other
-        other_dict = json_parse(other_str)
+        other_dict = await CommonApi.json_by_dict(other)
         if not isinstance(other_dict, dict):
             return self.answer(StaCode.FAIL, hint="other参数格式错误")
         self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
