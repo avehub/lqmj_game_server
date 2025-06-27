@@ -15,7 +15,6 @@ class Player(BaseLeisurePlayer):
         self.__is_lock = False
         self.__tian_ting =0
         self.__tian_hu = 0
-        self.__room_card = 0
         self.__mo_pai = 0
         self.__jiao_pai = 0
         self.__men_cards = []  #闷、捡牌都在里面
@@ -36,6 +35,7 @@ class Player(BaseLeisurePlayer):
         self.__dian_gang_count = 0  # 点杠次数
         self.__ming_gang_count = 0  # 明杠次数
         self.__an_gang_count = 0  # 暗杠次数
+        self.__zhuan_wan_gang_count = 0
         self.__zi_mo_count = 0  # 自摸次数
         self.__lian_zhuang = 0
         self.__jian_next_player_card = 0  # 一圈内是否捡过下家牌 轮到自己重置为0 1为捡过
@@ -47,6 +47,9 @@ class Player(BaseLeisurePlayer):
         self.__chong_feng_wgj = 0
         self.__ze_ren_ji = 0
         self.__ze_ren_wgj = 0
+        self.__han_bao_dou_an_gang_count = 0
+        self.__han_bao_dou_zhuan_wan_gang_count = 0
+        self.__han_dou_cards = set()
         self.__is_ready = False
         self.__hu_info = {}  # 胡开信息
         self.__shao_tong_xing_zheng = 0  # 烧通行证
@@ -127,11 +130,6 @@ class Player(BaseLeisurePlayer):
     @property
     def can_tian_ting(self):
         return self.__can_tian_ting
-
-    def remove_cards(self, cards, chu_pai=False):
-        self.rm_cards(cards)
-        chu_pai and self.__chu_cards.extend(cards)
-        self.__all_chu_cards.extend(cards)
 
     def chu_pai_len(self):
         return len(self.__chu_cards)
@@ -241,26 +239,51 @@ class Player(BaseLeisurePlayer):
         print(self.__uid, "玩家被烧通行证")
         self.__shao_tong_xing_zheng = flag
 
+    @property
+    def shao_tong_xing_zheng(self):
+        return self.__shao_tong_xing_zheng
+
 
     def on_round_over_clear(self):
         self.is_lock = False
         self.__has_shang_ga = False
         self.__shang_ga_score = 0
+        self.__operates.clear()
         self.__ting_list = []
         self.__fang_pao = 0
-        self.__hu_type = -1
+        self.__hu_type = 0
         self.__ji_pai = []
+        self.__que = 0
+        self.__yuan_que = 0
         self.__men_cards = []
         self.__chong_feng_ji = 0
         self.__chong_feng_wgj = 0
         self.__ze_ren_ji = 0
         self.__ze_ren_wgj = 0
+        self.__jiao_pai = 0
+        self.__tian_ting = 0
+        self.__can_tian_ting = 0
+        self.__han_bao_dou_an_gang_count = 0
+        self.__han_bao_dou_zhuan_wan_gang_count = 0
+        self.__lock_cards = []
+        self.__zha_hu = 0
+        self.__tian_hu = 0
         self.__hu_info = {}
+        self.__han_dou_cards = set()
         self.__shao_tong_xing_zheng = 0
+        self.__tui_zhang_ke_kai = 0
+        self.__jian_next_player_card = 0
+        self.__is_ready = False
+
+        self.__chu_cards.clear()
+        self.__all_chu_cards.clear()
+        self.__table_cards.clear()
+        self.__zi_mo_cards.clear()
 
     def clear_data_round_over(self):
         super().clear_data_round_over()
         self.on_round_over_clear()
+
 
     def mo_pai_can_operates(self):
         """两个集合有交集返回True,即至少有其中一个操作"""
@@ -286,10 +309,6 @@ class Player(BaseLeisurePlayer):
                 return False, 0
         return rule.can_an_gang(self.cards, card)
 
-    def set_shao_txz(self, flag: int = 1):
-        """ 设置烧通行证 """
-        self.__shao_tong_xing_zheng = flag
-
     @property
     def tui_zhang_ke_kai(self):
         return self.__tui_zhang_ke_kai
@@ -303,6 +322,20 @@ class Player(BaseLeisurePlayer):
             if (card or 0) // 10 == self.__que:
                 return False, 0
         return rule.can_zhuan_wan_gang(self.cards, self.__table_cards, card)
+
+    def zhuan_wan_gang(self, card):
+
+        for table_card in self.__table_cards:
+            card_type, first_card, *_ = table_card
+            if card_type == ActionType.ACTION_TYPE_PENG and first_card == card:
+                self.__table_cards.remove(table_card)
+                self.__add_table_cards(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG, [card] * 4, self.seat_id)
+                if card in self.cards:
+                    self.rm_cards([card])
+                self.__zhuan_wan_gang_count += 1
+                return True
+
+        return False
 
     def can_ming_gang(self, rule, card):
         if self.__que > 0:
@@ -340,6 +373,10 @@ class Player(BaseLeisurePlayer):
 
     def get_out_not_lock_card(self):
         lock_set = set(self.__lock_cards)
+        print("lock_set",lock_set)
+        result = [card for card in self.cards if card not in lock_set]
+        if not result:
+            return [self.__mo_pai]
         return [card for card in self.cards if card not in lock_set]
 
     def set_lock_cards(self, lock_cards):
@@ -363,8 +400,8 @@ class Player(BaseLeisurePlayer):
     def card_is_lock(self):
         return self.tian_ting or len(self.men_cards) > 0
 
-    def chu_pai(self,card,chu_pai=False):
-        self.remove_cards([card], chu_pai)
+    def chu_pai(self,card,chu_pai=True):
+        self.rm_cards([card], chu_pai)
 
     def jie_pao_count(self):
         self.__jie_pao_count += 1
@@ -414,7 +451,7 @@ class Player(BaseLeisurePlayer):
         """ 仅检测当前牌能否转弯杠 """
         return any(
             card_type == ActionType.ACTION_TYPE_PENG and first_card == card
-            for card_type, first_card in self.__table_cards
+            for card_type, first_card,*_ in self.__table_cards
         )
 
     def check_an_gang(self, card) -> bool:
@@ -625,7 +662,7 @@ class Player(BaseLeisurePlayer):
                 data["card"] = 0
             public_men_cards.append(data)
 
-        p_info = super().player_info()
+        p_info = super().player_info(contain_cards)
         p_info["is_ready"] = self.__is_ready
         p_info["shang_ga"] = self.__has_shang_ga
         p_info["shang_ga_score"] = self.__shang_ga_score
@@ -702,9 +739,6 @@ class Player(BaseLeisurePlayer):
     def on_round_over(self, score):
         """ 一局结束结算 """
         self.round_score = score
-        self.__is_ready = False  # 一局结束后取消准备
-        self.__operates.clear()
-
 
     def set_hu_info(self, info: dict):
         self.__hu_info = info
@@ -722,17 +756,50 @@ class Player(BaseLeisurePlayer):
         检查玩家是否完成缺
         return: 0 表示已经完成，> 0表示还有缺牌
         """
-        suit_count = Poker.cal_card_suit_count(self.__cards)
+        suit_count = Poker.cal_card_suit_count(self.cards)
         return suit_count.get(self.__que, 0)
 
     def set_is_yuan_que(self):
         """ 判断起手是不是原缺(手牌只有一种或两种花色且不是缺牌花色) """
         if self.__que == 0:
             return False
-        cards_to_count = Poker.cal_card_suit_count(self.__cards)
+        cards_to_count = Poker.cal_card_suit_count(self.cards)
         if len(cards_to_count) <= 2:
             # 手中没有缺的牌才算源缺
             if not cards_to_count.get(self.__que):
                 self.__yuan_que = self.__que
                 return True
         return False
+
+    @property
+    def han_bao_dou_an_gang_count(self):
+        return self.__han_bao_dou_an_gang_count
+
+    def add_han_bao_dou_an_gang_count(self, card):
+        self.__han_bao_dou_an_gang_count += 1
+        self.__han_dou_cards.add(card)
+
+    @property
+    def han_bao_dou_zhuan_wan_gang_count(self):
+        return self.__han_bao_dou_zhuan_wan_gang_count
+
+    def add_han_bao_dou_zhuan_wan_gang_count(self, card):
+        self.__han_bao_dou_zhuan_wan_gang_count += 1
+        self.__han_dou_cards.add(card)
+
+    @property
+    def han_dou_cards(self):
+        return self.__han_dou_cards
+
+    def player_peng(self, card, from_seat_id):
+        if self.cards.count(card) < 2:
+            return False
+        cards = [card, card, card]
+        self.rm_cards([card] * 2)
+        self.__add_table_cards(ActionType.ACTION_TYPE_PENG, cards, from_seat_id)
+        return True
+
+
+    def on_game_over(self):
+        self.on_round_over_clear()
+        self.__clear_game_data()

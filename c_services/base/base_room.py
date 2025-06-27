@@ -305,6 +305,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def has_next_round(self):
         """ 判断是否还有下一局 """
+        print("__total_round",self.__total_round)
         return self.__round_idx < self.__total_round
 
     async def player_join_room(self, players):
@@ -428,6 +429,7 @@ class BaseRoom(metaclass=ABCMeta):
         await self.notify_player_info(player,reenter)
 
     async def notify_room_info(self, player=None):
+        print("发送房间信息")
         data = self.serialize_room_info()
         if player:
             await self.inner_send(player, CmdRoom.ROOM_INFO, data)
@@ -436,6 +438,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def notify_player_info(self, curr_player=None, reenter = False):
         """ 通知玩家信息 """
+        print("发送玩家信息")
         if curr_player:
             # 断线重进房间
             room_player_info = self.room_player_info(curr_player)
@@ -499,10 +502,11 @@ class BaseRoom(metaclass=ABCMeta):
     async def game_over(self):
         """ 游戏结束 """
         for p in self.__seats:
-            if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
-                await GameRoomsRC.leave_room(p.tid, p.uid)
-                await self.service.del_player_in_service(p.uid)
-            self.service.release_player(p)
+            if p:
+                if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
+                    await GameRoomsRC.leave_room(p.tid, p.uid)
+                    await self.service.del_player_in_service(p.uid)
+                self.service.release_player(p)
         self.service.release_room(self)
 
     def clear_room(self):

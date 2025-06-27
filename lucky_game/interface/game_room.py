@@ -16,6 +16,7 @@ from common.public.common_class import CommonApi
 
 
 async def again_mq(again_uid, room_data, cs_server: BaseServer = None):
+    """再来一局WS消息通知"""
     room_data["secret"] = C_SERVICE_SECRET_KEY
     u_ids = await CommonApi.json_by_dict(again_uid)
     if u_ids:

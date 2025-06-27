@@ -274,21 +274,6 @@ class RecordsGameSegment(DBModel):
         table = "records_game_segment"
 
 
-class ExtraGameRoom(DBModel):
-    """游戏房间记录表"""
-    id = fields.IntField(max_length=10, pk=True, description='记录ID')
-    club_id = fields.IntField(max_length=6, index=True, description='茶馆ID，玩家无茶馆值为0')
-    room_id = fields.IntField(max_length=10, index=True, description='房间ID')
-    room_rule = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
-    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
-    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    current_players = fields.SmallIntField(max_length=2, null=True, default=0, description='对局人数')
-    room_uids = fields.CharField(max_length=64, null=True, description='房间玩家ID（多个ID用英文,分割）')
-
-    class Meta:
-        table = "extra_game_room"
-
-
 class ConfJson(DBModel):
     """简单配置"""
     conf_id = fields.CharField(pk=True, max_length=128, null=False, description='配置名')

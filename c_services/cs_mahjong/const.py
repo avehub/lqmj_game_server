@@ -16,6 +16,7 @@ class PlayType(BaseEnum):
     GUI_YANG_4 = 3,"贵阳麻将"
     GUI_YANG_3 = 4,"三丁拐"
     GUI_YANG_2 = 5,"两丁拐"
+    BI_JIE_MJ = 6,"毕节麻将"
 
 
 class ActionType(BaseEnum):
@@ -41,6 +42,7 @@ class CardsType(IntEnum):
     """ 牌相关 """
     CARD_COUNT = 4  # 每张牌的牌数
     YAO_JI = 21
+    YI_TONG = 31  # 1筒
     WU_GU_JI = 38  # 乌骨鸡
     LAI_ZI = 51  # 癞子（红中）
     DONG_FENG = 42  # 东风
@@ -165,7 +167,7 @@ class ChangeCardsType(IntEnum):
 
 @unique
 class OverType(IntEnum):
-    DEFAULT = -1  # 默认值
+    DEFAULT = 0  # 默认值
     LIU_JU = 1  # 流局
     HU_KAI = 2  # 胡开
     ZHA_HU_KAI = 3  # 炸胡开

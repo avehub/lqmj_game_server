@@ -50,7 +50,7 @@ class RecordsGameRoomRC(BaseCommonRC):
             if end_time:
                 up_sta = await cls.db_model.update_by_pk(record_rid, {"end_time": end_time}, old_data=record)
                 if not up_sta:
-                    return up_sta, "更新失败"
+                    return None, "更新失败"
         except OperationalError as e:
             return None, f"更新失败: {str(e)}"
         return True, "成功"
