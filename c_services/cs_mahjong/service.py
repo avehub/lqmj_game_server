@@ -53,7 +53,7 @@ class MahjongServer(BaseCardService):
 
     async def __on_player_hu(self,player, room,_):
         code, msg = await room.on_player_hu(player)
-        if code != StaCode.Pass:
+        if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_HU, player.uid, code, msg, ws_id=player.ws_id)
         await room.check_action_end()
 
@@ -88,7 +88,7 @@ class MahjongServer(BaseCardService):
 
     async def __on_player_chu_pai(self,player,room,data):
         code, msg = await room.on_player_chu_pai(player, data)
-        if code != StaCode.Pass:
+        if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAY_CARDS,player.uid, code, msg, ws_id = player.ws_id)
         await room.enter_chu_pai_call()
 

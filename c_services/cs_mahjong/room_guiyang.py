@@ -18,7 +18,12 @@ class RoomGY(Room):
             self.__yuan_que = 1
 
         if self.play_type == PlayType.GUI_YANG_4:
-            self.__lian_zhuang = int(self.__rule_details.get("lian_zhuang", 0))
+            self.__lian_zhuang = int(self.rule_detail.get("lian_zhuang", 0))
+
+        self.__yuan_bao = 0
+        if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3):
+            # 起手牌满足听牌条件才能报听。摸第一张牌后不可再报听，庄家除外。
+            self.__yuan_bao = self.__rule_details.get("yuan_bao", 0)
 
     def get_tian_ting_operates(self,p):
         """获取玩家天听操作"""
@@ -81,7 +86,7 @@ class RoomGY(Room):
         # 1.开牌牌型结算
         self.log_info(self.tid, "开胡信息: ", self.__kai_pai_hu_info)
         for hu_info in self.__kai_pai_hu_info:
-            self.__check_by_num_3(accounts, hu_info)
+            self.check_by_num_3(accounts, hu_info)
 
         # 原缺
         self.check_out_yuan_que(accounts)
@@ -124,8 +129,7 @@ class RoomGY(Room):
 
         self.log_info(self.__tid, "开始结算源缺")
         type_ = CheckType.CHECK_YUAN_QUE
-        score_map = self.get_extra_score_map()
-        base_score = score_map.get(type_, 2)
+        base_score = self.extra_score_map.get(type_, 2)
 
         # 预过滤叫牌玩家
         valid_players = [p for p in self.seats if p.jiao_pai > 0]

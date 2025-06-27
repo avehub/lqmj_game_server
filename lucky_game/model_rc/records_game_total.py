@@ -41,10 +41,11 @@ class RecordsGameTotalRC(BaseCommonRC):
                 if not new_record:
                     return new_record, "创建失败"
                 up_segment_sta, _ = await RecordsGameSegmentRC.update_record_game_segment(record_rid, record_tid=new_record.record_tid)
-                up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
+                up_room_sta, e2 = await RecordsGameRoomRC.update_record_game_room(
                     record_rid,
                     end_time=int(datetime.now().timestamp())
                 )
+                print("up_room_sta",up_room_sta,"up_segment_sta",e2)
                 if not up_room_sta or not up_segment_sta:
                     return new_record, "创建失败"
         except OperationalError as e:

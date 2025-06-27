@@ -41,9 +41,10 @@ class SessionManager:
         if self.__room_pool:
             room_obj = self.__room_pool.popleft()
             room_obj.refresh_room_conf(self, room_conf, **kwargs)
-            tid = room_obj.tid + 1
-            while self.__rooms.get(tid):
-                tid += 1
+            if room_type != RoomType.SELF_BUILD:
+                tid = room_obj.tid + 1
+                while self.__rooms.get(tid):
+                    tid += 1
             room_obj.set_tid(tid)
         else:
             if room_type == RoomType.SELF_BUILD:

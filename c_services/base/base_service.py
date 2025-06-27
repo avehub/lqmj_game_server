@@ -16,6 +16,9 @@ from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityTyp
 # from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
+from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
+from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
 
 # from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
@@ -45,7 +48,7 @@ class BaseService(BaseServer, SessionManager):
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
         self.register_rc_model(
-            BaseUserRC,GameRoomsRC,
+            BaseUserRC,GameRoomsRC,RecordsGameRoomRC,RecordsGameSegmentRC,RecordsGameTotalRC
         )
 
         self.__limit_call_tag = set()
@@ -190,7 +193,6 @@ class BaseService(BaseServer, SessionManager):
         if player:
             await self.set_player_ws_id(player)
         await room.notify_player_enter_room(player,reenter)
-        # await room.notify_distance()
 
     async def set_player_ws_id(self, player: BasePlayer):
         player.ws_id = await self.get_player_ws_id(player.uid)

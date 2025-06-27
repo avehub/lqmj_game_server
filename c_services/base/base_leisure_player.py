@@ -159,7 +159,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
 
     def player_info(self,contain_cards = True):
         """ 玩家信息：子类必须实现 """
-        data = super().player_info()
+        data = super().player_info(contain_cards)
         data["gold"] = self.__gold
         return data
 

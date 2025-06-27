@@ -58,25 +58,39 @@ class BaseCardService(BaseService):
     @staticmethod
     async def __req_dismiss_room(player, room, data):
         if not room.agree_dismiss_seats and not room.timer_dismiss:
-            room.call_dismiss(120, room.force_dismiss, OverType.REQ_DISMISS)
+            room.call_dismiss(120, room.force_dismiss, OverType.FORCE)
+            if room.room_status in (RoomStatus.T_IDLE,RoomStatus.T_READY):
+                room.set_room_status(RoomStatus.T_DISMISS)
+                room.set_not_playing_dismiss(room.room_status,True)
 
-        req_dismiss_model.ParFromString(data)
+        req_dismiss_model.ParseFromString(data)
         agree = req_dismiss_model.agree or False
         if agree:
             room.add_agree_dismiss(player.seat_id)
         else:
             room.clear_agree_dismiss()
+            room.back_room_status()
 
         data = {
             "seat_id": player.seat_id,
             "agree": agree,
-            "agree_seats": list(room.agree_dismiss_seats)
+            "agree_seats": list(room.agree_dismiss_seats),
+            "total_time":120,
+            "left_seconds":room.dismiss_left_seconds(),
         }
-        data_model = S2CReqDismissRoom.pb_model(**data)
-        await room.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
-        room.log_info(player.uid, "请求解散房间", player.tid)
-        if room.agree_dismiss_count() == room.max_player_count:
-            return await room.force_dismiss(OverType.REQ_DISMISS)
+        print("data",data)
+        if room.in_room_count > 1:
+            data_model = S2CReqDismissRoom.pb_model(**data)
+            await room.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
+        room.log_info(player.uid, "请求解散房间", player.tid,"结果:",agree)
+        if room.agree_dismiss_count() == room.in_room_count:
+            room.clear_agree_dismiss()
+            return await room.force_dismiss(OverType.FORCE)
+        if player.uid == room.owner and room.in_room_count == 1:
+            player.on_game_over()
+            room.clear_agree_dismiss()
+            return await room.force_dismiss(OverType.FORCE)
+
 
     async def clear_in_service(self):
         await GameRoomsRC.abnormal_cs_type(self.service_type,"重启子游戏服务")

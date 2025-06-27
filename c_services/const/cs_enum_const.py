@@ -128,6 +128,7 @@ class CmdRoom(BaseEnum):
     REQ_DISMISS = 93,"请求解散房间","麻将"
     NOTIFY_POSITION = 94,"开局通知定位","麻将"
     PLAYER_DING_QUE = 95,"玩家定缺","麻将"
+    ROOM_DISMISS = 96,"房间解散","麻将"
 
 
 class CmdWorkers(BaseEnum):
