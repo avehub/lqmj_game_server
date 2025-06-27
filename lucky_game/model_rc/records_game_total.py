@@ -20,7 +20,7 @@ class RecordsGameTotalRC(BaseCommonRC):
 
     @classmethod
     async def create_record_game_total(cls, record_rid: int, uid: int, final_status: int, final_score: int, final_ranking: int,
-                                       final_grade: int, final_result: dict, ):
+                                       final_grade: int, final_result: dict, num: int = 0):
         """创建战绩总局记录"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -41,12 +41,15 @@ class RecordsGameTotalRC(BaseCommonRC):
                 if not new_record:
                     return new_record, "创建失败"
                 up_segment_sta, _ = await RecordsGameSegmentRC.update_record_game_segment(record_rid, uid, record_tid=new_record.record_tid)
-                up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
-                    record_rid,
-                    end_time=int(datetime.now().timestamp())
-                )
-                if not up_room_sta or not up_segment_sta:
+                if not up_segment_sta:
                     return new_record, "创建失败"
+                if num > 0:
+                    up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
+                        record_rid,
+                        end_time=int(datetime.now().timestamp())
+                    )
+                    if not up_room_sta:
+                        return new_record, "创建失败"
         except OperationalError as e:
             return None, f"创建失败: {str(e)}"
         return new_record, "成功"
