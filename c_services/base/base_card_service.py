@@ -60,7 +60,7 @@ class BaseCardService(BaseService):
         if not room.agree_dismiss_seats and not room.timer_dismiss:
             room.call_dismiss(120, room.force_dismiss, OverType.FORCE)
             if room.room_status in (RoomStatus.T_IDLE,RoomStatus.T_READY):
-                room.set_room_status(RoomStatus.T_DISMISS)
+                await room.async_set_room_status(RoomStatus.T_DISMISS)
                 room.set_not_playing_dismiss(room.room_status,True)
 
         req_dismiss_model.ParseFromString(data)
@@ -82,7 +82,7 @@ class BaseCardService(BaseService):
         if room.in_room_count > 1:
             data_model = S2CReqDismissRoom.pb_model(**data)
             await room.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
-        room.log_info(player.uid, "请求解散房间", player.tid,"结果:",agree)
+        room.log_info("请求解散房间",player.uid,"结果:",agree)
         if room.agree_dismiss_count() == room.in_room_count:
             room.clear_agree_dismiss()
             return await room.force_dismiss(OverType.FORCE)

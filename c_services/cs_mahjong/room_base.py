@@ -1,7 +1,7 @@
 from collections import Counter
 from copy import deepcopy
 
-from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model, tian_ting_model
+from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model
 from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, \
     S2CShangGaMahjong, S2CShangGaBeginMahjong, S2CDealCardsMahjong, s2c_one_of_model, S2CPublicOperatesMahjong, S2CTurnToMahjong, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
@@ -52,6 +52,7 @@ class Room(BaseCardRoom):
         self.__curr_card_exist = 0  # 当前牌是否存在
         self.__before_seat_id = 0
         self.__win_seat_list = []
+        self.__all_player_cards = []
 
         self.__ji_cards = None
         self.__player_actions = []  # 玩家动作
@@ -93,6 +94,9 @@ class Room(BaseCardRoom):
         self.__yin_ji = self.rule_detail.get("yin_ji", 0)
         self.__fan_jin_ji_cards = set()  # 记录翻金鸡cards
         self.__fan_yin_ji_cards = set()  # 记录翻银鸡cards
+        self.__exchange_first = 0
+        if self.__exchange_three != ChangeThreeType.NO_CHANGE:
+            self.__exchange_first = self.rule_detail.get("__exchange_first", 0)
         if self.__fan_ji_pai:  # 有翻鸡才有摇摆鸡和本鸡
             self.__yao_bai_ji = self.rule_detail.get("shang_xia_ji", 0)  # 摇摆鸡(上下鸡)
             self.__ben_ji = self.rule_detail.get("ben_ji", 0)  # 本鸡
@@ -143,6 +147,7 @@ class Room(BaseCardRoom):
             room_info["exchange_seats"] = list(self.__exchange_cards_info)
             room_info["operate_seats"] = self.get_operate_seats()
             room_info["shang_ga_list"] = self.__shang_ga_list
+        print("房间信息",room_info)
         return S2CRoomInfo04Mahjong.pb_model(**room_info)
 
     def serialize_player_info(self, room_player_info):
@@ -232,9 +237,8 @@ class Room(BaseCardRoom):
         self.log_info("开始发牌")
         self.set_flow_status(FlowStatus.T_IN_DEAL_CARDS)
         await self.async_set_room_status(RoomStatus.T_PLAYING)
-
-        if self.__four_card_bao_ting:
-            return self.start_bao_ting_by_four_cards()
+        if self.__four_card_bao_ting and not self.__exchange_first:
+            return await self.start_bao_ting_by_four_cards()
 
         all_cards = self.poker.deal_cards(self.max_player_count, self.deal_cards_count)
         data = {}
@@ -347,27 +351,25 @@ class Room(BaseCardRoom):
     async def start_bao_ting_by_four_cards(self):
         """ 四张牌报听 """
         self.log_info("进入四张报听")
+        all_cards = self.poker.deal_cards(self.max_player_count, self.__four_card_bao_ting)
         self.set_flow_status(FlowStatus.T_IN_FOUR_BAO_TING)
-        for _ in range(self.__four_card_bao_ting):
-            for p in self.seats:
-                c = self.poker.pop()
-                p.rev_card(c)
 
-        for p in self.seats:
-
+        for i, p in enumerate(self.seats):
+            p.cards = all_cards[i]
             cards = p.cards
             operates = []
             if not (cards[0] == cards[1] == cards[2] == cards[3]):
                 operates = []
-                hu_type, hu_path = Rule.can_hu(
-                    [], p.cards, 0, {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: True,
+                hu_type = Rule.can_tian_ting(
+                    [], p.cards, p.que, {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: True,
                                      HuType.DI_LONG_QI: self.__di_long_qi})
                 if hu_type:
                     operates = [ActionType.ACTION_TYPE_TIAN_TING]
 
             p.operates = operates
 
-        if self.can_operates() and self.can_four_card_bao_ting():  # 有人可以胡，则需要等待
+
+        if self.can_operates():  # 有人可以胡，则需要等待
             self.log_info("有人可以四张报听")
             data = {
                 "left_count": self.poker.left_count,
@@ -2056,7 +2058,8 @@ class Room(BaseCardRoom):
             return StaCode.RULE_ERR, "桌子状态不在游戏中，不可出牌"
         if self.flow_status not in (FlowStatus.T_IN_CHU_PAI, FlowStatus.T_IN_DI_HU_CHU_PAI,
                                     FlowStatus.T_IN_MO_PAI_CALL):
-            return StaCode.FLOW_ERR, "当前流程不在可出牌流程"
+            desc = "当前有玩家选听中" if self.flow_status == FlowStatus.T_IN_TIAN_TING else "当前流程不在可出牌流程"
+            return StaCode.FLOW_ERR, desc
         if self.curr_seat_id != player.seat_id:
             return StaCode.NOT_YOUR_TURN, "没有轮到你"
         if player.card_is_lock():
@@ -2359,9 +2362,7 @@ class Room(BaseCardRoom):
                 self.call_flow(2, self.ding_que_or_tian_ting)
         return StaCode.PASS, ""
 
-    async def on_player_tian_ting(self, p: Player, data):
-        tian_ting_model.ParseFromString(data)
-        is_tian_ting = tian_ting_model.is_tian_ting or 0
+    async def on_player_tian_ting(self, p: Player):
         if self.flow_status not in (FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_FOUR_BAO_TING, FlowStatus.T_IN_MO_PAI_CALL):
             return StaCode.RULE_ERR, "当前流程不可天听"
         if not p.is_action_in_operates(ActionType.ACTION_TYPE_TIAN_TING):
@@ -2369,9 +2370,9 @@ class Room(BaseCardRoom):
         result = {
             "seat_id": p.seat_id,
         }
-        if p.cards_len == self.deal_cards_count + 1 and p.is_action_in_operates(ActionType.ACTION_TYPE_HU)():
+        if p.cards_len == self.deal_cards_count + 1 and p.is_action_in_operates(ActionType.ACTION_TYPE_HU):
             # 暂不锁牌，待玩家打出再锁牌
-            if is_tian_ting and p.can_tian_ting >= 0:
+            if p.can_tian_ting >= 0:
                 self.log_info(self.tid, p.uid, "玩家天听且能胡，暂不锁牌")
                 p.tian_ting = 1
                 p.can_tian_ting = -1
@@ -2380,27 +2381,21 @@ class Room(BaseCardRoom):
                 result["lock_cards"] = []
                 data_model = S2CTianTingInfo.pb_model(**result)
                 await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model)
-        elif is_tian_ting:
+        else:
             p.tian_ting = 1
             p.can_tian_ting = -1
             allow_hu_map = {HuType.QI_DUI: True, HuType.DI_LONG_QI: False}
             _, tian_ting_cards = Rule.which_cards_to_play_can_tian_ting(p.table_cards, p.cards, allow_hu_map)
             result["tian_ting"] = p.tian_ting
             data_model = S2CTianTingInfo.pb_model(**result)
-            await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model, p.uid)
+            await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model, exclude_uid =p.uid)
             self.log_info(self.tid, p.uid, "tian_ting_cards", tian_ting_cards)
             p.set_lock_cards(tian_ting_cards)
 
             # 设置ting_list
             ting_list = Rule.get_ting_hu_list(p.table_cards, p.cards, allow_hu_map)
             p.ting_list = ting_list
-
             result["lock_cards"] = p.lock_cards
-            data_model = S2CTianTingInfo.pb_model(**result)
-            await self.inner_send(p, CmdRoom.PLAYER_TIAN_TING, data_model)
-        else:
-            p.can_tian_ting = -1
-            result["tian_ting"] = is_tian_ting
             data_model = S2CTianTingInfo.pb_model(**result)
             await self.inner_send(p, CmdRoom.PLAYER_TIAN_TING, data_model)
         self.save_player_action(p, ActionType.ACTION_TYPE_TIAN_TING)
@@ -2452,7 +2447,7 @@ class Room(BaseCardRoom):
             "left_count": self.poker.left_count,
         }
         for p in self.seats:
-            if self.__four_card_bao_ting and self.can_four_card_bao_ting() and p.cards_len < 13:
+            if self.__four_card_bao_ting and p.cards_len < 13:
                 continue
             data["operates"] = self.get_tian_ting_operates(p)
             data["seat_id"] = p.seat_id
@@ -4165,6 +4160,8 @@ class Room(BaseCardRoom):
             if self.not_playing_dismiss:
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE,False)
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
+                for p in self.seats:
+                    p and p.on_game_over()
                 return await super(BaseCardRoom, self).game_over()
             return await self.game_over()
         await self.liu_ju_notify()

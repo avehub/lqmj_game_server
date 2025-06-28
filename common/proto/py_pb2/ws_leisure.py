@@ -576,6 +576,12 @@ class S2CRoomInfo04Mahjong:
         obj.operate_seats.extend(kwargs.get("operate_seats") or [])
         obj.shang_ga_list.extend(kwargs.get("shang_ga_list") or [])
         pack_rule_details(obj, **kwargs)
+        obj.cs_type = kwargs.get("cs_type") or 0
+        obj.price = kwargs.get("price") or 0
+        obj.is_location = kwargs.get("is_location") or 0
+        obj.is_friend = kwargs.get("is_friend") or 0
+        obj.club_id = kwargs.get("club_id") or 0
+        obj.pay_type = kwargs.get("pay_type") or 0
         return obj
 
 def pack_table_cards(obj, **kwargs):
@@ -794,6 +800,7 @@ class S2CTianTingInfo:
         obj = ws_leisure_pb2.S2CTianTingInfo()
         obj.seat_id = kwargs.get("seat_id") or 0
         obj.tian_ting = kwargs.get("tian_ting") or 0
+        obj.lock_cards.extend(kwargs.get("lock_cards") or [])
         return obj
 
 class S2CStartDingQueInfo:

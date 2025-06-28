@@ -47,7 +47,6 @@ class Cards(BaseCard):
 
 class Poker(BasePoker):
     CARDS_ENUM = Cards
-    CARDS_NUM = 4
 
     def __init__(self,not_include=0):
         super().__init__(not_include)

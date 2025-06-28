@@ -173,8 +173,7 @@ class BaseService(BaseServer, SessionManager):
 
     async def __on_set_cards(self, player, room, data):
         """ 设牌 """
-        set_cards_data = set_cards_model.ParseFromString(data)
-        code, msg = room.set_cards_in_debug(set_cards_data)
+        code, msg = room.set_cards_in_debug(data)
         if code != StaCode.PASS:
             await self.cs2ws_by_rmq(CmdRoom.SET_CARDS_IN_DEBUG, player.uid, code, msg, ws_id=player.ws_id)
 
@@ -241,14 +240,16 @@ class BaseService(BaseServer, SessionManager):
         func = self.cmd2func.get(cmd)
         if not func or not callable(func):
             return
-        player, room = await self.check_in_room(uid, cmd)
-        if not player:
-            c_enum = CmdRoom.find_member_by_val(cmd)
-            if c_enum.desc != CallCheck.INNER:
-                return
+        c_enum = CmdRoom.find_member_by_val(cmd)
+        check_inner = c_enum.desc == CallCheck.INNER
+        if check_inner:
             data = self.check_inner_call(data)
             if not data:
                 return
             return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
 
+        player, room = await self.check_in_room(uid, cmd)
+        if not player:
+            return
+        print("玩家在房间内","uid",player.uid,"tid",room.tid)
         return await func(player, room, data) if asyncio.iscoroutinefunction(func) else func(player, room, data)
