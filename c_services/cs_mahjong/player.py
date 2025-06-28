@@ -383,6 +383,7 @@ class Player(BaseLeisurePlayer):
         """ 锁牌，锁住除lock_cards的牌 """
         self.__lock_cards = []
         temp_cards = deepcopy(self.cards)
+        print("锁牌",temp_cards, self.__lock_cards)
         for card in lock_cards:
             temp_cards.remove(card)
         self.__lock_cards = temp_cards

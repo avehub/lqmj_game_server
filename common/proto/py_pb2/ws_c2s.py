@@ -27,7 +27,6 @@ def reverse_model():
 gang_model = ws_leisure_pb2.C2SGangInfo()
 shang_ga_model = ws_leisure_pb2.C2SShangGaInfo()
 exchange_model = ws_leisure_pb2.C2SExchangeCardsInfo()
-tian_ting_model = ws_leisure_pb2.C2STianTingInfo()
 req_dismiss_model = ws_leisure_pb2.C2SReqDismissRoom()
 enter_room_model = ws_leisure_pb2.C2SEnterRoom()
 set_cards_model = ws_leisure_pb2.C2SSetCard()

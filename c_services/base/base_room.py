@@ -1,6 +1,7 @@
 import asyncio
 from c_services.const.cs_enum_const import RoomStatus, RoomType, CmdRoom
 from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.proto.py_pb2.ws_c2s import set_cards_model
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import StaCode, BaseEnum, ServiceEnum
 from lucky_game.model_rc.game_rooms import GameRoomsRC
@@ -305,7 +306,6 @@ class BaseRoom(metaclass=ABCMeta):
 
     def has_next_round(self):
         """ 判断是否还有下一局 """
-        print("__total_round",self.__total_round)
         return self.__round_idx < self.__total_round
 
     async def player_join_room(self, players):
@@ -330,17 +330,23 @@ class BaseRoom(metaclass=ABCMeta):
         """ 设牌调试 """
         if LIVE_SERVER:
             return StaCode.FAIL, "不允许设牌"
-
-        dealer_id = data.dealer_id
-        cards = data.cards
+        set_cards_model.ParseFromString(data)
+        dealer_id = set_cards_model.dealer_id or 0
+        cards = set_cards_model.cards
         if len(cards) != self.max_player_count + 1:
             return StaCode.FAIL, "设牌数据结构错误"
 
         all_cards = []
+        cards_data = []
         for c in cards:
-            all_cards.extend(c)
+            data = []
+            if len(c.values)>0:
+                all_cards.extend(c.values)
+                data.extend(c.values)
+                cards_data.append(data)
+            else:
+                cards_data.append([])
         card2count = {}
-
         for c in all_cards:
             count = card2count.get(c, 0) + 1
             card2count[c] = count
@@ -352,7 +358,7 @@ class BaseRoom(metaclass=ABCMeta):
 
         if dealer_id > 0:
             pass  # todo 设置庄家
-        self.__poker.set_order_cards(cards)  # 具体设置牌
+        self.__poker.set_order_cards(cards_data)  # 具体设置牌
         return StaCode.PASS, ""
 
     async def round_start(self):
@@ -504,7 +510,8 @@ class BaseRoom(metaclass=ABCMeta):
         for p in self.__seats:
             if p:
                 if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
-                    await GameRoomsRC.leave_room(p.tid, p.uid)
+                    leave_result = await GameRoomsRC.leave_room(p.tid, p.uid)
+                    self.log_info("游戏结束离开房间:",leave_result,"房间状态:",self.__room_status)
                     await self.service.del_player_in_service(p.uid)
                 self.service.release_player(p)
         self.service.release_room(self)

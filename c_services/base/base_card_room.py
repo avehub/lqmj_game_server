@@ -29,6 +29,7 @@ class BaseCardRoom(BaseRoom):
 
     def __init__(self, tid, service, room_conf, poker,not_include = 0):
         rule_details = room_conf.pop("rule_details")
+        print("rule_details",rule_details)
         room_conf.update(rule_details)
         super().__init__(tid, service, room_conf, poker,not_include)
         self.__rule_details = rule_details
@@ -86,7 +87,7 @@ class BaseCardRoom(BaseRoom):
     def back_room_status(self):
         print("返回房间状态",self.__not_playing_dismiss,self.__not_playing_room_status)
         if self.__not_playing_dismiss:
-            self.set_room_status(self.__not_playing_room_status)
+            self.async_set_room_status(self.__not_playing_room_status)
             self.__not_playing_dismiss = False
             self.__not_playing_room_status = RoomStatus.T_IDLE
 
@@ -134,6 +135,7 @@ class BaseCardRoom(BaseRoom):
         return sta
 
     async def player_quit_room(self,player,data):
+        self.log_info("请求退出房间:uid",player.uid,"game_began:",self.game_began(),"owner:",self.owner,"tid:",self.tid)
         if not self.game_began():
             if self.owner == player.uid:
                 if self.in_room_count == 1:
@@ -142,7 +144,7 @@ class BaseCardRoom(BaseRoom):
                 await self.inner_send(player,CmdRoom.QUIT_ROOM,None,StaCode.FAIL,"房主不能退出")
                 return
             one_of_model = s2c_one_of_model()
-            one_of_model.seat_id = self.curr_seat_id
+            one_of_model.seat_id = player.seat_id
             await self.inner_broadcast(CmdRoom.QUIT_ROOM,one_of_model)
             await GameRoomsRC.leave_room(self.tid, player.uid)
             self.seats[player.seat_id - 1] = None
@@ -246,35 +248,38 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        score_rank_map = self.get_player_ranking(account)
-        for p in self.seats:
-            record_data = {
-                "record_rid": self.__record_id,
-                "record_tid": 0,
-                "cs_type": self.service.service_type,
-                "round_num": self.round_idx,
-                "replay_msg": self.__round_msg_records,
-            }
-            player_account = account.get(p.seat_id, {})
-            score = player_account.get("total_score", 0)
-            p.on_round_over(score)
-            over_data = p.round_over_data()
-            over_data["account"] = player_account if player_account else None
-            data["seats"].append(over_data)
-            record_data["uid"] = p.uid
-            record_data["round_status"] = 1 if score>=0 else 0
-            record_data["round_score"] = score
-            record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
-            record_data["round_result"] = over_data
-            new_data.append(record_data)
-            p.clear_data_round_over()
+        if account:
+            score_rank_map = self.get_player_ranking(account)
+            for p in self.seats:
+                if not p:
+                    continue
+                record_data = {
+                    "record_rid": self.__record_id,
+                    "record_tid": 0,
+                    "cs_type": self.service.service_type,
+                    "round_num": self.round_idx,
+                    "replay_msg": self.__round_msg_records,
+                }
+                player_account = account.get(p.seat_id, {})
+                score = player_account.get("total_score", 0)
+                p.on_round_over(score)
+                over_data = p.round_over_data()
+                over_data["account"] = player_account if player_account else None
+                data["seats"].append(over_data)
+                record_data["uid"] = p.uid
+                record_data["round_status"] = 1 if score>=0 else 0
+                record_data["round_score"] = score
+                record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
+                record_data["round_result"] = over_data
+                new_data.append(record_data)
+                p.clear_data_round_over()
 
-        print("new_data",new_data)
-        self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
-        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-        print("result_data",result_data)
-        data_model = S2CRoundOverInfo.pb_model(**data)
-        await self.inner_broadcast(CmdRoom.ROUND_OVER,data_model)
+            print("new_data",new_data)
+            self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+            self.log_info("一轮结束战绩插入",result_data)
+            data_model = S2CRoundOverInfo.pb_model(**data)
+            await self.inner_broadcast(CmdRoom.ROUND_OVER,data_model)
 
         if not self.has_next_round() or over_type==OverType.FORCE:
             return await self.game_over(over_type)
@@ -341,15 +346,17 @@ class BaseCardRoom(BaseRoom):
         result = {"seats": [], "time_stamp": tool_dt.cur_time(), "tid": self.tid}
 
         score_rank_map = self.get_player_ranking()
-        for p in self.seats:
+
+        for idx, p in enumerate(self.seats):
             if not p:
                 continue
+            num = 1 if idx==0 else 0
             result["seats"].append(p.game_over_data)
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking== 1 else 0
             over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id,p.uid,p.total_score>=0,p.total_score
-                                                              ,final_ranking,final_grade,p.game_over_data)
-            print("over_record",over_record)
+                                                              ,final_ranking,final_grade,p.game_over_data,num)
+            self.log_info("总结算战绩插入",over_record)
             p.on_game_over()
 
         data_model = S2CGameOverInfo.pb_model(**result)
@@ -373,10 +380,19 @@ class BaseCardRoom(BaseRoom):
     def room_info(self):
         data = super().room_info()
         data["owner"] = self.__owner
+        data["cs_type"] = self.service.service_type
+        data["price"] = self.room_conf.get("price") or 0
+        data["is_location"] = self.room_conf.get("is_location") or 0
+        data["is_friend"] = self.room_conf.get("is_friend") or 0
+        data["club_id"] = self.room_conf.get("club_id") or 0
+        data["pay_type"] = self.room_conf.get("pay_type") or 0
+
         data["rule_details"] = self.__rule_details
         if self.__agree_dismiss_seats:
-            data["agree_seats"] = list(self.__agree_dismiss_seats)
-            data["req_dismiss_left_sec"] = self.dismiss_left_seconds()
+            data["dismiss_info"] = {
+                "agree_seats":list(self.__agree_dismiss_seats),
+                "req_dismiss_left_sec": self.dismiss_left_seconds()
+            }
         return data
 
     def dismiss_left_seconds(self) -> int:
