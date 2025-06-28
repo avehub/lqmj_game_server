@@ -9,6 +9,7 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from common.public.enum_const import ServiceEnum
+from datetime import datetime
 
 
 class RecordBase(GameAuthApi):
@@ -126,6 +127,11 @@ class UserAggregateRanks(RecordBase):
         uid = self.check_int(req.args.get("uid"), require=True, p_name="用户ID")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
+        if start_time is None:
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            start_time = int(today_start.timestamp())
+        if end_time is None:
+            end_time = int(datetime.now().timestamp())
         data, e = await BaseRecordsGameRC.get_by_club_id(
             uid=uid,
             start_time=start_time,
@@ -146,6 +152,7 @@ class UserAggregateRanks(RecordBase):
             "win": win,
             "fail": fail,
             "grade": grade,
+            "end_time": end_time,
         }
         return self.answer(data=result)
 
@@ -157,6 +164,11 @@ class ClubAggregateRanks(RecordBase):
         club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
+        if start_time is None:
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            start_time = int(today_start.timestamp())
+        if end_time is None:
+            end_time = int(datetime.now().timestamp())
         data, e = await RecordsGameRoomRC.get_record_room_by_filter(
             club_id=club_id,
             start_time=start_time,
@@ -175,6 +187,7 @@ class ClubAggregateRanks(RecordBase):
             "total": total,
             "player": player,
             "creator": len(creator),
+            "end_time": end_time,
         }
         return self.answer(data=result)
 

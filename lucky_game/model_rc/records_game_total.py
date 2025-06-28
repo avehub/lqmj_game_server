@@ -70,7 +70,8 @@ class RecordsGameTotalRC(BaseCommonRC):
     async def get_record_total_by_filter(cls, club_id: any = None, room_id: any = None, uid: any = None,
                                           record_rid: any = None, record_tid: any = None, start_time: int = None,
                                           end_time: int = None, cs_type: int = None, final_score: int = None,
-                                          order_field: str = None, page: int = None, page_size: int = None):
+                                          order_field: str = None, page: int = None, page_size: int = None,
+                                         group_field: str = "record_tid"):
         """根据条件获取总局战绩列表"""
         try:
             query = {}
@@ -114,7 +115,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                 records = []
                 if total > 0:
                     offset = (page - 1) * page_size
-                    records = await cls.db_model.filter(**query).order_by(order_field).offset(offset).limit(page_size).values()
+                    records = await cls.db_model.filter(**query).order_by(order_field).group_by(group_field).offset(offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, total, records)
             else:
                 result = records = await cls.db_model.filter(**query).order_by(order_field).values()

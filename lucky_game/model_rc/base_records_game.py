@@ -113,6 +113,7 @@ class BaseRecordsGameRC(BaseCommonRC):
                 order_field=order_field,
                 page_size=page_size,
                 page=page,
+                group_field="uid"
             )
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"

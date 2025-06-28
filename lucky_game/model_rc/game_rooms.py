@@ -51,7 +51,8 @@ class GameRoomsRC(BaseCommonRC):
         "tui_zhang_can_hu": {0, 1},  #退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
         "bao_ting_bi_men": {0, 1},  #报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
         "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
-        "exchange_cards_type": {0, 1, 2}  # 换三张方式  1任意牌 2同色牌
+        "exchange_cards_type": {0, 1, 2},  # 换三张方式  1任意牌 2同色牌
+        "exchange_first": {0, 1},  # 是否换三张优先 0否 1是
     }
     NULL_MEG = "房间已解散"
 
