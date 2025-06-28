@@ -23,12 +23,10 @@ async def again_mq(again_uid, room_data, cs_server: BaseServer = None):
         if cs_server is None:
             cs_server = BaseServer()
         for uid in u_ids:
-            ws_id = await CommonApi.get_player_ws_id(uid)
-            await cs_server.cs2ws_by_rmq(
+            await cs_server.inner_cs2ws(
                 c_code=CmdNotice.INVITE_ROOM,
                 uid=uid,
                 msg=room_data,
-                ws_id=ws_id,
             )
 
 

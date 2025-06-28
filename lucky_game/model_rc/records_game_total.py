@@ -145,3 +145,58 @@ class RecordsGameTotalRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
         return record, "删除成功"
+
+    @classmethod
+    async def query_record_total_by_sql(cls, club_id: any = None, room_id: any = None, uid: any = None,
+                                         record_rid: any = None, record_tid: any = None, start_time: int = None,
+                                         end_time: int = None, cs_type: int = None, final_score: int = None,
+                                         order_field: str = None, page: int = None, page_size: int = None,
+                                         group_field: str = "record_tid"):
+        """根据条件获取总局战绩列表"""
+        try:
+            query = where = {}
+            if club_id is not None:
+                if isinstance(club_id, list):
+                    query["club_id__in"] = club_id
+                else:
+                    query["club_id"] = club_id
+            if room_id is not None:
+                if isinstance(room_id, list):
+                    query["room_id__in"] = room_id
+                else:
+                    query["room_id"] = room_id
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if record_rid is not None:
+                if isinstance(record_rid, list):
+                    query["record_rid__in"] = record_rid
+                else:
+                    query["record_rid"] = record_rid
+            if record_tid is not None:
+                if isinstance(record_tid, list):
+                    query["record_tid__in"] = record_tid
+                else:
+                    query["record_tid"] = record_tid
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lt"] = end_time
+            if cs_type is not None:
+                query["cs_type"] = cs_type
+            if final_score is not None:
+                query["final_score__gte"] = final_score
+            if order_field is None:
+                order_field = "record_tid"
+
+            filtration = """record_tid, record_rid, uid, club_id, room_id, cs_type, SUM(final_status), SUM(final_score), 
+                                    SUM(final_grade), COUNT(final_grade)"""
+            sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field}"
+            if page and page_size:
+                sql += f" LIMIT {page_size} OFFSET {(page - 1) * page_size}"
+            result = cls.db_model.exec_query(sql)
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return result, "成功"
