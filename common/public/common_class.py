@@ -109,9 +109,30 @@ class CommonApi(LogMeta):
         return result
 
     @classmethod
-    async def merge_by_key(cls, arr1: list, arr2: list, key: str):
-        index = {item[key]: item for item in arr2}
-        return [{**item, **index.get(item[key], {})} for item in arr1]
+    async def merge_by_key(
+            cls,
+            arr1: list[dict[str, any]],
+            arr2: list[dict[str, any]],
+            key: str,
+            fields: Optional[list[str]] = None
+    ):
+        """合并两个数组"""
+        index = {
+            item[key]: {k: v for k, v in item.items() if (not fields or k in fields)}
+            for item in arr2
+        }
+
+        return [
+            {
+                **item,
+                **{  # 仅合并指定字段
+                    k: v
+                    for k, v in index.get(item[key], {}).items()
+                    if (not fields or k in fields)
+                }
+            }
+            for item in arr1
+        ]
 
     @classmethod
     async def json_by_dict(cls, data: str):

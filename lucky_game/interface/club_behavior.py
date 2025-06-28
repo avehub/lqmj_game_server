@@ -3,7 +3,9 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
-from lucky_game.model_rc.club_users import ExtraClubBehaviorRC
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
+from lucky_game.model_rc.club_users import ClubUsersRC
+from common.public.common_class import CommonApi
 
 
 class GetBehaviorExtra(GameAuthApi):
@@ -21,4 +23,9 @@ class GetBehaviorExtra(GameAuthApi):
             page=page,
             page_size=page_size,
         )
+        if data["list"]:
+            ids = [item.get("uid") for item in data["list"]]
+            role_data, _ = await ClubUsersRC.get_club_user_by_filter(uid=list(set(ids)), club_id=club_id)
+            data["list"] = await CommonApi.merge_by_key(data["list"], role_data, "uid", ["role"])
         return self.answer(data=data, hint=e)
+

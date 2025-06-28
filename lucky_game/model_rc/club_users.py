@@ -182,17 +182,23 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_filter(cls, uid: int = None, club_id: int = None, role: int = None, status: int = None,
+    async def get_club_user_by_filter(cls, uid: any = None, club_id: int = None, role: any = None, status: int = None,
                                       page: int = None, page_size: int = None):
         """获取用户茶馆关系"""
         try:
             query = {}
             if uid is not None:
-                query["uid"] = uid
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
             if club_id is not None:
                 query["club_id"] = club_id
             if role is not None:
-                query["role"] = role
+                if isinstance(role, list):
+                    query["role__in"] = role
+                else:
+                    query["role"] = role
             if status is not None:
                 query["status"] = status
             if page and page_size:
