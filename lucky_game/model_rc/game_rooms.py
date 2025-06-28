@@ -371,7 +371,7 @@ class GameRoomsRC(BaseCommonRC):
             room_data, e = await cls.get_game_room_by_room_id(room_id)
             if not room_data:
                 return False, e
-            if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT]:
+            if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
                 return False, "离开房间状态异常"
             sta = await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
             if sta == 0:
