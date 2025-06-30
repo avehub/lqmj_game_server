@@ -166,6 +166,7 @@ class BasePoker:
         for card, count in all_cards_map.items():
             remain_cards.extend([card] * count)
 
+        random.shuffle(remain_cards)
         order_cards = []
         for i in range(card_count):
             for j in range(player_count):
