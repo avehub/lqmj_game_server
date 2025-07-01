@@ -15,12 +15,6 @@ from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
 # from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.game_rooms import GameRoomsRC
-from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
-from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
-from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
-
-
 # from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
@@ -47,9 +41,6 @@ class BaseService(BaseServer, SessionManager):
             CmdRoom.FORCE_DISMISS.val: self.__on_force_dismiss,
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
-        self.register_rc_model(
-            BaseUserRC,GameRoomsRC,RecordsGameRoomRC,RecordsGameSegmentRC,RecordsGameTotalRC
-        )
 
         self.__limit_call_tag = set()
 

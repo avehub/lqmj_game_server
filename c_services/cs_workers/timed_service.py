@@ -29,10 +29,6 @@ class TimedService():
         self.__main_service = main_service
         self.__scheduler = None
 
-        self.__main_service.register_rc_model(
-            ConfSeasonRC, UserRankingRC, BaseRobotRC, DouYin, BaseAds, JuLiangAdsRC
-        )
-
     def log_info(self, *data):
         self.__main_service.log_info("定时任务：", *data)
 
