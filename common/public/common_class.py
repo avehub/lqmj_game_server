@@ -97,13 +97,13 @@ class CommonApi(LogMeta):
     @classmethod
     async def send_msg_to_player(
             cls,
-            cs_type,
             c_code,
             uid=1,
             code=StaCode.DEFAULT,
             hint="",
             msg=None,
             req_id="",
+            cs_type: ServiceEnum = 0
     ):
         """ 发送消息至玩家 """
         r_key = await cls.__get_routing_key(uid)
