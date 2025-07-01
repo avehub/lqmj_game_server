@@ -50,9 +50,6 @@ class BaseLeisureService(BaseService, LeisureService):
     def __init__(self):
         BaseService.__init__(self)
         LeisureService.__init__(self)
-        self.register_rc_model(
-            LeisureConfRC, UserSafeBoxRC, ConfActivityRC
-        )
         self.add_handlers({
             CmdRoom.GIVE_UP.val: self.__on_give_up,
             CmdRoom.RECHARGE.val: self.__on_recharge,

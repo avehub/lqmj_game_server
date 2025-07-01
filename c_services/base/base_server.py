@@ -4,6 +4,7 @@ from typing import AnyStr
 
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
+from nsanic.orm.rc_model import RCModel
 from tortoise import Tortoise, connections
 
 from c_services.const.cs_enum_const import CmdChat, CallCheck
@@ -161,14 +162,19 @@ class BaseServer(BasePubService, CommonApi):
 
     async def start_server(self):
         """ 启动服务 """
-        await self.init_db()  # 初始化db
-        self.conf.rds.init_loop()  # 初始化redis
-        self.conf.rmq.init_pool()  # 初始化rmq
-        await self.__init_listen_channel()
+        await self.init_component()
         asyncio.create_task(self.__read_task())
         await self.clear_in_service()
         asyncio.create_task(self.rpc_client())
         await self.__consume_rmq()
+
+    async def init_component(self):
+        """ 初始化组件 """
+        RCModel.set_conf(self.conf)
+        await self.init_db()  # 初始化db
+        self.conf.rds.init_loop()  # 初始化redis
+        self.conf.rmq.init_pool()  # 初始化rmq
+        await self.__init_listen_channel()
 
     async def clear_in_service(self):
         """ 子类重写（某些不是游戏的服务不需要清理） """

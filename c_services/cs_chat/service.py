@@ -18,7 +18,6 @@ class ChatServer(JsonBaseServer):
         self.add_handlers({
             CmdChat.RECEIVE_CHAT_MSG: self.__recv_chat_message,
         })
-        self.register_rc_model(ChatRecordRC)
 
     async def __recv_chat_message(self, to_uid, msg: dict):
         """ 接收聊天消息 """
