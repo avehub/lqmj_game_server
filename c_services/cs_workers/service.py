@@ -8,7 +8,7 @@ from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, Cm
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
-from common.public.enum_const import TaskId, DbKey, LEISURE_GAME_LIST
+from common.public.enum_const import TaskId, DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
@@ -539,7 +539,7 @@ class WorkersServer(JsonBaseServer):
             self.log_info("解禁玩家完成：", uid)
             return
         self.log_info("封禁玩家：", uid)
-        await self.inner_cs2ws(CmdWs.BAN_PLAYER, 1, data)
+        await self.inner_cs2ws(ServiceEnum.WS_HALL, CmdWs.BAN_PLAYER, 1, data)
 
     async def __loop_game_announcement(self):
         """ 循环调用局内公告 """

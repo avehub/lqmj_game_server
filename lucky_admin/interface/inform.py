@@ -6,7 +6,7 @@ from sanic import Request
 from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdWorkers, CmdWs
 from common.public.conf import R_UID_THRESHOLD
-from common.public.enum_const import DbKey
+from common.public.enum_const import DbKey, ServiceEnum
 from lucky_admin.base_api import AdminAuthApi
 from lucky_admin.handler.pack_msg import pack_background_timed_task
 from lucky_admin.model_db.main import RecordsAdminTimedTask
@@ -42,7 +42,7 @@ class BanHandler(AdminAuthApi):
             "uid": uid,
             "ban_time": ban_time,
         }
-        await self.inner_cs2ws(CmdWs.BAN_PLAYER, 1, data)
+        await self.inner_cs2ws(ServiceEnum.WS_HALL, CmdWs.BAN_PLAYER, 1, data)
 
         self.log_info("封禁玩家：", uid, ban_time)
         self.answer(hint="ok")

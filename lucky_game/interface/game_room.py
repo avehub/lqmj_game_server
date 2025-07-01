@@ -29,12 +29,7 @@ async def make_again_room_msg(room_data):
         max_player=room_data["max_player"],
         rule_details=room_data["rule_details"],
     )
-    msg = PbWsBaseRep.encode(
-        code=StaCode.PASS,
-        hint="再来一局",
-        _any=data,
-    )
-    return msg
+    return data
 
 
 class GameRoomAPI(RoomTemplateBase):
@@ -86,11 +81,13 @@ class GameRoomAPI(RoomTemplateBase):
         """再来一局WS消息通知"""
         u_ids = await self.json_by_dict(again_uid)
         if u_ids:
-            msg = make_again_room_msg(room_data)
+            msg = await make_again_room_msg(room_data)
             for uid in u_ids:
-                await self.inner_cs2ws(
-                    c_code=ServiceEnum.C_NOTICE,
+                await self.send_msg_to_player(
+                    ServiceEnum.C_NOTICE,
+                    c_code=CmdNotice.INVITE_ROOM,
                     uid=uid,
+                    hint='再来一局',
                     msg=msg,
                 )
 
