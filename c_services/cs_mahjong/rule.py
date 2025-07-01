@@ -903,7 +903,7 @@ class Rule(metaclass=NoInstances):
 
 
     @staticmethod
-    def r_can_tian_ting(table_cards, hand_cards, mo_card=0, que=0):
+    def r_can_tian_ting(table_cards, hand_cards, mo_card=0, que=0,allow_hu_map: dict = None):
         """通用天听检测方法（支持13/14张牌）"""
         for combo in table_cards:
             if combo[0] != ActionType.ACTION_TYPE_AN_GANG:

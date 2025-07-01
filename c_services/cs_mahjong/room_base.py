@@ -148,6 +148,9 @@ class Room(BaseCardRoom):
             room_info["operate_seats"] = self.get_operate_seats()
             room_info["shang_ga_list"] = self.__shang_ga_list
         print("房间信息",room_info)
+        if self.room_status == RoomStatus.T_CLOSED:
+            self.log_info("房间已在关闭状态")
+            return None
         return S2CRoomInfo04Mahjong.pb_model(**room_info)
 
     def serialize_player_info(self, room_player_info):
@@ -698,6 +701,7 @@ class Room(BaseCardRoom):
         除了所有玩家手上的牌，和牌堆里的牌 其它都是已知的牌
         从已知牌里遍历，不满足已经知道 3张牌 的略过遍历
         """
+        print("判断绝张")
         # 未知牌 = 其余玩家手牌 + 牌堆未摸的牌
         unknown_cards = []
         for _p in self.seats:
@@ -2537,7 +2541,7 @@ class Room(BaseCardRoom):
             if self.can_select_tian_ting(p, self.deal_cards_count):
                 result.append(ActionType.ACTION_TYPE_TIAN_TING)
         else:
-            if self.can_select_tian_ting(p, self.deal_cards_count + 1):
+            if self.can_select_tian_ting(p, self.deal_cards_count + 1,p.mo_pai):
                 result.append(ActionType.ACTION_TYPE_TIAN_TING)
 
         return result
@@ -2545,11 +2549,13 @@ class Room(BaseCardRoom):
     def can_select_tian_ting(self, p: Player, cards_len, mo_pai=0):
         if p.cards_len != cards_len:
             return False
+        allow_hu_map = {HuType.DI_LONG_QI: self.__di_long_qi, HuType.JIN_GOU_DIAO: True,
+                        HuType.QI_DUI: True}
         if cards_len == self.deal_cards_count and p.chu_pai_len() == 0 and p.can_tian_ting >= 0:
-            if Rule.r_can_tian_ting(p.table_cards, p.cards, p.que):
+            if Rule.r_can_tian_ting(p.table_cards, p.cards, mo_pai, p.que,allow_hu_map):
                 return True
-        if cards_len == self.deal_cards_count + 1 and p.table_cards_len == 0 and p.chu_pai_len() == 0 and p.can_tian_ting >= 0:
-            if Rule.r_can_tian_ting(p.table_cards, p.cards, mo_pai, p.que):
+        if cards_len == self.deal_cards_count + 1 and p.table_cards_len() == 0 and p.chu_pai_len() == 0 and p.can_tian_ting >= 0:
+            if Rule.r_can_tian_ting(p.table_cards, p.cards, mo_pai, p.que,allow_hu_map):
                 return True
 
         return False
@@ -4167,3 +4173,6 @@ class Room(BaseCardRoom):
         await self.liu_ju_notify()
         self.__win_seat_list = []
         await super().force_dismiss()
+
+    def refresh_room_conf(self, service,room_conf):
+        self.__init__(self.tid,service,room_conf)

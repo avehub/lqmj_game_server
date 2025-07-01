@@ -248,36 +248,37 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        if account:
-            score_rank_map = self.get_player_ranking(account)
-            for p in self.seats:
-                if not p:
-                    continue
-                record_data = {
-                    "record_rid": self.__record_id,
-                    "record_tid": 0,
-                    "cs_type": self.service.service_type,
-                    "round_num": self.round_idx,
-                    "replay_msg": self.__round_msg_records,
-                }
-                player_account = account.get(p.seat_id, {})
-                score = player_account.get("total_score", 0)
-                p.on_round_over(score)
-                over_data = p.round_over_data()
-                over_data["account"] = player_account if player_account else None
-                data["seats"].append(over_data)
-                record_data["uid"] = p.uid
-                record_data["round_status"] = 1 if score>=0 else 0
-                record_data["round_score"] = score
-                record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
-                record_data["round_result"] = over_data
-                new_data.append(record_data)
-                p.clear_data_round_over()
+        print("account",account)
+        score_rank_map = self.get_player_ranking(account,True)
+        for p in self.seats:
+            if not p:
+                continue
+            record_data = {
+                "record_rid": self.__record_id,
+                "record_tid": 0,
+                "cs_type": self.service.service_type,
+                "round_num": self.round_idx,
+                "replay_msg": self.__round_msg_records,
+            }
+            player_account = account.get(p.seat_id, {})
+            score = player_account.get("total_score", 0)
+            p.on_round_over(score)
+            over_data = p.round_over_data()
+            over_data["account"] = player_account if player_account else None
+            data["seats"].append(over_data)
+            record_data["uid"] = p.uid
+            record_data["round_status"] = 1 if score>=0 else 0
+            record_data["round_score"] = score
+            record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
+            record_data["round_result"] = over_data
+            new_data.append(record_data)
+            p.clear_data_round_over()
 
-            print("new_data",new_data)
-            self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
+        print("new_data",new_data)
+        self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
+        if over_type!=OverType.FORCE:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-            self.log_info("一轮结束战绩插入",result_data)
+            self.log_info("一轮结束战绩插入", result_data)
             data_model = S2CRoundOverInfo.pb_model(**data)
             await self.inner_broadcast(CmdRoom.ROUND_OVER,data_model)
 
@@ -364,8 +365,8 @@ class BaseCardRoom(BaseRoom):
         await super().game_over()
 
 
-    def get_player_ranking(self,account = None):
-        if account:
+    def get_player_ranking(self,account = None,is_round_over=False):
+        if account and is_round_over:
             all_scores = [account.get(p.seat_id, {}).get("total_score", 0) for p in self.seats if p]
         else:
             all_scores = [p.total_score for p in self.seats if p]
@@ -410,6 +411,7 @@ class BaseCardRoom(BaseRoom):
 
     def refresh_room_conf(self, service,room_conf):
         rule_details = room_conf.pop("rule_details")
+        print("刷新房间配置",rule_details)
         room_conf.update(rule_details)
         super().refresh_room_conf(service,room_conf)
 

@@ -40,12 +40,12 @@ class SessionManager:
         tid = kwargs.pop("tid") if room_type == RoomType.SELF_BUILD else 0
         if self.__room_pool:
             room_obj = self.__room_pool.popleft()
+            room_obj.set_tid(tid)
             room_obj.refresh_room_conf(self, room_conf, **kwargs)
             if room_type != RoomType.SELF_BUILD:
                 tid = room_obj.tid + 1
                 while self.__rooms.get(tid):
                     tid += 1
-            room_obj.set_tid(tid)
         else:
             if room_type == RoomType.SELF_BUILD:
                 room_obj = room.new(tid,self, room_conf, **kwargs)
