@@ -251,5 +251,4 @@ class BaseService(BaseServer, SessionManager):
         player, room = await self.check_in_room(uid, cmd)
         if not player:
             return
-        print("玩家在房间内","uid",player.uid,"tid",room.tid)
         return await func(player, room, data) if asyncio.iscoroutinefunction(func) else func(player, room, data)

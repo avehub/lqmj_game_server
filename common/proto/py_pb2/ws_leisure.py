@@ -77,7 +77,7 @@ def pack_base_room_info(obj, **kwargs):
     rule_conf = room_conf.get("rule_conf", {})
 
     obj.base_room_info.room_conf.max_player = rule_conf.get("max_player") or room_conf.get("max_player")
-    obj.base_room_info.room_conf.total_round = rule_conf.get("total_round") or room_conf.get("max_player")
+    obj.base_room_info.room_conf.total_round = rule_conf.get("total_round") or room_conf.get("total_round")
 
     obj.base_room_info.min_take = room_conf.get("min_take") or 0
     obj.base_room_info.max_take = room_conf.get("max_take") or 0

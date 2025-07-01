@@ -435,8 +435,10 @@ class BaseRoom(metaclass=ABCMeta):
         await self.notify_player_info(player,reenter)
 
     async def notify_room_info(self, player=None):
-        print("发送房间信息")
         data = self.serialize_room_info()
+        if not data:
+            return
+        print("发送房间信息")
         if player:
             await self.inner_send(player, CmdRoom.ROOM_INFO, data)
         else:
@@ -514,6 +516,7 @@ class BaseRoom(metaclass=ABCMeta):
                     self.log_info("游戏结束离开房间:",leave_result,"房间状态:",self.__room_status)
                     await self.service.del_player_in_service(p.uid)
                 self.service.release_player(p)
+        self.__room_status = RoomStatus.T_CLOSED
         self.service.release_room(self)
 
     def clear_room(self):
