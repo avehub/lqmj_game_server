@@ -63,10 +63,10 @@ class CommonApi(LogMeta):
     @classmethod
     async def inner_cs2ws(
             cls,
+            service_type,
             c_code,
             uid=1,
             msg=None,
-            s_enum: ServiceEnum = ServiceEnum.WS_HALL
     ):
         """
         内部调用ws
@@ -80,8 +80,9 @@ class CommonApi(LogMeta):
             if not ws_id:
                 return
             r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{int(ws_id)}"
-        cmd = UtilsTool.packet_command(s_enum, c_code)
-        await cls.cs2cs_by_rmq(s_enum, cmd, msg, uid, r_key=r_key)
+
+        cmd = UtilsTool.packet_command(service_type, c_code)
+        await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, msg, uid, r_key=r_key)
 
     @classmethod
     async def req_by_rpc(cls, cs_type: ServiceEnum, c_code, uid, msg, r_key=''):

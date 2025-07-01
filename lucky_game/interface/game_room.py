@@ -91,10 +91,10 @@ class GameRoomAPI(RoomTemplateBase):
             msg = await make_again_room_msg(room_data)
             for uid in u_ids:
                 await self.inner_cs2ws(
-                    c_code=CmdNotice.INVITE_ROOM,
+                    ServiceEnum.C_NOTICE,
+                    c_code=ServiceEnum.INVITE_ROOM,
                     uid=uid,
                     msg=msg,
-                    s_enum=ServiceEnum.C_NOTICE,
                 )
 
 
