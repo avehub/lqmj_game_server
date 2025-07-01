@@ -141,6 +141,45 @@ class BaseRecordsGameRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
         return result, "成功"
 
+    @classmethod
+    async def get_past_list(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
+                                uid: int = None, cs_type: int = None, page_size: int = None, page: int = None):
+        try:
+            if start_time is None and end_time is None:
+                start_time, end_time = await cls.default_time()
+            # 当前用户所在的房间及用户
+            result_temp, e = await RecordsGameTotalRC.query_record_total_by_sql(
+                uid=uid,
+                club_id=club_id,
+                room_id=room_id,
+                start_time=start_time,
+                end_time=end_time,
+                cs_type=cs_type,
+                group_field="record_rid",
+                filtration="record_rid"
+            )
+            if not result_temp:
+                return None, e
+            record_rids = [item["record_rid"] for item in result_temp]
+            result_total, e = await RecordsGameTotalRC.query_record_total_by_sql(
+                record_rid=record_rids,
+                filtration="uid, record_tid, record_rid, final_score, final_grade, final_ranking, final_status"
+            )
+            result_room, e = await RecordsGameRoomRC.get_record_room_by_filter(
+                record_rid=record_rids,
+                page_size=page_size,
+                page=page,
+            )
+            for item in result_room["list"]:
+                item["room_seat"] = []
+                for i in result_total:
+                    if item["record_rid"] == i["record_rid"]:
+                        item["room_seat"].append(i)
+
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return result_room, "成功"
+
 
     @classmethod
     async def get_record_room_by_filter(cls, club_id: int = None, room_id: int = None, creator: int = None):

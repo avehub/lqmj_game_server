@@ -204,8 +204,13 @@ class ClubRanks(RecordBase):
         final_score = self.check_int(req.args.get("final_score"), default=None, require=False, p_name="最佳分数")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_club_id(
-            uid=uid,
+        order_field = self.check_str(req.args.get("order_field"), require=False, default="total_score", p_name="排序字段")
+        order_type_val = self.check_int(req.args.get("order_type"), require=False, minval=1, maxval=2, p_name="排序方式")
+        order_type = "DESC"
+        if order_type_val == 2:
+            order_type = "ASC"
+
+        data, e = await RecordsGameTotalRC.query_record_total_by_sql(
             club_id=club_id,
             final_score=final_score,
             cs_type=cs_type,
@@ -213,6 +218,10 @@ class ClubRanks(RecordBase):
             end_time=end_time,
             page=page,
             page_size=page_size,
+            order_field=order_field,
+            order_type=order_type,
+            group_field="uid",
+            filtration="uid, club_id, SUM(final_status) AS total_status, SUM(final_score) AS total_score, SUM(final_grade) AS total_grade, COUNT(final_grade) AS grade_count"
         )
         return self.answer(data=data, hint=e)
 
@@ -226,7 +235,7 @@ class PastRanks(RecordBase):
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_club_id(
+        data, e = await BaseRecordsGameRC.get_past_list(
             uid=uid,
             club_id=club_id,
             start_time=start_time,

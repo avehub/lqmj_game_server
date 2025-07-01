@@ -11,9 +11,6 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdNotice
 from lucky_game.interface.club_room_template import RoomTemplateBase, verify_rule_detail
 from common.public.conf import C_SERVICE_SECRET_KEY
-from c_services.base.base_server import BaseServer
-from common.public.common_class import CommonApi
-from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.proto.py_pb2.ws_client import S2CAgainRoomInfo
 
 
@@ -153,9 +150,6 @@ class CreateRoom(GameRoomAPI):
             creator,
         )
         if again == 1 and again_uid:
-            print("再来一局")
-            print("again->:", again)
-            print("again_uid->:", again_uid)
             await self.again_mq(again_uid, room_data)
         return self.answer(data=room_data)
 
@@ -167,7 +161,7 @@ class RoomList(GameRoomAPI):
         club_id = self.check_int(req.args.get("club_id"), require=False, default=None, p_name="茶馆ID")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, default=None, p_name="房间状态")
         if status is None:
-            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
+            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
         not_rooms = await GameRoomsRC.before_room(club_id, uid)
         room_list, e = await GameRoomsRC.get_game_rooms_by_filter(club_id=club_id, status=status, not_room_id=not_rooms)
         if isinstance(room_list, list):

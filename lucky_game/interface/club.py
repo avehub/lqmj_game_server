@@ -93,7 +93,7 @@ class ClubHall(BaseClub):
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
-            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
+            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
         # 游戏房间
