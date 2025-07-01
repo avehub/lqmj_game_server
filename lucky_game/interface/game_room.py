@@ -13,21 +13,28 @@ from lucky_game.interface.club_room_template import RoomTemplateBase, verify_rul
 from common.public.conf import C_SERVICE_SECRET_KEY
 from c_services.base.base_server import BaseServer
 from common.public.common_class import CommonApi
+from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.proto.py_pb2.ws_client import S2CAgainRoomInfo
 
 
-async def again_mq(again_uid, room_data, cs_server: BaseServer = None):
-    """再来一局WS消息通知"""
-    room_data["secret"] = C_SERVICE_SECRET_KEY
-    u_ids = await CommonApi.json_by_dict(again_uid)
-    if u_ids:
-        if cs_server is None:
-            cs_server = BaseServer()
-        for uid in u_ids:
-            await cs_server.inner_cs2ws(
-                c_code=CmdNotice.INVITE_ROOM,
-                uid=uid,
-                msg=room_data,
-            )
+async def make_again_room_msg(room_data):
+    """生成再来一局房间消息"""
+    data = S2CAgainRoomInfo.pb_model(
+        room_id=room_data["room_id"],
+        play_type=room_data["play_type"],
+        cs_type=room_data["cs_type"],
+        creator=room_data["creator"],
+        status=room_data["status"],
+        total_round=room_data["total_round"],
+        max_player=room_data["max_player"],
+        rule_details=room_data["rule_details"],
+    )
+    msg = PbWsBaseRep.encode(
+        code=StaCode.PASS,
+        hint="再来一局",
+        _any=data,
+    )
+    return msg
 
 
 class GameRoomAPI(RoomTemplateBase):
@@ -75,6 +82,18 @@ class GameRoomAPI(RoomTemplateBase):
         cs_type = template.cs_type
         return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
 
+    async def again_mq(self, again_uid, room_data):
+        """再来一局WS消息通知"""
+        u_ids = await self.json_by_dict(again_uid)
+        if u_ids:
+            msg = make_again_room_msg(room_data)
+            for uid in u_ids:
+                await self.inner_cs2ws(
+                    c_code=ServiceEnum.C_NOTICE,
+                    uid=uid,
+                    msg=msg,
+                )
+
 
 class CreateRoom(GameRoomAPI):
     """创建房间（支持普通房间和茶馆房间）"""
@@ -84,7 +103,7 @@ class CreateRoom(GameRoomAPI):
         template_id = self.check_int(req.json.get("template_id"), require=False, p_name="模板ID")
         is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
         is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否开启位置")
-        again = self.check_int(req.json.get("is_again"), require=False, minval=0, maxval=1, p_name="开启再来一局")
+        again = self.check_int(req.json.get("again"), require=False, minval=0, maxval=1, p_name="开启再来一局")
         again_uid = self.check_str(req.json.get("again_uid"), require=False, p_name="再来一局玩家ID")
         if template_id:
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.room_clone(template_id, creator, **kwargs)
@@ -137,7 +156,10 @@ class CreateRoom(GameRoomAPI):
             creator,
         )
         if again == 1 and again_uid:
-            await again_mq(again_uid, room_data)
+            print("再来一局")
+            print("again->:", again)
+            print("again_uid->:", again_uid)
+            await self.again_mq(again_uid, room_data)
         return self.answer(data=room_data)
 
 
