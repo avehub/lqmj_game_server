@@ -260,14 +260,6 @@ class BaseServer(BasePubService, CommonApi):
         r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{ws_id}"
         await self.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
 
-    async def __get_routing_key(self, uid):
-        if uid == 1:
-            r_key = Channel.CHANNEL_SYSTEM_MSG
-        else:
-            ws_id = await self.get_player_ws_id(uid)
-            r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{ws_id}"
-        return r_key
-
     async def notice_ws_by_rmq(
             self, c_code, uid=1, code=StaCode.DEFAULT, hint="", msg=None, req_id="", cs_type=ServiceEnum.C_NOTICE):
         """
@@ -275,11 +267,7 @@ class BaseServer(BasePubService, CommonApi):
         注意：uid=1时广播所有在线玩家
         uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
         """
-        r_key = await self.__get_routing_key(uid)
-        hint = hint or code.msg
-        pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
-        cmd = UtilsTool.packet_command(cs_type, c_code)
-        await self.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+        await self.send_msg_to_player(cs_type, c_code, uid, code, hint, msg, req_id)
 
     async def chat_ws_by_rmq(self, c_code, uid=1, code=StaCode.DEFAULT, hint="", msg=None, req_id=""):
         """
@@ -287,7 +275,7 @@ class BaseServer(BasePubService, CommonApi):
         注意：uid=1时广播所有在线玩家
         uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
         """
-        await self.notice_ws_by_rmq(c_code, uid, code, hint, msg, req_id, ServiceEnum.C_CHAT)
+        await self.send_msg_to_player(ServiceEnum.C_CHAT, c_code, uid, code, hint, msg, req_id)
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """
