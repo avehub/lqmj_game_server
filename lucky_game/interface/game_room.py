@@ -34,6 +34,8 @@ async def make_again_room_msg(room_data):
         hint="再来一局",
         _any=data,
     )
+    print("msg->:", msg)
+
     return msg
 
 
@@ -86,12 +88,13 @@ class GameRoomAPI(RoomTemplateBase):
         """再来一局WS消息通知"""
         u_ids = await self.json_by_dict(again_uid)
         if u_ids:
-            msg = make_again_room_msg(room_data)
+            msg = await make_again_room_msg(room_data)
             for uid in u_ids:
                 await self.inner_cs2ws(
-                    c_code=ServiceEnum.C_NOTICE,
+                    c_code=CmdNotice.INVITE_ROOM,
                     uid=uid,
                     msg=msg,
+                    s_enum=ServiceEnum.C_NOTICE,
                 )
 
 
