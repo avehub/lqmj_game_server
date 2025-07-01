@@ -81,11 +81,11 @@ class GameRoomAPI(RoomTemplateBase):
             msg = await make_again_room_msg(room_data)
             for uid in u_ids:
                 await self.send_msg_to_player(
-                    ServiceEnum.C_NOTICE,
                     c_code=CmdNotice.INVITE_ROOM,
                     uid=uid,
                     hint='再来一局',
                     msg=msg,
+                    cs_type=ServiceEnum.C_NOTICE
                 )
 
 

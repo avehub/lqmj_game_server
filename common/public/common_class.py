@@ -72,16 +72,9 @@ class CommonApi(LogMeta):
         """
         内部调用ws
         目标service: ws_hall
-        发给ws服务的，非让ws中转
+        发给ws服务的，非直接面向用户
         """
-        if uid == 1:
-            r_key = Channel.CHANNEL_SYSTEM_MSG
-        else:
-            ws_id = await cls.get_player_ws_id(uid)
-            if not ws_id:
-                return
-            r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{int(ws_id)}"
-
+        r_key = await cls.__get_routing_key(uid)
         cmd = UtilsTool.packet_command(service_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, msg, uid, r_key=r_key)
 
@@ -97,13 +90,13 @@ class CommonApi(LogMeta):
     @classmethod
     async def send_msg_to_player(
             cls,
-            cs_type,
             c_code,
             uid=1,
             code=StaCode.DEFAULT,
             hint="",
             msg=None,
             req_id="",
+            cs_type: ServiceEnum = 0
     ):
         """ 发送消息至玩家 """
         r_key = await cls.__get_routing_key(uid)
