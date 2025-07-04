@@ -226,6 +226,7 @@ class RecordsGameRoom(DBModel):
     room_id = fields.IntField(index=True, description='房间ID', )
     creator = fields.IntField(description='房主ID', )
     total_round = fields.SmallIntField(description='总局数', )
+    round_num = fields.SmallIntField(default=0, description='对局数', )
     max_player = fields.SmallIntField(description='对局人数', )
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储', )
     play_type = fields.SmallIntField(description='玩法类型', )

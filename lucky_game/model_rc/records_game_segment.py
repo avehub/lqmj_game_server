@@ -163,17 +163,20 @@ class RecordsGameSegmentRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
         return count, "成功",
 
-
     @classmethod
-    async def delete_record_game_segment(cls, record_sid: int):
+    async def delete_record_game_segment(cls, record_sid: int = None, record_rid: int = None):
         """删除战绩子局记录"""
         try:
-            record = await cls.db_model.del_by_pk(record_sid)
+            record = None
+            if record_sid:
+                record = await cls.db_model.del_by_pk(record_sid)
+            if record_rid:
+                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
             if not record:
                 return record, "删除失败"
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
-        return record, "删除成功"
+        return True, "删除成功"
 
     @classmethod
     async def query_record_segment_by_sql(cls, record_sid: any = None, uid: any = None, cs_type: int = None,

@@ -46,7 +46,8 @@ class RecordsGameTotalRC(BaseCommonRC):
                 if num > 0:
                     up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
                         record_rid,
-                        end_time=int(datetime.now().timestamp())
+                        end_time=int(datetime.now().timestamp()),
+                        round_num=record["total_round"],
                     )
                     if not up_room_sta:
                         return new_record, "创建失败"
@@ -134,17 +135,20 @@ class RecordsGameTotalRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
         return count, "成功",
 
-
     @classmethod
-    async def delete_record_game_total(cls, record_tid: int):
+    async def delete_record_game_total(cls, record_tid: int = None, record_rid: int = None):
         """删除战绩总局记录"""
         try:
-            record = await cls.db_model.del_by_pk(record_tid)
+            record = None
+            if record_tid:
+                record = await cls.db_model.del_by_pk(record_tid)
+            if record_rid:
+                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
             if not record:
                 return record, "删除失败"
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
-        return record, "删除成功"
+        return True, "删除成功"
 
     @classmethod
     async def query_record_total_by_sql(cls, club_id: any = None, room_id: any = None, uid: any = None,

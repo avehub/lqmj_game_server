@@ -31,6 +31,7 @@ class RecordsGameRoomRC(BaseCommonRC):
                 "price": game_room["price"],
                 "start_time": start_time,
                 "end_time": end_time,
+                "round_num": 0,
             }
             new_record = await cls.db_model.add_one(record_data)
             if not new_record:
@@ -47,8 +48,14 @@ class RecordsGameRoomRC(BaseCommonRC):
             if not record:
                 return None, "战绩不存在"
             end_time = kwargs.get("end_time")
+            round_num = kwargs.get("round_num")
+            update = {}
             if end_time:
-                up_sta = await cls.db_model.update_by_pk(record_rid, {"end_time": end_time}, old_data=record)
+                update["end_time"] = end_time
+            if round_num:
+                update["round_num"] = round_num
+            if update:
+                up_sta = await cls.db_model.update_by_pk(record_rid, update, old_data=record)
                 if not up_sta:
                     return None, "更新失败"
         except OperationalError as e:
