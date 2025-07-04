@@ -20,13 +20,12 @@ class UserRecords(RecordBase):
     """用户战绩列表"""
 
     async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
-        self.check_int(uid, require=True, p_name="用户ID")
-        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,
-                                 p_name="子服务类型")
+        uid = self.check_int(req.args.get("uid"), default=None, require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
+        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,p_name="子服务类型")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_uid(uid=uid, cs_type=cs_type, page=page, page_size=page_size)
+        data, e = await BaseRecordsGameRC.get_record_list(uid=uid, club_id=club_id, cs_type=cs_type, page=page, page_size=page_size)
         return self.answer(data=data, hint=e)
 
 

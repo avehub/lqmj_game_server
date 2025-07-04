@@ -1,6 +1,7 @@
 """
 游戏战绩基础类
 """
+from collections import defaultdict
 from datetime import datetime, timedelta
 from tortoise.exceptions import OperationalError
 from lucky_game.model_rc.base_rc import BaseCommonRC
@@ -46,7 +47,7 @@ class BaseRecordsGameRC(BaseCommonRC):
         return data, "成功"
 
     @classmethod
-    async def get_by_uid(cls, uid: int, start_time: int = None, end_time: int = None, cs_type: int = None,
+    async def get_record_list(cls, uid: int, club_id: int, start_time: int = None, end_time: int = None, cs_type: int = None,
                          page_size: int = None, page: int = None):
         """根据用户ID获取战绩 (默认七日内)"""
         try:
@@ -60,13 +61,11 @@ class BaseRecordsGameRC(BaseCommonRC):
                 page_size=page_size,
                 page=page,
             )
-            # TODO 暂时注释 根据前端联调数据需要做调整
-            # if data.get("total") > 0:
-            #     ids = [item["record_rid"] for item in data["list"]]
-            #     room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
-            #         record_rid=ids,
-            #     )
-            #     data["list"] = CommonApi.merge_by_key(data["list"], room_data, "record_rid")
+            if data.get("total") > 0:
+                room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
+                    record_rid=[item["record_rid"] for item in data["list"]],
+                )
+                data["list"] = cls.merge_by_key(data["list"], room_data, "record_rid", ["total_round", "max_player", "start_time", "end_time"])
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
@@ -170,11 +169,11 @@ class BaseRecordsGameRC(BaseCommonRC):
                 page_size=page_size,
                 page=page,
             )
+            seat_groups = defaultdict(list)
+            for seat in result_total:
+                seat_groups[seat["record_rid"]].append(seat)
             for item in result_room["list"]:
-                item["room_seat"] = []
-                for i in result_total:
-                    if item["record_rid"] == i["record_rid"]:
-                        item["room_seat"].append(i)
+                item["room_seat"] = seat_groups.get(item["record_rid"], [])
 
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"

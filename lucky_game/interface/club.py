@@ -220,8 +220,10 @@ class ClubUserInfo(BaseClub):
         # 获取请求参数
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        club_id = req.args.get("club_id")
-        self.check_int(club_id, require=True, p_name="茶馆ID")
+        select_uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        if select_uid:
+            uid = select_uid
         data, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
