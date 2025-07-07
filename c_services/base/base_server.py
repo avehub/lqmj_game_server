@@ -273,15 +273,19 @@ class BaseServer(BasePubService, CommonApi):
         注意：uid=1时广播所有在线玩家
         uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
         """
-        await self.send_msg_to_player(cs_type, c_code, uid, code, hint, msg, req_id)
+        await self.send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=cs_type)
 
-    async def chat_ws_by_rmq(self, c_code, uid=1, code=StaCode.DEFAULT, hint="", msg=None, req_id=""):
-        """
-        通过 chat 服务号9 广播聊天消息
-        注意：uid=1时广播所有在线玩家
-        uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
-        """
-        await self.send_msg_to_player(ServiceEnum.C_CHAT, c_code, uid, code, hint, msg, req_id)
+    async def send_msg_to_player(
+            self,
+            c_code,
+            uid=1,
+            code=StaCode.DEFAULT,
+            hint="",
+            msg=None,
+            req_id="",
+            cs_type: ServiceEnum = 0
+    ):
+        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=self.service_type)
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """

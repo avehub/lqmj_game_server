@@ -46,7 +46,8 @@ class RecordsGameTotalRC(BaseCommonRC):
                 if num > 0:
                     up_room_sta, _ = await RecordsGameRoomRC.update_record_game_room(
                         record_rid,
-                        end_time=int(datetime.now().timestamp())
+                        end_time=int(datetime.now().timestamp()),
+                        round_num=record["total_round"],
                     )
                     if not up_room_sta:
                         return new_record, "创建失败"
@@ -134,69 +135,79 @@ class RecordsGameTotalRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
         return count, "成功",
 
-
     @classmethod
-    async def delete_record_game_total(cls, record_tid: int):
+    async def delete_record_game_total(cls, record_tid: int = None, record_rid: int = None):
         """删除战绩总局记录"""
         try:
-            record = await cls.db_model.del_by_pk(record_tid)
+            record = None
+            if record_tid:
+                record = await cls.db_model.del_by_pk(record_tid)
+            if record_rid:
+                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
             if not record:
                 return record, "删除失败"
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
-        return record, "删除成功"
+        return True, "删除成功"
 
     @classmethod
     async def query_record_total_by_sql(cls, club_id: any = None, room_id: any = None, uid: any = None,
                                          record_rid: any = None, record_tid: any = None, start_time: int = None,
                                          end_time: int = None, cs_type: int = None, final_score: int = None,
                                          order_field: str = None, page: int = None, page_size: int = None,
-                                         group_field: str = "record_tid"):
-        """根据条件获取总局战绩列表"""
+                                         group_field: str = None, order_type: str = None, filtration: str = "*"):
+        """战绩查询原生SQL"""
         try:
-            query = where = {}
+            where = " 1=1 "
             if club_id is not None:
                 if isinstance(club_id, list):
-                    query["club_id__in"] = club_id
+                    where += f" AND club_id in ({','.join(map(str, club_id))})"
                 else:
-                    query["club_id"] = club_id
+                    where += f" AND club_id = {club_id}"
             if room_id is not None:
                 if isinstance(room_id, list):
-                    query["room_id__in"] = room_id
+                    where += f" AND room_id in ({','.join(map(str, room_id))})"
                 else:
-                    query["room_id"] = room_id
+                    where += f" AND room_id = {room_id}"
             if uid is not None:
                 if isinstance(uid, list):
-                    query["uid__in"] = uid
+                    where += f" AND uid in ({','.join(map(str, uid))})"
                 else:
-                    query["uid"] = uid
+                    where += f" AND uid = {uid}"
             if record_rid is not None:
                 if isinstance(record_rid, list):
-                    query["record_rid__in"] = record_rid
+                    where += f" AND record_rid in ({','.join(map(str, record_rid))})"
                 else:
-                    query["record_rid"] = record_rid
+                    where += f" AND record_rid = {record_rid}"
             if record_tid is not None:
                 if isinstance(record_tid, list):
-                    query["record_tid__in"] = record_tid
+                    where += f" AND record_tid in ({','.join(map(str, record_tid))})"
                 else:
-                    query["record_tid"] = record_tid
+                    where += f" AND record_tid = {record_tid}"
             if start_time is not None:
-                query["created__gte"] = start_time
+                where += f" AND created >= {start_time}"
             if end_time is not None:
-                query["created__lt"] = end_time
+                where += f" AND created < {end_time}"
             if cs_type is not None:
-                query["cs_type"] = cs_type
+                where += f" AND cs_type = {cs_type}"
             if final_score is not None:
-                query["final_score__gte"] = final_score
+                where += f" AND final_score >= {final_score}"
             if order_field is None:
                 order_field = "record_tid"
-
-            filtration = """record_tid, record_rid, uid, club_id, room_id, cs_type, SUM(final_status), SUM(final_score), 
-                                    SUM(final_grade), COUNT(final_grade)"""
-            sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field}"
+            if group_field is None:
+                group_field = "record_tid"
+            if order_type is None:
+                order_type = "DESC"
+            total = 0
+            sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
             if page and page_size:
-                sql += f" LIMIT {page_size} OFFSET {(page - 1) * page_size}"
-            result = cls.db_model.exec_query(sql)
+                total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field}")
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    sql += f" LIMIT {page_size} OFFSET {offset}"
+            result = await cls.db_model.exec_query(sql)
+            if page and page_size and result:
+                result = await cls.page_result(page, page_size, total, result)
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"

@@ -104,7 +104,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
     async def get_record_segment_by_filter(cls, greater_round_ranking: int = None, greater_round_score: int = None,
                                            uid: any = None, record_rid: any = None, record_tid: any = None,
                                            replay_msg: str = None, record_sid: any = None, page: int = None,
-                                           page_size: int = None):
+                                           page_size: int = None, group_field: str = None):
         """根据条件获取子局战绩列表"""
         try:
             query = {}
@@ -134,15 +134,17 @@ class RecordsGameSegmentRC(BaseCommonRC):
                     query["record_sid"] = record_sid
             if replay_msg is not None:
                 query["replay_msg"] = replay_msg
+            if group_field is None:
+                group_field = "record_sid"
             if page and page_size:
                 total, _ = await cls.count_record_segment(**query)
                 records = []
                 if total > 0:
                     offset = (page - 1) * page_size
-                    records = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
+                    records = await cls.db_model.filter(**query).offset(offset).limit(page_size).group_by(group_field).values()
                 result = await cls.page_result(page, page_size, total, records)
             else:
-                result = records = await cls.db_model.filter(**query).values()
+                result = records = await cls.db_model.filter(**query).group_by(group_field).values()
             if not records:
                 return result, "暂无战绩"
         except OperationalError as e:
@@ -150,21 +152,84 @@ class RecordsGameSegmentRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def count_record_segment(cls, **perms):
+    async def count_record_segment(cls, group_field: str = None, **perms):
         """获取房间战绩数量"""
         try:
-            count = await cls.db_model.filter(**perms).count()
+            if group_field:
+                count = await cls.db_model.filter(**perms).group_by(group_field).count()
+            else:
+                count = await cls.db_model.filter(**perms).count()
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return count, "成功",
 
     @classmethod
-    async def delete_record_game_segment(cls, record_sid: int):
+    async def delete_record_game_segment(cls, record_sid: int = None, record_rid: int = None):
         """删除战绩子局记录"""
         try:
-            record = await cls.db_model.del_by_pk(record_sid)
+            record = None
+            if record_sid:
+                record = await cls.db_model.del_by_pk(record_sid)
+            if record_rid:
+                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
             if not record:
                 return record, "删除失败"
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
-        return record, "删除成功"
+        return True, "删除成功"
+
+    @classmethod
+    async def query_record_segment_by_sql(cls, record_sid: any = None, uid: any = None, cs_type: int = None,
+                                         record_rid: any = None, record_tid: any = None, start_time: int = None,
+                                         end_time: int = None, final_score: int = None, group_field: str = None,
+                                         page: int = None, page_size: int = None, order_field: str = None,
+                                          order_type: str = None, filtration: str = "*"):
+        """排行榜查询SQL"""
+        try:
+            where = " 1=1 "
+            if record_sid is not None:
+                if isinstance(record_sid, list):
+                    where += f" AND record_sid in ({','.join(map(str, record_sid))})"
+                else:
+                    where += f" AND record_sid = {record_sid}"
+            if uid is not None:
+                if isinstance(uid, list):
+                    where += f" AND uid in ({','.join(map(str, uid))})"
+                else:
+                    where += f" AND uid = {uid}"
+            if record_rid is not None:
+                if isinstance(record_rid, list):
+                    where += f" AND record_rid in ({','.join(map(str, record_rid))})"
+                else:
+                    where += f" AND record_rid = {record_rid}"
+            if record_tid is not None:
+                if isinstance(record_tid, list):
+                    where += f" AND record_tid in ({','.join(map(str, record_tid))})"
+                else:
+                    where += f" AND record_tid = {record_tid}"
+            if start_time is not None:
+                where += f" AND created >= {start_time}"
+            if end_time is not None:
+                where += f" AND created < {end_time}"
+            if cs_type is not None:
+                where += f" AND cs_type = {cs_type}"
+            if final_score is not None:
+                where += f" AND final_score >= {final_score}"
+            if order_field is None:
+                order_field = "total_score"
+            if order_type is None:
+                order_type = "DESC"
+            total = 0
+            sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
+            if page and page_size:
+                total = await cls.db_model.exec_query(
+                    f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field}")
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    sql += f" LIMIT {page_size} OFFSET {offset}"
+            result = await cls.db_model.exec_query(sql)
+            if page and page_size and result:
+                result = await cls.page_result(page, page_size, total, result)
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return result, "成功"

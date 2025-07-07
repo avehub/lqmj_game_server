@@ -83,7 +83,7 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomTemplateDelete/", RoomTemplateDelete),  # 茶馆房间模板删除
         Urls("/ClubRoomTemplateUpdate/", RoomTemplateUpdate),  # 茶馆房间模板更新
         Urls("/ClubGroupCreate/", CreatGroup),  # 创建隔离组
-        Urls("/ClubGroupGet/", GetGroup),  # 获取隔离组列表
+        Urls("/ClubGroupList/", GetGroup),  # 获取隔离组列表
         Urls("/ClubGroupUpdate/", UpdateGroup),  # 更新隔离组
         Urls("/ClubGroupDelete/", DelGroup),  # 删除隔离组
         Urls("/ClubBehaviorExtra/", GetBehaviorExtra),  # 获取用户行为记录列表
