@@ -245,9 +245,9 @@ class ClubUsersRC(BaseCommonRC):
                 club_user, e = await cls.get_club_user_by_one(uid, club_id)
                 if not club_user:
                     return False, e
-                if club_user.status == cls.STATUS_BLACK:
+                if club_user["status"] == cls.STATUS_BLACK:
                     return False, "用户已在黑名单中"
-                sta = await cls.update_club_user(club_user.id, status=cls.STATUS_BLACK)
+                sta = await cls.update_club_user(club_user["id"], status=cls.STATUS_BLACK)
                 if not sta:
                     return False, "加入黑名单失败"
                 if check_uid:
