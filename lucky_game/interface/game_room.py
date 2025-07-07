@@ -72,7 +72,9 @@ class GameRoomAPI(RoomTemplateBase):
         total_round = template.total_round
         rule_details = template.rule_details
         cs_type = template.cs_type
-        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
+        is_location = template.is_location
+        is_friend = template.is_friend
+        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend
 
     async def again_mq(self, again_uid, room_data):
         """再来一局WS消息通知"""
@@ -95,17 +97,15 @@ class CreateRoom(GameRoomAPI):
         u_info = kwargs.get("u_info")
         creator = u_info.get("uid")
         template_id = self.check_int(req.json.get("template_id"), require=False, p_name="模板ID")
-        is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
-        is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否开启位置")
         again = self.check_int(req.json.get("again"), require=False, minval=0, maxval=1, p_name="开启再来一局")
         again_uid = self.check_str(req.json.get("again_uid"), require=False, p_name="再来一局玩家ID")
         if template_id:
-            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.room_clone(template_id, creator, **kwargs)
+            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.room_clone(template_id, creator, **kwargs)
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             pay_type = club["other"]["pay_type"]
         else:
-            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
             pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
+            platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         # 预处理
         rule_details = await verify_rule_detail(rule_details)
         await self._before_create_room(

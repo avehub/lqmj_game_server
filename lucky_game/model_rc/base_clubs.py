@@ -61,7 +61,7 @@ class BaseClubRC(BaseCommonRC):
             club_dick = {
                 "name": name,
                 "uid": club_uid,
-                "other": {"pay_type": 1, "host_power_room": 1}
+                "other": {"pay_type": 1, "host_power_room": 3}
             }
             # cls.conf.info_log('creat club:', club_dick)
             row = await cls.db_model.add_one(club_dick)

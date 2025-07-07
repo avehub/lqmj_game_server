@@ -37,7 +37,9 @@ class RoomTemplateBase(GameAuthApi):
         rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
         total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
         price = self.check_int(req.json.get("price"), require=True, p_name="支付金额")
-        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
+        is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
+        is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否只允许好友进入")
+        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend
     
     async def check_authority(self, uid, club_id):
         """校验权限"""
@@ -55,7 +57,7 @@ class RoomTemplateCreate(RoomTemplateBase):
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         rule_dick = await verify_rule_detail(rule_details)
         await self.check_authority(uid, club_id)
         # 创建模板
@@ -68,6 +70,8 @@ class RoomTemplateCreate(RoomTemplateBase):
             max_player=max_player,
             rule_details=rule_dick,
             club_id=club_id,
+            is_location=is_location,
+            is_friend=is_friend,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -80,17 +84,19 @@ class RoomTemplateUpdate(RoomTemplateBase):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         template_id = self.check_int(req.json.get("template_id"), require=True, p_name="模板ID")
-        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         await self.check_authority(uid, club_id)
         rule_dick = await verify_rule_detail(rule_details)
         new, err = await ClubRoomTemplatesRC.update_template(
-            template_id=template_id,
+            template_id,
             play_type=play_type,
             cs_type=cs_type,
             price=price,
             total_round=total_round,
             max_player=max_player,
             rule_details=rule_dick,
+            is_location=is_location,
+            is_friend=is_friend,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
