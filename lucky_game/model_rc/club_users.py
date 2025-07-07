@@ -174,7 +174,7 @@ class ClubUsersRC(BaseCommonRC):
     async def get_club_user_by_one(cls, uid: int, club_id: int):
         """根据用户ID、茶馆ID获取用户茶馆关系"""
         try:
-            result = await cls.db_model.filter(uid=uid, club_id=club_id).first()
+            result = await cls.db_model.filter(uid=uid, club_id=club_id).first().values()
             if not result:
                 return result, "茶馆用户关系不存在"
         except OperationalError as e:

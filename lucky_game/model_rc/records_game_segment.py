@@ -93,7 +93,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
             query = {
                 "record_rid": record_rid
             }
-            record = await cls.db_model.filter(**query).first()
+            record = await cls.db_model.filter(**query).first().values()
             if not record:
                 return None, "战绩不存在"
         except OperationalError as e:
