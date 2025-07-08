@@ -1,6 +1,9 @@
+import asyncio
+
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CdmClub
+from c_services.const.cs_enum_const import CmdClub, CallCheck
 from c_services.cs_club.room import ClubRoom
+from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo
 from common.public.enum_const import StaCode
 
 
@@ -8,10 +11,11 @@ class ClubServer(BaseServer):
     def __init__(self):
         super().__init__()
         self.add_handlers({
-            CdmClub.ENTER_CLUB: self.__enter_club,
-            CdmClub.QUIT_CLUB: self.__quit_club,
-            CdmClub.ROOM_INFO_CHANGE: self.__room_info_change,
-            CdmClub.CLUB_OWNER_DISMISS: self.__club_owner_dismiss,
+            CmdClub.ENTER_CLUB: self.__enter_club,
+            CmdClub.QUIT_CLUB: self.__quit_club,
+            CmdClub.ROOM_INFO_CHANGE: self.__room_info_change,
+            CmdClub.CLUB_OWNER_DISMISS: self.__club_owner_dismiss,
+            CmdClub.PLAYER_READY_EXCEPT_OWNER: self.__player_ready_except_owner,
         })
 
         self.__rooms = {}
@@ -19,42 +23,96 @@ class ClubServer(BaseServer):
     def get_room(self, cid):
         return self.__rooms.get(cid)
 
-    def create_room(self, cid):
-        room = ClubRoom(cid, self)
+    def create_room(self, cid, owner):
+        room = ClubRoom(cid, owner, self)
         self.__rooms[cid] = room
         return room
 
-    def get_or_create_room(self, cid):
-        return self.get_room(cid) or self.create_room(cid)
+    def remove_room(self, cid):
+        if cid in self.__rooms:
+            self.__rooms.pop(cid)
+
+    def get_or_create_room(self, cid, owner):
+        return self.get_room(cid) or self.create_room(cid, owner)
 
     async def __enter_club(self, uid, data):
         """ 进入 """
         club_id = data.get("club_id")
-
+        print("茶馆进入", uid, club_id)
         # todo: 1.检验club_id 是否有对应茶馆
+        if club_id <= 0:
+            return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
+        room = self.get_or_create_room(club_id, uid)
         # todo: 2.检验当前uid是否是club id下的茶馆成员
-        room = self.get_or_create_room(club_id)
-        room.player_join_room(uid)
-        return await self.cs2ws_by_rmq(CdmClub.ENTER_CLUB, uid)
+        if uid <= 0:
+            return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
+        if not room.check_player_in_club(uid):
+            room.player_join_room(uid)
+        return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid)
 
     async def __quit_club(self, uid, data):
         """ 退出 """
         club_id = data.get("club_id")
         room = self.get_room(club_id)
         if not room:
-            return await self.cs2ws_by_rmq(CdmClub.QUIT_CLUB, uid, StaCode.FAIL)
+            return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid, StaCode.FAIL)
         room.player_quit_room(uid)
-        self.log_info(uid, "退出俱乐部", club_id)
-        return await self.cs2ws_by_rmq(CdmClub.QUIT_CLUB, uid)
+        return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid)
 
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """
+        print("data",data)
         club_id = data.get("club_id")
         room = self.get_room(club_id)
         if not room:
             return
-        await room.inner_broadcast(CdmClub.ROOM_INFO_CHANGE, data)
+        data_model = S2CClubRoomInfo.pb_mode(**data)
+        await room.inner_broadcast(CmdClub.ROOM_INFO_CHANGE, data_model)
 
     async def __club_owner_dismiss(self, uid, data):
         """ 俱乐部主解散房间 """
+        club_id = data.get("club_id")
+        room = self.get_room(club_id)
+        if not room:
+            return
+        if uid != room.club_owner:
+            print("该玩家不是茶馆主",uid,room.owner)
+            return
+        room.clear_club()
+        self.remove_room(club_id)
+
+    async def __player_ready_except_owner(self,uid,data):
+        club_id = data.get("club_id")
+        room = self.get_room(club_id)
+        if not room.check_player_in_club(uid):
+            return
+
+        return await self.cs2ws_by_rmq(CmdClub.PLAYER_READY_EXCEPT_OWNER, uid)
+
+
+    async def call_handler(self, cmd, uid, data):
+        """
+        uid: uid or ws
+        注意顺序
+        """
+        func = self.cmd2func.get(cmd)
+        if not func or not callable(func):
+            return
+        c_enum = CmdClub.find_member_by_val(cmd)
+        check_inner = c_enum.desc == CallCheck.INNER
+        if check_inner:
+            data = self.check_inner_call(data)
+            if not data:
+                return
+            data.pop("secret")
+            return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
+
+        club_id = data.get("club_id")
+        room = self.get_room(club_id)
+        if not room:
+            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='茶馆不存在')
+        if not room.check_player_in_club(uid):
+            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在服務')
+        return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
+
 

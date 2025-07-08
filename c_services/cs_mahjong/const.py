@@ -17,6 +17,8 @@ class PlayType(BaseEnum):
     GUI_YANG_3 = 4,"三丁拐"
     GUI_YANG_2 = 5,"两丁拐"
     BI_JIE_MJ = 6,"毕节麻将"
+    ZUN_YI_LAI_ZI = 7,"遵义麻将(一筒赖子)"
+
 
 
 class ActionType(BaseEnum):
@@ -42,6 +44,7 @@ class CardsType(IntEnum):
     """ 牌相关 """
     CARD_COUNT = 4  # 每张牌的牌数
     YAO_JI = 21
+    YI_WAN = 11  # 1万
     YI_TONG = 31  # 1筒
     WU_GU_JI = 38  # 乌骨鸡
     LAI_ZI = 51  # 癞子（红中）
@@ -78,8 +81,26 @@ class HuType(BaseEnum):
     QING_QI_DUI = 108, "清七对"
     QING_DI_LONG = 109, "清地龙"
     QING_LONG_BEI = 110, "清龙对(清龙背|清龙七对)"
+    DOUBLE_DI_LONG_QI = 111,"双地龙七"
+    THREE_DI_LONG_QI = 112,"三地龙七"
     JIN_GOU_DIAO = 113,"金钩钓"
+    QING_DOUBLE_DI_LONG_QI = 114,"清双地龙七"
+    QING_THREE_DI_LONG_QI = 115,"清三地龙七"
     QING_JIN_GOU = 116,"清金钩"  #（只在二三丁拐下有）
+
+    # 遵义一筒赖子
+    DOUBLE_LONG_QI = 117,"双龙,遵义一筒赖子"
+    QING_DOUBLE_LONG_QI = 118,"清双龙,遵义一筒赖子"
+    THREE_LONG_QI = 119,"三龙,遵义一筒赖子"
+    QING_THREE_LONG_QI = 120,"清三龙,遵义一筒赖子"
+
+    #发财捉鸡
+    SHI_BA_LUO_HAN = 121,"十八罗汉（知行合一）"
+    SI_JIE_GAO = 122,"四节高"
+    SI_AN_KE = 123,"四暗刻（四喜财）"
+    SHI_ER_JIN_CHAI = 124,"十二金钗（八音坐唱）"
+    SAN_JIE_GAO = 125,"三节高"
+    SAN_AN_KE = 126,"三暗刻（三星照）"
 
     # 毕节麻将
     YIN_GOU_DIAO = 131, "银勾钓"
