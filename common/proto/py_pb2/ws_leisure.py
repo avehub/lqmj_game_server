@@ -612,6 +612,7 @@ class S2CPlayerInfo05Mahjong:
             p_info.operates.extend(one_data.get("operates") or [])
             p_info.is_bi_hu = one_data.get("is_bi_hu") or False
             p_info.out_cards.extend(one_data.get("out_cards") or [])
+            p_info.lock_cards.extend(one_data.get("lock_cards") or [])
             pack_table_cards(p_info, **one_data)
             men_cards = one_data.get("men_cards") or []
             for men_data in men_cards:
@@ -922,6 +923,34 @@ class S2CStartExchangeCards:
 
 
 # ################################## 麻将 ##################################
+
+# ################################## 茶馆通知 ##################################
+
+class S2CClubRoomInfo:
+    @classmethod
+    def pb_mode(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CClubRoomInfo()
+        obj.club_id = kwargs.get("club_id") or 0
+        obj.created = kwargs.get("created") or 0
+        obj.creator = kwargs.get("creator") or 0
+        obj.cs_type = kwargs.get("cs_type") or 0
+        obj.id = kwargs.get("id") or 0
+        obj.is_friend = kwargs.get("is_friend") or 0
+        obj.is_location = kwargs.get("is_location") or 0
+        obj.max_player = kwargs.get("max_player") or 0
+        obj.pay_type = kwargs.get("pay_type") or 0
+        obj.platform = kwargs.get("platform") or 0
+        obj.play_type = kwargs.get("play_type") or 0
+        obj.price = kwargs.get("price") or 0
+        obj.room_id = kwargs.get("room_id") or 0
+        obj.room_type = kwargs.get("room_type") or 0
+        pack_rule_details(obj, **kwargs)
+        obj.seats.extend(kwargs.get("seats") or [])
+        obj.total_round = kwargs.get("total_round") or 0
+        obj.updated = kwargs.get("updated") or 0
+        obj.msg_type = kwargs.get("msg_type") or 0
+
+# ################################## 茶馆通知 ##################################
 
 
 # ################################## ws大厅通知 ##################################

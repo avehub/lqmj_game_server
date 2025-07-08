@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 
 from c_services.const.base_card import BaseCard
 
@@ -14,6 +15,7 @@ class BasePoker:
         self.__cards = card_list
         self.__cards_count = len(self.__cards)
         self.__set_cards_list = []
+        self.__not_set_cards = []
 
     @property
     def cards(self):
@@ -41,6 +43,7 @@ class BasePoker:
         if self.__set_cards_list:
             self.__set_cards_ordered(card_count)
         else:
+            print("self.__cards",len(self.__cards))
             random.shuffle(self.__cards)
             half_idx = self.__cards_count // 2
             self.swap_card(0, half_idx)
@@ -82,7 +85,6 @@ class BasePoker:
             for _ in range(extra_count):
                 extra_list.append(self.pop())
             all_cards.append(extra_list)
-
         return all_cards
 
     @property
@@ -145,10 +147,11 @@ class BasePoker:
         all_set_cards = []
         player_count = len(self.__set_cards_list) - 1  # 在这里计算人数表示 只发设置人数
         for cards in self.__set_cards_list[:-1]:
-            all_set_cards.extend(cards)
+            all_set_cards.extend(cards[:card_count]) #根据传入牌数切片处理防止设牌数量大于发牌数量,导致总的牌数量有误
 
+        self.__not_set_cards = self.__set_cards_list[:-1]
         # 设置摸牌
-        set_mo_cards = self.__set_cards_list[-1]
+        set_mo_cards = [24]
 
         all_cards_map = {}
         for c in self.all_cards:
@@ -177,6 +180,7 @@ class BasePoker:
                     # 未设置的牌用剩余牌填充
                     remain_cards and order_cards.append(remain_cards.pop())
 
+
         # 设置摸牌
         order_cards.extend(set_mo_cards)
         order_cards.extend(remain_cards)
@@ -184,3 +188,35 @@ class BasePoker:
 
         self.__cards = order_cards
         self.__set_cards_list.clear()  # 清除当前设牌
+
+    def not_set_cards_ordered(self,seats,card_count):
+        not_set_cards = []
+        for i ,cards in enumerate(self.__not_set_cards):
+            if i+1 in seats:
+                not_set_cards.extend(cards[card_count:])
+
+        count_no = Counter(not_set_cards)
+        count_remain = Counter(self.__cards[self.__cursor:])
+
+        # 检查 remain_cards 是否包含足够元素
+        for item, req_count in count_no.items():
+            if count_remain.get(item, 0) < req_count:
+                raise ValueError(f"元素 {item} 数量不足（需要 {req_count} 个，实际 {count_remain.get(item, 0)} 个）")
+
+        temp = []  # 存储非匹配元素
+        count = count_no.copy()  # 动态计数器
+
+        for card in self.__cards[self.__cursor:]:
+            if card in count and count[card] > 0:
+                count[card] -= 1  # 标记已匹配
+            else:
+                temp.append(card)  # 保留非匹配元素
+        print("remain_cards",self.__cards[self.__cursor:])
+
+        new_remain = not_set_cards + temp  # 前 N 位 = no_set_cards，后续 = 剩余元素
+        self.__cards[self.__cursor:] = new_remain  # 同步修改原列表
+        self.__not_set_cards = []
+        print("new_remain",self.__cards[self.__cursor:])
+
+
+

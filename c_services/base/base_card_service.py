@@ -1,11 +1,11 @@
 from asyncio import sleep
 
 from c_services.base.base_service import BaseService
-from c_services.const.cs_enum_const import CmdRoom, RoomStatus
+from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdClub, ClubMsgType
 from c_services.cs_mahjong.const import OverType
 from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
 from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
-from common.public.enum_const import StaCode
+from common.public.enum_const import StaCode, ServiceEnum
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 
 
@@ -18,17 +18,19 @@ class BaseCardService(BaseService):
 
     async def _on_new_match(self, uid, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
+        print("匹配",data)
         await self.new_match(uid, data)
 
     async def new_match(self, uid, data):
-        print(uid)
         tid = data.get("room_id")
-        print("tid",tid)
+        club_id = data.get("club_id")
         room = self.get_room(tid)
         if not room:
             room = self.create_room(self.ROOM, data,tid = tid)
             self.log_info(f"创建房间{room.tid}")
             room.creator = uid
+            if club_id > 0:
+                await room.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, room.club_room_info(ClubMsgType.CREATE_ROOM))
         else:
             player = self.get_player(uid)
             if player and player.tid == tid:
@@ -59,7 +61,7 @@ class BaseCardService(BaseService):
     async def __req_dismiss_room(player, room, data):
         if not room.agree_dismiss_seats and not room.timer_dismiss:
             room.call_dismiss(120, room.force_dismiss, OverType.FORCE)
-            if room.room_status in (RoomStatus.T_IDLE,RoomStatus.T_READY):
+            if room.room_status not in (RoomStatus.T_DISMISS,RoomStatus.T_CLOSED):
                 await room.async_set_room_status(RoomStatus.T_DISMISS)
                 room.set_not_playing_dismiss(room.room_status,True)
 
@@ -87,7 +89,6 @@ class BaseCardService(BaseService):
             room.clear_agree_dismiss()
             return await room.force_dismiss(OverType.FORCE)
         if player.uid == room.owner and room.in_room_count == 1:
-            player.on_game_over()
             room.clear_agree_dismiss()
             return await room.force_dismiss(OverType.FORCE)
 
@@ -95,3 +96,4 @@ class BaseCardService(BaseService):
     async def clear_in_service(self):
         await GameRoomsRC.abnormal_cs_type(self.service_type,"重启子游戏服务")
         await super().clear_in_service()
+

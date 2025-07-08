@@ -14,7 +14,6 @@ from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_prop import ItemsPropRC
 from lucky_game.model_rc.base_ranking import ConfRankingMatchTimeRc, ConfSeasonRC, UserRankingRC, ConfRankingRC
 from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.kit_async import DelayCall, delay_func
@@ -22,7 +21,6 @@ from c_services.const.cs_enum_const import CmdMatch, CmdRoom
 from common.public.enum_const import ServiceEnum, StaCode, GameType
 from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD
 from common.utils.kit_dt import KitDt
-from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from .const import MatchingMode
@@ -54,12 +52,6 @@ class MatchServer(BaseServer, LeisureService):
 
         self.__matching_mode = MatchingMode.RAND_TIME
         self.__match_search_extension_time: Dict[int, Dict[str, int]] = {}  # 赛季搜索扩展时间
-
-        self.register_rc_model(
-            BaseRobotRC, ConfRobotRC, BaseUserRC, LeisureConfRC, UserBagRC, ItemsPropRC, UserSkinRC, ItemsSkinRC,
-            ConfJsonRC, ConfSeasonRC, ConfRankingRC, UserRankingRC, ConfRankingMatchTimeRc, PlayerGameTimesRC,
-            UserVipRC, ConfVipRC, UserActivityRC
-        )
         DelayCall(0.5, self.__init_data).start()
         DelayCall(2, self.__loop_match_by_type).loop_start()
         self.add_handlers({

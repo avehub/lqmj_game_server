@@ -1,29 +1,20 @@
 from common.proto.py_pb2.ws_c2s import ding_que_model
 from common.proto.py_pb2.ws_leisure import S2CDingQueInfo
 from common.public.enum_const import StaCode
-from .room_base import Room
-from .const import (FlowStatus, ActionType, CheckType, PlayType)
+from .const import (FlowStatus, ActionType, CheckType, PlayType, CardsType, JiType)
+from .room_bijie import RoomBJ
 from ..const.cs_enum_const import CmdRoom
 
 
-class RoomGY(Room):
+class RoomGY(RoomBJ):
     def __init__(self, tid, service, room_conf):
-        room_conf.get("rule_details")["bao_ting"] = 1
         super().__init__(tid, service, room_conf)
         self.__cha_que = 0
         self.__yuan_que = 0
-        self.__lian_zhuang = 0
         if self.play_type in (PlayType.GUI_YANG_2,PlayType.GUI_YANG_3) and self.liang_men_pai == 0:
             self.__cha_que = 1
             self.__yuan_que = 1
 
-        if self.play_type == PlayType.GUI_YANG_4:
-            self.__lian_zhuang = int(self.rule_detail.get("lian_zhuang", 0))
-
-        self.__yuan_bao = 0
-        if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3):
-            # 起手牌满足听牌条件才能报听。摸第一张牌后不可再报听，庄家除外。
-            self.__yuan_bao = self.__rule_details.get("yuan_bao", 0)
 
     def get_tian_ting_operates(self,p):
         """获取玩家天听操作"""
@@ -74,46 +65,20 @@ class RoomGY(Room):
         await self.enter_mo_pai_call()
 
 
-    def __kai_pai_check_out(self, accounts: dict):
+    def kai_pai_check_out(self, accounts: dict):
         """
         3人开牌结算
         统一数据结构
         """
-        # 翻鸡
-        self.__ji_cards, zhuo_ji = self.calc_fan_ji_cards()
-        self.log_info(self.tid, "翻到的所有鸡牌", self.__ji_cards, "捉鸡：", zhuo_ji)
-
-        # 1.开牌牌型结算
-        self.log_info(self.tid, "开胡信息: ", self.__kai_pai_hu_info)
-        for hu_info in self.__kai_pai_hu_info:
-            self.check_by_num_3(accounts, hu_info)
-
+        accounts, zhuo_ji = super().kai_pai_check_out(accounts)
         # 原缺
         self.check_out_yuan_que(accounts)
         # 查缺
         self.check_out_cha_que(accounts)
-
-        # 2.结算闷捡
-        self.check_men_jian(accounts)
-
-        # 3.结算鸡分
-        # 3.1 冲锋鸡
-        self.check_chong_feng_ji(accounts)
-
-        # 3.2 责任鸡(责任鸡无金鸡一说，额外算分)
-        self.check_ze_ren_ji(accounts)
-
-        # 3.3 翻鸡
-        self.check_ji(accounts)
-
+        #包鸡
         if self.bao_ji:
             self.bao_ji_check(accounts)
-
-        # 4.结算杠分
-        # 4.1 结算正常玩家的杠分
-        self.check_gang(accounts)
-
-        # 4.2 结算包杠
+        #包杠
         if self.bao_gang:
             self.bao_gang_check(accounts)
 
@@ -196,36 +161,28 @@ class RoomGY(Room):
             self_data = self.self_ming_xi_data(type_, win_from, win_total)
             self.update_result_score(accounts, receiver.seat_id, 1, self_data)
 
-    def check_out_lian_zhuang(self, accounts: dict):
-        """结算连庄（贵阳捉鸡4人专属）：连庄玩家从其他玩家获得（连庄次数-1）分"""
-        if self.__lian_zhuang != 1:  # 非连庄模式直接退出
-            return
 
-        self.log_info(self.__tid, "结算连庄")
-        type_ = CheckType.CHECK_LIAN_ZHUANG
+    def get_per_score(self,ji,score,count,default_ji,liu_ju):
+        bei_lv = 1
+        if not liu_ju:
+            if ji in self.__fan_jin_ji_cards:
+                bei_lv = 2
 
-        # 预过滤有效玩家（非空且连庄≥2）
-        valid_winners = [w for w in self.__winner_list if w and w.lian_zhuang >= 2]
-        if not valid_winners:  # 无有效连庄玩家提前退出
-            return
+        if ji == CardsType.WU_GU_JI and ji not in default_ji:
+            per_score = count
+        else:
+            per_score = self.ji_pai_score.get(ji, 1) * count * bei_lv
+        return per_score
 
-        # 预过滤需付分玩家（非空且非连庄玩家）
-        payers = [p for p in self.__seats if p and p not in valid_winners]
-
-        # 批量处理连庄玩家
-        for winner in valid_winners:
-            score_per_payer = winner.lian_zhuang - 1  # 单玩家应付分数
-            win_total = score_per_payer * len(payers)  # 总收益
-            win_from = [p.seat_id for p in payers]  # 付分玩家列表
-
-            # 批量扣除玩家分数
-            for payer in payers:
-                other_data = self.other_ming_xi_data(type_, winner.seat_id, -score_per_payer)
-                self.update_result_score(accounts, payer.seat_id, 0, other_data)
-
-            # 连庄玩家加分
-            self_data = self.self_ming_xi_data(type_, win_from, win_total)
-            self.update_result_score(accounts, winner.seat_id, 1, self_data)
+    def check_extra_ji(self,ji,score,count):
+        if ji == CardsType.WU_GU_JI and ji not in self.default_ji:
+            per_score = score + count
+        elif self.__yin_ji and ji in self.fan_yin_ji_cards:
+            # 银鸡处理（只有翻鸡才有，流局无）
+            per_score = score + self.ji_pai_score.get(JiType.YIN_JI, 1) * count
+        else:
+            per_score = score + self.ji_pai_score.get(ji, 1) * count
+        return per_score
 
 
 

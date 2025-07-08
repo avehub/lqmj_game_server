@@ -49,6 +49,20 @@ class CallCheck(BaseEnum):
     CLIENT = 1, "客户端"
     INNER = 2, "内部调用"
 
+@unique
+class CmdClub(BaseEnum):
+    ENTER_CLUB = 1,"进入茶馆",CallCheck.INNER.val
+    QUIT_CLUB = 2,"退出茶馆"
+    ROOM_INFO_CHANGE = 3,"茶馆房间改变",CallCheck.INNER.val
+    CLUB_OWNER_DISMISS = 4,"茶馆房主解散"
+    PLAYER_READY_EXCEPT_OWNER = 5,"所有玩家准备，除了房主",CallCheck.INNER.val
+
+@unique
+class ClubMsgType(BaseEnum):
+    CREATE_ROOM = 1,"创建茶馆游戏房间"
+    ENTER_ROOM = 2,"进入茶馆游戏房间"
+    QUIT_ROOM = 3,"退出茶馆游戏房间"
+    DISMISS_ROOM = 4,"解散茶馆游戏房间"
 
 @unique
 class CmdRoom(BaseEnum):

@@ -18,18 +18,14 @@ from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_goods import ItemsBaseRC
 from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.base_mails import MailsRC
-from lucky_game.model_rc.base_prop import ItemsPropRC
 from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
 from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
 from lucky_game.model_rc.base_store import ConfStoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
-from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
@@ -75,14 +71,6 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.USER_EVENT_TRACKING: self.__user_event_tracking,
             # CmdWorkers.PROCESS_SAFE_BOX: self.__process_safe_box,
         })
-
-        self.register_rc_model(
-            GoodsManagerRC, PlayerGameTimesRC, ConfTaskRC, UserTaskRC, UserBehaviorsRC, ConfStoreRC, UserVipRC,
-            BaseUserRC, UserActivityRC, ConfVipRC, ConfJsonRC, UserSafeBoxRC, UserCosmeticRC, ItemsCosmeticRC,
-            UserBagRC, UserSkinRC, ItemsSkinRC, UserRankingRC, ConfRankingRC, MailsRC, ItemsPropRC,
-            ItemsBaseRC, ConfSeasonRC, RecordsAdminMailsRC, LeisureConfRC
-        )
-
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
         DelayCall(1, self.__get_date_task_exec).start()

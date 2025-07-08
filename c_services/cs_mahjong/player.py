@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from c_services.base.base_leisure_player import BaseLeisurePlayer
-from c_services.cs_mahjong.const import ActionType
+from c_services.cs_mahjong.const import ActionType, HuType
 from c_services.cs_mahjong.poker import Poker
 from common.utils import earth_position
 from common.utils.utils import UtilsTool
@@ -45,14 +45,20 @@ class Player(BaseLeisurePlayer):
         self.__ji_pai = []
         self.__chong_feng_ji = 0
         self.__chong_feng_wgj = 0
+        self.__chong_feng_yi_tong = 0
+        self.__chong_feng_yi_wan = 0
         self.__ze_ren_ji = 0
         self.__ze_ren_wgj = 0
+        self.__ze_ren_yi_tong = 0
+        self.__ze_ren_yi_wan = 0
         self.__han_bao_dou_an_gang_count = 0
         self.__han_bao_dou_zhuan_wan_gang_count = 0
         self.__han_dou_cards = set()
         self.__is_ready = False
         self.__hu_info = {}  # 胡开信息
         self.__shao_tong_xing_zheng = 0  # 烧通行证
+        self.__hu_path = None
+        self.__dian_pao_no_hu = 0 #点炮未胡
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
@@ -159,6 +165,14 @@ class Player(BaseLeisurePlayer):
     def add_operates(self, opt):
         self.__operates.append(opt)
 
+    @property
+    def hu_path(self):
+        return self.__hu_path
+
+    @hu_path.setter
+    def hu_path(self, hu_path):
+        self.__hu_path = hu_path
+
 
     @property
     def mo_pai(self):
@@ -211,6 +225,14 @@ class Player(BaseLeisurePlayer):
     def zi_mo_cards(self):
         return deepcopy(self.__zi_mo_cards)
 
+    @property
+    def dian_pao_no_hu(self):
+        return self.__dian_pao_no_hu
+
+    @dian_pao_no_hu.setter
+    def dian_pao_no_hu(self,value):
+        self.__dian_pao_no_hu = value
+
     def gang_in_operates(self):
         if ActionType.ACTION_TYPE_AN_GANG in self.__operates:
             return ActionType.ACTION_TYPE_AN_GANG
@@ -247,6 +269,7 @@ class Player(BaseLeisurePlayer):
     def on_round_over_clear(self):
         self.is_lock = False
         self.__has_shang_ga = False
+        self.__mo_pai = 0
         self.__shang_ga_score = 0
         self.__operates.clear()
         self.__ting_list = []
@@ -258,8 +281,12 @@ class Player(BaseLeisurePlayer):
         self.__men_cards = []
         self.__chong_feng_ji = 0
         self.__chong_feng_wgj = 0
+        self.__chong_feng_yi_tong = 0
+        self.__chong_feng_yi_wan = 0
         self.__ze_ren_ji = 0
         self.__ze_ren_wgj = 0
+        self.__ze_ren_yi_tong = 0
+        self.__ze_ren_yi_wan = 0
         self.__jiao_pai = 0
         self.__tian_ting = 0
         self.__can_tian_ting = 0
@@ -274,6 +301,7 @@ class Player(BaseLeisurePlayer):
         self.__tui_zhang_ke_kai = 0
         self.__jian_next_player_card = 0
         self.__is_ready = False
+        self.__hu_path = None
 
         self.__chu_cards.clear()
         self.__all_chu_cards.clear()
@@ -372,12 +400,20 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = lock_cards
 
     def get_out_not_lock_card(self):
-        lock_set = set(self.__lock_cards)
-        print("lock_set",lock_set)
-        result = [card for card in self.cards if card not in lock_set]
-        if not result:
-            return [self.__mo_pai]
-        return [card for card in self.cards if card not in lock_set]
+        card_count = {}
+        for card in self.cards:
+            card_count[card] = card_count.get(card, 0) + 1
+
+        for locked_card in self.__lock_cards:
+            if card_count.get(locked_card, 0) > 0:
+                card_count[locked_card] -= 1
+
+        result = []
+        for card in self.cards:
+            if card_count.get(card, 0) > 0:
+                result.append(card)
+                card_count[card] -= 1  # 减少计数避免重复添加
+        return result
 
     def set_lock_cards(self, lock_cards):
         """ 锁牌，锁住除lock_cards的牌 """
@@ -551,28 +587,31 @@ class Player(BaseLeisurePlayer):
         self.__shang_ga_score = 0
 
 
-    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None):
+    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None,include_hand_card = True):
         """
         计算玩家自己所有鸡牌
         fan_ji_list: 桌子中所有鸡牌的集合(默认鸡 + 翻鸡 + 乌骨鸡，后两种可选)
         default_ji: 默认鸡
         with_out: 满堂鸡包含打出的鸡
         exclude_last_card: 打出的牌不算最后一张（点炮那张）
+        include_hand_card:是否包含手牌
         """
         fan_ji_list = fan_ji_list or set()
 
         all_bird = default_ji | fan_ji_list  # 并集
 
-        # 手牌
-        for card in self.cards:
-            if card in all_bird:
-                self.__ji_pai.append(card)
+        if include_hand_card:
+            # 手牌
+            for card in self.cards:
+                if card in all_bird:
+                    self.__ji_pai.append(card)
 
-        # 闷捡的牌
-        for men_data in self.__men_cards:
-            card = men_data["card"]
-            if card in all_bird:
-                self.__ji_pai.append(card)
+            # 闷捡的牌
+            for men_data in self.__men_cards:
+                card = men_data["card"]
+                if card in all_bird:
+                    self.__ji_pai.append(card)
+
         # 碰杠的牌
         for combo in self.__table_cards:
             for card in combo[1:-1]:
@@ -617,18 +656,18 @@ class Player(BaseLeisurePlayer):
                     stand_ji.append(card)
         return stand_ji
 
-    def calc_peng_gang_ji(self, default_ji):
+    def calc_peng_gang_ji(self, default_ji,include_an_gang=False):
         """ 计算碰杠的鸡(除暗杠) """
         peng_gang_ji = []
         for combo in self.__table_cards:
-            if combo[0] == ActionType.ACTION_TYPE_AN_GANG:
+            if not include_an_gang and combo[0] == ActionType.ACTION_TYPE_AN_GANG:
                 continue
             for card in combo[1:-1]:
                 if card in default_ji:
                     peng_gang_ji.append(card)
         return peng_gang_ji
 
-    def get_bao_ji(self, default_ji):
+    def get_bao_ji(self, default_ji,include_an_gang=False):
         """
         不叫牌的玩家碰杠的默认鸡和打出的默认鸡要按相
         同分数倒给进行包鸡。
@@ -641,7 +680,7 @@ class Player(BaseLeisurePlayer):
         # 碰杠的默认鸡
         for combo in self.__table_cards:
             # 暗杠属于手上的鸡
-            if combo[0] == ActionType.ACTION_TYPE_AN_GANG:
+            if not include_an_gang and combo[0] == ActionType.ACTION_TYPE_AN_GANG:
                 continue
             for card in combo[1:-1]:
                 if card in default_ji:
@@ -694,6 +733,7 @@ class Player(BaseLeisurePlayer):
             "ji_pai": self.__ji_pai,
             "men_cards": self.__men_cards,
             "is_zha_hu": self.__zha_hu,
+            "hu_path": self.__hu_path,
         }
 
     @property
@@ -801,6 +841,114 @@ class Player(BaseLeisurePlayer):
         return True
 
 
-    def on_game_over(self):
+    def clear_player(self):
         self.on_round_over_clear()
         self.__clear_game_data()
+        super().clear_player()
+
+    def jiao_di_long(self):
+        return self.__jiao_pai in (
+            HuType.DI_LONG_QI, HuType.QING_DI_LONG,
+            HuType.DOUBLE_LONG_QI, HuType.QING_DOUBLE_LONG_QI,
+            HuType.THREE_DI_LONG_QI, HuType.QING_THREE_DI_LONG_QI
+        )
+
+    def calc_hand_ji_by_lai_zi(self, default_ji, fan_ji_list, ji_to_score, lai_zi, is_winner=False):
+        """
+        根据 手牌 的胡牌类型找鸡牌
+        前提是叫牌了
+        手里的单独计算，因为赖子可能会作为翻鸡
+        """
+        hand_ji_list = []
+        if self.__jiao_pai <= 0:
+            return hand_ji_list
+
+        fan_ji_list = fan_ji_list or set()
+        all_bird = default_ji | fan_ji_list  # 并集
+
+        if lai_zi not in self.__cards:
+            for card in self.__cards:
+                if card in all_bird:
+                    hand_ji_list.append(card)
+            if self.jiao_di_long():
+                for combo in self.__table_cards:
+                    for card in combo[1:-1]:
+                        if card in all_bird:
+                            hand_ji_list.append(card)
+
+            return hand_ji_list
+
+        all_comb_list = []
+        for comb in self.__hu_path:
+            all_comb_list.extend(comb)
+            comb_len = len(comb)
+            if comb_len == 2:
+                if comb[0] == comb[1] and comb[0] in all_bird:
+                    hand_ji_list.extend(comb)
+            elif comb_len == 3:
+                if comb[0] == comb[1] == comb[2]:
+                    if comb[0] in all_bird:
+                        hand_ji_list.extend(comb)
+                else:
+                    if comb[0] + 1 == comb[1] and comb[0] + 2 == comb[2]:
+                        if comb[0] in all_bird:
+                            hand_ji_list.append(comb[0])
+                        if comb[1] in all_bird:
+                            hand_ji_list.append(comb[1])
+                        if comb[2] in all_bird:
+                            hand_ji_list.append(comb[2])
+            elif comb_len == 4:
+                if comb[0] == comb[1] == comb[2] == comb[3]:
+                    if comb[0] in all_bird:
+                        hand_ji_list.extend(comb)
+        if not is_winner:
+            # 非胡牌者需要减去一个癞子（因为算hu_path时添加了一个癞子进手牌）
+            all_comb_list_c_map = {}
+            for c in all_comb_list:
+                all_comb_list_c_map[c] = all_comb_list_c_map.get(c, 0) + 1
+            extra_cards = []
+            for c in self.__cards:
+                # [31, 28, 29] <-> [27, 28, 29] -> [27]
+                if all_comb_list_c_map.get(c, 0) > 0:
+                    all_comb_list_c_map[c] -= 1
+                else:
+                    extra_cards.append(c)
+
+            # 1.hu_path - 手牌 = 癞子替代的牌
+            res_cards = []  # hu_path - 手牌
+            for card, count in all_comb_list_c_map.items():
+                if count > 0:
+                    res_cards.extend([card] * count)
+
+            lz_count = extra_cards.count(lai_zi)
+            remove_count = len(res_cards) - lz_count
+            if remove_count > 0:
+                new_res_cards = []  # 记录鸡牌
+                for c in res_cards[:]:
+                    if ji_to_score.get(c):
+                        new_res_cards.append(c)
+                        res_cards.remove(c)
+                if new_res_cards:
+                    new_res_cards.sort(key=ji_to_score.get)  # 按鸡牌分升序
+
+                res_cards.extend(new_res_cards)  # 得到按鸡分从小到大的牌
+                for c in res_cards[:remove_count]:
+                    if c in hand_ji_list:
+                        hand_ji_list.remove(c)
+
+        return hand_ji_list
+
+    def lai_zi_in_played(self, lai_zi):
+        """ 打出去的癞子 + 碰杠的癞子 """
+        count = 0
+        for card in self.__chu_cards:
+            if card == lai_zi:
+                count += 1
+        for combo in self.__table_cards:
+            if combo[1] != lai_zi:
+                continue
+            if combo[0] == ActionType.ACTION_TYPE_PENG:
+                count += 3
+            else:
+                count += 4
+        return count
