@@ -178,6 +178,8 @@ class ClubRoomTemplates(DBModel):
     max_player = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
     total_round = fields.SmallIntField(max_length=6, null=True, default=0, description='总局数')
     price = fields.SmallIntField(max_length=6, null=True, default=0, description='费用')
+    is_location = fields.SmallIntField(max_length=2, null=True, default=0, description='是否开启定位：0否 1是')
+    is_friend = fields.SmallIntField(max_length=2, null=True, default=0, description='是否只允许好友可进：0否 1是')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:

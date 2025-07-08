@@ -44,11 +44,14 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                 "total_round": kwargs.get('total_round', 0),
                 "cs_type": kwargs.get('cs_type', 0),
                 "price": kwargs.get('price', 0),
+                "is_friend": kwargs.get('is_friend', 0),
+                "is_location": kwargs.get('is_location', 0),
             }
 
             new_template = await cls.db_model.add_one(template_data)
             if not new_template:
                 return False, "模板创建失败"
+            await cls.cache_session_drop(club_id)
         except OperationalError as e:
             return False, f"模板创建失败: {str(e)}"
         return new_template.id, "成功"
@@ -72,7 +75,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             template, e = await cls.get_by_id(template_id)
             if not template:
                 return False, e
-            valid_fields = ["max_player", "rule_details", "total_round", "price", "cs_type", "play_type"]
+            valid_fields = ["max_player", "rule_details", "total_round", "price", "cs_type", "play_type", "is_friend", "is_location"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
             if 'rule_details' in update_data:
                 update_data['rule_details'] = json_encode(update_data['rule_details'])
