@@ -3,15 +3,16 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
-from common.public.enum_const import StaCode
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
-from c_services.const.cs_enum_const import RoomStatus
+from c_services.const.cs_enum_const import RoomStatus, CmdClub
 from common.public.common_class import CommonApi
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
+from common.public.conf import C_SERVICE_SECRET_KEY
 
 
 class BaseClub(GameAuthApi):
@@ -112,6 +113,14 @@ class ClubHall(BaseClub):
                 user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])
                 room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "uid": uid}
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.ENTER_CLUB,
+            data,
+            uid,
+        )
         return self.answer(data=result)
 
 
