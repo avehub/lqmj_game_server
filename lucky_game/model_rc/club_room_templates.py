@@ -81,7 +81,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                 update_data['rule_details'] = json_encode(update_data['rule_details'])
             if update_data:
                 await cls.db_model.filter(id=template_id).update(**update_data)
-                await cls.cache_session_drop(template.club_id)
+                await cls.cache_session_drop(template["club_id"])
         except OperationalError as e:
             return None, f"模板更新失败: {str(e)}"
         return True, "成功"
@@ -90,7 +90,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
     async def get_by_id(cls, template_id: int):
         """根据ID获取模板详情"""
         try:
-            template = await cls.db_model.get_or_none(id=template_id)
+            template = await cls.db_model.get_by_pk(template_id)
             if not template:
                 return None, "未找到模板"
         except OperationalError as e:

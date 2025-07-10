@@ -154,12 +154,12 @@ class RoomTemplateDelete(RoomTemplateBase):
         template, e = await ClubRoomTemplatesRC.get_by_id(template_id)
         if template is None:
             return self.answer(StaCode.FAIL, hint=e)
-        club_id = template.club_id
+        club_id = template["club_id"]
         await self.check_authority(uid, club_id)
         sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
-        cs_enum = ServiceEnum.find_member_by_val(template.cs_type)
+        cs_enum = ServiceEnum.find_member_by_val(template["cs_type"])
         data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY}
         await self.cs2cs_by_rmq(
             cs_enum,

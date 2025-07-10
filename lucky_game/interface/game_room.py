@@ -64,16 +64,16 @@ class GameRoomAPI(RoomTemplateBase):
         template, e = await ClubRoomTemplatesRC.get_by_id(template_id)
         if not template:
             return self.answer(StaCode.FAIL, hint=e)
-        platform = template.platform
-        play_type = template.play_type
-        club_id = template.club_id
-        max_player = template.max_player
-        price = template.price
-        total_round = template.total_round
-        rule_details = template.rule_details
-        cs_type = template.cs_type
-        is_location = template.is_location
-        is_friend = template.is_friend
+        platform = template["platform"]
+        play_type = template["play_type"]
+        club_id = template["club_id"]
+        max_player = template["max_player"]
+        price = template["price"]
+        total_round = template["total_round"]
+        rule_details = template["rule_details"]
+        cs_type = template["cs_type"]
+        is_location = template["is_location"]
+        is_friend = template["is_friend"]
         return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend
 
     async def again_mq(self, again_uid, room_data):
