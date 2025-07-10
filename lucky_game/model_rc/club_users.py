@@ -144,7 +144,7 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_uid(cls, uid: int, in_role: list = []):
+    async def get_club_user_by_uid(cls, uid: int, in_role: list = None):
         """根据用户ID获取用户茶馆关系"""
         try:
             result = await cls.cache_session_uid_get(uid)
@@ -156,13 +156,18 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_uid_club_ids(cls, uid: int, in_role: list = []):
+    async def get_club_user_by_uid_club_ids(cls, uid: int, in_role: list = None, club_id: any = None):
         """根据用户ID获取用户加入、管理茶馆IDS"""
         result = []
         try:
             where = {"uid": uid}
             if in_role:
                 where["role__in"] = in_role
+            if club_id:
+                if isinstance(club_id, list):
+                    where["club_id__in"] = club_id
+                else:
+                    where["club_id"] = club_id
             club_users_data = await cls.db_model.get_by_dict(where)
             if club_users_data:
                 result = [club_user["club_id"] for club_user in club_users_data]

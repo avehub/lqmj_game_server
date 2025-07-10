@@ -150,8 +150,9 @@ class ClubCheckList(BaseClub):
         # 获取请求参数
         u_info = kwargs.get("u_info")
         check_uid = u_info.get("uid")
+        club_id = self.check_int(req.args.get("club_id"), require=False, default=None, p_name="茶馆ID")
         # 获取用户管理的茶馆
-        club_ids, e = await ClubUsersRC.get_club_user_by_uid_club_ids(check_uid, [1, 9])
+        club_ids, e = await ClubUsersRC.get_club_user_by_uid_club_ids(check_uid, in_role=[1, 9], club_id=club_id)
         data = []
         if club_ids:
             data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(

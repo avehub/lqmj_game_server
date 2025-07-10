@@ -73,10 +73,10 @@ class BaseClubRC(BaseCommonRC):
         return row, "创建成功"
 
     @classmethod
-    async def get_club_by_uid(cls, uid: int, in_role: list = []):
+    async def get_club_by_uid(cls, uid: int, in_role: list = None):
         """根据用户ID获取已加入茶馆列表"""
         try:
-            club_ids, _ = await ClubUsersRC.get_club_user_by_uid_club_ids(uid, in_role)
+            club_ids, _ = await ClubUsersRC.get_club_user_by_uid_club_ids(uid, in_role=in_role)
             club_list = await cls.db_model.filter(id__in=club_ids).values()
         except OperationalError as e:
             return False, f"失败：{str(e)}"
