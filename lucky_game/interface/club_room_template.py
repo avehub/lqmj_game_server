@@ -10,7 +10,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.handler.decorator import BaseDecorator
 from common.public.common_class import CommonApi
 from common.public.conf import C_SERVICE_SECRET_KEY
-from c_services.const.cs_enum_const import ClubMsgType
+from c_services.const.cs_enum_const import ClubMsgType, CmdClub
 
 
 async def verify_rule_detail(rule_details) -> dict:
@@ -86,7 +86,7 @@ class RoomTemplateCreate(RoomTemplateBase):
         data["msg_type"] = ClubMsgType.CREATE_ROOM.value
         await self.cs2cs_by_rmq(
             cs_enum,
-            ClubMsgType.CREATE_ROOM,
+            CmdClub.ROOM_INFO_CHANGE,
             data,
             uid,
         )
@@ -121,7 +121,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
         data["msg_type"] = ClubMsgType.UPDATE_ROOM.value
         await self.cs2cs_by_rmq(
             cs_enum,
-            ClubMsgType.UPDATE_ROOM,
+            CmdClub.ROOM_INFO_CHANGE,
             data,
             uid,
         )
@@ -163,7 +163,7 @@ class RoomTemplateDelete(RoomTemplateBase):
         data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY}
         await self.cs2cs_by_rmq(
             cs_enum,
-            ClubMsgType.DISMISS_ROOM,
+            CmdClub.ROOM_INFO_CHANGE,
             data,
             uid,
         )
