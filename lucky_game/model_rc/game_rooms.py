@@ -141,6 +141,7 @@ class GameRoomsRC(BaseCommonRC):
                     "is_friend": kwargs.get("is_friend"),
                     "room_type": kwargs.get("room_type"),
                     "status": kwargs.get("status", 0),
+                    "round_num": kwargs.get("round_num", 0),
                 }
                 new_room = await cls.db_model.add_one(room_data)
                 if not new_room:
@@ -288,7 +289,7 @@ class GameRoomsRC(BaseCommonRC):
             if not room:
                 return False, e
             valid_fields = ["status", "player_count", "rule_details", "play_type", "max_player", "pay_type", "price",
-                            "cs_type"]
+                            "cs_type", "round_num"]
             update_data = {k: v for k, v in kwargs.items() if k in valid_fields}
             if update_data:
                 await cls.db_model.filter(room_id=room_id).update(**update_data)

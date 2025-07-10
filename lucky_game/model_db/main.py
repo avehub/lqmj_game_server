@@ -198,6 +198,7 @@ class GameRooms(DBModel):
     cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
     play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
     total_round = fields.SmallIntField(max_length=6, null=True, default=0, description='总局数')
+    round_num = fields.SmallIntField(max_length=6, default=0, description='对局数')
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
     max_player = fields.SmallIntField(max_length=2, null=True, default=0, description='最大人数')
     is_location = fields.SmallIntField(max_length=2, null=True, default=0, description='是否开启定位：0否 1是')
