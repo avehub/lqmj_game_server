@@ -63,6 +63,7 @@ class ClubMsgType(BaseEnum):
     ENTER_ROOM = 2,"进入茶馆游戏房间"
     QUIT_ROOM = 3,"退出茶馆游戏房间"
     DISMISS_ROOM = 4,"解散茶馆游戏房间"
+    UPDATE_ROOM = 5,"更新茶馆游戏房间"
 
 @unique
 class CmdRoom(BaseEnum):
