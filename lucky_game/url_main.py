@@ -47,6 +47,7 @@ from lucky_game.interface.records_game import UserRecords, TotalRecords, Segment
 from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
 from lucky_game.interface.club_behavior import GetBehaviorExtra
 from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
+from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 
 
 class MainBp(BaseBlue):
@@ -55,6 +56,8 @@ class MainBp(BaseBlue):
         # 结构为: 接口路由地址, 接口视图处理器, 版本号(可选), 接口命名(可选)
         Urls("/testapi", TestApi),
         Urls("/TestCreatGameRecords", TestCreatGameRecords),
+        Urls("/FileUpload", FileUploadHandler),
+        Urls("/FileDelete", FileDeleteHandler),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
