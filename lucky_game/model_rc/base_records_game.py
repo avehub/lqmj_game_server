@@ -179,9 +179,8 @@ class BaseRecordsGameRC(BaseCommonRC):
             seat_groups = defaultdict(list)
             for seat in result_total:
                 seat_groups[seat["record_rid"]].append(seat)
-            for item in result_room["list"]:
+            for item in result_room["list"] if page else result_room:
                 item["room_seat"] = seat_groups.get(item["record_rid"], [])
-
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result_room, "成功"

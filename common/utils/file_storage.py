@@ -5,8 +5,27 @@ import mimetypes
 from datetime import datetime
 from typing import Dict, Optional, Tuple, BinaryIO, List, Union
 
-
+from common.aliyun.content_safety_service import content_security
 from lucky_game.config.conf_start import ConfSrv
+
+
+async def check_file_safety(file_url: str, file_type: str) -> Tuple[bool, Optional[str]]:
+    """
+    检查文件是否安全
+    Args:
+        file_url: 文件地址
+        file_type: 文件类型(image/document/video/audio/archive)
+    Returns:
+        Tuple[bool, Optional[str]]: 安全检查结果和错误信息
+    """
+    result = None
+    if file_type == 'image':
+        result = await content_security.scan_url(file_url)
+
+    if result and result.get('success'):
+        return True, "审核通过"
+    else:
+        return False, "文件审核不通过"
 
 
 class FileStorageService:
@@ -57,6 +76,7 @@ class FileStorageService:
                 return file_type
 
         return None
+
 
     def generate_filename(self, original_filename: str) -> str:
         """生成唯一文件名"""
@@ -123,7 +143,6 @@ class FileStorageService:
         storage_filename = self.generate_filename(filename)
         relative_path = self.get_storage_path(category, **kwargs)
         full_path = os.path.join(relative_path, storage_filename)
-
         try:
              # 本地存储
             result = await self._save_to_local(file_data, relative_path, storage_filename)
@@ -132,7 +151,14 @@ class FileStorageService:
 
             file_url = self.config.LOCAL_STORAGE['public_url_prefix'].rstrip('/') + '/' + \
                        os.path.join(relative_path, storage_filename).replace('\\', '/')
-
+            file_type = self.get_file_type(filename)
+            # TODO 检测文件安全 只能在测试环境校验
+            # sta, e = await check_file_safety(file_url, file_type)
+            # if sta is False:
+            #     return {
+            #         'success': sta,
+            #         'message': f'文件保存失败: {str(e)}'
+            #     }
             # 获取MIME类型
             mime_type, _ = mimetypes.guess_type(filename)
 
@@ -145,7 +171,7 @@ class FileStorageService:
                 'size': result.get('size', 0),
                 'mime_type': mime_type,
                 'category': category,
-                'file_type': self.get_file_type(filename)
+                'file_type': file_type
             }
 
         except Exception as e:

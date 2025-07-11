@@ -72,6 +72,8 @@ class KickRelation(GameAuthApi):
         behavior, e = await ClubUsersRC.delete_club_user(relation_id)
         if not behavior:
             return self.answer(StaCode.FAIL, hint=e)
+        check_uid = kwargs.get("u_info").get("uid")
+
         return self.answer()
 
 

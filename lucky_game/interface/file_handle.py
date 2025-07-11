@@ -7,6 +7,7 @@ from tortoise.exceptions import DoesNotExist
 from lucky_game.config.conf_start import ConfSrv
 from common.utils.file_storage import file_storage
 from common.public.enum_const import StaCode
+from common.public.conf import SERVER_ADDR
 
 
 class FileUploadHandler(GameAuthApi):
@@ -53,7 +54,7 @@ class FileUploadHandler(GameAuthApi):
             if save_result['success']:
                results.append({
                    'success': True,
-                   'file_url': save_result.get('file_url'),
+                   'file_url': SERVER_ADDR + save_result.get('url'),
                    'message': '上传成功',
                })
         return True, results

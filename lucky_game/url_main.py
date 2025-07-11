@@ -94,7 +94,7 @@ class MainBp(BaseBlue):
         Urls("/ClubCancelBlack/", CancelBlack),  # 取消小黑屋
         Urls("/ClubUpdateRelation/", UpdateRelation),  # 编辑茶馆与用户关系
         Urls("/ClubKickRelation/", KickRelation),  # 踢出茶馆
-        Urls("/ClubUserList/", GetClubUser),  # 获取茶馆与用户关系列表
+        Urls("/ClubUserList/", GetClubUser),  # 获取茶馆用户列表
         Urls("/ClubDismiss/", ClubDismiss),  # 解散茶馆
 
         # 用户数据相关
