@@ -111,3 +111,18 @@ class ClubRoomTemplatesRC(BaseCommonRC):
         except OperationalError as e:
             return [], f"查询失败: {str(e)}"
         return templates, "成功"
+
+    @classmethod
+    async def delete_club_all(cls, club_id: int):
+        """删除茶馆所有房间模板(解散茶馆)"""
+        try:
+            query = {
+                "club_id": club_id
+            }
+            data = await cls.db_model.filter(**query).delete()
+            if not data:
+                return False, "失败"
+            await cls.cache_session_drop(club_id)
+        except OperationalError as e:
+            return False, e
+        return True, "成功"

@@ -445,15 +445,15 @@ class BaseUserRC(BaseCommonRC):
             name = generate_natural_random(4)
         return {
             "avatar": SERVER_ADDR + "/resource/default/avatar.png",
-            "name": name,
+            "nickname": name,
             "sex": 0,
-            "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
-            "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
-            "safe_key": RngMaker.mk_str(18),
-            "valid_key": RngMaker.mk_str(16),
-            "dev_ident": dev_ident,
-            "country": "CN",
-            "tst_mark": False,
+            # "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
+            # "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
+            # "safe_key": RngMaker.mk_str(18),
+            # "valid_key": RngMaker.mk_str(16),
+            # "dev_ident": dev_ident,
+            # "country": "CN",
+            # "tst_mark": False,
         }
 
 class BaseBanRC(BaseCommonRC):

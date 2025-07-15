@@ -88,10 +88,9 @@ class ClubGroupRC(RCModel):
     async def delete_group(cls, gid: int):
         """删除茶馆隔离组"""
         try:
-            async with in_transaction(connection_name=DbKey.DEFAULT):
-                sta = await cls.db_model.del_by_pk(gid)
-                if not sta:
-                    return sta, "删除失败"
+            sta = await cls.db_model.del_by_pk(gid)
+            if not sta:
+                return sta, "删除失败"
         except OperationalError as e:
             return None, f"删除失败: {str(e)}"
         return True, "成功"
@@ -117,7 +116,11 @@ class ClubGroupRC(RCModel):
             if name is not None:
                 query["name"] = name
             groups = await cls.db_model.filter(**query).values()
-            if not groups:
+            if groups:
+                #将u_ids转化为列表
+                for item in groups:
+                    item["u_ids"] = json_parse(item["u_ids"]) if item["u_ids"] else []
+            else:
                 return None, "组不存在"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
@@ -140,3 +143,17 @@ class ClubGroupRC(RCModel):
         if group_uid:
             sta = True
         return sta, group_uid
+
+    @classmethod
+    async def delete_club_all(cls, club_id: int):
+        """删除茶馆所有隔离组(解散茶馆)"""
+        try:
+            query = {
+                "club_id": club_id
+            }
+            data = await cls.db_model.filter(**query).delete()
+            if not data:
+                return False, "失败"
+        except OperationalError as e:
+            return False, e
+        return True, "成功"

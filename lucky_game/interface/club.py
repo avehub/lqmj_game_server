@@ -13,6 +13,7 @@ from c_services.const.cs_enum_const import RoomStatus, CmdClub
 from common.public.common_class import CommonApi
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.public.conf import C_SERVICE_SECRET_KEY
+from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
 
 class BaseClub(GameAuthApi):
@@ -244,10 +245,37 @@ class ClubDismiss(BaseClub):
     """解散茶馆"""
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
-        data, e = await BaseClubRC.delete_club(club_id)
+        data, e = await BaseClubRC.delete_club(club_id, u_info)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer()
+
+class ClubRoomCard(BaseClub):
+    """茶馆基金（房卡）"""
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
+        num = self.check_int(req.json.get("num"), require=True, minval=1, p_name="操作数量")
+        # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
+        data, e = await BaseClubRC.club_room_card_operation(u_info, club_id, num)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
+
+
+class ClubRoomCardList(BaseClub):
+    """茶馆基金（房卡）"""
+    async def get(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        event_type = self.check_int(req.args.get("event_type"), require=False, minval=1, p_name="事件类型")
+        page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
+        page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
+        data, e = await ExtraClubEventRC.get_by_filter(club_id=club_id, event_type=event_type, uid=uid, page=page, page_size=page_size)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer(data=data)
+
 

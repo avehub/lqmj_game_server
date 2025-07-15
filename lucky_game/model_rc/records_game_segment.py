@@ -216,9 +216,11 @@ class RecordsGameSegmentRC(BaseCommonRC):
             if final_score is not None:
                 where += f" AND final_score >= {final_score}"
             if order_field is None:
-                order_field = "total_score"
+                order_field = "record_sid"
             if order_type is None:
                 order_type = "DESC"
+            if group_field is None:
+                group_field = "record_sid"
             total = 0
             sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
             if page and page_size:

@@ -183,7 +183,7 @@ class GameRoomsRC(BaseCommonRC):
                 name=userinfo["name"],
                 uid=userinfo["uid"],
                 price=room_data["price"],
-                cs_type=room_data["cs_type"],
+                play_type=room_data["play_type"],
                 room_id=room_data["room_id"],
             )
             add_club_behavior, _ = await ExtraClubEventRC.create_event(
@@ -420,7 +420,6 @@ class GameRoomsRC(BaseCommonRC):
         ids = set()
         data, _ = await cls.get_room_user_all()
         if data:
-            print(data)
             for uid in u_ids:
                 if uid in data:
                     ids.update(uid)

@@ -215,7 +215,7 @@ class ExtraClubEvent(DBModel):
     """茶馆日常事件相关记录表"""
     id = fields.IntField(max_length=10, pk=True, description='事件ID')
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
-    type = fields.SmallIntField(max_length=2, index=True, default=0, description='类型：1基金充值 2基金消耗 3入馆审批记录')
+    type = fields.SmallIntField(max_length=2, index=True, default=0, description='类型：1基金充值 2基金消耗 3入馆审批记录 4茶馆解散')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID（发起方）')
     explain = fields.CharField(max_length=256, null=True, default='', description='说明:记录XX管理员（ID：xx）通过XX玩家（ID：xx）加入茶馆; XX玩家（ID：xx）消耗XX基金创建了xx玩法（房间号：xx）; XX玩家（ID：xx）为茶馆充值基金xx')
 
@@ -251,6 +251,8 @@ class RecordsGameTotal(DBModel):
     room_id = fields.IntField(index=True, description='房间ID', )
     uid = fields.IntField(index=True, description='玩家ID', )
     cs_type = fields.IntField(description='子服务类型', )
+    play_type = fields.SmallIntField(description='玩法类型', )
+    price = fields.SmallIntField(description='费用', )
     final_status = fields.SmallIntField(description='输赢状态：0输 1赢', )
     final_score = fields.IntField(description='最终分数', )
     final_ranking = fields.IntField(description='最终名次', )

@@ -6,6 +6,8 @@ from alibabacloud_dysmsapi20170525.client import Client as Dysmsapi20170525Clien
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_dysmsapi20170525 import models as dysmsapi_models
 from alibabacloud_tea_util import models as util_models
+from common.aliyun.dingtalk_service import dingtalk_exception_handler
+from Tea.exceptions import UnretryableException, TeaException
 
 from common.public.conf import AliYunSms
 
@@ -23,10 +25,12 @@ class AliyunSmsService:
         config = open_api_models.Config(
             access_key_id=AliYunSms.ACCESS_KEY_ID,
             access_key_secret=AliYunSms.ACCESS_KEY_SECRET,
-            endpoint=AliYunSms.ENDPOINT
+            endpoint=AliYunSms.ENDPOINT,
+            connect_timeout=3000,  #连接超时 单位毫秒(ms)
         )
         return Dysmsapi20170525Client(config)
 
+    @dingtalk_exception_handler(service_name='阿里云短信服务')
     async def send_sms(self,
                        phone_number: str,
                        template_code: str,
@@ -57,7 +61,10 @@ class AliyunSmsService:
             )
 
             # 发送请求
-            runtime = util_models.RuntimeOptions()
+            runtime = util_models.RuntimeOptions(
+                autoretry=True,  # 开启重试机制
+                max_attempts=3,  # 重试次数
+            )
             response = await self.client.send_sms_with_options_async(request, runtime)
 
             # 处理响应
@@ -78,7 +85,12 @@ class AliyunSmsService:
                     f"Failed to send SMS to {phone_number}, template: {template_code}, error: {result['message']}")
 
             return result
-
+        except UnretryableException as e:
+            # 网络异常
+            print(e)
+        except TeaException as e:
+            # 业务异常
+            print(e)
         except Exception as e:
             logger.exception(f"SMS sending error: {str(e)}")
             return {

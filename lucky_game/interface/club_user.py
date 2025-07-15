@@ -68,11 +68,11 @@ class UpdateRelation(GameAuthApi):
 class KickRelation(GameAuthApi):
     """踢出茶馆"""
     async def post(self, req: Request, **kwargs):
+        check_uid = kwargs.get("u_info").get("uid")
         relation_id = self.check_int(req.json.get("relation_id"), require=True, p_name="关系ID")
-        behavior, e = await ClubUsersRC.delete_club_user(relation_id)
+        behavior, e = await ClubUsersRC.delete_club_user(relation_id, check_uid=check_uid)
         if not behavior:
             return self.answer(StaCode.FAIL, hint=e)
-        check_uid = kwargs.get("u_info").get("uid")
 
         return self.answer()
 

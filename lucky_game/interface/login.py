@@ -75,6 +75,7 @@ class BaseLogin(GameAuthApi):
         dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
+        avatar = user_info.get("avatar", SERVER_ADDR + "/resource/default/avatar.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
@@ -94,7 +95,7 @@ class BaseLogin(GameAuthApi):
             "platform": user_info.get("platform"),
             "unionid": user_info.get("unionid"),
             "openid": user_info.get("openid"),
-            "avatar": SERVER_ADDR + "/resource/default/avatar.png",
+            "avatar": avatar,
         }
         return info
 
@@ -441,7 +442,7 @@ class LoginByPhone(BaseLogin):
     async def post(self, req: Request):
         phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
         scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
-        platform = self.check_str(req.args.get('platform'), require=True, p_name="平台")
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
         code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         device_id = self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
@@ -456,8 +457,9 @@ class LoginByPhone(BaseLogin):
         login_info = await self.get_login_info(req, LoginWay.PHONE)
         if not u_info:
             # 手机号注册
+            req_user = await BaseUserRC.get_default_user_info("phone", phone=phone_number, device_id=device_id, platform=platform)
             u_info = await self.create_new_user(
-                req, 'phone', login_info, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform)
+                req, 'phone', login_info, req_user, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform)
             self.log_info('phone number Reg u_info:', u_info)
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)

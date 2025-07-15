@@ -159,6 +159,8 @@ class CommonApi(LogMeta):
     @classmethod
     async def json_by_dict(cls, data: str):
         """ json转dict  """
+        if not data:
+            return {}
         if "'" in data:
             str_json = data.replace("'", "\"")
         else:

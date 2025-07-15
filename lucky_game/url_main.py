@@ -17,7 +17,7 @@ from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 #     SafeBoxOperateUser, GetCosmeticUsedItems, UseCosmeticItem, GetCosmeticHandler, \
 #     ClickNewGoodsItem, GetGamePropHandler, GetDetailShardInfo, GetGoodsJumpChance
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechatMiniProgram, LoginByWechat, \
-    LoginByAlipayGame, LoginByDouYinGame
+    LoginByAlipayGame, SendCode, LoginByPhone
 # from lucky_game.interface.up_u_info import ModifyGeneralUserInfo, TestAddGold, GetSessionKey, \
 #     GetWeChatGzhOpenid
 # from lucky_game.interface.some_pay import AliPayNotify, MiniGameRecvPush, MakeOrder, MiniGameQueryOrder, \
@@ -35,7 +35,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     GetActivityHandler
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
-    ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss
+    ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
@@ -62,7 +62,8 @@ class MainBp(BaseBlue):
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
         Urls("/LoginByToken/", LoginByToken),  # Token登录
-        Urls("/LoginByPhone/", LoginByWechatMiniProgram),  # 手机号登陆
+        Urls("/SendCode/", SendCode),  # 发送验证码
+        Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录
         Urls("/LoginByApple/", LoginByAlipayGame),  # AppleID登录
 
@@ -96,15 +97,17 @@ class MainBp(BaseBlue):
         Urls("/ClubKickRelation/", KickRelation),  # 踢出茶馆
         Urls("/ClubUserList/", GetClubUser),  # 获取茶馆用户列表
         Urls("/ClubDismiss/", ClubDismiss),  # 解散茶馆
+        Urls("/ClubRoomCard/", ClubRoomCard),  # 茶馆基金
+        Urls("/ClubRoomCardList/", ClubRoomCardList),  # 茶馆基金记录列表
 
         # 用户数据相关
-        # Urls("/ModifyGeneralUserInfo/", ModifyGeneralUserInfo),  # 更新用户必要信息
+        Urls("/ModifyGeneralUserInfo/", UpdateUserInfo),  # 更新用户必要信息
         Urls("/Certification/", Certification),  # 实名认证
         Urls("/TestUpdateUserResource/", UpdateUserResource),  # 更新用户资源（测试）
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         # Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产
-        # Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
+        Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         # Urls("/GetWeChatGzhOpenid/", GetWeChatGzhOpenid),  # 获取微信公众号的Openid
         #
         # # 游戏相关
@@ -112,8 +115,8 @@ class MainBp(BaseBlue):
         # Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
         # Urls("/QueryUserGameStates/", QueryUserGameStates),  # 获取玩家游戏次数等
         # Urls("/QueryUserAllNumOfGames/", QueryUserAllNumOfGames),  # 查询玩家总对局数
-        Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩
-        Urls("/QueryTotalRecords/", TotalRecords),  # 获取总局游戏战绩
+        # Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩
+        # Urls("/QueryTotalRecords/", TotalRecords),  # 获取总局游戏战绩
         Urls("/QuerySegmentRecords/", SegmentRecords),  # 获取子局游戏战绩
         Urls("/QueryClubRanks/", ClubRanks),  # 获取茶馆战绩排行榜
         Urls("/QueryPastRanks/", PastRanks),  # 获取茶馆、我的历史战绩

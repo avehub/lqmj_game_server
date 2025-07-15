@@ -78,6 +78,35 @@ class BaseRecordsGameRC(BaseCommonRC):
         return data, "成功"
 
     @classmethod
+    async def get_record_segment_list(cls, uid: int, record_rid: int, record_tid: int, start_time: int = None, end_time: int = None):
+        """根据条件信息获取战绩详情列表"""
+        try:
+            record_segment, _ = await RecordsGameSegmentRC.query_record_segment_by_sql(
+                record_rid=record_rid,
+                record_tid=record_tid,
+                start_time=start_time,
+                end_time=end_time,
+                uid=uid,
+                order_field="round_num",
+                order_type="ASC",
+                filtration="record_sid, record_tid, record_rid, uid, round_num, round_status, round_score, round_ranking, replay_msg, created"
+            )
+            data = []
+            # 根据当前局数进行数据重组
+            if record_segment:
+                result = {}
+                for item in record_segment:
+                    index = item["round_num"] - 1
+                    if index not in result:
+                        result[index] = []
+                    result[index].append(item)
+                # 将字典转为列表
+                data = list(result.values())
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return data, "成功"
+
+    @classmethod
     async def get_by_room_id(cls, room_id: int = None, uid: int = None,  start_time: int = None,
                              end_time: int = None, cs_type: int = None, page_size: int = None,
                              page: int = None):
@@ -149,7 +178,8 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_past_list(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
-                                uid: int = None, cs_type: int = None, page_size: int = None, page: int = None):
+                                uid: int = None, cs_type: int = None, play_type: int = None, page_size: int = None,
+                                final_score: int = None, page: int = None):
         try:
             if start_time is None and end_time is None:
                 start_time, end_time = await cls.default_time()
@@ -161,6 +191,8 @@ class BaseRecordsGameRC(BaseCommonRC):
                 start_time=start_time,
                 end_time=end_time,
                 cs_type=cs_type,
+                play_type=play_type,
+                final_score=final_score,
                 group_field="record_rid",
                 filtration="record_rid"
             )
@@ -240,5 +272,3 @@ class BaseRecordsGameRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"失败: {str(e)}"
         return True, "成功"
-
-

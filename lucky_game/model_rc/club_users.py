@@ -10,6 +10,7 @@ from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 
 
+
 class ClubUsersRC(BaseCommonRC):
     db_model = ClubUsers
     tb_name = db_model.sheet_name()
@@ -114,14 +115,19 @@ class ClubUsersRC(BaseCommonRC):
                 if data:
                     if data.role == cls.ROLE_HOST:
                         return False, "无法删除茶馆主"
+                    from lucky_game.model_rc.game_rooms import GameRoomsRC
+                    check, _ = await GameRoomsRC.check_uid_room_user(data.uid)
+                    if check:
+                        return False, "用户已在游戏中，无法退出"
                     await cls.db_model.del_by_pk(data.id)
                     await cls.cache_session_uid_drop(data.uid)
                     await cls.cache_session_clubid_drop(data.club_id)
                 sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                     ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
-                    uid,
-                    club_id,
-                    0 if check_uid == uid else check_uid,  # 主动离开check_id=0
+                    data.uid,
+                    data.club_id,
+                    0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
                     return False, e
@@ -268,7 +274,8 @@ class ClubUsersRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                         uid,
                         club_id,
-                        check_uid
+                        check_uid,
+                        status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
                     )
                     if not sta:
                         return False, e
@@ -294,10 +301,28 @@ class ClubUsersRC(BaseCommonRC):
                     club_user["uid"],
                     club_user["club_id"],
                     check_uid,
-                    ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
                     return False, e
+        except OperationalError as e:
+            return False, e
+        return True, "成功"
+
+    @classmethod
+    async def delete_club_all(cls, club_id: int):
+        """删除茶馆所有用户关系(解散茶馆)"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                query = {
+                    "club_id": club_id
+                }
+                data = await cls.db_model.filter(**query).values()
+                if data:
+                    for item in data:
+                        await cls.cache_session_uid_drop(item["uid"])
+                    await cls.cache_session_clubid_drop(club_id)
+                    await cls.db_model.filter(**query).delete()
         except OperationalError as e:
             return False, e
         return True, "成功"
