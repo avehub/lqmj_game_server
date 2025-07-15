@@ -18,6 +18,7 @@ class PlayType(BaseEnum):
     GUI_YANG_2 = 5,"两丁拐"
     BI_JIE_MJ = 6,"毕节麻将"
     ZUN_YI_LAI_ZI = 7,"遵义麻将(一筒赖子)"
+    LEISURE_FCZJ = 8,"休闲场发财捉鸡"
 
 
 
@@ -194,6 +195,7 @@ class OverType(IntEnum):
     ZHA_HU_KAI = 3  # 炸胡开
     FORCE = 4  # 强制解散
     OTHERS_GIVE_UP = 5  # 其它玩家认输
+    CLUB_OWNER_DISMISS = 6  # 房主解散
 
 @unique
 class ExtraHuPai(IntEnum):
@@ -412,3 +414,21 @@ ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_ZHA_JIAN: 94,
     ActionType.ACTION_TYPE_PASS: 1,
 }
+
+@unique
+class RechargeType(IntEnum):
+    """ 充值等待type """
+    WAIT_RECHARGE_JIAN = 1
+    WAIT_RECHARGE_MEN = 2
+    WAIT_RECHARGE_AN_GANG = 3
+    WAIT_RECHARGE_MING_GANG = 4
+    WAIT_RECHARGE_ZHUAN_WAN_GANG = 5
+
+@unique
+class SeatRelation(IntEnum):
+    """ 玩家位置关系 """
+    LAST = 1  # 上家
+    NEXT = 2  # 下家
+    OOP = 3  # 对家
+    TWO = 4  # 两家
+    THREE = 5  # 三家

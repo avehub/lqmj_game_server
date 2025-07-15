@@ -14,6 +14,7 @@ class BaseCardService(BaseService):
         super().__init__()
         self.add_handlers({
             CmdRoom.REQ_DISMISS.val: self.__req_dismiss_room,
+            CmdRoom.CLUB_OWNER_DISMISS.val: self.__club_owner_dismiss,
         })
 
     async def _on_new_match(self, uid, data):
@@ -91,6 +92,19 @@ class BaseCardService(BaseService):
         if player.uid == room.owner and room.in_room_count == 1:
             room.clear_agree_dismiss()
             return await room.force_dismiss(OverType.FORCE)
+
+    async def __club_owner_dismiss(self, _, data):
+        tid = data.get("tid")
+        room = self.get_room(tid)
+        if not room:
+            self.log_info("__club_owner_dismiss, 房间不存在")
+            return
+        club_id = data.get("club_id")
+        if room.club_id != club_id:
+            self.log_info("__club_owner_dismiss, club id对不上", room.club_id, club_id)
+            return
+        room.set_not_playing_dismiss(room.room_status, True)
+        await room.force_dismiss(OverType.CLUB_OWNER_DISMISS)
 
 
     async def clear_in_service(self):

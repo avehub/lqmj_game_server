@@ -38,7 +38,6 @@ class ClubServer(BaseServer):
     async def __enter_club(self, uid, data):
         """ 进入 """
         club_id = data.get("club_id")
-        print("茶馆进入", uid, club_id)
         # todo: 1.检验club_id 是否有对应茶馆
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
@@ -46,6 +45,7 @@ class ClubServer(BaseServer):
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
+        self.log_info("club_id",club_id,"玩家进入茶馆", uid)
         if not room.check_player_in_club(uid):
             room.player_join_room(uid)
         return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid)
@@ -66,8 +66,10 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return
+        print("room.owner",room.owner)
         data_model = S2CClubRoomInfo.pb_mode(**data)
         await room.inner_broadcast(CmdClub.ROOM_INFO_CHANGE, data_model)
+        print("茶馆房间改变",data.get("msg_type"))
 
     async def __club_owner_dismiss(self, uid, data):
         """ 俱乐部主解散房间 """
@@ -75,7 +77,7 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return
-        if uid != room.club_owner:
+        if uid != room.owner:
             print("该玩家不是茶馆主",uid,room.owner)
             return
         room.clear_club()
