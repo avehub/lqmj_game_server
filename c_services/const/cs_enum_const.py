@@ -144,6 +144,14 @@ class CmdRoom(BaseEnum):
     NOTIFY_POSITION = 94,"开局通知定位","麻将"
     PLAYER_DING_QUE = 95,"玩家定缺","麻将"
     ROOM_DISMISS = 96,"房间解散","麻将"
+    CLUB_OWNER_DISMISS = 97,"茶馆房主解散","麻将"
+
+    #休闲玩法
+    TIMELY_KOU_FEN = 110,"即时结算","麻将"
+    START_FAN_JI = 111,"通知开始翻鸡","麻将"
+    FAN_JI_INFO = 112,"翻鸡信息","麻将"
+    MANY_HU = 113,"多人胡","麻将"
+
 
 
 class CmdWorkers(BaseEnum):

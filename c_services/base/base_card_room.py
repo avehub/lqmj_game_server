@@ -256,7 +256,6 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        print("account", account)
         is_round_over = True if over_type != OverType.FORCE else False
         score_rank_map = self.get_player_ranking(account, is_round_over)
         for p in self.seats:
@@ -283,7 +282,6 @@ class BaseCardRoom(BaseRoom):
             new_data.append(record_data)
             p.clear_data_round_over()
 
-        print("new_data", new_data)
         self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
@@ -330,7 +328,7 @@ class BaseCardRoom(BaseRoom):
             return False
         if not self.get_owner_is_ready:  # 满人后其余玩家准备了，房主没准备，通知房主
             if self.ready_player_count == self.max_player_count - 1:
-                room_data = {"club_id": self.club_id}
+                room_data = {"club_id": self.club_id,"secret": C_SERVICE_SECRET_KEY}
                 await self.cs2cs_by_rmq(ServiceEnum.C_CLUB, CmdClub.PLAYER_READY_EXCEPT_OWNER, room_data, self.owner)
                 self.log_info("玩家都准备了,除了房主", self.owner)
 
@@ -374,10 +372,11 @@ class BaseCardRoom(BaseRoom):
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
-        await super().game_over()
-
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
+        await super().game_over()
+
+
 
     def get_player_ranking(self, account=None, is_round_over=False):
         if account:
@@ -576,6 +575,7 @@ class BaseCardRoom(BaseRoom):
             "seats": [p.uid for p in self.seats if p],
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
+            "round_idx": self.round_idx,
             "updated": self.__create_time,
             "msg_type":msg_type,
             "secret": C_SERVICE_SECRET_KEY
