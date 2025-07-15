@@ -107,7 +107,7 @@ class MainBp(BaseBlue):
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         # Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产
-        Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
+        # Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         # Urls("/GetWeChatGzhOpenid/", GetWeChatGzhOpenid),  # 获取微信公众号的Openid
         #
         # # 游戏相关

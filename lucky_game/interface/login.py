@@ -79,7 +79,7 @@ class BaseLogin(GameAuthApi):
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
-            name = f"游客{self.rng.mk_str(8, True)}"
+            name = f"游客{self.rng.mk_str(4, True)}"
             user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
             user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
         info = {
