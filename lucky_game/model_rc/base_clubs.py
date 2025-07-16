@@ -130,17 +130,6 @@ class BaseClubRC(BaseCommonRC):
         """删除茶馆信息"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                club, e = await cls.get_club_by_id(club_id)
-                # 茶馆基金
-                if club["room_card"] > 0:
-                    # return None, "无法解散，还有未消耗的房卡基金"
-                    # 自动转入馆主账户
-                    sta, _ = await cls.club_room_card_operation(
-                        u_info,
-                        club_id,
-                        club["room_card"],
-                        operation="sub"
-                    )
                 # 存在游戏中的房间则无法解散
                 from lucky_game.model_rc.game_rooms import GameRoomsRC
                 rooms, _ = await GameRoomsRC.get_game_rooms_by_filter(
@@ -156,6 +145,24 @@ class BaseClubRC(BaseCommonRC):
                 )
                 if rooms:
                     return None, "无法解散，还有未结束的游戏房间"
+                club_user, _ = await ClubUsersRC.get_club_user_by_filter(
+                    club_id=club_id,
+                )
+                total = len(club_user)
+                if total > 1:
+                    return None, "无法解散，还有其他玩家"
+                club, e = await cls.get_club_by_id(club_id)
+                # 茶馆基金
+                if club["room_card"] > 0:
+                    # return None, "无法解散，还有未消耗的房卡基金"
+                    # 自动转入馆主账户
+                    sta, _ = await cls.club_room_card_operation(
+                        u_info,
+                        club_id,
+                        club["room_card"],
+                        operation="sub"
+                    )
+
                 # 删除茶馆所有用户
                 del_user, e = await ClubUsersRC.delete_club_all(club_id)
                 if not del_user:

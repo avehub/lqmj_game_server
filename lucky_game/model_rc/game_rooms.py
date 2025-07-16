@@ -153,8 +153,6 @@ class GameRoomsRC(BaseCommonRC):
                     return False, e
         except OperationalError as e:
             return None, f"房间创建失败: {str(e)}"
-        # 将房间信息缓存
-        await cls.cache_room_set(room_data["room_id"], room_data)
         return room_data["room_id"], "成功"
 
     @classmethod
