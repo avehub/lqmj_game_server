@@ -21,7 +21,8 @@ from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
 from lucky_game.handler.ali_verification import AliVerification
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
-from common.public.conf import SERVER_ADDR
+from common.public.conf import ASSET_SERVER_ADDR
+import random
 
 class BaseLogin(GameAuthApi):
 
@@ -75,7 +76,7 @@ class BaseLogin(GameAuthApi):
         dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
-        avatar = user_info.get("avatar", SERVER_ADDR + "/resource/default/avatar.png")
+        avatar = user_info.get("avatar", ASSET_SERVER_ADDR + f"/lucky_game/avatar/avatar_{random.randint(1, 7)}.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
