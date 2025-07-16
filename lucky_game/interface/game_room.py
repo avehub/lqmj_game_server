@@ -206,10 +206,10 @@ class LeaveRoom(GameRoomAPI):
         uid = u_info.get("uid")
         # 仅允许馆主解散
         club_user, _ = await ClubUsersRC.get_club_user_by_one(uid, club_id)
-        if not club_user or club_user["role"] in [ClubUsersRC.ROLE_HOST, ClubUsersRC.ROLE_MANAGE]:
+        if not club_user or club_user["role"] not in [ClubUsersRC.ROLE_HOST, ClubUsersRC.ROLE_MANAGE]:
             return self.answer(StaCode.FAIL, hint="暂无权限")
         room_data, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
-        if not room_data or room_data["status"] in [RoomStatus.T_DISMISS, RoomStatus.T_CLOSED]:
+        if not room_data or room_data["status"] in [RoomStatus.T_CLOSED]:
             return self.answer(StaCode.FAIL, hint="房间不存在或已解散")
         # 更新房间信息
         sta, e = await GameRoomsRC.leave_room(room_id, room_data["creator"])
