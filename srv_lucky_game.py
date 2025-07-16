@@ -6,7 +6,6 @@ from lucky_game.config import conf_srv as conf
 from lucky_game.url_main import MainBp
 from sanic import Sanic
 
-
 signal_map = {}
 
 main_server = InitServer(conf, middlewares=[CorsMiddle], bp_arr=[MainBp], exceptions=[RCatchExpt])
@@ -15,7 +14,6 @@ main_server.add_signal(signal_map)
 if conf.FILE_UPLOAD.LOCAL_STORAGE['enable']:
     app = Sanic.get_app()
     app.static(f'/{conf.RESOURCE_PATH}', conf.STATIC_ROOT)
-
 
 if __name__ == '__main__':
     main_server.run()

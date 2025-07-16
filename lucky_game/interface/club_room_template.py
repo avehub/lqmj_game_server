@@ -160,7 +160,7 @@ class RoomTemplateDelete(RoomTemplateBase):
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
-        data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY}
+        data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY, "id": template_id}
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdClub.ROOM_INFO_CHANGE,

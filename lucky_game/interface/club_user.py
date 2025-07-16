@@ -2,11 +2,11 @@
 茶馆成员关系管理相关接口
 """
 from sanic import Request
-from common.public.enum_const import StaCode
 from lucky_game.base_api import GameAuthApi
 from lucky_game.model_rc.club_users import ClubUsersRC
-from lucky_game.model_rc.base_user import BaseUserRC
-from nsanic.libs.tool import json_encode, json_parse
+from c_services.const.cs_enum_const import CmdClub
+from common.public.enum_const import StaCode, ServiceEnum
+from common.public.conf import C_SERVICE_SECRET_KEY
 
 
 class JoinBlack(GameAuthApi):
@@ -70,10 +70,18 @@ class KickRelation(GameAuthApi):
     async def post(self, req: Request, **kwargs):
         check_uid = kwargs.get("u_info").get("uid")
         relation_id = self.check_int(req.json.get("relation_id"), require=True, p_name="关系ID")
+        relation_info, _ = await ClubUsersRC.get_club_user_by_id(relation_id)
         behavior, e = await ClubUsersRC.delete_club_user(relation_id, check_uid=check_uid)
         if not behavior:
             return self.answer(StaCode.FAIL, hint=e)
-
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": relation_info["club_id"], "uid": relation_info["uid"]}
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.QUIT_CLUB,
+            data,
+            relation_info["uid"],
+        )
         return self.answer()
 
 
