@@ -454,3 +454,84 @@ class ConfServerAddr(DBModel):
 
     class Meta:
         table = "conf_server_addr"
+
+class ConfRule(DBModel):
+    """ 游戏规则配置(主要关于游戏、房间规则相关) """
+    conf_leisure: fields.ReverseRelation["ConfLeisure"]
+    conf = fields.JSONField(null=True, description="配置")
+    desc = fields.CharField(max_length=28, null=True, default=0, description='配置描述')
+
+    class Meta:
+        table = "conf_rule"
+
+class ConfLeisure(DBModel):
+    """ 休闲场配置 """
+    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
+    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
+    level = fields.IntField(max_length=10, null=True, default=0, description="级别")
+    base_score = fields.BigIntField(null=True, default=0, description="底分")
+    price = fields.BigIntField(null=True, default=0, description="门票")
+    min_take = fields.BigIntField(null=True, default=0, description="最低携带")
+    max_take = fields.BigIntField(null=True, default=0, description="最高携带")
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
+    desc = fields.CharField(max_length=28, null=True, default=0, description='配置描述')
+    level_desc = fields.CharField(max_length=28, null=True, default=0, description='场次描述')
+    ranking_addition = fields.FloatField(default=0, description="修为加成")
+    gift_conf = fields.JSONField(null=True, description="礼包配置")
+    # 表示在 RuleConf 模型中可以通过 conf_leisure 属性访问所有相关的 LeisureConf 实例（这里好像用不到）
+    rule_conf = fields.ForeignKeyField("lucky_game.ConfRule", related_name="conf_leisure")
+    threshold_multiple = fields.SmallIntField(max_length=2, null=True, default=0, description='大赢公告倍率')
+
+    class Meta:
+        table = "conf_leisure"
+
+
+class StatsPlayerGameTimes(DBModel):
+    """ 玩家游戏次数统计 """
+    uid = fields.IntField(max_length=28, index=True, default=100000, description='玩家ID')
+    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
+    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
+    win_count = fields.BigIntField(null=True, default=0, description="赢的次数")
+    curr_win_streak = fields.IntField(null=True, default=0, description="当前连胜")
+    max_win_streak = fields.IntField(null=True, default=0, description="最大连胜")
+    total_count = fields.BigIntField(null=True, default=0, description="总次数")
+    max_multiple = fields.BigIntField(null=True, default=0, description="最大倍数")
+    max_win_score = fields.BigIntField(null=True, default=0, description="最大赢分")
+    max_cards = fields.CharField(max_length=64, null=True, default="", description="最大牌型")
+    extra_info = fields.JSONField(null=True, description="额外信息")
+
+    class Meta:
+        unique_together = (("uid", "cs_type", "play_type"),)
+        table = "stats_player_game_times"
+
+
+class Robot(DBModel):
+    """ 机器人总表 """
+    uid = fields.IntField(max_length=28, pk=True, default=100000, description='玩家ID')
+    name = fields.CharField(max_length=32, null=True, default='', description='玩家昵称')
+    sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
+    avatar = fields.CharField(max_length=128, null=True, default='', description='头像地址')
+    address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
+    region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
+    r_score = fields.IntField(max_length=20, default=100, index=True, description='当前排位分')
+    r_top_score = fields.IntField(max_length=20, default=100, description='最高排位分')
+    game_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏局数')
+    game_win_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏总赢数')
+    extra_info = fields.JSONField(null=True, description="固定额外配置")
+
+    class Meta:
+        indexes = (("region", "r_score"),)  # 联合索引
+
+
+class ConfRobot(DBModel):
+    """ 机器人简单配置 """
+    leisure = fields.ForeignKeyField("lucky_game.ConfLeisure", related_name="conf_robot", on_delete=fields.CASCADE)
+    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
+    avatar_frame = fields.JSONField(null=True, description="头像框配置")
+    chat_bubble = fields.JSONField(null=True, description="聊天气泡配置")
+    card_skin = fields.JSONField(null=True, description="卡牌皮肤配置")
+    skin_count = fields.JSONField(null=True, description="卡牌皮肤数量配置")
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
+
+    class Meta:
+        table = "conf_robot"

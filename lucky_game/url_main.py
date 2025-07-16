@@ -48,6 +48,7 @@ from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, D
 from lucky_game.interface.club_behavior import GetBehaviorExtra
 from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
+from lucky_game.interface.game import GetLeisureList
 
 
 class MainBp(BaseBlue):
@@ -112,7 +113,7 @@ class MainBp(BaseBlue):
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
-        # Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
+        Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
         # Urls("/QueryUserGameStates/", QueryUserGameStates),  # 获取玩家游戏次数等
         # Urls("/QueryUserAllNumOfGames/", QueryUserAllNumOfGames),  # 查询玩家总对局数
         # Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩

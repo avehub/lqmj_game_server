@@ -34,7 +34,7 @@ class RoomTemplateBase(GameAuthApi):
         platform = self.check_int(req.args.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
         cs_type = self.check_int(req.json.get("cs_type"), require=True, p_name="子服务类型")
         play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
-        club_id = self.check_int(req.json.get("club_id"), minval=100000, require=True, p_name="茶馆ID")
+        club_id = self.check_int(req.json.get("club_id"), minval=100000, require=False, p_name="茶馆ID")
         max_player = self.check_int(req.json.get("max_player"), require=True, p_name="最大人数")
         rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
         total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
