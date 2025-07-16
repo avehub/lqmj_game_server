@@ -18,6 +18,7 @@ from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from nsanic.libs import tool_dt
 from common.public.enum_const import CacheKey
 from lucky_game.model_rc.club_group import ClubGroupRC
+from tortoise.expressions import F
 
 
 class GameRoomsRC(BaseCommonRC):
@@ -315,7 +316,8 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def get_game_rooms_by_filter(cls, club_id: int = None, status: any = None, creator: int = None,
-                                       cs_type: int = None, not_room_id: any = None):
+                                       cs_type: int = None, not_room_id: any = None, play_type: any = None,
+                                       full: bool = False):
         """多条件查询房间列表"""
         try:
             query = {}
@@ -328,11 +330,17 @@ class GameRoomsRC(BaseCommonRC):
                     query["status"] = status
             if creator is not None:
                 query["creator"] = creator
+            if play_type is not None:
+                if isinstance(play_type, list):
+                    query["play_type__in"] = play_type
+                else:
+                    query["play_type"] = play_type
             if cs_type is not None:
                 query["cs_type"] = cs_type
             if not_room_id is not None:
                 query["room_id__not_in"] = not_room_id
-
+            if full:
+                query["round_num"] = F("total_round")
             rooms = await cls.db_model.filter(**query).order_by("status").values()
             if not rooms:
                 return [], "未找到符合条件的房间"

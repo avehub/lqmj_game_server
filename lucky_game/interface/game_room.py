@@ -198,15 +198,31 @@ class JoinRoom(GameRoomAPI):
 
 
 class LeaveRoom(GameRoomAPI):
-    """离开、解散房间(主动)"""
+    """解散房间(主动)"""
     async def post(self, req: Request, **kwargs):
         room_id = self.check_int(req.json.get("room_id"), require=True, p_name="房间ID")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
+        # 仅允许馆主解散
+        club_user, _ = await ClubUsersRC.get_club_user_by_one(uid, club_id)
+        if not club_user or club_user["role"] in [ClubUsersRC.ROLE_HOST, ClubUsersRC.ROLE_MANAGE]:
+            return self.answer(StaCode.FAIL, hint="暂无权限")
+        room_data, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
+        if not room_data or room_data["status"] in [RoomStatus.T_DISMISS, RoomStatus.T_CLOSED]:
+            return self.answer(StaCode.FAIL, hint="房间不存在或已解散")
         # 更新房间信息
-        sta, e = await GameRoomsRC.leave_room(room_id, uid)
+        sta, e = await GameRoomsRC.leave_room(room_id, room_data["creator"])
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
+        cs_enum = ServiceEnum.find_member_by_val(room_data['cs_type'])
+        room_data["secret"] = C_SERVICE_SECRET_KEY
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdRoom.CLUB_OWNER_DISMISS,
+            room_data,
+            uid,
+        )
         return self.answer()
 
 

@@ -93,17 +93,21 @@ class ClubHall(BaseClub):
     async def get(self, req: Request, **kwargs):
         uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        full = self.check_int(req.args.get("full"), require=False, minval=0, maxval=1, p_name="展示已满房间")
+        play_type = self.check_str(req.args.get("play_type"), require=False, p_name="玩法类型")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
             status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
         # 玩法模板
-        templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
+        templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id, play_type=play_type)
         # 游戏房间
         not_rooms = await GameRoomsRC.before_room(club_id, uid)
         room_list, e = await GameRoomsRC.get_game_rooms_by_filter(
             club_id=club_id,
+            play_type=play_type,
             status=status,
             not_room_id=not_rooms,
+            full=bool(full),
         )
         # 玩法模板和游戏房间列表合并
         result = []

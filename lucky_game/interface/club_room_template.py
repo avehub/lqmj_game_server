@@ -77,7 +77,7 @@ class RoomTemplateCreate(RoomTemplateBase):
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
-        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
         if not cs_enum:
             await ClubRoomTemplatesRC.delete_template(new, club_id)
             return self.answer(StaCode.FAIL, hint="非法服务")
@@ -115,7 +115,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
-        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
         data, _ = await ClubRoomTemplatesRC.get_by_id(template_id)
         data["secret"] = C_SERVICE_SECRET_KEY
         data["msg_type"] = ClubMsgType.UPDATE_ROOM.value
@@ -159,7 +159,7 @@ class RoomTemplateDelete(RoomTemplateBase):
         sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
-        cs_enum = ServiceEnum.find_member_by_val(template["cs_type"])
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
         data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY}
         await self.cs2cs_by_rmq(
             cs_enum,

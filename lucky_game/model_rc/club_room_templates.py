@@ -51,7 +51,6 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             new_template = await cls.db_model.add_one(template_data)
             if not new_template:
                 return False, "模板创建失败"
-            await cls.cache_session_drop(club_id)
         except OperationalError as e:
             return False, f"模板创建失败: {str(e)}"
         return new_template.id, "成功"
@@ -63,7 +62,6 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             sta = await cls.db_model.filter(id=template_id).delete()
             if not sta:
                 return False, "操作失败"
-            await cls.cache_session_drop(club_id)
         except OperationalError as e:
             return False, f"模板删除失败: {str(e)}"
         return True, "成功"
@@ -81,7 +79,6 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                 update_data['rule_details'] = json_encode(update_data['rule_details'])
             if update_data:
                 await cls.db_model.filter(id=template_id).update(**update_data)
-                await cls.cache_session_drop(template["club_id"])
         except OperationalError as e:
             return None, f"模板更新失败: {str(e)}"
         return True, "成功"
@@ -98,16 +95,13 @@ class ClubRoomTemplatesRC(BaseCommonRC):
         return template, "成功"
 
     @classmethod
-    async def get_by_club(cls, club_id: int):
+    async def get_by_club(cls, club_id: int, play_type: any = None):
         """根据茶馆ID获取模板列表"""
         try:
-            templates = await cls.cache_session_get(club_id)
-            if not templates:
-                query = {"club_id": club_id}
-                templates = await cls.db_model.filter(**query).values()
-                if not templates:
-                    return [], "未找到模板"
-                await cls.cache_session_set(club_id, templates)
+            query = {"club_id": club_id}
+            if play_type is not None:
+                query["play_type"] = play_type
+            templates = await cls.db_model.filter(**query).values()
         except OperationalError as e:
             return [], f"查询失败: {str(e)}"
         return templates, "成功"
@@ -122,7 +116,6 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             data = await cls.db_model.filter(**query).delete()
             if not data:
                 return False, "失败"
-            await cls.cache_session_drop(club_id)
         except OperationalError as e:
             return False, e
         return True, "成功"
