@@ -2,9 +2,10 @@ from nsanic.libs.mk_random import RngMaker
 from nsanic.orm.db_model import DBModel
 from tortoise import fields
 from nsanic.libs import tool_dt
-from common.public.enum_const import ServiceEnum, PlayType
+from common.public.enum_const import ServiceEnum
 from lucky_game.const import AwardType, EventTracking
 from lucky_game.const import OrderStatus, PayType, PayMode, DeliverStatus, PlatForm, AchieveType
+from c_services.cs_mahjong.const import PlayType
 
 
 class RecordsTrade(DBModel):
@@ -128,7 +129,7 @@ class RecordsGameGrade(DBModel):
 
     uid = fields.IntField(max_length=28, index=True, default=100000, description='玩家ID')
     cs_type = fields.IntEnumField(enum_type=ServiceEnum, index=True, description="子服务类型")
-    play_type = fields.IntEnumField(enum_type=PlayType, index=True, description="玩法类型（休闲|房卡）")
+    play_type = fields.IntEnumField(enum_type=PlayType, index=True, description="玩法类型")
     level_desc = fields.CharField(max_length=28, description="场次等级")
     tid = fields.CharField(max_length=28, description="房间id")
     score = fields.BigIntField(null=True, default=0, description="分数")

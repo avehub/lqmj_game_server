@@ -10,7 +10,7 @@ from lucky_game.model_db.main import Mails
 from lucky_game.model_rc.base_mails import MailsRC
 from common.public.enum_const import DbKey
 from lucky_game.const import MailSta, PullSta, MailOpType, ReasonCostGold, ReasonCostDiamond
-from lucky_game.model_rc.base_skin import UserSkinRC
+# # from lucky_game.model_rc.base_skin import UserSkinRC
 
 
 class MailsListHandler(GameAuthApi):
@@ -86,7 +86,8 @@ class MailsOperateUser(GameAuthApi):
 
         # 处理皮肤兑换
         for i in award_items:
-            await UserSkinRC.deal_hold_skin(uid, i)
+            pass
+            # await UserSkinRC.deal_hold_skin(uid, i)
         StatFlow.stat_common_flow(awards=award_items, d_reason=ReasonCostDiamond.MAILS_GIFT, g_reason=ReasonCostGold.MAILS_GIFT)
 
         new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
@@ -156,7 +157,8 @@ class MailsOperateOneClick(GameAuthApi):
 
         # 处理皮肤兑换
         for i in award_items:
-            await UserSkinRC.deal_hold_skin(uid, i)
+            pass
+#             await UserSkinRC.deal_hold_skin(uid, i)
         StatFlow.stat_common_flow(awards=award_items, d_reason=ReasonCostDiamond.MAILS_GIFT , g_reason=ReasonCostGold.MAILS_GIFT)
 
         update_mail = []

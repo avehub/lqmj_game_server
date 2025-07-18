@@ -19,6 +19,7 @@ from nsanic.libs import tool_dt
 from common.public.enum_const import CacheKey
 from lucky_game.model_rc.club_group import ClubGroupRC
 from tortoise.expressions import F
+from c_services.cs_mahjong.const import PlayType
 
 
 class GameRoomsRC(BaseCommonRC):
@@ -32,6 +33,7 @@ class GameRoomsRC(BaseCommonRC):
     SESSION_ROOM_KEY = "game_room" # 游戏房间信息缓存
     SESSION_ROOM_USER_KEY = "game_room_user"  # 游戏房间中的用户ID集合
     SESSION_ROOM_NUMBER_KEY = "game_room_number"  # 游戏中的房间ID集合
+    NULL_MEG = "房间已解散"
     RULE_DETAILS = {
         "shang_xia_ji": {0, 1},  #上下鸡选项 0未选 1选
         "ben_ji": {0, 1},  # 本鸡选项  0未选 1选
@@ -55,7 +57,39 @@ class GameRoomsRC(BaseCommonRC):
         "exchange_cards_type": {0, 1, 2},  # 换三张方式  1任意牌 2同色牌
         "exchange_first": {0, 1},  # 是否换三张优先 0否 1是
     }
-    NULL_MEG = "房间已解散"
+    # 毕节麻将
+    RULE_DETAILS_BJMJ = RULE_DETAILS | {
+        "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
+        "qing_yi_se_extra_add": {0, 1},  #清一色额外+5 0未选 1选
+        "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
+        "lian_zhuang": {0, 1},  #连庄 0未勾选 1勾选
+    }
+    # 贵阳麻将（两丁拐、三丁拐）
+    RULE_DETAILS_GYMJ = RULE_DETAILS | {
+        "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
+        "shu_zi_ji": {0, 1},  #数字鸡 0未勾选 1勾选
+        "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
+    }
+    # 遵义麻将（玄同麻将）
+    RULE_DETAILS_ZYMJ = RULE_DETAILS | {
+        "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
+        "yi_wan_ji": {0, 1},  #一万鸡 0未勾选 1勾选
+        "xi_pai_score": {25, 100},  #喜牌100分 25未勾选 100勾选
+        "wu_gu_ji_score": {2, 3},  #乌骨鸡3分 2未勾选 3勾选
+        "after_peng_can_bao_ting": {0, 1},  #碰牌报听 0未勾选 1勾选
+        "lian_zhuang": {0, 1},  #连庄 0未勾选 1勾选
+    }
+
+    @classmethod
+    async def get_play_rule(cls, play_type: int):
+        if play_type in [PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN]:
+            return cls.RULE_DETAILS
+        elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
+            return cls.RULE_DETAILS_GYMJ
+        elif PlayType.BI_JIE_MJ == play_type:
+            return cls.RULE_DETAILS_BJMJ
+        elif PlayType.ZUN_YI_LAI_ZI == play_type:
+            return cls.RULE_DETAILS_ZYMJ
 
     @classmethod
     async def cache_room_player_up(cls, room_id, value=1):

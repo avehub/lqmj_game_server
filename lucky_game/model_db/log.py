@@ -1,6 +1,7 @@
 from tortoise import fields
 from nsanic.orm.db_model import DBModel
-from common.public.enum_const import DbKey, LoginWay, ServiceEnum, PlayType, BanType
+from common.public.enum_const import DbKey, LoginWay, ServiceEnum, BanType
+from c_services.cs_mahjong.const import PlayType
 
 
 class RecordsGameUserLogin(DBModel):

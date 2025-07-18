@@ -107,7 +107,7 @@ class CreateRoom(GameRoomAPI):
             pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         # 预处理
-        rule_details = await verify_rule_detail(rule_details)
+        rule_details = await verify_rule_detail(rule_details, play_type)
         await self._before_create_room(
             creator=creator,
             price=int(price),

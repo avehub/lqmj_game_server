@@ -65,8 +65,8 @@ class Certification(BaseUserInfo):
     decorators = [CurrentLimiting, GameChecker]
 
     async def post(self, req, **kwargs):
-        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="id_card")
-        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="real_name")
+        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="证件号码")
+        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="证件姓名")
         res = UtilsTool.check_id_card(id_card)
         not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
         res = UtilsTool.validate_name(real_name)

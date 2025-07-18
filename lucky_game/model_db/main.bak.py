@@ -16,144 +16,6 @@ from lucky_game.const import QuickChatType, PlatForm, MailSta, PullSta, AchieveT
     CellType, EventType, LvDefendType, SeasonStatus, AdEventType, FriendshipSta, InteractPropType
 
 
-class User(DBModel):
-    """用户总表"""
-    uid = fields.IntField(max_length=28, pk=True, default=150000, description='玩家ID')
-    name = fields.CharField(max_length=20, null=True, default='', description='玩家昵称')
-    sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
-    phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
-    email = fields.CharField(max_length=256, null=True, index=True, description='邮箱')
-    address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
-    id_card = fields.CharField(max_length=20, null=True, default='', description='身份证')
-    real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
-    pi = fields.CharField(max_length=64, index=True, null=True, default='', description='已通过实名认证用户的唯一标识')
-    gold = fields.DecimalField(max_digits=65, decimal_places=0, default=0, description="金币")
-    diamond = fields.IntField(max_digits=20, default=0, description="仙玉")
-    avatar = fields.CharField(max_length=256, null=True, default='', description='头像地址')
-    platform = fields.IntEnumField(enum_type=PlatForm, index=True, default=PlatForm.DEFAULT, description="平台")
-    updated = fields.BigIntField(null=True, default=0, description='更新时间')
-    dev_ident = fields.CharField(max_length=18, null=True, index=True, description='设备标识')
-    safe_key = fields.CharField(max_length=18, null=True, default='', description='安全密钥')
-    valid_key = fields.CharField(max_length=16, null=True, default='', description='验证密钥')
-    tst_mark = fields.BooleanField(null=True, default=False, index=True, description='测试号标记')
-    ip = fields.CharField(max_length=128, null=True, default='', description='登陆IP')
-    region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
-    country = fields.CharField(max_length=16, null=True, default='CN', description='国家域名')
-    # 用户统一标识。针对一个微信开放平台账号下的应用，同一用户的 unionid 是唯一的
-    openid = fields.CharField(max_length=128, null=True, description='授权用户唯一标识')
-    unionid = fields.CharField(max_length=128, null=True, description='unionid')
-    ban_time = fields.BigIntField(null=True, index=True, default=0,
-                                  description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
-
-    class Meta:
-        unique_together = (("platform", "openid"), ("platform", "unionid"))  # 联合主键
-
-
-class Robot(DBModel):
-    """ 机器人总表 """
-    uid = fields.IntField(max_length=28, pk=True, default=100000, description='玩家ID')
-    name = fields.CharField(max_length=32, null=True, default='', description='玩家昵称')
-    sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
-    avatar = fields.CharField(max_length=128, null=True, default='', description='头像地址')
-    address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
-    region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
-    r_score = fields.IntField(max_length=20, default=100, index=True, description='当前排位分')
-    r_top_score = fields.IntField(max_length=20, default=100, description='最高排位分')
-    game_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏局数')
-    game_win_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏总赢数')
-    extra_info = fields.JSONField(null=True, description="固定额外配置")
-
-    class Meta:
-        indexes = (("region", "r_score"),)  # 联合索引
-
-
-class UserFriendship(DBModel):
-    """好友关系表"""
-    from_uid = fields.IntField(max_length=28, null=False, index=True, description='发起申请玩家UID')
-    to_uid = fields.IntField(max_length=28, null=False, index=True, description='被申请玩家UID')
-    status = fields.IntEnumField(enum_type=FriendshipSta, default=FriendshipSta.PENDING.val, description='友情状态')
-    prev_status = fields.IntField(null=True, description='屏蔽前的友情状态')
-    updated = fields.BigIntField(null=True, default=0, description='更新时间')
-
-    class Meta:
-        unique_together = (("from_uid", "to_uid"),)
-        table = "user_friendship"
-
-
-class ConfRobot(DBModel):
-    """ 机器人简单配置 """
-    leisure = fields.ForeignKeyField("lucky_game.ConfLeisure", related_name="conf_robot", on_delete=fields.CASCADE)
-    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
-    avatar_frame = fields.JSONField(null=True, description="头像框配置")
-    chat_bubble = fields.JSONField(null=True, description="聊天气泡配置")
-    card_skin = fields.JSONField(null=True, description="卡牌皮肤配置")
-    skin_count = fields.JSONField(null=True, description="卡牌皮肤数量配置")
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-
-    class Meta:
-        table = "conf_robot"
-
-
-class ConfServerAddr(DBModel):
-    """服务器配置"""
-    sid = fields.IntField(max_length=10, null=True, default=0, description="服务ID")
-    addr = fields.CharField(max_length=32, null=True, default='', description='地址')
-    path = fields.CharField(max_length=32, null=True, default='', description='路径')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-
-    class Meta:
-        table = "conf_server_addr"
-
-
-class ConfRule(DBModel):
-    """ 游戏规则配置(主要关于房间的，和游戏规则相关) """
-    conf_leisure: fields.ReverseRelation["ConfLeisure"]
-    conf = fields.JSONField(null=True, description="配置")
-    desc = fields.CharField(max_length=28, null=True, default=0, description='配置描述')
-
-    class Meta:
-        table = "conf_rule"
-
-
-class ConfLeisure(DBModel):
-    """ 休闲场配置 """
-    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
-    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    level = fields.IntField(max_length=10, null=True, default=0, description="级别")
-    base_score = fields.BigIntField(null=True, default=0, description="底分")
-    price = fields.BigIntField(null=True, default=0, description="门票")
-    min_take = fields.BigIntField(null=True, default=0, description="最低携带")
-    max_take = fields.BigIntField(null=True, default=0, description="最高携带")
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-    desc = fields.CharField(max_length=28, null=True, default=0, description='配置描述')
-    level_desc = fields.CharField(max_length=28, null=True, default=0, description='场次描述')
-    ranking_addition = fields.FloatField(default=0, description="修为加成")
-    gift_conf = fields.JSONField(null=True, description="礼包配置")
-    # 表示在 RuleConf 模型中可以通过 conf_leisure 属性访问所有相关的 LeisureConf 实例（这里好像用不到）
-    rule_conf = fields.ForeignKeyField("lucky_game.ConfRule", related_name="conf_leisure")
-    threshold_multiple = fields.SmallIntField(max_length=2, null=True, default=0, description='大赢公告倍率')
-
-    class Meta:
-        table = "conf_leisure"
-
-
-class StatsPlayerGameTimes(DBModel):
-    """ 玩家游戏次数统计 """
-    uid = fields.IntField(max_length=28, index=True, default=100000, description='玩家ID')
-    cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
-    play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.CLASSICAL, description="玩法类型")
-    win_count = fields.BigIntField(null=True, default=0, description="赢的次数")
-    curr_win_streak = fields.IntField(null=True, default=0, description="当前连胜")
-    max_win_streak = fields.IntField(null=True, default=0, description="最大连胜")
-    total_count = fields.BigIntField(null=True, default=0, description="总次数")
-    max_multiple = fields.BigIntField(null=True, default=0, description="最大倍数")
-    max_win_score = fields.BigIntField(null=True, default=0, description="最大赢分")
-    max_cards = fields.CharField(max_length=64, null=True, default="", description="最大牌型")
-    extra_info = fields.JSONField(null=True, description="额外信息")
-
-    class Meta:
-        unique_together = (("uid", "cs_type", "play_type"),)
-        table = "stats_player_game_times"
 
 
 class ItemsBase(DBModel):
@@ -281,84 +143,6 @@ class ItemsLegend(DBModel):
         table = "items_legend"
 
 
-class ConfStore(DBModel):
-    """ 商店配置 """
-    store_id = fields.IntField(max_length=10, pk=True, default=2000, description='商品ID')
-    store_type = fields.IntEnumField(enum_type=StoreType, index=True, default=0, description='商品类型')
-    store_name = fields.CharField(max_length=32, null=True, default='', description='商品名称')
-    store_count = fields.IntField(max_length=10, null=True, default=0, description='商品数量')
-    pay_type = fields.IntEnumField(enum_type=PayType, default=PayType.BY_FREE, description='支付类型')
-    price = fields.IntField(null=True, default=0, description='商品价格')
-    discount = fields.FloatField(null=True, default=0, description='商品折扣')
-    discount_price = fields.IntField(null=True, default=0, description='折扣价格')
-    sub_label = fields.JSONField(null=True, description='子标签')
-    product_id = fields.CharField(max_length=32, null=True, description='微信道具ID')
-    orig_price = fields.IntField(null=True, default=0, description='商品原价')
-    time_limit = fields.IntField(max_length=20, null=True, default=0, description='商品购买时效 0 永久 单位：秒')
-    buy_limit = fields.JSONField(null=True, description='商品限购配置')
-    rand_type = fields.IntEnumField(enum_type=RandType, default=0, description='返利类型')
-    number = fields.SmallIntField(max_length=6, null=True, default=0, description='商品排序')
-    desc = fields.CharField(max_length=256, null=True, default='', description='商品描述')
-    conf_items = fields.JSONField(null=True, description='商品配置')
-    first_gifts = fields.JSONField(null=True, description='首充赠品')
-    common_gifts = fields.JSONField(null=True, description='通用赠品')
-    img_url = fields.CharField(max_length=128, null=True, default='', description='图片地址')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-
-    class Meta:
-        table = "conf_store"
-
-
-class ConfAward(DBModel):
-    """奖励配置"""
-    award_id = fields.IntField(max_length=10, pk=True, default=4000, description='奖励ID')
-    award_type = fields.IntEnumField(enum_type=AwardType, index=True, default=0, description='获奖类型')
-    award_name = fields.CharField(max_length=32, null=True, default='', description='奖励名称')
-    award_level = fields.IntField(max_length=10, null=True, default=0, description='奖励级别 0无等级')
-    weight = fields.SmallIntField(null=True, default=0, description='奖励权重')
-    achieve_type = fields.IntEnumField(enum_type=AchieveType, default=0, description='获奖条件')
-    achieve_value = fields.BigIntField(max_length=20, null=True, description="获奖目标值")
-    receive_limit = fields.IntField(max_length=10, null=True, default=0, description='领奖次数限制')
-    conf_items = fields.JSONField(null=True, description='可立即获得的物品配置')
-    img_url = fields.CharField(max_length=128, null=True, default='', description='图片地址')
-    desc = fields.CharField(max_length=256, null=True, default='', description='奖励描述')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-
-    class Meta:
-        table = "conf_award"
-
-
-class ConfActivity(DBModel):
-    """活动配置"""
-    act_id = fields.IntField(max_length=10, pk=True, default=3000, description='充值活动ID')
-    act_type = fields.IntEnumField(enum_type=ActivityType, index=True, default=0, description='活动类型')
-    act_name = fields.CharField(max_length=32, null=True, default='', description='活动名称')
-    act_level = fields.SmallIntField(max_length=4, null=True, default=0, description='活动级别')
-    pay_type = fields.IntEnumField(enum_type=PayType, default=PayType.BY_FREE, description='支付类型')
-    price = fields.IntField(null=True, default=0, description='商品价格')
-    discount = fields.FloatField(null=True, default=0, description='商品折扣')
-    discount_price = fields.IntField(null=True, default=0, description='折扣价格')
-    product_id = fields.CharField(max_length=32, null=True, description='微信道具ID')
-    orig_price = fields.IntField(null=True, default=0, description='商品原价')
-    condition_type = fields.IntEnumField(enum_type=ConditionType, default=0, description='参与条件')
-    time_limit = fields.IntField(max_length=20, null=True, default=0, description='活动参与有效期 0 永久 单位：秒')
-    join_limit = fields.IntField(max_length=10, null=True, default=0, description='可参与次数')
-    join_limit_day = fields.IntField(max_length=10, null=True, default=0, description='每日可参与次数')
-    join_limit_total = fields.IntField(max_length=10, null=True, default=0, description='总共可参与次数')
-    desc = fields.CharField(max_length=1500, null=True, default='', description='活动描述')
-    start_time = fields.IntField(max_length=28, null=True, default=0, description='活动开始时间')
-    end_time = fields.IntField(max_length=28, null=True, default=0, description='活动结束时间')
-    conf_items = fields.JSONField(null=True, description='可立即获得的物品配置')
-    act_awards = fields.JSONField(null=True, description='按活动规则获取的奖励')
-    sale_limit = fields.JSONField(null=True, description='商品特价配置')
-    rand_type = fields.IntEnumField(enum_type=RandType, default=0, description='返利类型')
-    img_url = fields.CharField(max_length=128, null=True, default='', description='图片地址')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-
-    class Meta:
-        table = "conf_activity"
-
-
 class ConfQuickChat(DBModel):
     """ 快捷聊天配置（文字/表情/互动） """
     chat_id = fields.IntField(max_length=11, pk=True, description='聊天ID')
@@ -394,23 +178,6 @@ class UserSkin(DBModel):
         table = "user_skin"
         unique_together = (("uid", "skin_public_id", "cs_type"),)
 
-
-class UserBag(DBModel):
-    """玩家背包"""
-    bag_id = fields.IntField(max_length=10, pk=True, default=1, description='背包统计ID')
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    goods_id = fields.IntField(max_length=10, index=True, null=False, description='物品ID')
-    goods_type = fields.IntEnumField(enum_type=GoodsType, null=False, index=True, default=0, description='物品类型')
-    goods_count = fields.IntField(max_length=10, null=True, default=0, description='物品数量')
-    exp_time = fields.BigIntField(max_length=28, null=True, default=0, description="过期时间")
-    got_time = fields.IntField(max_length=28, null=True, default=0, description='获得时间')
-    bag_sta = fields.IntEnumField(enum_type=BagSta, default=0, description="背包状态")
-
-    class Meta:
-        table = "user_bag"
-        unique_together = (("uid", "goods_id", "exp_time"),)
-
-
 class UserCosmetic(DBModel):
     """玩家装扮"""
     cos_id = fields.IntField(max_length=10, pk=True, default=1, description='装扮统计ID')
@@ -427,21 +194,6 @@ class UserCosmetic(DBModel):
         unique_together = (("uid", "cosmetic_item"),)
 
 
-class StatsWatchAdTimes(DBModel):
-    """玩家看广告统计"""
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    time_node = fields.BigIntField(max_length=28, null=True, default=0, description='时间节点：天')
-    t_raffle_luck = fields.IntField(max_length=10, null=True, default=0, description='免费抽奖次数')
-    t_award = fields.IntField(max_length=10, null=True, default=0, description='免费领奖次数')
-    t_relief = fields.IntField(max_length=10, null=True, default=0, description='救济翻倍次数')
-    t_dice = fields.IntField(max_length=10, null=True, default=0, description='免费骰子次数')
-    t_gold_not_enough_first = fields.IntField(max_length=10, null=True, default=0, description='看广告领取金币不足礼包（上篇）')
-    t_gold_not_enough_second = fields.IntField(max_length=10, null=True, default=0, description='看广告领取金币不足礼包（下篇）')
-    t_sign_in_wk = fields.IntField(max_length=10, null=True, default=0, description='看广告每周七日签到')
-
-    class Meta:
-        table = "stats_watch_ad_times"
-        unique_together = (("uid", "time_node"),)
 
 
 class ConfJson(DBModel):
@@ -470,43 +222,6 @@ class UserSafeBox(DBModel):
         table = "user_safe_box"
 
 
-class Mails(DBModel):
-    """ 邮件总表 """
-    mail_id = fields.IntField(max_length=20, pk=True, default=1, description='邮件ID')
-    mail_type = fields.IntEnumField(enum_type=MailType, index=True, default=MailType.SYS, description='邮件类型')
-    title = fields.CharField(max_length=64, default='', description="主题/标题")
-    content = fields.CharField(max_length=255, default='', description="邮件内容")
-    attachment = fields.JSONField(null=True, description="附件信息：如奖励ID和数量等")
-    sender = fields.CharField(max_length=28, default='', description="发送者")
-    receiver = fields.IntField(max_length=28, index=True, null=False, description='接收者：玩家ID')
-    mail_sta = fields.IntEnumField(enum_type=MailSta, index=True, default=MailSta.UNREAD, description="邮件状态")
-    attachment_sta = fields.IntEnumField(enum_type=PullSta, index=True, default=PullSta.UN_PULL, description="附件状态")
-    receive_time = fields.BigIntField(max_length=28, null=True, default=0, description="接收时间")
-    exp_time = fields.BigIntField(max_length=28, null=True, default=0, description="过期时间")
-
-    class Meta:
-        table = "mails"
-        indexes = (("receiver", "mail_sta", "exp_time"),)
-
-
-class UserActivity(DBModel):
-    """充值活动记录"""
-    act_id = fields.IntField(max_length=10, index=True, null=False, description='充值活动ID')
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    join_time = fields.BigIntField(max_length=28, null=True, default=0, description='参与时间')
-    awards_achieved = fields.JSONField(null=True, description="奖励发放状态")
-    activity_sta = fields.IntEnumField(enum_type=ActivitySta, default=0, description='活动参与状态')
-    times = fields.IntField(max_length=10, null=True, default=0, description='活动已参与次数')
-    times_day = fields.IntField(max_length=10, null=True, default=0, description='日奖领取次数')
-    deadline = fields.BigIntField(max_length=20, null=True, default=0, description='截止时间')
-    time_node = fields.BigIntField(max_length=28, null=True, default=0, description='最新发奖时间')
-    level = fields.IntEnumField(enum_type=LevelType, description="等级")
-
-    class Meta:
-        table = "user_activity"
-        unique_together = (("act_id", "uid"),)
-
-
 class ConfTask(DBModel):
     """任务配置"""
     task_id = fields.IntField(max_length=20, pk=True, default=1, description='任务ID')
@@ -527,37 +242,6 @@ class ConfTask(DBModel):
 
     class Meta:
         table = "conf_task"
-
-
-class ConfVip(DBModel):
-    """ VIP配置 """
-    level = fields.IntEnumField(enum_type=LevelType, description="等级")
-    need_exp = fields.IntField(max_length=20, description='需要经验')
-    text = fields.CharField(max_length=64, default='', description='当前文案')
-    ranking_addition = fields.FloatField(default=0, description="修为加成")
-    relief_add_times = fields.SmallIntField(default=0, description='救济增加次数')
-    relief_addition = fields.FloatField(default=0, description='救济金加成')
-    level_awards = fields.JSONField(null=True, description='VIP等级奖')
-    daily_awards = fields.JSONField(null=True, description='VIP日奖')
-    increase_space = fields.DecimalField(max_digits=65, decimal_places=0, default=0, description="保险箱扩容量")
-
-    class Meta:
-        table = "conf_vip"
-
-
-class UserVip(DBModel):
-    """ VIP玩家记录 """
-    uid = fields.IntField(max_length=28, pk=True, default=100000, description='玩家ID')
-    cur_exp = fields.IntField(max_length=20, description='当前经验')
-    vip = fields.ForeignKeyField('lucky_game.ConfVip', related_name='conf_vip', default=None)
-    recharge_amount = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description="充值金额")
-    level_achieved = fields.JSONField(null=True, description='已领取的等级奖励')
-    time_node = fields.BigIntField(max_length=28, null=True, default=0, description='日奖最新发奖时间')
-    daily_achieved = fields.JSONField(null=True, description='已领取的每日奖励')
-    updated = fields.BigIntField(null=True, default=0, description='更新时间')
-
-    class Meta:
-        table = "user_vip"
 
 
 class StatsItemOrderCount(DBModel):
@@ -692,20 +376,6 @@ class RecordsUserTask(DBModel):
     class Meta:
         table = "records_user_task"
         unique_together = (("uid", "task_id"),)
-
-
-class RecordsUserSignIn(DBModel):
-    """ 签到记录 """
-
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    time_node = fields.BigIntField(max_length=28, null=True, default=0, description='最新签到时间')
-    award_type = fields.IntEnumField(enum_type=AwardType, default=0, description='签到奖励类型')
-    sign_in_date = fields.JSONField(null=True, description='已签到的日期')
-    sign_in_achieved = fields.JSONField(null=True, description='已领取的累计奖励')
-
-    class Meta:
-        table = "records_user_sign_in"
-        unique_together = (("uid", "award_type"),)
 
 
 # class ConfWinStreakAddition(DBModel):
@@ -957,26 +627,7 @@ class StatsRetentionOwnUser(DBModel):
         table = "stats_retention_own_user"
 
 
-class StatsUserDataAnalysis(DBModel):
-    """ 用户数据分析 """
-    time_node = fields.BigIntField(max_length=28, index=True, null=False, default=0, description="时间节点：天")
-    active_user_count = fields.IntField(max_length=32, default=0, description="活跃用户总数")
-    new_user_count = fields.IntField(max_length=32, default=0, description="新增用户总数")
-    pay_user_count = fields.IntField(max_length=32, default=0, description="付费用户总数")
-    pay_amount = fields.BigIntField(max_length=28, null=True, default=0, description="付费金额")
-    first_pay_times = fields.IntField(max_length=28, null=True, default=0, description="首次付费人数")
-    avg_pay_amount = fields.FloatField(null=True, default=0, description="人均付费金额")
-
-    class Meta:
-        table = "stats_user_data_analysis"
 
 
-class RecordsChatHistory(DBModel):
-    """ 聊天历史记录 """
-    from_uid = fields.IntField(max_length=28, null=False, index=True, description='发送玩家UID')
-    to_uid = fields.IntField(max_length=28, null=False, index=True, description='接收玩家UID')
-    chat_channel = fields.IntEnumField(enum_type=ChatChannel, index=True, default=ChatChannel.WORLD, description='聊天频道')
-    content = fields.CharField(max_length=255, default='', description='消息内容')
 
-    class Meta:
-        table = "records_chat_history"
+

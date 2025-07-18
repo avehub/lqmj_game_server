@@ -11,6 +11,7 @@ class GameRuleAll(GameAuthApi):
     """获取所有游戏规则"""
     async def get(self, req: Request, **kwargs):
         pid = req.args.get("pid", 0)
-        rule_type = req.args.get("type")
-        data, e = await ConfGameRoomRulesRC.get_all(pid, rule_type=rule_type)
+        rule_type = self.check_int(req.args.get("rule_type"), require=False, p_name="规则类型")
+        status = self.check_int(req.args.get("status"), require=False, default=0, p_name="状态")
+        data, e = await ConfGameRoomRulesRC.get_all(pid, rule_type=rule_type, status=status)
         return self.answer(data=data)

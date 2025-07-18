@@ -13,11 +13,12 @@ from common.public.conf import C_SERVICE_SECRET_KEY
 from c_services.const.cs_enum_const import ClubMsgType, CmdClub
 
 
-async def verify_rule_detail(rule_details) -> dict:
+async def verify_rule_detail(rule_details, play_type) -> dict:
     """游侠房间规则校验"""
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
-    for k, v in GameRoomsRC.RULE_DETAILS.items():
+    play_rule = await GameRoomsRC.get_play_rule(play_type)
+    for k, v in play_rule.items():
         await decorator.check_inner(
             val=rule.get(k),
             require=True,
@@ -60,7 +61,7 @@ class RoomTemplateCreate(RoomTemplateBase):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
-        rule_dick = await verify_rule_detail(rule_details)
+        rule_dick = await verify_rule_detail(rule_details, play_type)
         await self.check_authority(uid, club_id)
         # 创建模板
         new, err = await ClubRoomTemplatesRC.create_template(
@@ -101,7 +102,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
         template_id = self.check_int(req.json.get("template_id"), require=True, p_name="模板ID")
         platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         await self.check_authority(uid, club_id)
-        rule_dick = await verify_rule_detail(rule_details)
+        rule_dick = await verify_rule_detail(rule_details, play_type)
         new, err = await ClubRoomTemplatesRC.update_template(
             template_id,
             play_type=play_type,

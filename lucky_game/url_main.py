@@ -39,7 +39,7 @@ from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply,
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
-from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification
+from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -108,7 +108,7 @@ class MainBp(BaseBlue):
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         # Urls("/GetSessionKey/", GetSessionKey),  # 微信session_key更新
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产
-        # Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
+        Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         # Urls("/GetWeChatGzhOpenid/", GetWeChatGzhOpenid),  # 获取微信公众号的Openid
         #
         # # 游戏相关
