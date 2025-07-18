@@ -12,7 +12,7 @@ from common.public.enum_const import TaskId, StaCode
 from common.utils.utils import UtilsTool
 from lucky_admin.const import WeightEnum
 from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
-from lucky_game.model_rc.base_activity import ConfActivityRC
+# from lucky_game.model_rc.base_activity import ConfActivityRC
 
 
 class BaseLeisureRoom(BaseRoom):
@@ -358,7 +358,8 @@ class BaseLeisureRoom(BaseRoom):
         for gift in self.__gift_conf:
             if gift.get("gift_type") == GiftType.REVENGE:
                 activity_id = gift.get("activity_id")
-                data = await ConfActivityRC.get_activity_item_by_id(activity_id)
+                # data = await ConfActivityRC.get_activity_item_by_id(activity_id)
+                data = {}
                 conf_items = data.get("conf_items")
                 if conf_items:
                     gold = conf_items[0].get("goods_count")
@@ -488,12 +489,12 @@ class BaseLeisureRoom(BaseRoom):
                     send_list.append(self.notify_buy_gift_pack(player, CmdRoom.GOLD_NOT_ENOUGH))
         send_list and await asyncio.gather(*send_list)
 
-    async def safe_box_auto_complement(self, player):
-        """ 保险箱自动补足 """
-        status = await self.service.safe_box_auto_complement(player)
-        if status:
-            m = s2c_gold_model(player.seat_id, player.gold)
-            await self.inner_broadcast(CmdRoom.SAFE_BOX_AUTO_COMPLEMENT, m)
+    # async def safe_box_auto_complement(self, player):
+    #     """ 保险箱自动补足 """
+    #     status = await self.service.safe_box_auto_complement(player)
+    #     if status:
+    #         m = s2c_gold_model(player.seat_id, player.gold)
+    #         await self.inner_broadcast(CmdRoom.SAFE_BOX_AUTO_COMPLEMENT, m)
 
     @staticmethod
     def get_player_info(player):

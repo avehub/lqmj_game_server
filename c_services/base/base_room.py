@@ -512,8 +512,9 @@ class BaseRoom(metaclass=ABCMeta):
         for p in self.__seats:
             if p:
                 if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
-                    leave_result = await GameRoomsRC.leave_room(p.tid, p.uid)
-                    self.log_info("游戏结束离开房间:",leave_result,"房间状态:",self.__room_status)
+                    if self.__room_type == RoomType.SELF_BUILD:
+                        leave_result = await GameRoomsRC.leave_room(p.tid, p.uid)
+                        self.log_info("游戏结束离开房间:",leave_result,"房间状态:",self.__room_status)
                     await self.service.del_player_in_service(p.uid)
                 self.service.release_player(p)
         self.__room_status = RoomStatus.T_CLOSED

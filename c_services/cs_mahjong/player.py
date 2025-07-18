@@ -323,7 +323,8 @@ class Player(BaseLeisurePlayer):
             ActionType.ACTION_TYPE_ZHUAN_WAN_GANG,
             ActionType.ACTION_TYPE_MEN,
             ActionType.ACTION_TYPE_JIAN,
-            ActionType.ACTION_TYPE_HU
+            ActionType.ACTION_TYPE_HU,
+            ActionType.ACTION_TYPE_TIAN_TING,
         }
         return not target_actions.isdisjoint(operates_map)
 

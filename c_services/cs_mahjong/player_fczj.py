@@ -1,0 +1,96 @@
+from copy import deepcopy
+
+from c_services.cs_mahjong.player import Player
+
+
+class PlayerFCZJ(Player):
+    def __init__(self, uid, is_robot):
+        super().__init__(uid, is_robot)
+        self.__first_down = 0 #第一次金币下到15倍
+        self.__quan_count = 0  # 记录打了几圈
+        self.__lucky_quan = 0
+        self.__lian_sheng = 0  # 正为胜 负为败
+        self.__record_account = []
+        self.__fan_ji = 0
+        self.lock = False
+
+
+
+
+    @property
+    def first_down(self):
+        return self.__first_down
+
+    def add_first_down(self):
+        self.__first_down += 1
+
+    @property
+    def quan_count(self):
+        return self.__quan_count
+
+    def add_quan_count(self):
+        self.__quan_count += 1
+
+
+    @property
+    def lucky_quan(self):
+        return self.__lucky_quan
+
+    @lucky_quan.setter
+    def lucky_quan(self, lucky_quan):
+        self.__lucky_quan = lucky_quan
+
+
+    @property
+    def lian_sheng(self):
+        return self.__lian_sheng
+
+    @lian_sheng.setter
+    def lian_sheng(self, lian_sheng):
+        self.__lian_sheng = lian_sheng
+
+    @property
+    def fan_ji(self):
+        return self.__fan_ji
+
+    @fan_ji.setter
+    def fan_ji(self, fan_ji):
+        self.__fan_ji = fan_ji
+
+    @property
+    def lock(self):
+        return self.__is_lock
+
+    @lock.setter
+    def lock(self, is_lock):
+        self.__is_lock = is_lock
+
+    def record_account(self, data, is_copy=True):
+        """
+        玩家记账
+        [上家 下家 两家 三家]，最多三家
+        """
+        if is_copy:
+            data = deepcopy(data)
+        self.__record_account.append(data)
+
+    def round_account(self):
+        return self.__record_account
+
+    def clear_account(self):
+        self.__record_account = []
+
+
+    def round_over_info(self):
+        data = super().round_over_info()
+        result = {
+            "hand_cards": self.cards,
+            "table_cards": self.get_table_cards(),
+            "jiao_pai": self.__jiao_pai,
+            "fang_pao": self.__fang_pao,
+            "hu_type": self.__hu_type,
+            "ji_pai": self.__ji_pai,
+        }
+        data.update(result)
+        return data
+

@@ -177,12 +177,14 @@ class RoomGY(RoomBJ):
     def check_extra_ji(self,ji,score,count):
         if ji == CardsType.WU_GU_JI and ji not in self.default_ji:
             per_score = score + count
-        elif self.__yin_ji and ji in self.fan_yin_ji_cards:
+        elif self.yin_ji and ji in self.fan_yin_ji_cards:
             # 银鸡处理（只有翻鸡才有，流局无）
             per_score = score + self.ji_pai_score.get(JiType.YIN_JI, 1) * count
         else:
             per_score = score + self.ji_pai_score.get(ji, 1) * count
         return per_score
+
+
 
 
 

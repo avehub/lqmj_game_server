@@ -810,6 +810,7 @@ class S2CStartDingQueInfo:
         obj = ws_leisure_pb2.S2CStartDingQueInfo()
         obj.ding_que_list.extend(kwargs.get("ding_que_list") or [])
         obj.seconds = kwargs.get("seconds") or 0
+        obj.recommend_que = kwargs.get("recommend_que") or 0
         return obj
 
 class S2CDingQueInfo:
@@ -862,7 +863,7 @@ class S2CRoundOverInfo:
             for men_data in men_cards:
                 men_card = seat.men_cards.add()
                 men_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
-            pack_table_cards(obj, **kwargs)
+            pack_table_cards(seat, **data)
             account_data = data.get("account") or {}
             seat.account.total_score = account_data.get("total_score") or 0
             ming_xi_data = account_data.get("ming_xi") or {}
@@ -921,6 +922,101 @@ class S2CStartExchangeCards:
         obj.in_flow = kwargs.get("in_flow") or 0
         return obj
 
+class S2CKouFen:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CKouFen()
+        obj.win_seat_id = kwargs.get("win_seat_id") or 0
+        obj.check_out_type = kwargs.get("check_out_type") or 0
+        obj.win_gold = kwargs.get("win_gold") or 0
+        obj.winner_res_gold = kwargs.get("winner_res_gold") or 0
+        lose_list = kwargs.get("lose_list") or []
+        for data in lose_list:
+            lose = obj.lose_list.add()
+            lose.loes_seat_id = data.get("loes_seat_id") or 0
+            lose.loes_gold = data.get("loes_gold") or 0
+            lose.loes_res_gold = data.get("loes_res_gold") or 0
+        obj.extra_hu_type.extend(kwargs.get("extra_hu_type") or [])
+        return obj
+
+class S2CStartFanJi:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CStartFanJi()
+        obj.seconds = kwargs.get("seconds") or 0
+        obj.fan_ji_list.extend(kwargs.get("fan_ji_list") or [])
+        return obj
+
+class S2CFanJi:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CFanJi()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.fan_ji_card = kwargs.get("fan_ji_card") or 0
+        return obj
+
+class S2CFanJiInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CFanJiInfo()
+        obj.fan_ji_cards.extend(kwargs.get("fan_ji_cards") or [])
+        result = kwargs.get("result") or {}
+        for data in result:
+            seat = obj.result.add()
+            seat.seat_id = data.get("seat_id") or 0
+            seat.ji_cards.extend(data.get("ji_cards") or [])
+        return obj
+
+class S2CRecordAccountInfo:
+    @classmethod
+    def pb_model(cls,data_list:list):
+        obj = ws_leisure_pb2.S2CRecordAccountInfo()
+        for data in data_list:
+            account = obj.result.add()
+            account.curr_card = data.get("curr_card") or 0
+            account.relation = data.get("relation") or 0
+            account.multiple = data.get("multiple") or 0
+            account.gold = data.get("gold") or 0
+            account.act = data.get("act") or 0
+            account.win_from.extend(data.get("win_from") or [])
+            account.lose_to.extend(data.get("lose_to") or [])
+            account.hu_type = data.get("hu_type") or 0
+        return obj
+
+class S2CFanJiScore:
+    @classmethod
+    def pb_model(cls,data_list:list):
+        obj = ws_leisure_pb2.S2CFanJiScore()
+        for data in data_list:
+            fan_ji = obj.result.add()
+            fan_ji.fan_ji_score = data.get("fan_ji_score") or 0
+            fan_ji.res_gold = data.get("res_gold") or 0
+            fan_ji.seat_id = data.get("seat_id") or 0
+        return obj
+
+class S2CRoundOverInfoByLeisure:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CRoundOverInfoByLeisure()
+        obj.round_idx = kwargs.get("round_idx") or 0
+        obj.finish_type = kwargs.get("finish_type") or 0
+        obj.curr_card = kwargs.get("curr_card") or 0
+        obj.dealer = kwargs.get("dealer") or 0
+        obj.left_cards.extend(kwargs.get("left_cards") or [])
+        obj.winner.extend(kwargs.get("winner") or [])
+        seats_data = kwargs.get("seats") or []
+        for data in seats_data:
+            seat = obj.seats.add()
+            seat.seat_id = data.get("seat_id") or 0
+            seat.win_gold = data.get("win_gold") or 0
+            seat.res_gold = data.get("res_gold") or 0
+            seat.is_win = data.get("is_win") or 0
+            seat.jiao_pai = data.get("jiao_pai") or 0
+            seat.fang_pao = data.get("fang_pao") or 0
+            seat.hu_type = data.get("hu_type") or 0
+            seat.hand_cards.extend(data.get("hand_cards") or [])
+            seat.ji_pai.extend(data.get("ji_pai") or [])
+        return obj
 
 # ################################## 麻将 ##################################
 
@@ -949,6 +1045,8 @@ class S2CClubRoomInfo:
         obj.total_round = kwargs.get("total_round") or 0
         obj.updated = kwargs.get("updated") or 0
         obj.msg_type = kwargs.get("msg_type") or 0
+        obj.round_idx = kwargs.get("round_idx") or 1
+        return obj
 
 # ################################## 茶馆通知 ##################################
 

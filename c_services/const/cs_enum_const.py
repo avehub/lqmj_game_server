@@ -52,10 +52,11 @@ class CallCheck(BaseEnum):
 @unique
 class CmdClub(BaseEnum):
     ENTER_CLUB = 1,"进入茶馆",CallCheck.INNER.val
-    QUIT_CLUB = 2,"退出茶馆"
+    QUIT_CLUB = 2,"退出茶馆",CallCheck.INNER.val
     ROOM_INFO_CHANGE = 3,"茶馆房间改变",CallCheck.INNER.val
     CLUB_OWNER_DISMISS = 4,"茶馆房主解散"
     PLAYER_READY_EXCEPT_OWNER = 5,"所有玩家准备，除了房主",CallCheck.INNER.val
+    LEAVE_CLUB = 6,"离开茶馆"
 
 @unique
 class ClubMsgType(BaseEnum):
@@ -144,15 +145,25 @@ class CmdRoom(BaseEnum):
     NOTIFY_POSITION = 94,"开局通知定位","麻将"
     PLAYER_DING_QUE = 95,"玩家定缺","麻将"
     ROOM_DISMISS = 96,"房间解散","麻将"
-    CLUB_OWNER_DISMISS = 97,"茶馆房主解散","麻将"
+    CLUB_OWNER_DISMISS = 97,"茶馆房主解散", CallCheck.INNER.val
+    FAN_JI_SCORE = 98,"翻鸡分数","麻将"
+    ROBOT_CAL_ACTION = 99,"机器人出牌计算",CallCheck.INNER.val
+    ROBOT_CAL_PENG = 100,"机器人碰计算",CallCheck.INNER.val
+    ROBOT_CAL_GANG = 101,"机器人杠计算",CallCheck.INNER.val
 
     #休闲玩法
     TIMELY_KOU_FEN = 110,"即时结算","麻将"
     START_FAN_JI = 111,"通知开始翻鸡","麻将"
-    FAN_JI_INFO = 112,"翻鸡信息","麻将"
-    MANY_HU = 113,"多人胡","麻将"
+    FAN_JI = 112,"翻鸡","麻将"
+    FAN_JI_INFO = 113,"翻鸡信息","麻将"
+    MANY_HU = 114,"多人胡","麻将"
+    RECORD_ACCOUNT = 115,"记账","麻将"
 
-
+@unique
+class CmdRobotCal(BaseEnum):
+    CAL_ACTION = 1, "出牌",CallCheck.INNER.val
+    CAL_PONG = 2, "麻将碰",CallCheck.INNER.val
+    CAL_GANG = 3, "麻将杠",CallCheck.INNER.val
 
 class CmdWorkers(BaseEnum):
     """ 消费服务命令（服务端内部使用） """

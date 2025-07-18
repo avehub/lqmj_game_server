@@ -92,10 +92,10 @@ class LoginWay(BaseEnum):
     APPLE = 8, "AppleID登录"
 
 
-class PlayType(BaseEnum):
-    """ 玩法类型 """
-    CLASSICAL = 1, "经典玩法（通用玩法）"
-    OTHER = 2, "其它玩法（通用玩法）"
+# class PlayType(BaseEnum):
+#     """ 玩法类型 """
+#     CLASSICAL = 1, "经典玩法（通用玩法）"
+#     OTHER = 2, "其它玩法（通用玩法）"
 
 
 class GameType(BaseEnum):
@@ -120,17 +120,21 @@ class ServiceEnum(BaseEnum):
     C_CHAT = 9, "chat", '聊天服务'
     C_CLUB = 10, "club", '俱乐部服务'
 
+    C_MAHJONG_FC = 11, "mahjong_fc", GameType.LEISURE
+
     C_WATER_FISH = 20, "water_fish", GameType.LEISURE
     C_LANDLORDS = 21, "landlords", GameType.LEISURE
     C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
     C_MAHJONG_GY = 23,"mahjong_gy",GameType.ROOM_CARD
     C_MAHJONG_ZY = 24,"mahjong_zy",GameType.ROOM_CARD
+    C_MAHJONG_BJ = 25,"mahjong_bj",GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
     ROBOT_MONSTER_SEQ = 102, "monster_seq", '神魔仙逆下篇机器人'
     ROBOT_WATER_FISH = 103, "water_fish", '暗水鱼机器人'
     ROBOT_LANDLORDS = 104, "landlords", '斗地主机器人'
+    ROBOT_MAHJONG_FC = 105, "mahjong_fc", '麻将发财捉鸡机器人'
 
 
 LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MANY.val]

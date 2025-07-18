@@ -11,7 +11,7 @@ LIU_JU_COUNT = 0  # 控制流局阈值
 XUE_LIU_LEFT_BI_HU = 3
 
 class PlayType(BaseEnum):
-    XING_YI_MJ = 1,"兴义麻将"
+    JIAN_LOU_XUE_LIU = 1,"捡漏麻将"
     AN_LONG_XUE_ZHAN = 2,"血流麻将"
     GUI_YANG_4 = 3,"贵阳麻将"
     GUI_YANG_3 = 4,"三丁拐"
