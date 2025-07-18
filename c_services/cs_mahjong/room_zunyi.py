@@ -1,11 +1,7 @@
 from copy import deepcopy
-
-from common.proto.py_pb2.ws_c2s import ding_que_model
-from common.proto.py_pb2.ws_leisure import S2CDingQueInfo, S2CPublicOperatesMahjong, S2CTurnToMahjong
 from common.public.enum_const import StaCode
 from .player import Player
-from .room_base import Room
-from .const import (FlowStatus, ActionType, CheckType, PlayType, JiType, CardsType, HuType, ExtraHuPai, TimerDelay)
+from .const import (FlowStatus, ActionType, CheckType, JiType, CardsType, HuType, ExtraHuPai)
 from .room_bijie import RoomBJ
 from .rule import Rule
 from ..const.cs_enum_const import CmdRoom

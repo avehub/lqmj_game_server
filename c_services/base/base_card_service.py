@@ -94,7 +94,8 @@ class BaseCardService(BaseService):
             return await room.force_dismiss(OverType.FORCE)
 
     async def __club_owner_dismiss(self, _, data):
-        tid = data.get("tid")
+        print("解散",data)
+        tid = data.get("room_id")
         room = self.get_room(tid)
         if not room:
             self.log_info("__club_owner_dismiss, 房间不存在")

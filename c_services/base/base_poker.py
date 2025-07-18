@@ -1,15 +1,16 @@
 import random
-from collections import Counter
+from collections import Counter, defaultdict
 
 from c_services.const.base_card import BaseCard
+from common.utils.utils import UtilsTool
 
 
 class BasePoker:
     CARDS_ENUM: BaseCard
 
-    def __init__(self,not_include=0):
+    def __init__(self,not_include=0,lai_zi_count =0):
         self.__cursor = 0
-        card_list = self.CARDS_ENUM.all_cards()
+        card_list = self.CARDS_ENUM.all_cards(lai_zi_count)
         if not_include!= 0:
             card_list = [card for card in card_list if card.suit != not_include]
         self.__cards = card_list
@@ -43,7 +44,6 @@ class BasePoker:
         if self.__set_cards_list:
             self.__set_cards_ordered(card_count)
         else:
-            print("self.__cards",len(self.__cards))
             random.shuffle(self.__cards)
             half_idx = self.__cards_count // 2
             self.swap_card(0, half_idx)
@@ -59,8 +59,30 @@ class BasePoker:
             if start_idx >= end_idx:
                 break
 
-    def pop(self):
-        """ 发一张牌 """
+    # def pop(self):
+    #     """ 发一张牌 """
+    #     if self.__cursor >= self.__cards_count:
+    #         return 0
+    #     c = self.__cards[self.__cursor]
+    #     self.__cursor += 1
+    #     return c
+
+    def pop(self, card=None):
+        """弹出指定牌（若未指定则按原规则顺序发牌）"""
+        # 情况1：指定目标牌
+        if card is not None:
+            try:
+                # 查找目标牌位置（从当前游标开始搜索）
+                idx = self.__cards.index(card, self.__cursor)
+                # 移除并返回该牌
+                c = self.__cards.pop(idx)
+                # 牌总数减1（若需要）
+                self.__cards_count -= 1
+                return c
+            except ValueError:  # 目标牌不存在
+                return 0
+
+        # 情况2：未指定牌时按原顺序发牌
         if self.__cursor >= self.__cards_count:
             return 0
         c = self.__cards[self.__cursor]
@@ -87,6 +109,42 @@ class BasePoker:
             all_cards.append(extra_list)
         return all_cards
 
+    def deal_good_cards(self,player_count: int = 4):
+
+        cards_pool = self.CARDS_ENUM.all_cards().copy()
+        result_dict = dict(Counter(cards_pool))
+
+        players_hands = [[] for _ in range(player_count + 1)]
+        for player_id in range(player_count):
+            hands = [51]
+            combo_count = 0
+            dui_zi_index = 0
+            count = int(UtilsTool.random_choice_num([5, 4], [0.2, 0.8]))
+            suit_list = random.sample(range(1, 4), 2)  # 控制花色为两种
+            kz_ctrl = int(UtilsTool.random_choice_num([1, 2], [0.4, 0.6]))  # 控制刻子数量
+            kz_index = random.randrange(0, 2)  # 控制刻子是否连续 0不连续
+            if kz_index != 0:
+                kz_index = random.randrange(1, 8)  # 连续的起点
+            if kz_ctrl == 1:
+                kz_index = random.randrange(2, 7)
+            if count == 5:
+                dui_zi_index = random.randrange(1, 5)
+            while combo_count < count:
+                combo = self.get_better_cards_combo(result_dict,combo_count,1,dui_zi_index,kz_ctrl,kz_index,suit_list)
+                for card in combo:
+                    if result_dict.get(card, 0):
+                        result_dict[card] -= 1
+                hands.extend(combo)
+                combo_count += 1
+            for i in range(13 - len(hands)):
+                hands.append(cards_pool.pop())
+            players_hands[player_id] = hands
+        print("players_hands",players_hands)
+        self.__set_cards_list = players_hands
+        return players_hands
+
+
+
     @property
     def left_count(self):
         """ 剩余多少牌 """
@@ -98,6 +156,7 @@ class BasePoker:
         return self.__cards[self.__cursor:]
 
     def set_order_cards(self, cards):
+        print("设牌信息",cards)
         self.__set_cards_list = cards
         return True
 
@@ -151,7 +210,7 @@ class BasePoker:
 
         self.__not_set_cards = self.__set_cards_list[:-1]
         # 设置摸牌
-        set_mo_cards = [24]
+        set_mo_cards = self.__set_cards_list[-1]
 
         all_cards_map = {}
         for c in self.all_cards:
@@ -217,6 +276,97 @@ class BasePoker:
         self.__cards[self.__cursor:] = new_remain  # 同步修改原列表
         self.__not_set_cards = []
         print("new_remain",self.__cards[self.__cursor:])
+
+
+
+    @staticmethod
+    def get_better_cards_combo(cards, count=0, suit_start=1, dui_zi = 0, kz_ctl=2, kz_index =0, suit_list=None):
+        """ 手牌发较好的牌 """
+        if suit_list is None:
+            suit_list = []
+        kz_cards = []
+        dz_cards = []
+        for card, card_count  in cards.items():
+            if card_count>=3:
+                kz_cards.append(card)
+            elif card_count>=2:
+                dz_cards.append(card)
+        result = []
+        san_zhang = 1 if count == 3 else kz_ctl
+        if count <= san_zhang:
+            combo_type =  1
+        else:
+            if kz_ctl == 1:
+                combo_type = 5
+            else:
+                combo_type = int(UtilsTool.random_choice_num([2, 3, 5], [0.3, 0.3,0.4]))
+        if dui_zi!=0:
+            combo_type = 5
+        # 顺子
+        if combo_type == 0:
+            sz_combo = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9]]
+            sz_index = random.randrange(0, len(sz_combo))
+            combo = sz_combo[sz_index]
+            # 获取花色
+            combo_suit = random.randrange(suit_start, suit_start+2)
+            for card in combo:
+                result.append(combo_suit * 10 + card)
+        # 刻子
+        elif combo_type == 1:
+            # 特殊处理好牌发刻子
+            combo_suit = int(UtilsTool.random_choice_num([suit_list[0], suit_list[1]], [0.85, 0.15]))
+            if kz_index != 0 or kz_ctl==1:
+                combo_suit = suit_list[0]
+            if kz_index ==0:
+                valid_cards = [num for num in kz_cards if (num // 10) % 10 == combo_suit]
+                first_match = random.choice(valid_cards) if valid_cards else None
+            else:
+                first_match = next((num for num in kz_cards if (num // 10) % 10 == combo_suit and num % 10 >= kz_index), None)
+                if first_match is None:
+                    allowed = [i for i in range(1, 4) if i != combo_suit]
+                    for suit in allowed:
+                        first_match = next((num for num in kz_cards if (num // 10) % 10 == suit and num % 10 >= kz_index), None)
+                        if first_match is not None:
+                            break
+
+            result.extend([first_match] * 3)
+
+        # 两张
+        elif combo_type == 2:
+            combo = random.randrange(1, 9)
+            combo_suit = random.randrange(suit_start, suit_start+2)
+            c_suit = combo_suit * 10
+            result.append(c_suit + combo)
+            result.append(c_suit + (combo + 1))
+        # 隔张
+        elif combo_type == 3:
+            combo = random.randrange(1, 6)
+            combo_suit = random.randrange(suit_start, suit_start+2)
+            c_suit = combo_suit * 10
+            result.append(c_suit + combo)
+            result.append(c_suit + (combo + 4))
+        else:
+            result = []
+            rate1 = 0.1
+            rate2 = 0.9
+            if kz_ctl ==1 :
+                rate1 = 0.9
+                rate2 = 0.1
+                if kz_index != 0:
+                    dui_zi = kz_index-1
+            combo_suit = int(UtilsTool.random_choice_num([suit_list[0], suit_list[1]], [rate1, rate2]))
+            # 特殊处理好牌发连续的对子
+            if dui_zi!=0:
+                combo_suit = suit_list[0]
+            first_match = None
+            if len(kz_cards)!=0:
+                first_match = next((num for num in kz_cards if (num // 10) % 10 == combo_suit and num % 10 >=dui_zi), None)
+            if first_match is None:
+                first_match = next((num for num in dz_cards if (num // 10) % 10 == combo_suit and num % 10 >= dui_zi), None)
+            result.extend([first_match]*2)
+
+        print("result", result)
+        return result
 
 
 

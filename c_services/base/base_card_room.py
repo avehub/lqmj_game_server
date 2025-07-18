@@ -127,10 +127,10 @@ class BaseCardRoom(BaseRoom):
         return self.__agree_dismiss_seats.clear()
 
     async def player_join_room(self, players: list):
-        sta = await super(BaseCardRoom, self).player_join_room(players)
-        if sta and self.club_id > 0:
+        await super(BaseCardRoom, self).player_join_room(players)
+        if self.club_id > 0:
+            print("玩家进入房间，通知茶馆创建房间")
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
-        return sta
 
     async def player_quit_room(self, player, data):
         self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began(), "owner:", self.owner, "tid:", self.tid)
@@ -328,7 +328,7 @@ class BaseCardRoom(BaseRoom):
             return False
         if not self.get_owner_is_ready:  # 满人后其余玩家准备了，房主没准备，通知房主
             if self.ready_player_count == self.max_player_count - 1:
-                room_data = {"club_id": self.club_id,"secret": C_SERVICE_SECRET_KEY}
+                room_data = {"club_id": self.club_id, "secret": C_SERVICE_SECRET_KEY}
                 await self.cs2cs_by_rmq(ServiceEnum.C_CLUB, CmdClub.PLAYER_READY_EXCEPT_OWNER, room_data, self.owner)
                 self.log_info("玩家都准备了,除了房主", self.owner)
 
@@ -375,8 +375,6 @@ class BaseCardRoom(BaseRoom):
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
         await super().game_over()
-
-
 
     def get_player_ranking(self, account=None, is_round_over=False):
         if account:
@@ -469,12 +467,19 @@ class BaseCardRoom(BaseRoom):
     def get_pai_xing_score_map(self) -> dict:
         map_copy = PAI_XING_SCORE_MAP.copy()
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
+            qing_yi_se = 10
+            if self.play_type == PlayType.GUI_YANG_3:
+                qys_score = self.__rule_details.get("qing_yi_se_extra_add", 0)
+                if qys_score:
+                    qing_yi_se = 10 + 5
+
             map_copy.update({
                 HuType.DI_LONG_QI: 20,
                 HuType.DOUBLE_DI_LONG_QI: 30,
                 HuType.QING_DOUBLE_DI_LONG_QI: 40,
                 HuType.THREE_DI_LONG_QI: 40,
                 HuType.QING_THREE_DI_LONG_QI: 50,
+                HuType.QING_YI_SE: qing_yi_se
             })
             return map_copy
         elif self.play_type == PlayType.BI_JIE_MJ:
@@ -555,13 +560,13 @@ class BaseCardRoom(BaseRoom):
     async def cs2club_by_rmq(self, cmd, data):
         await self.cs2cs_by_rmq(ServiceEnum.C_CLUB, cmd, data)
 
-    def club_room_info(self,msg_type):
+    def club_room_info(self, msg_type):
         return {
             "club_id": self.__club_id,
             "created": self.__create_time,
             "creator": self.owner,
             "cs_type": self.service.service_type,
-            "id": 0,
+            "id": self.room_conf.get("id") or 0,
             "is_friend": self.room_conf.get("is_location") or 0,
             "is_location": self.room_conf.get("is_friend") or 0,
             "max_player": self.max_player_count,
@@ -577,6 +582,6 @@ class BaseCardRoom(BaseRoom):
             "total_round": self.room_conf.get("total_round"),
             "round_idx": self.round_idx,
             "updated": self.__create_time,
-            "msg_type":msg_type,
-            "secret": C_SERVICE_SECRET_KEY
+            "msg_type": msg_type,
+            "secret": C_SERVICE_SECRET_KEY,
         }

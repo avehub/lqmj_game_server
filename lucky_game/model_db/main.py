@@ -513,11 +513,6 @@ class Robot(DBModel):
     avatar = fields.CharField(max_length=128, null=True, default='', description='头像地址')
     address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
     region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
-    r_score = fields.IntField(max_length=20, default=100, index=True, description='当前排位分')
-    r_top_score = fields.IntField(max_length=20, default=100, description='最高排位分')
-    game_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏局数')
-    game_win_count_5 = fields.IntField(max_length=20, default=0, description='上篇游戏总赢数')
-    extra_info = fields.JSONField(null=True, description="固定额外配置")
 
     class Meta:
         indexes = (("region", "r_score"),)  # 联合索引

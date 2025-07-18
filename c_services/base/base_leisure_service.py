@@ -2,8 +2,8 @@ from typing import Dict
 
 from c_services.base.base_service import BaseService
 from common.public.enum_const import ServiceEnum, StaCode
-from lucky_game.model_rc.base_activity import ConfActivityRC
-from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
+# from lucky_game.model_rc.base_activity import ConfActivityRC
+# from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from nsanic.libs import tool
 
@@ -60,18 +60,18 @@ class BaseLeisureService(BaseService, LeisureService):
         data = await self.leisure_conf(self.service_type.val, play_type)
         return data[level - 1]
 
-    async def safe_box_auto_complement(self, player):
-        """ 保险箱自动补足 """
-        safe_box_info = await UserSafeBoxRC.cache_by_pk(player.uid)
-        if not safe_box_info or safe_box_info.get("default_cache"):
-            return False
-        u_info = {"gold": player.gold, "uid": player.uid}
-        sta_code, hint = await UserSafeBoxRC.safe_box_use_complement(u_info, safe_box_info)
-        self.log_info(player.uid, "自动补足", sta_code, hint)
-        if sta_code == StaCode.PASS:
-            await self.init_player(player)
-            return True
-        return False
+    # async def safe_box_auto_complement(self, player):
+    #     """ 保险箱自动补足 """
+    #     safe_box_info = await UserSafeBoxRC.cache_by_pk(player.uid)
+    #     if not safe_box_info or safe_box_info.get("default_cache"):
+    #         return False
+    #     u_info = {"gold": player.gold, "uid": player.uid}
+    #     sta_code, hint = await UserSafeBoxRC.safe_box_use_complement(u_info, safe_box_info)
+    #     self.log_info(player.uid, "自动补足", sta_code, hint)
+    #     if sta_code == StaCode.PASS:
+    #         await self.init_player(player)
+    #         return True
+    #     return False
 
     async def new_match(self, room, c_player, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """

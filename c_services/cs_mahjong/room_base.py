@@ -15,7 +15,7 @@ from .const import (FlowStatus, TimerDelay, ChangeThreeType, OverType, HuType, A
                     ExtraHuPai, JiType, CardsType, CheckType, PlayerStatusType, PlayType)
 import random
 from c_services.base.base_card_room import BaseCardRoom
-from ..const.cs_enum_const import RoomStatus, CmdRoom
+from ..const.cs_enum_const import RoomStatus, CmdRoom, CmdClub, ClubMsgType
 from common.public.enum_const import StaCode
 
 
@@ -120,7 +120,7 @@ class Room(BaseCardRoom):
         if self.play_type == PlayType.GUI_YANG_4:
             self.__di_long_qi = 1
 
-        if self.play_type == PlayType.XING_YI_MJ:
+        if self.play_type == PlayType.JIAN_LOU_XUE_LIU:
             self.__liang_men_pai = 1
 
         self.__ji_pai_score = self.get_ji_pai_score_map()
@@ -131,6 +131,10 @@ class Room(BaseCardRoom):
     @property
     def liang_men_pai(self):
         return self.__liang_men_pai
+
+    @property
+    def lian_zhuang(self):
+        return self.__lian_zhuang
 
     @property
     def que_list(self):
@@ -207,6 +211,10 @@ class Room(BaseCardRoom):
     @property
     def cfwgj_seat_id(self):
         return self.__cfwgj_seat_id
+
+    @property
+    def yin_ji(self):
+        return self.__yin_ji
 
     def serialize_room_info(self):
         room_info = self.room_info()
@@ -657,13 +665,12 @@ class Room(BaseCardRoom):
             "seconds": seconds,
             "in_flow": self.flow_status,
         }
-        print("mo_pai_call 计算摸牌后操作")
         operates, can_gang_list = self.calc_operates_after_mo_pai(curr_player)
         curr_player.operates = deepcopy(operates)
 
         if not self.__hu_pai_ti_shi:
             await self.remove_jmh_from_operates(operates)
-        if self.play_type in (PlayType.XING_YI_MJ, PlayType.AN_LONG_XUE_ZHAN):
+        if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
         data["operates"] = operates
         data["gang_hou_mo_pai"] = 1 if len(self.__gang_hou_mo_pai) > 0 else 0
@@ -773,6 +780,7 @@ class Room(BaseCardRoom):
     def set_tui_zhang_ke_kai(self, p: Player):
         if self.__tui_zhang_can_hu:
             p.tui_zhang_ke_kai = 1
+            self.log_info("退张可开玩家",p.uid,"座位号",p.seat_id)
 
     def is_jue_zhang(self, player: Player) -> bool:
         """
@@ -929,7 +937,7 @@ class Room(BaseCardRoom):
             else:
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
-            if self.play_type in (PlayType.XING_YI_MJ, PlayType.AN_LONG_XUE_ZHAN):
+            if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
                 data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
                 if can_hu_or_jian and can_peng_or_gang:
                     data["operates"].append(ActionType.ACTION_TYPE_PASS)
@@ -1119,7 +1127,7 @@ class Room(BaseCardRoom):
         p = self.get_player_by_seat_id(seat_id)
         p.set_lock_cards([])
         p.can_tian_ting = -1
-        allow_hu_map = {HuType.DI_LONG_QI: False, HuType.JIN_GOU_DIAO: False,
+        allow_hu_map = {HuType.DI_LONG_QI: self.__di_long_qi, HuType.JIN_GOU_DIAO: False,
                         HuType.QI_DUI: True}
         if len(p.ting_list) == 0:
             ting_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map,self.__lai_zi)
@@ -1138,7 +1146,7 @@ class Room(BaseCardRoom):
         print("进入somebody_jian")
         self.__curr_card_exist = 0
         await self.jian_da_notify(seat_list)
-        allow_hu_map = {HuType.DI_LONG_QI: False, HuType.JIN_GOU_DIAO: False,
+        allow_hu_map = {HuType.DI_LONG_QI: self.__di_long_qi, HuType.JIN_GOU_DIAO: False,
                         HuType.QI_DUI: True}
         # 捡完 锁定牌组 自动出牌
         for seat_id in seat_list:
@@ -1539,7 +1547,6 @@ class Room(BaseCardRoom):
         if self.__curr_card != curr_player.mo_pai:  # 摸了就出才有分，
             curr_player.add_han_bao_dou_zhuan_wan_gang_count(self.__curr_card)
 
-        # todo: 憨包杠要不要算所得加1
         await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_ZHUAN_WAN_GANG, self.__curr_card])
 
     def calc_operates_after_zhuan_wan_gang(self, p: Player):
@@ -2912,6 +2919,8 @@ class Room(BaseCardRoom):
         self.__over_type = over_type
         self.limit_lose_score(account)
 
+        print("account",account)
+
         data = {
             "round_idx": self.round_idx,
             "has_next_round": self.has_next_round(),
@@ -3137,7 +3146,7 @@ class Room(BaseCardRoom):
             p_stand_ji = p.calc_stand_ji(self.__default_ji)
             p_pg_ji = p.calc_peng_gang_ji(self.__default_ji)  # 除暗杠外的碰杠鸡
             # 冲锋鸡之前算过 -1
-            self.remove_player_ji_card(p_pg_ji,p)
+            self.remove_player_ji_card(p_ji_cards,p)
             if not p_ji_cards:
                 continue
             bearer, get_bearer = self.zha_hu_bear_no_zha_hu(p)
@@ -3433,35 +3442,7 @@ class Room(BaseCardRoom):
                     self.update_result_score(accounts, ze_ren_lose, 0, other_data)
                     self.update_result_score(accounts, pei_seat, 1, self_data)
 
-    def heck_out_lian_zhuang(self, accounts: dict):
-        """结算连庄：连庄玩家从其他玩家获得（连庄次数-1）分"""
-        if self.__lian_zhuang != 1:  # 非连庄模式直接退出
-            return
-        self.log_info(self.__tid, "结算连庄")
-        type_ = CheckType.CHECK_LIAN_ZHUANG
 
-        # 预过滤有效玩家（非空且连庄≥2）
-        valid_winners = [w for w in self.__winner_list if w and w.lian_zhuang >= 2]
-        if not valid_winners:  # 无有效连庄玩家提前退出
-            return
-
-        # 预过滤需付分玩家（非空且非连庄玩家）
-        payers = [p for p in self.__seats if p and p not in valid_winners]
-
-        # 批量处理连庄玩家
-        for winner in valid_winners:
-            score_per_payer = winner.lian_zhuang - 1  # 单玩家应付分数
-            win_total = score_per_payer * len(payers)  # 总收益
-            win_from = [p.seat_id for p in payers]  # 付分玩家列表
-
-            # 批量扣除玩家分数
-            for payer in payers:
-                other_data = self.other_ming_xi_data(type_, winner.seat_id, -score_per_payer)
-                self.update_result_score(accounts, payer.seat_id, 0, other_data)
-
-            # 连庄玩家加分
-            self_data = self.self_ming_xi_data(type_, win_from, win_total)
-            self.update_result_score(accounts, winner.seat_id, 1, self_data)
 
     def liu_ju_check_out(self, accounts: dict):
         """ 3人流局结算 """
@@ -4317,6 +4298,8 @@ class Room(BaseCardRoom):
             if self.not_playing_dismiss:
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE,False)
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
+                if self.club_id > 0:
+                    await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
                 return await super(BaseCardRoom, self).game_over()
             return await self.game_over()
         await self.liu_ju_notify()

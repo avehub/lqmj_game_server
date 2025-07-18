@@ -25,7 +25,7 @@ class BaseCard(IntEnum):
         return cls._value2member_map_.get(value)
 
     @classmethod
-    def all_cards(cls):
+    def all_cards(cls,extra_count = 0):
         raise NotImplementedError
 
     @staticmethod
