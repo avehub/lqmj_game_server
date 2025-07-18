@@ -120,7 +120,7 @@ class Room(BaseCardRoom):
         if self.play_type == PlayType.GUI_YANG_4:
             self.__di_long_qi = 1
 
-        if self.play_type == PlayType.XING_YI_MJ:
+        if self.play_type == PlayType.JIAN_LOU_XUE_LIU:
             self.__liang_men_pai = 1
 
         self.__ji_pai_score = self.get_ji_pai_score_map()
@@ -670,7 +670,7 @@ class Room(BaseCardRoom):
 
         if not self.__hu_pai_ti_shi:
             await self.remove_jmh_from_operates(operates)
-        if self.play_type in (PlayType.XING_YI_MJ, PlayType.AN_LONG_XUE_ZHAN):
+        if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
         data["operates"] = operates
         data["gang_hou_mo_pai"] = 1 if len(self.__gang_hou_mo_pai) > 0 else 0
@@ -937,7 +937,7 @@ class Room(BaseCardRoom):
             else:
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
-            if self.play_type in (PlayType.XING_YI_MJ, PlayType.AN_LONG_XUE_ZHAN):
+            if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
                 data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
                 if can_hu_or_jian and can_peng_or_gang:
                     data["operates"].append(ActionType.ACTION_TYPE_PASS)
