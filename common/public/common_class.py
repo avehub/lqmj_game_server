@@ -5,7 +5,8 @@ from nsanic.base_conf import BaseConf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
-from common.public.enum_const import ServiceEnum, Channel, CacheKey
+from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
 
 
@@ -63,25 +64,46 @@ class CommonApi(LogMeta):
     @classmethod
     async def inner_cs2ws(
             cls,
+            service_type,
             c_code,
             uid=1,
             msg=None,
-            s_enum: ServiceEnum = ServiceEnum.WS_HALL
     ):
         """
         内部调用ws
         目标service: ws_hall
-        发给ws服务的，非让ws中转
+        发给ws服务的，非直接面向用户
         """
+        r_key = await cls.__get_routing_key(uid)
+        cmd = UtilsTool.packet_command(service_type, c_code)
+        await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, msg, uid, r_key=r_key)
+
+    @classmethod
+    async def __get_routing_key(cls, uid):
         if uid == 1:
             r_key = Channel.CHANNEL_SYSTEM_MSG
         else:
             ws_id = await cls.get_player_ws_id(uid)
-            if not ws_id:
-                return
-            r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{int(ws_id)}"
-        cmd = UtilsTool.packet_command(s_enum, c_code)
-        await cls.cs2cs_by_rmq(s_enum, cmd, msg, uid, r_key=r_key)
+            r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{ws_id}"
+        return r_key
+
+    @classmethod
+    async def send_msg_to_player(
+            cls,
+            c_code,
+            uid=1,
+            code=StaCode.DEFAULT,
+            hint="",
+            msg=None,
+            req_id="",
+            cs_type: ServiceEnum = 0
+    ):
+        """ 发送消息至玩家 """
+        r_key = await cls.__get_routing_key(uid)
+        hint = hint or code.msg
+        pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
+        cmd = UtilsTool.packet_command(cs_type, c_code)
+        await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
 
     @classmethod
     async def req_by_rpc(cls, cs_type: ServiceEnum, c_code, uid, msg, r_key=''):
@@ -137,9 +159,10 @@ class CommonApi(LogMeta):
     @classmethod
     async def json_by_dict(cls, data: str):
         """ json转dict  """
+        if not data:
+            return {}
         if "'" in data:
             str_json = data.replace("'", "\"")
         else:
             str_json = data
         return json_parse(str_json)
-

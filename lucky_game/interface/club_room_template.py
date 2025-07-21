@@ -3,19 +3,22 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
-from common.public.enum_const import StaCode
+from common.public.enum_const import StaCode, ServiceEnum
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.handler.decorator import BaseDecorator
 from common.public.common_class import CommonApi
+from common.public.conf import C_SERVICE_SECRET_KEY
+from c_services.const.cs_enum_const import ClubMsgType, CmdClub
 
 
-async def verify_rule_detail(rule_details) -> dict:
+async def verify_rule_detail(rule_details, play_type) -> dict:
     """游侠房间规则校验"""
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
-    for k, v in GameRoomsRC.RULE_DETAILS.items():
+    play_rule = await GameRoomsRC.get_play_rule(play_type)
+    for k, v in play_rule.items():
         await decorator.check_inner(
             val=rule.get(k),
             require=True,
@@ -32,12 +35,14 @@ class RoomTemplateBase(GameAuthApi):
         platform = self.check_int(req.args.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
         cs_type = self.check_int(req.json.get("cs_type"), require=True, p_name="子服务类型")
         play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
-        club_id = self.check_int(req.json.get("club_id"), minval=100000, require=True, p_name="茶馆ID")
+        club_id = self.check_int(req.json.get("club_id"), minval=100000, require=False, p_name="茶馆ID")
         max_player = self.check_int(req.json.get("max_player"), require=True, p_name="最大人数")
         rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
         total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
         price = self.check_int(req.json.get("price"), require=True, p_name="支付金额")
-        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type
+        is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
+        is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否只允许好友进入")
+        return platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend
     
     async def check_authority(self, uid, club_id):
         """校验权限"""
@@ -55,8 +60,8 @@ class RoomTemplateCreate(RoomTemplateBase):
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
-        rule_dick = await verify_rule_detail(rule_details)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
+        rule_dick = await verify_rule_detail(rule_details, play_type)
         await self.check_authority(uid, club_id)
         # 创建模板
         new, err = await ClubRoomTemplatesRC.create_template(
@@ -68,9 +73,24 @@ class RoomTemplateCreate(RoomTemplateBase):
             max_player=max_player,
             rule_details=rule_dick,
             club_id=club_id,
+            is_location=is_location,
+            is_friend=is_friend,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        if not cs_enum:
+            await ClubRoomTemplatesRC.delete_template(new, club_id)
+            return self.answer(StaCode.FAIL, hint="非法服务")
+        data, _ = await ClubRoomTemplatesRC.get_by_id(new)
+        data["secret"] = C_SERVICE_SECRET_KEY
+        data["msg_type"] = ClubMsgType.CREATE_ROOM.value
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.ROOM_INFO_CHANGE,
+            data,
+            uid,
+        )
         return self.answer(data={"template_id": new})
 
 
@@ -80,20 +100,32 @@ class RoomTemplateUpdate(RoomTemplateBase):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         template_id = self.check_int(req.json.get("template_id"), require=True, p_name="模板ID")
-        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type = await self.verify_params(req, **kwargs)
+        platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
         await self.check_authority(uid, club_id)
-        rule_dick = await verify_rule_detail(rule_details)
+        rule_dick = await verify_rule_detail(rule_details, play_type)
         new, err = await ClubRoomTemplatesRC.update_template(
-            template_id=template_id,
+            template_id,
             play_type=play_type,
             cs_type=cs_type,
             price=price,
             total_round=total_round,
             max_player=max_player,
             rule_details=rule_dick,
+            is_location=is_location,
+            is_friend=is_friend,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        data, _ = await ClubRoomTemplatesRC.get_by_id(template_id)
+        data["secret"] = C_SERVICE_SECRET_KEY
+        data["msg_type"] = ClubMsgType.UPDATE_ROOM.value
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.ROOM_INFO_CHANGE,
+            data,
+            uid,
+        )
         return self.answer()
 
 class RoomTemplateList(RoomTemplateBase):
@@ -123,9 +155,17 @@ class RoomTemplateDelete(RoomTemplateBase):
         template, e = await ClubRoomTemplatesRC.get_by_id(template_id)
         if template is None:
             return self.answer(StaCode.FAIL, hint=e)
-        club_id = template.club_id
+        club_id = template["club_id"]
         await self.check_authority(uid, club_id)
         sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        data = {"msg_type": ClubMsgType.DISMISS_ROOM.value, "club_id": club_id, "secret": C_SERVICE_SECRET_KEY, "id": template_id}
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.ROOM_INFO_CHANGE,
+            data,
+            uid,
+        )
         return self.answer()

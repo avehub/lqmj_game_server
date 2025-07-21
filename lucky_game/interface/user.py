@@ -5,6 +5,8 @@ from lucky_game.handler.decorator import GameChecker, CurrentLimiting, LimitTest
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem
+from c_services.const.cs_enum_const import CmdWorkers
 
 
 class BaseUserInfo(GameAuthApi):
@@ -58,37 +60,64 @@ class UpdateUserInfo(GameAuthApi):
         data = await BaseUserRC.update_info(uid, new_data)
         return self.answer(data=data)
 
-    class Certification(BaseUserInfo):
-        """ 实名认证 """
-        decorators = [CurrentLimiting, GameChecker]
+class Certification(BaseUserInfo):
+    """ 实名认证 """
+    decorators = [CurrentLimiting, GameChecker]
 
-        async def post(self, req, **kwargs):
-            id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="id_card")
-            real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="real_name")
-            res = UtilsTool.check_id_card(id_card)
-            not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
-            res = UtilsTool.validate_name(real_name)
-            not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
-            u_info = kwargs.get("u_info") or {}
-            if u_info.get("id_card"):
-                self.answer(self.sta_code.HAD_CERTIFICATED)
+    async def post(self, req, **kwargs):
+        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="证件号码")
+        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="证件姓名")
+        res = UtilsTool.check_id_card(id_card)
+        not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
+        res = UtilsTool.validate_name(real_name)
+        not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
+        u_info = kwargs.get("u_info") or {}
+        if u_info.get("id_card"):
+            self.answer(self.sta_code.HAD_CERTIFICATED)
 
-            status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
-            self.log_info("实名结果：", result)
-            if not status:
-                self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
+        status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
+        self.log_info("实名结果：", result)
+        if not status:
+            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
 
-            pi = result.get('data').get('result').get('pi')
-            sex = UtilsTool.determine_gender(id_card)
-            new_info = {
-                "sex": sex,
-                "id_card": id_card,
-                "real_name": real_name,
-            }
-            if pi:
-                new_info["pi"] = pi
-            p_info = await BaseUserRC.update_info(u_info, new_info)
-            return self.format_response_info(p_info)
+        pi = result.get('data').get('result').get('pi')
+        sex = UtilsTool.determine_gender(id_card)
+        new_info = {
+            "sex": sex,
+            "id_card": id_card,
+            "real_name": real_name,
+        }
+        if pi:
+            new_info["pi"] = pi
+        p_info = await BaseUserRC.update_info(u_info, new_info)
+        return self.format_response_info(p_info)
+
+
+class FetchRedDotsByOpportunity(GameAuthApi):
+    """根据时机拉取红点"""
+
+    async def get(self, req: Request, **kwargs):
+        rd_enum = self.check_int(req.args.get("rd_enum"), require=True, p_name="rd_enum")
+        # 1.批量获取红点（前端确定WS已经建立连接之后调用）
+        # 该列表只能客户端在某些时机调用
+        rd_type_list = RED_DOTS_OPPORTUNITY_MAP.get(rd_enum)
+        if not rd_type_list:
+            self.answer(hint="ok")
+
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        cache_key = f"req_limit:{uid}:{req.server_path}:{rd_enum}"
+
+        incr_value = await self.conf.rds.conn.incr(cache_key)
+        await self.conf.rds.expired(cache_key, 60)  # 设置键过期时间
+
+        if incr_value > 3:  # 60秒内只能调3次
+            self.answer(code=self.sta_code.REQ_FREQUENT)
+
+        await self.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, msg={"rd_type_list": rd_type_list}, uid=uid)
+
+        self.log_info(uid, '获取红点>>', rd_type_list)
+        return self.answer(hint="OK!")
 
 
 class UpdateUserResource(BaseUserInfo):
@@ -133,3 +162,5 @@ class UpdateUserResource(BaseUserInfo):
             return self.answer(code=self.sta_code.FAIL, hint=e)
         p_info = await BaseUserRC.cache_by_pk(uid)
         return self.format_response_info(p_info)
+
+

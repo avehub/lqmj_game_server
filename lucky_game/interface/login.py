@@ -13,14 +13,16 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 # from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.server_addr import ServerAddrRC
-from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
+from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum, StaCode
 from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
-from pprint import pprint
+from lucky_game.handler.ali_verification import AliVerification
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+from common.public.conf import ASSET_SERVER_ADDR
+import random
 
 class BaseLogin(GameAuthApi):
 
@@ -74,10 +76,11 @@ class BaseLogin(GameAuthApi):
         dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
+        avatar = user_info.get("avatar", ASSET_SERVER_ADDR + f"/lucky_game/avatar/avatar_{random.randint(1, 7)}.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
-            name = f"游客{self.rng.mk_str(8, True)}"
+            name = f"游客{self.rng.mk_str(4, True)}"
             user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
             user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
         info = {
@@ -92,7 +95,8 @@ class BaseLogin(GameAuthApi):
             "dev_ident": dev_ident,
             "platform": user_info.get("platform"),
             "unionid": user_info.get("unionid"),
-            "openid": user_info.get("openid")
+            "openid": user_info.get("openid"),
+            "avatar": avatar,
         }
         return info
 
@@ -417,4 +421,52 @@ class LoginByDouYinGame(BaseLogin):
         session_key = req_data.get('session_key')
         await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
         self.log_info('LoginByDouYinGame suc:', u_info.get("uid"))
+        return await self.format_login_info(u_info, server_info, JWType.USER)
+
+
+class SendCode(BaseLogin):
+    """ 发送验证码 """
+    decorators = []
+    async def post(self, req: Request):
+        # 获取客户手机号
+        phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
+        scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
+        sta, e = await AliVerification.send_code(phone_number, scene)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
+
+
+class LoginByPhone(BaseLogin):
+    """ 通过手机号登录 """
+    decorators = []
+    async def post(self, req: Request):
+        phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
+        scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
+        code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
+        dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
+        device_id = self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
+        sta, e = await AliVerification.verify_code(phone_number, code, scene)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
+        # 通过手机号查询数据库用户信息
+        user_data = {
+            "phone": phone_number
+        }
+        u_info = await BaseUserRC.cache_by_unique(user_data, BaseUserRC.KEY_PHONE_CACHE)
+        login_info = await self.get_login_info(req, LoginWay.PHONE)
+        if not u_info:
+            # 手机号注册
+            req_user = await BaseUserRC.get_default_user_info("phone", phone=phone_number, device_id=device_id, platform=platform)
+            u_info = await self.create_new_user(
+                req, 'phone', login_info, req_user, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform)
+            self.log_info('phone number Reg u_info:', u_info)
+        else:
+            u_info = await self.update_user_login_info(req, u_info, login_info)
+            self.log_info('DouYinMG Login u_info:', u_info)
+
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        server_info = await self.whether_through()
+        self.log_info('LoginByPhone suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)

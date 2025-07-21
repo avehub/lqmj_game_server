@@ -10,6 +10,7 @@ from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 
 
+
 class ClubUsersRC(BaseCommonRC):
     db_model = ClubUsers
     tb_name = db_model.sheet_name()
@@ -60,7 +61,6 @@ class ClubUsersRC(BaseCommonRC):
         """根据茶馆ID缓存用户茶馆关系列表"""
         return await cls.conf.rds.drop_item(f"{cls.KEY_SESSION_CLUBID}:{club_id}")
 
-
     @classmethod
     async def create_club_user(cls, uid: int, club_id: int, role: int = 0, status: int = 0):
         """添加用户至茶馆"""
@@ -99,23 +99,38 @@ class ClubUsersRC(BaseCommonRC):
         return True, "更新成功"
 
     @classmethod
-    async def delete_club_user(cls, relation_id: int = None, uid: int = None, club_id: int = None):
+    async def delete_club_user(cls, relation_id: int = None, uid: int = None, club_id: int = None,
+                               check_uid: int = None):
         """删除用户茶馆关系"""
         try:
-            query = {}
-            if relation_id is not None:
-                query["id"] = relation_id
-            if uid is not None:
-                query["uid"] = uid
-            if club_id is not None:
-                query["club_id"] = club_id
-            data = await cls.db_model.filter(**query).first()
-            if data:
-                if data.role == cls.ROLE_HOST:
-                    return False, "无法删除茶馆主"
-                await cls.db_model.del_by_pk(data.id)
-                await cls.cache_session_uid_drop(data.uid)
-                await cls.cache_session_clubid_drop(data.club_id)
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                query = {}
+                if relation_id is not None:
+                    query["id"] = relation_id
+                if uid is not None:
+                    query["uid"] = uid
+                if club_id is not None:
+                    query["club_id"] = club_id
+                data = await cls.db_model.filter(**query).first()
+                if data:
+                    if data.role == cls.ROLE_HOST:
+                        return False, "无法删除茶馆主"
+                    from lucky_game.model_rc.game_rooms import GameRoomsRC
+                    check, _ = await GameRoomsRC.check_uid_room_user(data.uid)
+                    if check:
+                        return False, "用户已在游戏中，无法退出"
+                    await cls.db_model.del_by_pk(data.id)
+                    await cls.cache_session_uid_drop(data.uid)
+                    await cls.cache_session_clubid_drop(data.club_id)
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
+                    data.uid,
+                    data.club_id,
+                    0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                )
+                if not sta:
+                    return False, e
         except OperationalError as e:
             return False, e
         return True, "删除成功"
@@ -144,7 +159,7 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_uid(cls, uid: int, in_role: list = []):
+    async def get_club_user_by_uid(cls, uid: int, in_role: list = None):
         """根据用户ID获取用户茶馆关系"""
         try:
             result = await cls.cache_session_uid_get(uid)
@@ -156,13 +171,18 @@ class ClubUsersRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_club_user_by_uid_club_ids(cls, uid: int, in_role: list = []):
+    async def get_club_user_by_uid_club_ids(cls, uid: int, in_role: list = None, club_id: any = None):
         """根据用户ID获取用户加入、管理茶馆IDS"""
         result = []
         try:
             where = {"uid": uid}
             if in_role:
                 where["role__in"] = in_role
+            if club_id:
+                if isinstance(club_id, list):
+                    where["club_id__in"] = club_id
+                else:
+                    where["club_id"] = club_id
             club_users_data = await cls.db_model.get_by_dict(where)
             if club_users_data:
                 result = [club_user["club_id"] for club_user in club_users_data]
@@ -174,7 +194,7 @@ class ClubUsersRC(BaseCommonRC):
     async def get_club_user_by_one(cls, uid: int, club_id: int):
         """根据用户ID、茶馆ID获取用户茶馆关系"""
         try:
-            result = await cls.db_model.filter(uid=uid, club_id=club_id).first()
+            result = await cls.db_model.filter(uid=uid, club_id=club_id).first().values()
             if not result:
                 return result, "茶馆用户关系不存在"
         except OperationalError as e:
@@ -236,7 +256,6 @@ class ClubUsersRC(BaseCommonRC):
             return count, f"{str(e)}"
         return count, "成功"
 
-
     @classmethod
     async def join_black(cls, club_id: int, uid: int, check_uid: int = 0):
         """加入小黑屋"""
@@ -245,9 +264,9 @@ class ClubUsersRC(BaseCommonRC):
                 club_user, e = await cls.get_club_user_by_one(uid, club_id)
                 if not club_user:
                     return False, e
-                if club_user.status == cls.STATUS_BLACK:
+                if club_user["status"] == cls.STATUS_BLACK:
                     return False, "用户已在黑名单中"
-                sta = await cls.update_club_user(club_user.id, status=cls.STATUS_BLACK)
+                sta = await cls.update_club_user(club_user["id"], status=cls.STATUS_BLACK)
                 if not sta:
                     return False, "加入黑名单失败"
                 if check_uid:
@@ -255,7 +274,8 @@ class ClubUsersRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                         uid,
                         club_id,
-                        check_uid
+                        check_uid,
+                        status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
                     )
                     if not sta:
                         return False, e
@@ -281,7 +301,7 @@ class ClubUsersRC(BaseCommonRC):
                     club_user["uid"],
                     club_user["club_id"],
                     check_uid,
-                    ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
                     return False, e
@@ -289,3 +309,20 @@ class ClubUsersRC(BaseCommonRC):
             return False, e
         return True, "成功"
 
+    @classmethod
+    async def delete_club_all(cls, club_id: int):
+        """删除茶馆所有用户关系(解散茶馆)"""
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                query = {
+                    "club_id": club_id
+                }
+                data = await cls.db_model.filter(**query).values()
+                if data:
+                    for item in data:
+                        await cls.cache_session_uid_drop(item["uid"])
+                    await cls.cache_session_clubid_drop(club_id)
+                    await cls.db_model.filter(**query).delete()
+        except OperationalError as e:
+            return False, e
+        return True, "成功"

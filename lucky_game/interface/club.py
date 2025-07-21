@@ -3,15 +3,17 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
-from common.public.enum_const import StaCode
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
-from c_services.const.cs_enum_const import RoomStatus
+from c_services.const.cs_enum_const import RoomStatus, CmdClub
 from common.public.common_class import CommonApi
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
+from common.public.conf import C_SERVICE_SECRET_KEY
+from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
 
 class BaseClub(GameAuthApi):
@@ -21,7 +23,7 @@ class BaseClub(GameAuthApi):
         if not isinstance(other_dict, dict):
             return self.answer(StaCode.FAIL, hint="other参数格式错误")
         self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
-        self.check_int(other_dict.get("host_power_room"), require=True, minval=0, maxval=2,  p_name="host_power_room")
+        self.check_int(other_dict.get("host_power_room"), require=True, minval=0, maxval=3,  p_name="host_power_room")
         return other_dict
 
 
@@ -91,17 +93,21 @@ class ClubHall(BaseClub):
     async def get(self, req: Request, **kwargs):
         uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        full = self.check_int(req.args.get("full"), require=False, minval=0, maxval=1, p_name="展示已满房间")
+        play_type = self.check_str(req.args.get("play_type"), require=False, p_name="玩法类型")
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
-            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING]
+            status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
         # 玩法模板
-        templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id)
+        templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id, play_type=play_type)
         # 游戏房间
         not_rooms = await GameRoomsRC.before_room(club_id, uid)
         room_list, e = await GameRoomsRC.get_game_rooms_by_filter(
             club_id=club_id,
+            play_type=play_type,
             status=status,
             not_room_id=not_rooms,
+            full=bool(full),
         )
         # 玩法模板和游戏房间列表合并
         result = []
@@ -112,6 +118,14 @@ class ClubHall(BaseClub):
                 user_uids, _ = await GameRoomsRC.get_room_player(room["room_id"])
                 room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "uid": uid}
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdClub.ENTER_CLUB,
+            data,
+            uid,
+        )
         return self.answer(data=result)
 
 
@@ -141,8 +155,9 @@ class ClubCheckList(BaseClub):
         # 获取请求参数
         u_info = kwargs.get("u_info")
         check_uid = u_info.get("uid")
+        club_id = self.check_int(req.args.get("club_id"), require=False, default=None, p_name="茶馆ID")
         # 获取用户管理的茶馆
-        club_ids, e = await ClubUsersRC.get_club_user_by_uid_club_ids(check_uid, [1, 9])
+        club_ids, e = await ClubUsersRC.get_club_user_by_uid_club_ids(check_uid, in_role=[1, 9], club_id=club_id)
         data = []
         if club_ids:
             data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
@@ -220,8 +235,10 @@ class ClubUserInfo(BaseClub):
         # 获取请求参数
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        club_id = req.args.get("club_id")
-        self.check_int(club_id, require=True, p_name="茶馆ID")
+        select_uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        if select_uid:
+            uid = select_uid
         data, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
@@ -232,10 +249,37 @@ class ClubDismiss(BaseClub):
     """解散茶馆"""
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
-        data, e = await BaseClubRC.delete_club(club_id)
+        data, e = await BaseClubRC.delete_club(club_id, u_info)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer()
+
+class ClubRoomCard(BaseClub):
+    """茶馆基金（房卡）"""
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
+        num = self.check_int(req.json.get("num"), require=True, minval=1, p_name="操作数量")
+        # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
+        data, e = await BaseClubRC.club_room_card_operation(u_info, club_id, num)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer()
+
+
+class ClubRoomCardList(BaseClub):
+    """茶馆基金（房卡）"""
+    async def get(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
+        event_type = self.check_int(req.args.get("event_type"), require=False, minval=1, p_name="事件类型")
+        page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
+        page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
+        data, e = await ExtraClubEventRC.get_by_filter(club_id=club_id, event_type=event_type, uid=uid, page=page, page_size=page_size)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer(data=data)
+
 

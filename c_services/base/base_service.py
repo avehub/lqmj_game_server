@@ -9,7 +9,7 @@ from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from c_services.base.base_player import BasePlayer
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdRoom, CallCheck
+from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2, enter_room_model, set_cards_model
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
@@ -120,7 +120,10 @@ class BaseService(BaseServer, SessionManager):
         DelayCall(5, self.__clear_limit_call_tag, chat_tag).start()
 
         rec_seat_id = quick_chat_model.rec_seat_id
-        await room.send_quit_chat(player.seat_id, rec_seat_id, one_data, quick_chat_model)
+        if room.room_type == RoomType.SELF_BUILD:
+            await room.inner_broadcast(CmdRoom.BROADCAST_CHAT, quick_chat_model)
+        else:
+            await room.send_quit_chat(player.seat_id, rec_seat_id, one_data, quick_chat_model)
 
     async def enter_room(self, player, room, data):
         """ 进入房间 """
@@ -237,6 +240,7 @@ class BaseService(BaseServer, SessionManager):
             data = self.check_inner_call(data)
             if not data:
                 return
+            data.pop("secret")
             return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
 
         player, room = await self.check_in_room(uid, cmd)

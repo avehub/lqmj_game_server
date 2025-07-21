@@ -14,6 +14,10 @@ from lucky_game.const import GoodsItem, ReasonCostGold, ReasonCostDiamond
 from lucky_game.model_db.log import RecordsUserBan
 from lucky_game.model_db.main import User
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from common.public.conf import SERVER_ADDR
+from lucky_game.handler.random_utils import generate_natural_random
+from common.utils.utils import UtilsTool
+from nsanic.libs.mk_random import RngMaker
 
 
 class BaseUserRC(BaseCommonRC):
@@ -419,6 +423,38 @@ class BaseUserRC(BaseCommonRC):
             return False, f"更新失败：{str(e)}"
         return True, "更新成功"
 
+    @classmethod
+    async def get_default_user_info(cls, register_type: str = None, **kwargs):
+        """
+        获取默认用户信息
+        :param register_type: 注册类型
+        :param kwargs: 其他参数
+        :return: 用户信息
+        """
+        union = kwargs.get(register_type)
+        name = kwargs.get("nickname")
+        dev_ident = kwargs.get("dev_ident")
+        if register_type == cls.KEY_PHONE_CACHE:
+            name = ''.join(list(union)[-4:])
+        elif register_type in [cls.KEY_UNION_ID, cls.KEY_OPENID]:
+            if name:
+                name = UtilsTool.filter_emoji(name[:20])
+            else:
+                name = RngMaker.mk_str(6)
+        else:
+            name = generate_natural_random(4)
+        return {
+            "avatar": SERVER_ADDR + "/resource/default/avatar.png",
+            "nickname": name,
+            "sex": 0,
+            # "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
+            # "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
+            # "safe_key": RngMaker.mk_str(18),
+            # "valid_key": RngMaker.mk_str(16),
+            # "dev_ident": dev_ident,
+            # "country": "CN",
+            # "tst_mark": False,
+        }
 
 class BaseBanRC(BaseCommonRC):
     db_model = RecordsUserBan
@@ -465,7 +501,7 @@ class BaseBanRC(BaseCommonRC):
                 return []
             return []
 
-        key = f'{cls.db_model.sheet_name()}:{uid}'
+        key = f"{cls.db_model.sheet_name()}:{uid}"
         info = await cls.conf.rds.get_item(key)
         if info:
             return json_parse(info, cls.log_err)

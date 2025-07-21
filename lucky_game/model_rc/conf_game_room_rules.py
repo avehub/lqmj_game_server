@@ -137,7 +137,7 @@ class ConfGameRoomRulesRC(BaseCommonRC):
 
 
     @classmethod
-    async def get_all(cls, pip: int = None, rule_type: int = None):
+    async def get_all(cls, pip: int = None, rule_type: int = None, status: int = None):
         """获取所有规则列表"""
         result = []
         try:
@@ -145,7 +145,9 @@ class ConfGameRoomRulesRC(BaseCommonRC):
             if pip is not None:
                 query["pip"] = pip
             if rule_type is not None:
-                query["type"] = rule_type
+                query["rule_type"] = rule_type
+            if status is not None:
+                query["status"] = status
             rules = await cls.db_model.filter(**query).values()
             if not rules:
                 return result, "暂无配置"

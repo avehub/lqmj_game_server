@@ -3,7 +3,6 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
-from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
@@ -12,25 +11,20 @@ from common.public.enum_const import ServiceEnum
 from datetime import datetime
 
 
-class RecordBase(GameAuthApi):
-    """游戏战绩基础相关方法"""
-
-
-class UserRecords(RecordBase):
+class UserRecords(GameAuthApi):
     """用户战绩列表"""
 
     async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
-        self.check_int(uid, require=True, p_name="用户ID")
-        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,
-                                 p_name="子服务类型")
+        uid = self.check_int(req.args.get("uid"), default=None, require=False, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
+        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,p_name="子服务类型")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_uid(uid=uid, cs_type=cs_type, page=page, page_size=page_size)
+        data, e = await BaseRecordsGameRC.get_record_list(uid=uid, club_id=club_id, cs_type=cs_type, page=page, page_size=page_size)
         return self.answer(data=data, hint=e)
 
 
-class TotalRecords(RecordBase):
+class TotalRecords(GameAuthApi):
     """总局战绩列表"""
 
     async def get(self, req: Request, **kwargs):
@@ -65,24 +59,26 @@ class TotalRecords(RecordBase):
         return self.answer(data=result, hint=e)
 
 
-class SegmentRecords(RecordBase):
+class SegmentRecords(GameAuthApi):
     """子局战绩列表"""
 
     async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
+        uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
         record_tid = self.check_int(req.args.get("record_tid"), require=False, p_name="战绩总ID")
         record_rid = self.check_int(req.args.get("record_rid"), require=False, p_name="战绩房间ID")
-        replay_msg = self.check_int(req.args.get("replay_msg"), require=False, p_name="视频回看码")
-        data, e = await RecordsGameSegmentRC.get_record_segment_by_filter(
+        start_time = self.check_int(req.args.get("start_time"), require=False, p_name="开始时间")
+        end_time = self.check_int(req.args.get("end_time"), require=False, p_name="结束时间")
+        data, e = await BaseRecordsGameRC.get_record_segment_list(
             uid=uid,
             record_tid=record_tid,
             record_rid=record_rid,
-            replay_msg=replay_msg,
+            start_time=start_time,
+            end_time=end_time,
         )
         return self.answer(data=data, hint=e)
 
 
-class ClubRecords(RecordBase):
+class ClubRecords(GameAuthApi):
     """茶馆战绩列表"""
 
     async def get(self, req: Request, **kwargs):
@@ -120,11 +116,12 @@ class ClubRecords(RecordBase):
         return self.answer(data=result, hint=e)
 
 
-class UserAggregateRanks(RecordBase):
+class UserAggregateRanks(GameAuthApi):
     """用户战绩总计"""
 
     async def get(self, req: Request, **kwargs):
         uid = self.check_int(req.args.get("uid"), require=True, p_name="用户ID")
+        club_id = self.check_int(req.args.get("club_id"), require=False, p_name="茶馆ID")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
         if start_time is None:
@@ -134,13 +131,15 @@ class UserAggregateRanks(RecordBase):
             end_time = int(datetime.now().timestamp())
         data, e = await BaseRecordsGameRC.get_by_club_id(
             uid=uid,
+            club_id=club_id,
             start_time=start_time,
             end_time=end_time,
         )
-        win = fail = total = grade = 0
+        score = win = fail = total = grade = 0
         if data:
             for item in data:
                 total += 1
+                score += item["final_score"]
                 if item["final_grade"] == 1:
                     grade += 1
                 if item["final_status"] == 1:
@@ -149,6 +148,7 @@ class UserAggregateRanks(RecordBase):
                     fail += 1
         result = {
             "total": total,
+            "score": score,
             "win": win,
             "fail": fail,
             "grade": grade,
@@ -157,7 +157,7 @@ class UserAggregateRanks(RecordBase):
         return self.answer(data=result)
 
 
-class ClubAggregateRanks(RecordBase):
+class ClubAggregateRanks(GameAuthApi):
     """茶馆战绩总计"""
 
     async def get(self, req: Request, **kwargs):
@@ -192,32 +192,43 @@ class ClubAggregateRanks(RecordBase):
         return self.answer(data=result)
 
 
-class ClubRanks(RecordBase):
+class ClubRanks(GameAuthApi):
     """茶馆战绩排行榜"""
     async def get(self, req: Request, **kwargs):
         uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
         cs_type = self.check_int(req.args.get("cs_type"), default=None, require=False, minval=ServiceEnum.C_WORKERS,
                                  p_name="子服务类型")
+        play_type = self.check_str(req.args.get("play_type"), default=None, require=False, p_name="玩法类型")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
         final_score = self.check_int(req.args.get("final_score"), default=None, require=False, p_name="最佳分数")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_club_id(
-            uid=uid,
+        order_field = self.check_str(req.args.get("order_field"), require=False, default="total_score", p_name="排序字段")
+        order_type_val = self.check_int(req.args.get("order_type"), require=False, minval=1, maxval=2, p_name="排序方式")
+        order_type = "DESC"
+        if order_type_val == 2:
+            order_type = "ASC"
+
+        data, e = await RecordsGameTotalRC.query_record_total_by_sql(
             club_id=club_id,
             final_score=final_score,
+            play_type=play_type,
             cs_type=cs_type,
             start_time=start_time,
             end_time=end_time,
             page=page,
             page_size=page_size,
+            order_field=order_field,
+            order_type=order_type,
+            group_field="uid",
+            filtration="uid, record_rid, club_id, COUNT(final_status) AS total_status, SUM(final_score) AS total_score, SUM(final_grade) AS total_grade, SUM(price) AS total_price"
         )
         return self.answer(data=data, hint=e)
 
 
-class PastRanks(RecordBase):
+class PastRanks(GameAuthApi):
     """茶馆、我的历史战绩"""
     async def get(self, req: Request, **kwargs):
         uid = self.check_int(req.args.get("uid"), default=None, require=False, p_name="用户ID")
@@ -226,13 +237,17 @@ class PastRanks(RecordBase):
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_club_id(
+        play_type = self.check_str(req.args.get("play_type"), default=None, require=False, p_name="玩法类型")
+        final_score = self.check_int(req.args.get("final_score"), default=None, require=False, p_name="最佳分数")
+        data, e = await BaseRecordsGameRC.get_past_list(
             uid=uid,
             club_id=club_id,
             start_time=start_time,
             end_time=end_time,
             page=page,
             page_size=page_size,
+            play_type=play_type,
+            final_score=final_score,
         )
         return self.answer(data=data, hint=e)
 

@@ -11,12 +11,15 @@ LIU_JU_COUNT = 0  # 控制流局阈值
 XUE_LIU_LEFT_BI_HU = 3
 
 class PlayType(BaseEnum):
-    XING_YI_MJ = 1,"兴义麻将"
+    JIAN_LOU_XUE_LIU = 1,"捡漏麻将"
     AN_LONG_XUE_ZHAN = 2,"血流麻将"
     GUI_YANG_4 = 3,"贵阳麻将"
     GUI_YANG_3 = 4,"三丁拐"
     GUI_YANG_2 = 5,"两丁拐"
     BI_JIE_MJ = 6,"毕节麻将"
+    ZUN_YI_LAI_ZI = 7,"遵义麻将(一筒赖子)"
+    LEISURE_FCZJ = 8,"休闲场发财捉鸡"
+
 
 
 class ActionType(BaseEnum):
@@ -42,6 +45,7 @@ class CardsType(IntEnum):
     """ 牌相关 """
     CARD_COUNT = 4  # 每张牌的牌数
     YAO_JI = 21
+    YI_WAN = 11  # 1万
     YI_TONG = 31  # 1筒
     WU_GU_JI = 38  # 乌骨鸡
     LAI_ZI = 51  # 癞子（红中）
@@ -78,8 +82,26 @@ class HuType(BaseEnum):
     QING_QI_DUI = 108, "清七对"
     QING_DI_LONG = 109, "清地龙"
     QING_LONG_BEI = 110, "清龙对(清龙背|清龙七对)"
+    DOUBLE_DI_LONG_QI = 111,"双地龙七"
+    THREE_DI_LONG_QI = 112,"三地龙七"
     JIN_GOU_DIAO = 113,"金钩钓"
+    QING_DOUBLE_DI_LONG_QI = 114,"清双地龙七"
+    QING_THREE_DI_LONG_QI = 115,"清三地龙七"
     QING_JIN_GOU = 116,"清金钩"  #（只在二三丁拐下有）
+
+    # 遵义一筒赖子
+    DOUBLE_LONG_QI = 117,"双龙,遵义一筒赖子"
+    QING_DOUBLE_LONG_QI = 118,"清双龙,遵义一筒赖子"
+    THREE_LONG_QI = 119,"三龙,遵义一筒赖子"
+    QING_THREE_LONG_QI = 120,"清三龙,遵义一筒赖子"
+
+    #发财捉鸡
+    SHI_BA_LUO_HAN = 121,"十八罗汉（知行合一）"
+    SI_JIE_GAO = 122,"四节高"
+    SI_AN_KE = 123,"四暗刻（四喜财）"
+    SHI_ER_JIN_CHAI = 124,"十二金钗（八音坐唱）"
+    SAN_JIE_GAO = 125,"三节高"
+    SAN_AN_KE = 126,"三暗刻（三星照）"
 
     # 毕节麻将
     YIN_GOU_DIAO = 131, "银勾钓"
@@ -173,6 +195,7 @@ class OverType(IntEnum):
     ZHA_HU_KAI = 3  # 炸胡开
     FORCE = 4  # 强制解散
     OTHERS_GIVE_UP = 5  # 其它玩家认输
+    CLUB_OWNER_DISMISS = 6  # 房主解散
 
 @unique
 class ExtraHuPai(IntEnum):
@@ -391,3 +414,21 @@ ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_ZHA_JIAN: 94,
     ActionType.ACTION_TYPE_PASS: 1,
 }
+
+@unique
+class RechargeType(IntEnum):
+    """ 充值等待type """
+    WAIT_RECHARGE_JIAN = 1
+    WAIT_RECHARGE_MEN = 2
+    WAIT_RECHARGE_AN_GANG = 3
+    WAIT_RECHARGE_MING_GANG = 4
+    WAIT_RECHARGE_ZHUAN_WAN_GANG = 5
+
+@unique
+class SeatRelation(IntEnum):
+    """ 玩家位置关系 """
+    LAST = 1  # 上家
+    NEXT = 2  # 下家
+    OOP = 3  # 对家
+    TWO = 4  # 两家
+    THREE = 5  # 三家
