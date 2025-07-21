@@ -61,27 +61,6 @@ class ItemsProp(DBModel):
         table = "items_prop"
 
 
-class ItemsCosmetic(DBModel):
-    """游戏装扮项"""
-    goods_id = fields.IntField(max_length=10, pk=True, default=1300, description='游戏装扮ID')
-    goods_name = fields.CharField(max_length=32, null=False, default='', description='装扮名称')
-    goods_type = fields.IntEnumField(enum_type=GoodsType, null=False, index=True, default=0, description='物品类型')
-    cosmetic_type = fields.IntEnumField(enum_type=CosmeticType, index=True, default=0, description='装扮类型')
-    add_type = fields.IntEnumField(enum_type=AddType, default=0, description='累加类型')
-    put_type = fields.IntEnumField(enum_type=PutType, default=PutType.U_BAG, description='存放类型')
-    price = fields.IntField(null=True, default=0, description='装扮价格')
-    jump_target = fields.IntEnumField(enum_type=JumpTarget, default=0, description='跳转目标')
-    target_data = fields.JSONField(null=True, description='跳转配置')
-    number = fields.SmallIntField(max_length=6, null=True, default=0, description='物品排序')
-    desc = fields.CharField(max_length=256, null=True, default='', description='物品描述')
-    img_url = fields.CharField(max_length=128, null=True, default='', description='图片地址')
-    status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态 0关闭 1开启')
-    extra_info = fields.JSONField(null=True, description="额外配置信息")
-    jump_data = fields.JSONField(null=True, description='跳转配置')
-
-    class Meta:
-        table = "items_cosmetic"
-
 
 class ItemsSkin(DBModel):
     """卡牌皮肤项"""
@@ -178,20 +157,7 @@ class UserSkin(DBModel):
         table = "user_skin"
         unique_together = (("uid", "skin_public_id", "cs_type"),)
 
-class UserCosmetic(DBModel):
-    """玩家装扮"""
-    cos_id = fields.IntField(max_length=10, pk=True, default=1, description='装扮统计ID')
-    cosmetic_type = fields.IntEnumField(enum_type=CosmeticType, index=True, default=0, description='装扮类型')
-    cosmetic_item = fields.ForeignKeyField('lucky_game.ItemsCosmetic', related_name='cosmetic_item',
-                                           on_delete=OnDelete.CASCADE, null=True)
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    got_type = fields.IntEnumField(enum_type=GotType, default=0, description='获得类型')
-    exp_time = fields.BigIntField(null=True, default=0, description="过期时间")
-    got_time = fields.IntField(null=True, default=0, description='获得时间')
 
-    class Meta:
-        table = "user_cosmetic"
-        unique_together = (("uid", "cosmetic_item"),)
 
 
 

@@ -13,7 +13,7 @@ class GetLeisureList(GameAuthApi):
     """ 休闲场列表 """
 
     async def get(self, req: Request, **kwargs):
-        cs_type = self.check_int(req.args.get("cs_type"), require=True, p_name="cs_type")
+        cs_type = self.check_int(req.args.get("cs_type"), require=True, p_name="子服务类型")
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         not cs_enum and self.answer(self.sta_code.ERR_ARG)
         if not isinstance(cs_enum.desc, GameType) or cs_enum.desc != GameType.LEISURE:
