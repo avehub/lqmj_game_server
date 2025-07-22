@@ -29,8 +29,8 @@ class ConfStoreRC(BaseRC):
     async def get_store_items(cls, uid, store_type=StoreType.DEFAULT, platform='', os=''):
         items = await cls.cache_all_conf_item()
         if items:
-            for item in items:
-                DouYin.adjust_payment_for_douyin(item, platform, os)
+            # for item in items:
+            #     DouYin.adjust_payment_for_douyin(item, platform, os)
             items_list = await cls.organize_store_data(uid, items, store_type, filter_types=cls.COMMON_STORE_TYPES)
             return items_list
         return
