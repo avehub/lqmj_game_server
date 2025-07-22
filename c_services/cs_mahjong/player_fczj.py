@@ -13,6 +13,7 @@ class PlayerFCZJ(Player):
         self.__record_account = []
         self.__fan_ji = 0
         self.lock = False
+        self.__hua_zhu = 0
 
 
 
@@ -65,6 +66,14 @@ class PlayerFCZJ(Player):
     def lock(self, is_lock):
         self.__is_lock = is_lock
 
+    @property
+    def hua_zhu(self):
+        return self.__hua_zhu
+
+    @hua_zhu.setter
+    def hua_zhu(self, hua_zhu):
+        self.__hua_zhu = hua_zhu
+
     def record_account(self, data, is_copy=True):
         """
         玩家记账
@@ -86,10 +95,10 @@ class PlayerFCZJ(Player):
         result = {
             "hand_cards": self.cards,
             "table_cards": self.get_table_cards(),
-            "jiao_pai": self.__jiao_pai,
-            "fang_pao": self.__fang_pao,
-            "hu_type": self.__hu_type,
-            "ji_pai": self.__ji_pai,
+            "jiao_pai": self.jiao_pai,
+            "fang_pao": self.fang_pao,
+            "hu_type": self.hu_type,
+            "ji_pai": self.ji_pai,
         }
         data.update(result)
         return data

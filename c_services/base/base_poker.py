@@ -131,10 +131,11 @@ class BasePoker:
                 dui_zi_index = random.randrange(1, 5)
             while combo_count < count:
                 combo = self.get_better_cards_combo(result_dict,combo_count,1,dui_zi_index,kz_ctrl,kz_index,suit_list)
-                for card in combo:
-                    if result_dict.get(card, 0):
-                        result_dict[card] -= 1
-                hands.extend(combo)
+                if self.has_cards(combo):
+                    for card in combo:
+                        if result_dict.get(card, 0):
+                            result_dict[card] -= 1
+                    hands.extend(combo)
                 combo_count += 1
             for i in range(13 - len(hands)):
                 hands.append(cards_pool.pop())
@@ -243,6 +244,7 @@ class BasePoker:
         # 设置摸牌
         order_cards.extend(set_mo_cards)
         order_cards.extend(remain_cards)
+        print("order_cards",order_cards)
         order_cards = [self.get_card_by_key(c) for c in order_cards]
 
         self.__cards = order_cards
@@ -368,5 +370,13 @@ class BasePoker:
         print("result", result)
         return result
 
+    def has_cards(self, cards):
+        if cards[0] == cards[1]:
+            return self.__cards.count(cards[0]) >= len(cards)
+        for card in cards:
+            if card not in self.__cards:
+                return False
+
+        return True
 
 

@@ -8,6 +8,8 @@ from ..const.cs_enum_const import CmdRoom
 
 class RoomGY(RoomBJ):
     def __init__(self, tid, service, room_conf):
+        room_conf.get("rule_details")["zhan_ji"] = 1
+
         super().__init__(tid, service, room_conf)
         self.__cha_que = 0
         self.__yuan_que = 0

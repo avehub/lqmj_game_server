@@ -94,7 +94,7 @@ class Room(BaseCardRoom):
         self.__lian_zhuang = 0
         self.__lai_zi = CardsType.LAI_ZI
         if self.play_type == PlayType.ZUN_YI_LAI_ZI:
-            self.__lai_zi = self.rule_detail.get("lai_zi", 0)
+            self.__lai_zi = self.rule_detail.get("lai_zi", CardsType.YI_TONG)
         if self.play_type in (PlayType.GUI_YANG_4,PlayType.BI_JIE_MJ):
             self.__lian_zhuang = self.rule_detail.get("lian_zhuang", 0)
         self.__yuan_bao = 0
@@ -639,7 +639,7 @@ class Room(BaseCardRoom):
         return False
 
     @staticmethod
-    def remove_jmh_from_operates(operates):
+    def remove_jmh_from_operates(operates) -> list:
         if ActionType.ACTION_TYPE_JIAN in operates:
             operates.remove(ActionType.ACTION_TYPE_JIAN)
         if ActionType.ACTION_TYPE_MEN in operates:
@@ -669,7 +669,7 @@ class Room(BaseCardRoom):
         curr_player.operates = deepcopy(operates)
 
         if not self.__hu_pai_ti_shi:
-            await self.remove_jmh_from_operates(operates)
+            self.remove_jmh_from_operates(operates)
         if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
         data["operates"] = operates
@@ -1802,6 +1802,7 @@ class Room(BaseCardRoom):
             hu_info, _, _ = self.get_hu_type(winner, dian_pao=not is_zi_mo)
             check_type = CheckType.CHECK_HU_ZI_MO if is_zi_mo else CheckType.CHECK_HU_DIAN_PAO
             hu_info["check_type"] = check_type
+            print("hu_info",hu_info)
             self.__kai_pai_hu_info.append(hu_info)
             winner.set_hu_info(hu_info)
             winner.hu_type = hu_info.get("hu_type", 0)
@@ -2518,12 +2519,13 @@ class Room(BaseCardRoom):
 
     async def ding_que_or_tian_ting(self):
         """如果二丁拐 三丁拐没开两门牌，开始定缺"""
-        if self.play_type == (PlayType.GUI_YANG_3, PlayType.GUI_YANG_2) and self.__liang_men_pai == 0:
+        if self.play_type in (PlayType.GUI_YANG_3, PlayType.GUI_YANG_2) and self.__liang_men_pai == 0:
             await self.start_ding_que()
         else:
             await self.start_tian_ting()
 
     async def start_ding_que(self):
+        print("开始定缺")
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             return StaCode.FLOW_ERR, "桌子状态不可定缺"
         data = {
@@ -3545,6 +3547,7 @@ class Room(BaseCardRoom):
         if self.play_type == PlayType.AN_LONG_XUE_ZHAN:
             self.kai_hu_cha_jiao(accounts)
         # 1.开牌牌型结算
+        print("self.__kai_pai_hu_info",self.__kai_pai_hu_info)
         for hu_info in self.__kai_pai_hu_info:
             self.check_by_num_3(accounts, hu_info)
         # 2.结算闷捡
@@ -3911,7 +3914,7 @@ class Room(BaseCardRoom):
         is_zi_mo = hu_info.get("is_zi_mo")
         seat_id = hu_info.get("seat_id")  # 闷捡者
         hu_type = hu_info.get("hu_type")
-        extra_hu_lst = hu_info["extra_hu_type"]
+        extra_hu_lst = hu_info.get("extra_hu_type", [])
         check_type = hu_info.get("check_type")
         winner = self.get_player_by_seat_id(seat_id)
 

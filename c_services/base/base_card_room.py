@@ -506,6 +506,31 @@ class BaseCardRoom(BaseRoom):
                 HuType.QYS_YING_WU_DUI: 40,  # 清硬五对
             })
             return map_copy
+        elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
+            base_score = 5
+            map_copy.update({
+                HuType.PING_HU: base_score,
+                HuType.DA_DUI_ZI: base_score + 10,
+                HuType.QI_DUI: base_score + 20,
+                HuType.LONG_QI_DUI: base_score + 40,
+                HuType.DOUBLE_LONG_QI: base_score + 80,
+                HuType.THREE_LONG_QI: base_score + 120,
+                HuType.DI_LONG_QI: base_score + 40,
+                HuType.DOUBLE_DI_LONG_QI: base_score + 80,
+                HuType.THREE_DI_LONG_QI: base_score + 120,
+                HuType.JIN_GOU_DIAO: base_score + 20,
+                HuType.QING_YI_SE: base_score + 20,
+                HuType.QING_DA_DUI: base_score + 30,
+                HuType.QING_QI_DUI: base_score + 40,
+                HuType.QING_DI_LONG: base_score + 60,
+                HuType.QING_DOUBLE_DI_LONG_QI: base_score + 100,
+                HuType.QING_THREE_DI_LONG_QI: base_score + 140,
+                HuType.QING_LONG_BEI: base_score + 60,
+                HuType.QING_DOUBLE_LONG_QI: base_score + 100,
+                HuType.QING_THREE_LONG_QI: base_score + 140,
+                HuType.QING_JIN_GOU: base_score + 40
+            })
+            return map_copy
         else:
             return map_copy
 

@@ -933,9 +933,9 @@ class S2CKouFen:
         lose_list = kwargs.get("lose_list") or []
         for data in lose_list:
             lose = obj.lose_list.add()
-            lose.loes_seat_id = data.get("loes_seat_id") or 0
-            lose.loes_gold = data.get("loes_gold") or 0
-            lose.loes_res_gold = data.get("loes_res_gold") or 0
+            lose.lose_seat_id = data.get("loes_seat_id") or 0
+            lose.lose_gold = data.get("lose_gold") or 0
+            lose.loser_res_gold = data.get("loser_res_gold") or 0
         obj.extra_hu_type.extend(kwargs.get("extra_hu_type") or [])
         return obj
 
@@ -980,7 +980,7 @@ class S2CRecordAccountInfo:
             account.act = data.get("act") or 0
             account.win_from.extend(data.get("win_from") or [])
             account.lose_to.extend(data.get("lose_to") or [])
-            account.hu_type = data.get("hu_type") or 0
+            account.hu_type.extend(data.get("lose_to") or [])
         return obj
 
 class S2CFanJiScore:

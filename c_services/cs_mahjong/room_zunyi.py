@@ -1,4 +1,6 @@
 from copy import deepcopy
+
+from common.proto.py_pb2.ws_leisure import S2CFirstJiMahjong
 from common.public.enum_const import StaCode
 from .player import Player
 from .const import (FlowStatus, ActionType, CheckType, JiType, CardsType, HuType, ExtraHuPai)
@@ -9,7 +11,6 @@ from ..const.cs_enum_const import CmdRoom
 
 class RoomZY(RoomBJ):
     def __init__(self, tid, service, room_conf):
-        room_conf.get("rule_details")["bao_ting"] = 1
         room_conf.get("rule_details")["di_long_qi"] = 1
         super().__init__(tid, service, room_conf)
         self.__after_peng_can_bao_ting = self.rule_detail.get("after_peng_can_bao_ting", 0)
@@ -19,7 +20,7 @@ class RoomZY(RoomBJ):
         self.__round_first_yi_tong = 0
         self.__round_first_yi_wan = 0
         self.__cf_yi_tong_seat_id = 0  # 冲锋一筒玩家
-        self.__cf_yi_wan_seat_id = 0 #冲锋一万玩家
+        self.__cf_yi_wan_seat_id = 0  # 冲锋一万玩家
 
     def clear_room_round_start(self):
         super().clear_room_round_start()
@@ -30,39 +31,33 @@ class RoomZY(RoomBJ):
         开牌结算
         统一数据结构
         """
-        accounts,zhuo_ji = super().kai_pai_check_out(accounts)
-
-        if self.bao_ji:
-            self.bao_ji_check(accounts)
-
-        # 4.2 结算包杠
-        if self.bao_gang:
-            self.bao_gang_check(accounts)
+        accounts, zhuo_ji = super().kai_pai_check_out(accounts)
 
         self.check_out_lian_zhuang(accounts)
 
         return accounts, zhuo_ji
 
-
-    def get_per_score(self,ji,score,count,default_ji,liu_ju):
+    def get_per_score(self, ji, score, count, default_ji, liu_ju):
         pass
 
-
     def get_hu_type(self, p: Player, dian_pao=False, only_calc_hu=False, lou=False):
+        print("遵义玩法胡牌提示")
         extra_fan = []
         is_zi_mo = self.curr_seat_id == p.seat_id
         table_cards = deepcopy(p.table_cards)
         if only_calc_hu:
-            hu_type,_ = Rule.only_can_hu(table_cards, p.cards, self.curr_card,self.lai_zi)
+            hu_type = Rule.only_can_hu(table_cards, p.cards, self.curr_card, self.lai_zi)
             hu_path = []
         else:
+            print("算胡")
             flag = self.is_must_qing_yi_se(p, table_cards, is_zi_mo)
             hu_type, hu_path = Rule.get_hu_type_by_score(
                 table_cards, p.cards, self.curr_card, self.__fan_ji_score, is_zi_mo, lai_zi=self.lai_zi, must_qys=flag)
             p.jiao_pai = hu_type
             p.hu_path = hu_path or []
+        print("hu_type:", hu_type)
         if not hu_type:
-            return {},False,[]
+            return {}, False, []
 
         # 地胡：第一轮接庄炮/自摸
         # 杀报(天听玩家未胡之前都可被杀报，只算一次，自己胡过或者被别人杀报过 后续则没有杀报)
@@ -132,7 +127,7 @@ class RoomZY(RoomBJ):
             HuType.DOUBLE_LONG_QI: HuType.QING_DOUBLE_LONG_QI,
             HuType.THREE_LONG_QI: HuType.QING_THREE_LONG_QI,
         }
-        is_qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(p.table_cards), deepcopy(p.cards), self.curr_card,self.lai_zi)
+        is_qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(p.table_cards), deepcopy(p.cards), self.curr_card, self.lai_zi)
 
         if is_qing_yi_se:
             hu_type = qing_upgrade_map.get(hu_type, HuType.QING_YI_SE)
@@ -153,25 +148,22 @@ class RoomZY(RoomBJ):
             result["qiang_gang_score"] = qiang_gang_score
             result["card"] = self.curr_card
             result["gang_card"] = gang_card
-
+        print("result:", result)
         return result, True, hu_path
 
-
-
-    def is_must_qing_yi_se(self, p:Player, table_cards, is_zi_mo) -> bool:
+    def is_must_qing_yi_se(self, p: Player, table_cards, is_zi_mo) -> bool:
         """ 是否是清一色 """
-        hu_type = Rule.only_can_hu(table_cards, p.cards, self.curr_card,self.lai_zi)
+        hu_type = Rule.only_can_hu(table_cards, p.cards, self.curr_card, self.lai_zi)
         if hu_type != HuType.PING_HU:
             return False
         hu_info = {"hu_type": hu_type, "is_zi_mo": is_zi_mo}
-        can_hu, hu_type = self.check_can_hu(Player,True, hu_info)
+        can_hu, hu_type,_ = self.check_can_hu(p, True, hu_info)
         if not can_hu:
             is_qing_yi_se = Rule.has_hu_is_qing_yi_se(
-                deepcopy(p.table_cards), deepcopy(p.cards), self.curr_card,self.lai_zi)
+                deepcopy(p.table_cards), deepcopy(p.cards), self.curr_card, self.lai_zi)
             if is_qing_yi_se:
                 return True
         return False
-
 
     def deal_fan_ji(self):
         self.ji_cards, zhuo_ji = self.calc_fan_ji_cards()
@@ -196,14 +188,14 @@ class RoomZY(RoomBJ):
                 ji_score[ji] = 1
         self.__fan_ji_score = ji_score
 
-    def get_operates_after_peng(self,p:Player):
+    def get_operates_after_peng(self, p: Player):
         can_an_gang, gang_card_list = p.can_an_gang(Rule)
         can_zwg, gang_card = p.can_zhuan_wan_gang(Rule)
         can_ting = False
         if self.__after_peng_can_bao_ting:
             if not p.chu_cards and p.mo_pai == 0:
                 can_ting = self.check_tian_ting_after_peng(p)
-                self.log_info( p.uid, "玩家碰后是否能听：", can_ting, p.cards)
+                self.log_info(p.uid, "玩家碰后是否能听：", can_ting, p.cards)
         operates = []
         if can_zwg:
             operates.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
@@ -211,49 +203,53 @@ class RoomZY(RoomBJ):
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
         if can_ting:
             operates.append(ActionType.ACTION_TYPE_TIAN_TING)
-        return operates,gang_card_list
+        return operates, gang_card_list
 
-    def check_tian_ting_after_peng(self,p:Player):
+    def check_tian_ting_after_peng(self, p: Player):
         """是否符合碰后听牌"""
         if len(p.table_cards) != 1 or p.table_cards[0][0] != ActionType.ACTION_TYPE_PENG:  # 最多有一个杠或者碰
             return False
         if len(p.cards) != 11:
             return False
         if p.chu_pai_len() == 0 and p.can_tian_ting >= 0:
-            if Rule.r_can_tian_ting(p.table_cards, p.cards, p.que,is_zy = True, lai_zi=self.__lai_zi):
+            if Rule.r_can_tian_ting(p.table_cards, p.cards, p.que, is_zy=True, lai_zi=self.__lai_zi):
                 return True
         return False
 
     async def on_player_pass(self, p: Player):
-       code,_ =  await super().on_player_pass(p)
-       if code == StaCode.PASS:
-           if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.curr_seat_id != p.seat_id:
-               p.dian_pao_no_hu = 1
+        code, msg = await super().on_player_pass(p)
+        if code == StaCode.PASS:
+            if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.curr_seat_id != p.seat_id:
+                p.dian_pao_no_hu = 1
+        return code, msg
+
 
     async def hu_da_notify(self, hu_list):
         self.deal_fan_ji()
         await super().hu_da_notify(hu_list)
 
-    async def deal_first_ji(self, curr_p:Player):
+    async def deal_first_ji(self, curr_p: Player):
         await super().deal_first_ji(curr_p)
         if self.curr_card == self.lai_zi and self.__round_first_yi_tong == 0:
             self.__round_first_yi_tong = 1
             self.__cf_yi_tong_seat_id = self.curr_seat_id
             curr_p.chong_feng_yi_tong = 1
-            self.log_info("癞子冲锋鸡玩家成功", self.__cf_yi_tong_seat_id)
-            result = {"chong_feng_ji": self.__cf_yi_tong_seat_id, "card": self.curr_card}
-            await self.inner_broadcast(CmdRoom.CONFIRM_CHONG_FENG_JI, result)
+            await self.send_first_ji_info("癞子冲锋鸡玩家成功")
 
         elif self.__yi_wan_ji and self.curr_card == CardsType.YI_WAN and self.__round_first_yi_wan == 0:
             self.__round_first_yi_wan = 1
             self.__cf_yi_wan_seat_id = self.curr_seat_id
             curr_p.chong_feng_yi_wan = 1
-            self.log_info("一万冲锋鸡玩家成功", self.__cf_yi_wan_seat_id)
-            result = {"chong_feng_ji": self.__cf_yi_wan_seat_id, "card": self.curr_card}
-            await self.inner_broadcast(CmdRoom.CONFIRM_CHONG_FENG_JI, result)
+            await self.send_first_ji_info("一万冲锋鸡玩家成功")
+
+    # async def send_first_ji_info(self, desc):
+    #     self.log_info(desc, self.curr_seat_id)
+    #     data = {"first_ji_seat_id": self.curr_seat_id, "first_ji_card": self.__curr_card}
+    #     data_model = S2CFirstJiMahjong.pb_model(**data)
+    #     await self.inner_broadcast(CmdRoom.CONFIRM_CHONG_FENG_JI, data_model)
 
     def check_ji(self, accounts, is_bao=True, liu_ju=False):
-        if liu_ju and self.play_type >2:
+        if liu_ju and self.play_type > 2:
             return
         type_ = CheckType.CHECK_JI
         # 外循环为未叫牌/炸胡玩家
@@ -265,13 +261,13 @@ class RoomZY(RoomBJ):
                 continue
             if p.seat_id in self.shao_ji_gang_seats:
                 continue
-            p.calc_all_ji_pai(self.default_ji, fan_bird_list, self.man_tang_ji,False)  # 计算玩家有几个鸡牌
+            p.calc_all_ji_pai(self.default_ji, fan_bird_list, self.man_tang_ji, False)  # 计算玩家有几个鸡牌
             p_ji_cards = p.ji_pai[:]  # list
             is_winner = p in self.winner_list
             p_hand_ji = p.calc_hand_ji_by_lai_zi(
                 self.default_ji, self.ji_cards, self.__fan_ji_score, self.lai_zi, is_winner)
             # 冲锋鸡之前算过 -1
-            self.remove_player_ji_card(p_ji_cards,p)
+            self.remove_player_ji_card(p_ji_cards, p)
 
             hand_ji_card_count = self.cal_card_count(p_hand_ji)
             hand_lai_zi_count = hand_ji_card_count.get(self.lai_zi, 0)  # 手里的癞子数量
@@ -331,8 +327,8 @@ class RoomZY(RoomBJ):
                     self.update_result_score(accounts, p.seat_id, 1, self_data)
         self.check_out_lai_zi_ji(accounts)
 
-    def remove_player_ji_card(self,p_ji_cards,p:Player):
-        super().remove_player_ji_card(p_ji_cards,p)
+    def remove_player_ji_card(self, p_ji_cards, p: Player):
+        super().remove_player_ji_card(p_ji_cards, p)
         if self.__cf_yi_wan_seat_id != 0 and self.__cf_yi_wan_seat_id == p.seat_id:
             p_ji_cards.remove(CardsType.YI_WAN)
 
@@ -348,22 +344,22 @@ class RoomZY(RoomBJ):
         score = self.ji_pai_score.get(CardsType.YI_TONG, 0)
         if self.lai_zi in self.ji_cards:
             # 没翻到赖子鸡时，打出一筒的赖子叫牌时算为10分/个，握在手里不计分，打出未叫牌-10/个。
-            score = self.__ji_pai_score.get(JiType.JIN_YI_TONG, 0)
+            score = self.ji_pai_score.get(JiType.JIN_YI_TONG, 0)
 
         for p in self.seats:
             if p.jiao_pai > 0 and p.seat_id in self.shao_ji_gang_seats:
-                self.log_info( p.uid, "结算碰杠+打出去的癞子鸡, 玩家叫牌但被烧鸡烧杠")
+                self.log_info(p.uid, "结算碰杠+打出去的癞子鸡, 玩家叫牌但被烧鸡烧杠")
                 continue
             played_count = p.lai_zi_in_played(self.lai_zi)
             if self.__cf_yi_tong_seat_id == p.seat_id:
                 played_count -= 1
-                self.log_info( p.uid, "结算癞子鸡，冲锋赖子鸡玩家-1", played_count)
+                self.log_info(p.uid, "结算癞子鸡，冲锋赖子鸡玩家-1", played_count)
             if played_count <= 0:
                 continue
             per_score = score * played_count
             if p.jiao_pai <= 0:
                 per_score *= -1
-            self.log_info( p.uid, p.seat_id, "结算打出的赖子鸡", played_count)
+            self.log_info(p.uid, p.seat_id, "结算打出的赖子鸡", played_count)
             win_total = 0
             win_from = []
             for other_p in self.seats:
@@ -383,7 +379,7 @@ class RoomZY(RoomBJ):
     def bao_ji_check(self, accounts, liu_ju=False):
         type_ = CheckType.CHECK_JI
 
-        default_ji = self.__default_ji.copy()
+        default_ji = self.default_ji.copy()
 
         # 外循环为未叫牌/炸胡玩家
         for p in self.seats:
@@ -393,7 +389,7 @@ class RoomZY(RoomBJ):
             p.get_bao_ji(default_ji)  # 计算玩家有几个鸡牌
             p_ji_cards = p.ji_pai[:]  # list
             # 冲锋鸡之前算过 -1
-            self.remove_player_ji_card(p_ji_cards,p)
+            self.remove_player_ji_card(p_ji_cards, p)
 
             if not p_ji_cards:
                 continue

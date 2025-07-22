@@ -91,7 +91,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__is_win = flag
 
     def init_player(self, u_info: dict):
-        self.__gold = u_info.get("gold") or 0
+        self.__gold = int(u_info.get("gold")) if u_info.get("gold") is not None else 0
         self.__diamond = u_info.get("diamond") or 0
 
     def update_gold(self, score: int, accumulate=True):

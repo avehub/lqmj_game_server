@@ -11,6 +11,8 @@ from ..const.cs_enum_const import CmdRoom, RoomStatus
 class RoomBJ(Room):
     def __init__(self, tid, service, room_conf):
         room_conf.get("rule_details")["bao_ting"] = 1
+        room_conf.get("rule_details")["ze_ren_ji"] = 1
+        room_conf.get("rule_details")["chong_feng_ji"] = 1
         super().__init__(tid, service, room_conf)
         self.__shu_zi_ji = self.rule_detail.get("shu_zi_ji", 0)  # 数字鸡
 
@@ -111,9 +113,9 @@ class RoomBJ(Room):
 
     def check_out_lian_zhuang(self, accounts: dict):
         """结算连庄：连庄玩家从其他玩家获得（连庄次数-1）分"""
-        if self.__lian_zhuang != 1:  # 非连庄模式直接退出
+        if self.lian_zhuang != 1:  # 非连庄模式直接退出
             return
-        self.log_info(self.__tid, "结算连庄")
+        self.log_info( "结算连庄")
         type_ = CheckType.CHECK_LIAN_ZHUANG
 
         # 预过滤有效玩家（非空且连庄≥2）

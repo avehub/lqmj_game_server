@@ -78,16 +78,16 @@ class Player(BaseLeisurePlayer):
         return self.__shang_ga_score
 
     @shang_ga_score.setter
-    def shang_ga_score(self, shang_ga_score):
-        self.__shang_ga_score = shang_ga_score
+    def shang_ga_score(self, value):
+        self.__shang_ga_score = value
 
     @property
-    def que(self):
+    def que(self) -> int:
         return self.__que
 
     @que.setter
-    def que(self,que:int):
-        self.__que = que
+    def que(self,value:int):
+        self.__que = value
 
     @property
     def yuan_que(self):
@@ -98,24 +98,24 @@ class Player(BaseLeisurePlayer):
         return self.__is_lock
 
     @is_lock.setter
-    def is_lock(self,is_lock:bool):
-        self.__is_lock = is_lock
+    def is_lock(self,value:bool):
+        self.__is_lock = value
 
     @property
     def tian_ting(self):
         return self.__tian_ting
 
     @tian_ting.setter
-    def tian_ting(self,tian_ting:int):
-        self.__tian_ting = tian_ting
+    def tian_ting(self,value:int):
+        self.__tian_ting = value
 
     @property
     def tian_hu(self):
         return self.__tian_hu
 
     @tian_hu.setter
-    def tian_hu(self, tian_hu):
-        self.__tian_hu = tian_hu
+    def tian_hu(self, value):
+        self.__tian_hu = value
 
     @property
     def all_chu_cards(self):
@@ -144,8 +144,8 @@ class Player(BaseLeisurePlayer):
         return self.__chu_cards.pop()
 
     @can_tian_ting.setter
-    def can_tian_ting(self, can_tian_ting):
-        self.__can_tian_ting = can_tian_ting
+    def can_tian_ting(self, value):
+        self.__can_tian_ting = value
 
     @property
     def operates(self):
@@ -170,8 +170,8 @@ class Player(BaseLeisurePlayer):
         return self.__hu_path
 
     @hu_path.setter
-    def hu_path(self, hu_path):
-        self.__hu_path = hu_path
+    def hu_path(self, value):
+        self.__hu_path = value
 
 
     @property
@@ -179,8 +179,8 @@ class Player(BaseLeisurePlayer):
         return self.__mo_pai
 
     @mo_pai.setter
-    def mo_pai(self,mo_pai:int):
-        self.__mo_pai = mo_pai
+    def mo_pai(self,value:int):
+        self.__mo_pai = value
 
     @property
     def jiao_pai(self):
@@ -389,16 +389,16 @@ class Player(BaseLeisurePlayer):
         return self.__ting_list
 
     @ting_list.setter
-    def ting_list(self, ting_list):
-        self.__ting_list = ting_list
+    def ting_list(self, value):
+        self.__ting_list = value
 
     @property
     def lock_cards(self):
         return self.__lock_cards
 
     @lock_cards.setter
-    def lock_cards(self, lock_cards):
-        self.__lock_cards = lock_cards
+    def lock_cards(self, value):
+        self.__lock_cards = value
 
     def get_out_not_lock_card(self):
         card_count = {}
@@ -458,8 +458,8 @@ class Player(BaseLeisurePlayer):
         return self.__lian_zhuang
 
     @lian_zhuang.setter
-    def lian_zhuang(self, lian_zhuang):
-        self.__lian_zhuang = lian_zhuang
+    def lian_zhuang(self, value):
+        self.__lian_zhuang = value
 
     def __add_table_cards(self, card_type, cards, from_seat_id):
         cards = deepcopy(cards)
@@ -524,16 +524,16 @@ class Player(BaseLeisurePlayer):
         return self.__fang_pao
 
     @fang_pao.setter
-    def fang_pao(self, fang_pao):
-        self.__fang_pao = fang_pao
+    def fang_pao(self, value):
+        self.__fang_pao = value
 
     @property
     def hu_type(self):
         return self.__hu_type
 
     @hu_type.setter
-    def hu_type(self, hu_type):
-        self.__hu_type = hu_type
+    def hu_type(self, value):
+        self.__hu_type = value
 
     @property
     def ji_pai(self):
@@ -544,32 +544,32 @@ class Player(BaseLeisurePlayer):
         return self.__chong_feng_ji
 
     @chong_feng_ji.setter
-    def chong_feng_ji(self, chong_feng_ji):
-        self.__chong_feng_ji = chong_feng_ji
+    def chong_feng_ji(self, value):
+        self.__chong_feng_ji = value
 
     @property
     def chong_feng_wgj(self):
         return self.__chong_feng_wgj
 
     @chong_feng_wgj.setter
-    def chong_feng_wgj(self, chong_feng_ji):
-        self.__chong_feng_wgj = chong_feng_ji
+    def chong_feng_wgj(self, value):
+        self.__chong_feng_wgj = value
 
     @property
     def ze_ren_ji(self):
         return self.__ze_ren_ji
 
     @ze_ren_ji.setter
-    def ze_ren_ji(self, ze_ren_ji):
-        self.__ze_ren_ji = ze_ren_ji
+    def ze_ren_ji(self, value):
+        self.__ze_ren_ji = value
 
     @property
     def ze_ren_wgj(self):
         return self.__ze_ren_wgj
 
     @ze_ren_wgj.setter
-    def ze_ren_wgj(self, ze_ren_ji):
-        self.__ze_ren_wgj = ze_ren_ji
+    def ze_ren_wgj(self, value):
+        self.__ze_ren_wgj = value
 
 
     def on_game_start_clear_data(self):
@@ -692,8 +692,8 @@ class Player(BaseLeisurePlayer):
         return self.__is_ready
 
     @is_ready.setter
-    def is_ready(self,is_ready:bool):
-        self.__is_ready = is_ready
+    def is_ready(self,value:bool):
+        self.__is_ready = value
 
     def player_info(self,contain_cards = True):
         public_men_cards = []
@@ -867,8 +867,8 @@ class Player(BaseLeisurePlayer):
         fan_ji_list = fan_ji_list or set()
         all_bird = default_ji | fan_ji_list  # 并集
 
-        if lai_zi not in self.__cards:
-            for card in self.__cards:
+        if lai_zi not in self.cards:
+            for card in self.cards:
                 if card in all_bird:
                     hand_ji_list.append(card)
             if self.jiao_di_long():
@@ -908,7 +908,7 @@ class Player(BaseLeisurePlayer):
             for c in all_comb_list:
                 all_comb_list_c_map[c] = all_comb_list_c_map.get(c, 0) + 1
             extra_cards = []
-            for c in self.__cards:
+            for c in self.cards:
                 # [31, 28, 29] <-> [27, 28, 29] -> [27]
                 if all_comb_list_c_map.get(c, 0) > 0:
                     all_comb_list_c_map[c] -= 1

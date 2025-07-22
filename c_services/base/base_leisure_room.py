@@ -381,7 +381,8 @@ class BaseLeisureRoom(BaseRoom):
 
     async def robot_go_broke(self, player):
         """ 机器人概率复活 """
-        flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
+        #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
+        flag = 0
         # flag = UtilsTool.random_choice_num([0, 1], [0, 1])
         if flag:
             return await self.__do_resurgence(player)
@@ -425,7 +426,8 @@ class BaseLeisureRoom(BaseRoom):
         self.log_info(player.uid, player.seat_id, "进入是否复仇")
         sec = 30
         await self.notify_buy_gift_pack(player, seconds=sec)
-        self.call_flow(sec, self.player_give_up, player)
+        await self.delay_func(sec, self.player_give_up, player)
+        #self.call_flow(sec, self.player_give_up, player)
 
     async def player_give_up(self, player):
         player.is_out = True

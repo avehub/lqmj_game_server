@@ -4,11 +4,11 @@ from common.public.enum_const import StaCode
 from .const import FlowStatus
 from .player_fczj import PlayerFCZJ
 from .room_fczj import RoomFCZJ
-from .service import MahjongServer
+from ..base.base_leisure_service import BaseLeisureService
 from ..const.cs_enum_const import CmdRoom, RoomStatus
 
 
-class MahjongServerFc(MahjongServer):
+class MahjongServerFc(BaseLeisureService):
     ROOM = RoomFCZJ
     PLAYER = PlayerFCZJ
 
