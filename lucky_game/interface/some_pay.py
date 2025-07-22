@@ -31,11 +31,11 @@ class BaseSomePay(GameAuthApi):
 
     @classmethod
     def log_info(cls, *data):
-        cls.log_info("支付日志：", *data)
+        cls.loginfo("支付日志：", *data)
 
     @classmethod
     def log_err(cls, *data):
-        cls.log_info("支付错误：", *data)
+        cls.logerr("支付错误：", *data)
 
     async def process_after_deliver(self, uid, trade_amount):
         """发货后处理（更新物品和发货状态之后）"""
