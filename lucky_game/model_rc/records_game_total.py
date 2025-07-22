@@ -236,7 +236,7 @@ class RecordsGameTotalRC(BaseCommonRC):
         record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
         result_total, e = await cls.query_record_total_by_sql(
             record_rid=record_rid,
-            filtration="uid, final_status"
+            filtration="uid, final_status, price"
         )
         # 默认茶馆基金支付
         uid = 0

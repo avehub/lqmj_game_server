@@ -232,7 +232,7 @@ class PastRanks(GameAuthApi):
     """茶馆、我的历史战绩"""
     async def get(self, req: Request, **kwargs):
         uid = self.check_int(req.args.get("uid"), default=None, require=False, p_name="用户ID")
-        club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
+        club_id = self.check_int(req.args.get("club_id"), default=None, require=False, p_name="茶馆ID")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
