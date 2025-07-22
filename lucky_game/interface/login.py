@@ -177,9 +177,8 @@ class LoginByGuest(BaseLogin):
     async def post(self, req: Request):
         server_info = await self.whether_through()
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
-        platform = req.json.get('platform') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        self.check_str(platform, require=True, p_name="platform")
+        platform = PlatForm.WEBPAGE
         q_params = {
             "dev_ident": dev_ident,
             "platform": platform,
