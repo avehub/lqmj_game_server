@@ -10,10 +10,8 @@ from common.public.enum_const import DbKey, ServiceEnum
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
 from lucky_game.model_rc.base_bag import UserBagRC
-from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.goods_manager import GoodsManagerRC
-from lucky_game.model_rc.base_store import ConfStoreRC, ConfMonopolyStoreRC
+from lucky_game.model_rc.base_store import ConfStoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
     BossType, HeldSta, PlatForm
@@ -31,16 +29,15 @@ class StoreHandler(GameAuthApi):
         uid = u_info.get("uid")
 
         match boss_type:
-            case BossType.MONOPOLY_STORE:
-                cs_type = self.check_int(req.args.get("cs_type", 5), p_name="cs_type")
-                cs_enum = ServiceEnum.find_member_by_val(cs_type)
-                (not cs_enum) and self.answer(self.sta_code.ERR_ARG, hint="游戏暂未开放法相系统")
-
-                items_lists = await ConfMonopolyStoreRC.get_monopoly_store_items(uid)
-                (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
-                                                  hint='大富翁商店加载失败，请稍后再试')
+            # case BossType.MONOPOLY_STORE:
+            #     cs_type = self.check_int(req.args.get("cs_type", 5), p_name="cs_type")
+            #     cs_enum = ServiceEnum.find_member_by_val(cs_type)
+            #     (not cs_enum) and self.answer(self.sta_code.ERR_ARG, hint="游戏暂未开放法相系统")
+            #
+            #     items_lists = await ConfMonopolyStoreRC.get_monopoly_store_items(uid)
+            #     (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION, hint='大富翁商店加载失败，请稍后再试')
             case _:
-                platform = req.args.get('c_platform') or ''
+                platform = req.args.get('platform') or ''
                 os = req.args.get('c_os') or ''
 
                 items_lists = await ConfStoreRC.get_store_items(uid, platform=platform, os=os)

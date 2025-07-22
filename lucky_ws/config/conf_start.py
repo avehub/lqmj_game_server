@@ -10,7 +10,7 @@ class ConfSrv(BaseConf):
     SERVER_ENUM = ServiceEnum.WS_HALL
     SERVER_NAME = 'lucky_ws'
     SERVER_ID = 'W0001'
-    RUN_PORT = 8886
+    RUN_PORT = 8885
     HOST = "0.0.0.0"
     DEBUG_MODE = DEBUG_MODE
     ACCESS_LOG = False

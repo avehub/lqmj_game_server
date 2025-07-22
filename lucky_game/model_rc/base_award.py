@@ -6,7 +6,7 @@ from nsanic.libs.tool import json_encode, json_parse
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ConfAward
 from lucky_game.model_db.extra import RecordsUserAwards
-from .goods_manager import GoodsManagerRC
+# from .goods_manager import GoodsManagerRC
 
 
 class ConfAwardRC(BaseRC):

@@ -25,7 +25,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     DouYinGameQueryOrder, GetBalanceByDouYinGame, ReduceBalanceByDouYinGame, ReduceBalanceByWechatMiniProgram, \
 #     GetBalanceByWechatMiniProgram, MiniProgramRecvPush, HuiFuGetPayInfo, HuiFuPayQueryOrder, HuiFuPayNotify, \
 #     CompletePaidOrder
-# from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaHandler
+from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaHandler
 # from lucky_game.interface.interaction import MakeAdOrder, CompleteAdOrder, SignInHandler, SignInComplete, \
 #     SignInTotalComplete, GetReliefHandler, GetReliefConf, GetCommonAwardsConf, PullCommonAwards, OpenTreasureBox
 # from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
