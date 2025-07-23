@@ -141,7 +141,8 @@ class BaseService(BaseServer, SessionManager):
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
-        await room.notify_distance()
+        if room.room_type == RoomType.SELF_BUILD:
+            await room.notify_distance()
 
     @staticmethod
     async def __on_quit_room(player, room, data):

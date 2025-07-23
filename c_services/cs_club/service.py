@@ -59,6 +59,7 @@ class ClubServer(BaseServer):
         if not room:
             return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid, StaCode.FAIL)
         room.player_quit_room(uid)
+        self.log_info("club_id", club_id, "玩家退出茶馆", uid)
         return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid)
 
     async def __leave_club(self, uid, data):
@@ -67,11 +68,12 @@ class ClubServer(BaseServer):
         room = await self.check_in_room(CmdClub.LEAVE_CLUB, uid, club_id)
         if room:
             room.player_quit_room(uid)
+            self.log_info("club_id", club_id, "玩家离开茶馆", uid)
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
 
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """
-        print("data",data)
+        self.log_info("房间改变下发数据",data)
         club_id = data.get("club_id")
         room = self.get_room(club_id)
         if not room:
@@ -79,7 +81,7 @@ class ClubServer(BaseServer):
         print("room.owner",room.owner)
         data_model = S2CClubRoomInfo.pb_mode(**data)
         await room.inner_broadcast(CmdClub.ROOM_INFO_CHANGE, data_model)
-        print("茶馆房间改变",data.get("msg_type"))
+        self.log_info("club_id",club_id,"茶馆房间改变",data.get("msg_type"))
 
     async def __club_owner_dismiss(self, uid, data):
         """ 俱乐部主解散房间 """
@@ -92,6 +94,7 @@ class ClubServer(BaseServer):
             return
         room.clear_club()
         self.remove_room(club_id)
+        self.log_info("club_id", club_id, "俱乐部主解散房间")
 
     async def __player_ready_except_owner(self,uid,data):
         club_id = data.get("club_id")
