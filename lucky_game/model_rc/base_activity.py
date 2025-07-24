@@ -47,6 +47,20 @@ class ConfActivityRC(BaseRC):
             return
         return [i for i in info if i.get("act_type") == act_type]
 
+    @classmethod
+    async def get_activity_by_once(cls, act_type: int=None, act_id: int=None):
+        """获取单条活动信息"""
+        query = {}
+        if act_type:
+            query["act_type"] = act_type
+        if act_id:
+            query["act_id"] = act_id
+
+        info = await cls.db_model.filter(**query).first().values()
+        if not info:
+            return None, "暂时没找到这类型的活动哦"
+        return info, "成功"
+
 
 class UserActivityRC(BaseRC):
     db_model = UserActivity

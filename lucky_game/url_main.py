@@ -31,8 +31,7 @@ from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaH
 # from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
-# from lucky_game.interface.activitys import GetActivityAwards, VipLevelHandler, VipLevelPullAwards, \
-#     GetActivityHandler
+from lucky_game.interface.activitys import ActivityDetail
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
@@ -49,6 +48,7 @@ from lucky_game.interface.club_behavior import GetBehaviorExtra
 from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 from lucky_game.interface.game import GetLeisureList
+
 
 
 class MainBp(BaseBlue):
@@ -128,7 +128,11 @@ class MainBp(BaseBlue):
         # Urls("/GetReliefHandler/", GetReliefHandler),  # 领取救济金
         # Urls("/GetReliefConf/", GetReliefConf),  # 救济金配置
         # Urls("/GetQuickChatConf/", GetQuickChatConf),  # 获取快捷聊天配置
-        #
+
+
+        # 活动相关
+        Urls("/QueryActivity/", ActivityDetail),  # 查询活动详情
+
         # # 支付相关
         # Urls("/MakeOrder/", MakeOrder),  # 创建订单
         # Urls("/MiniGameRecvPush/", MiniGameRecvPush),  # 微信MG支付回调通知

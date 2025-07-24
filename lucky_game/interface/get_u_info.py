@@ -201,19 +201,6 @@ class QueryUserGameGrade(GameAuthApi):
         self.answer(data={"games_info": data})
 
 
-class QueryUserIsInCService(GameAuthApi):
-    """ 查询玩家是否在子服务中（游戏中） """
-
-    async def get(self, _: Request, **kwargs):
-        u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
-        cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
-        if not cs_info:
-            self.answer(self.sta_code.FAIL, hint="不在游戏中")
-
-        self.answer(data=cs_info)
-
-
 class FetchRedDotsByOpportunity(GameAuthApi):
     """根据时机拉取红点"""
 

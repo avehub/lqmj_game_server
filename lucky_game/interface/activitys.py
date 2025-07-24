@@ -10,57 +10,70 @@ from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
-from lucky_game.model_rc.base_skin import UserSkinRC
+from lucky_game.model_rc.base_award import AwardRC
+# from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from lucky_game.const import ActivityType, ActivitySta, ConditionType, ReasonCostDiamond, ReasonCostGold
 
 
-class GetActivityHandler(GameAuthApi):
+async def act_by_awards(activity, act_type: int = None):
     """
-    获取充值活动配置
+    按活动配置获取奖励信息
+    """
+    if act_type is None:
+        act_type = activity.get("act_type")
+    once_awards = activity.get("once_awards")
+    condition_awards = activity.get("condition_awards")
+    if once_awards:
+        once_award_list, _ = await AwardRC.get_award_by_filter(award_id=once_awards)
+        activity["once_awards"]["list"] = once_award_list
+    if condition_awards:
+        condition_awards_list = await AwardRC.get_award_by_filter(award_id=condition_awards)
+        activity["condition_awards"]["list"] = condition_awards_list
+    return activity
+
+async def act_by_type(act_type):
+    """
+    根据活动类型获取活动信息
+    """
+    conf_data = {}
+    if act_type == ActivityType.LUCK_SIGN_IN.key():
+        conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_LUCK)
+
+    return conf_data
+
+
+class ActivityDetail(GameAuthApi):
+    """
+    获取活动信息
     query_param: act_type / act_id
     """
 
     async def get(self, req: Request, **kwargs):
         act_type = req.args.get("act_type")
-        act_id = req.args.get("act_id")
-        (not act_type and not act_id) and self.answer(self.sta_code.ERR_ARG, hint='缺少活动查询条件')
-
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        platform = req.args.get('c_platform') or ''
-        os = req.args.get('c_os') or ''
 
         # 1.获取活动配置
         if act_type:
-            act_type = self.check_int(act_type, require=True, p_name="act_type")
             act_enum = ActivityType.find_member_by_val(act_type)
             (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-            act_conf = await ConfActivityRC.get_activity_items_by_type(act_type, platform, os)
+            ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
         else:
-            act_id = self.check_int(act_id, require=True, minval=3000, maxval=3999, p_name="act_id")
-            ac = await ConfActivityRC.get_activity_item_by_id(act_id, platform, os)
-            act_conf = [ac]
+            act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
+            ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
+        (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
 
-        (not act_conf) and self.answer(self.sta_code.NO_CONFIGURATION, hint='暂时没找到这类型的活动哦')
+        # 2.奖励内容
+        data = await act_by_awards(ac, act_type)
 
-        # 2.用户充值数据
-        act_datas = await UserActivityRC.check_charge_data(uid, act_conf)
-        (not act_datas) and self.answer(self.sta_code.ERR_CONF, hint="活动数据不存在")
-
-        # 3.额外配置
-        extra_conf = ""
-        if act_datas[0].get("act_type") == ActivityType.LIFETIME_CARD:
-            conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_LIFETIME_CARD)
-            extra_conf = conf_data.get("privilege_show")
-
-        data = {
-            "act_conf": act_datas,
-            "extra_conf": json_encode(extra_conf)
-        }
-        self.log_info(uid, "GetActivityHandler 获取活动配置 / 用户充值数据 成功", act_type, act_id)
+        # 3.其他配置
+        if act_type == ActivityType.LUCK_SIGN_IN.key():
+            data["luck"] = await act_by_type(act_type)
         return self.answer(data=data)
+
+
 
 
 class GetActivityAwards(GameAuthApi):
@@ -126,13 +139,15 @@ class GetActivityAwards(GameAuthApi):
         # 1.检查领取日期记录
         old_awards_achieved = charge_record.get('awards_achieved')
         awards_achieved = [] if not old_awards_achieved else json_parse(old_awards_achieved)
-        (today_time_node in awards_achieved) and self.answer(code=self.sta_code.ALREADY_DO, hint="今天的奖励已全部领取，请明天再来哦")
+        (today_time_node in awards_achieved) and self.answer(code=self.sta_code.ALREADY_DO,
+                                                             hint="今天的奖励已全部领取，请明天再来哦")
 
         # 2.检查日奖次数（同一天次数才算）
         join_limit_day = activity_item.get('join_limit_day')
         times_day = charge_record.get('times_day')
         if charge_record.get('time_node', 0) == today_time_node:
-            (times_day >= join_limit_day) and self.answer(self.sta_code.ALREADY_DO, hint="今天的奖励已领取，请明天再来哦")
+            (times_day >= join_limit_day) and self.answer(self.sta_code.ALREADY_DO,
+                                                          hint="今天的奖励已领取，请明天再来哦")
             times_day += 1
         else:
             times_day = 1
@@ -160,7 +175,8 @@ class GetActivityAwards(GameAuthApi):
         (not act_awards) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="没有需要领取的奖励")
         join_limit_total = activity_item.get('join_limit_total') or 3
 
-        target = self.check_int(req.json.get('target'), require=True, minval=1, maxval=join_limit_total, p_name="target")
+        target = self.check_int(req.json.get('target'), require=True, minval=1, maxval=join_limit_total,
+                                p_name="target")
 
         new_data = {'id': charge_record.get('id')}
         # 1.检查领取记录
@@ -174,7 +190,8 @@ class GetActivityAwards(GameAuthApi):
 
         # 3.检查解锁奖励：目前只有首充逻辑
         awards_unlocked = UserActivityRC.cal_awards_unlocked(charge_record.get("join_time"))
-        (target not in awards_unlocked) and self.answer(code=self.sta_code.ALREADY_DO, hint="今天的奖励还未解锁，请明天再来哦")
+        (target not in awards_unlocked) and self.answer(code=self.sta_code.ALREADY_DO,
+                                                        hint="今天的奖励还未解锁，请明天再来哦")
 
         # 4.提取对应的奖励/更新领奖记录
         awards_achieved.append(target)
@@ -263,7 +280,8 @@ class VipLevelPullAwards(GameAuthApi):
         vip_items = await ConfVipRC.get_all_vip_items(is_all=True)
         (not vip_items) and self.answer(self.sta_code.NO_CONFIGURATION, hint="vip配置数据不存在")
         u_vip_info = await UserVipRC.cache_by_pk(uid)
-        (not u_vip_info or u_vip_info.get("default_cache")) and self.answer(self.sta_code.CONDITION_NOT_MET, hint='用户vip等级还未达成，请继续加油吧')
+        (not u_vip_info or u_vip_info.get("default_cache")) and self.answer(self.sta_code.CONDITION_NOT_MET,
+                                                                            hint='用户vip等级还未达成，请继续加油吧')
 
         vip_id = u_vip_info.get("vip_id")
         cur_level = 0
@@ -287,7 +305,8 @@ class VipLevelPullAwards(GameAuthApi):
                     if level_awards:
                         awards = level_awards
                         break
-            StatFlow.stat_common_flow(awards=awards, d_reason=ReasonCostDiamond.VIP_LEVEL_AWARDS, g_reason=ReasonCostGold.VIP_LEVEL_AWARDS)
+            StatFlow.stat_common_flow(awards=awards, d_reason=ReasonCostDiamond.VIP_LEVEL_AWARDS,
+                                      g_reason=ReasonCostGold.VIP_LEVEL_AWARDS)
             pull_info = {"level_achieved": json_encode(level_achieved)}
 
         # 4.日奖统计
@@ -301,7 +320,7 @@ class VipLevelPullAwards(GameAuthApi):
                 v_level = v_conf.get("level")
                 if v_level <= cur_level:
                     if daily_achieved and v_level in daily_achieved:
-                            continue
+                        continue
                     daily_awards = v_conf.get("daily_awards")
                     if daily_awards:
                         daily_achieved.append(v_level)
