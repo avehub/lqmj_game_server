@@ -149,7 +149,7 @@ class GameRoomsRC(BaseCommonRC):
             for uid in u_ids:
                 room_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
                 if room_info:
-                    not_join_room.add(room_info["room_id"])
+                    not_join_room.add(room_info["tid"])
         return not_join_room
 
 
@@ -396,12 +396,6 @@ class GameRoomsRC(BaseCommonRC):
                 await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
                 return False, "房间已满"
             await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_USER_KEY}", uid)
-            info = {
-                "room_id": room_id,
-                "cs_type": room_data["cs_type"],
-                "timestamp": tool_dt.cur_time()
-            }
-            await cls.conf.rds.set_hash(CacheKey.IN_SERVICE, uid, info)
         except OperationalError as e:
             return False, f"加入房间失败: {str(e)}"
         return True, "成功"

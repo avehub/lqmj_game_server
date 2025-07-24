@@ -14,7 +14,7 @@ from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.const import AwardType, CompleteSta
-from lucky_game.model_db.main import StatsWatchAdTimes, ConfAward, RecordsUserSignIn
+# from lucky_game.model_db.main import StatsWatchAdTimes, ConfAward, RecordsUserSignIn
 from lucky_game.model_db.extra import RecordsUserLuck, RecordsUserActiveScore, RecordsUserRaffle
 
 

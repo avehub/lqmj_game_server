@@ -36,6 +36,7 @@ class GameRoomAPI(RoomTemplateBase):
         # 是否已有创建房间
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, u_info.get("uid"), jsparse=True)
         if cs_info:
+            cs_info["exist"] = True
             self.answer(self.sta_code.FAIL, data=cs_info, hint="已有在游戏房间")
         # 茶馆房间特殊处理
         if club_id and club_id > 0:

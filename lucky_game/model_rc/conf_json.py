@@ -24,6 +24,7 @@ class ConfJsonRC(RCModel):
     CONF_FIRST_CHARGE = 'CONF_FIRST_CHARGE'  # 首充通用配置
     CONF_SWITCH = 'CONF_SWITCH'  # 开关配置：如内购等
     CONF_ADS_AWARDS = 'CONF_ADS_AWARDS'  # 大厅看广告领奖几率
+    CONF_LUCK = "CONF_LUCK"  # 今日运势
 
     @classmethod
     async def cache_conf_data_by_pk(cls, pk_val) -> dict:

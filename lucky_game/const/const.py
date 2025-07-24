@@ -213,7 +213,7 @@ class AwardType(BaseEnum):
 
 @unique
 class ActivityType(BaseEnum):
-    """充值活动类型"""
+    """活动类型"""
     DEFAULT = 0, "默认"
     MONTH_CARD = 1, "月卡"
     FIRST_CHARGE = 2, "首充"
@@ -223,6 +223,8 @@ class ActivityType(BaseEnum):
     PACKAGE = 6, "礼包"
     DISCOUNT = 7, "幸运折扣"
     INFINITE_PLAY = 8, "无限畅玩"
+    LUCK_SIGN_IN = 9, "抽奖签到"
+    TOTAL_SIGN_IN = 10, "累计签到"
 
 
 @unique
@@ -230,7 +232,7 @@ class ActivitySta(BaseEnum):
     """活动参与状态"""
     ACT_NOT_JOIN = 0, "未参与"
     ACT_INCOMPLETE = 1, "未完结"
-    ACT_COMPLETED = 2, "已完结"
+    ACT_COMPLETED = 99, "已完结"
 
 
 @unique

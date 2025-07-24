@@ -11,7 +11,7 @@ from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.base_store import ConfStoreRC
+from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
     BossType, HeldSta, PlatForm
@@ -40,7 +40,7 @@ class StoreHandler(GameAuthApi):
                 platform = req.args.get('platform') or ''
                 os = req.args.get('c_os') or ''
 
-                items_lists = await ConfStoreRC.get_store_items(uid, platform=platform, os=os)
+                items_lists = await StoreRC.get_store_items(uid, platform=platform, os=os)
                 (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                   hint='游戏商店加载失败，请稍后再试')
 
@@ -72,7 +72,7 @@ class PayByRedemption(GameAuthApi):
             case _:
                 platform = req.args.get('c_platform') or ''
                 os = req.args.get('c_os') or ''
-                express = await ConfStoreRC.get_store_item_by_id(store_id=trade_item, platform=platform, os=os)
+                express = await StoreRC.get_store_item_by_id(store_id=trade_item, platform=platform, os=os)
 
         # 2.验货 / 检查商品有效性
         (not express) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="该商品暂时缺货")

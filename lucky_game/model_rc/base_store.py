@@ -5,16 +5,16 @@ from nsanic.libs import tool_dt
 from common.utils.kit_dt import KitDt
 from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
-from lucky_game.model_db.main import ConfStore
+from lucky_game.model_db.main import Stores
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_rc import BaseRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import StoreType, PayType, AdSlotItem
 
 
-class ConfStoreRC(BaseRC):
+class StoreRC(BaseRC):
     """游戏商店"""
-    db_model = ConfStore
+    db_model = Stores
     tb_name = db_model.sheet_name()
 
     expired_mode = 0

@@ -48,7 +48,11 @@ class QueryUserIsInCService(GameAuthApi):
         uid = u_info.get("uid")
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
         if not cs_info:
-            self.answer(self.sta_code.FAIL, hint="不在游戏中")
+            cs_info = {
+                "exist": False
+            }
+        else:
+            cs_info["exist"] = True
         self.answer(data=cs_info)
 
 
