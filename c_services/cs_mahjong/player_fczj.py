@@ -6,7 +6,7 @@ from c_services.cs_mahjong.player import Player
 class PlayerFCZJ(Player):
     def __init__(self, uid, is_robot):
         super().__init__(uid, is_robot)
-        self.__first_down = 0 #第一次金币下到15倍
+        self.__first_down = 0  # 第一次金币下到15倍
         self.__quan_count = 0  # 记录打了几圈
         self.__lucky_quan = 0
         self.__lian_sheng = 0  # 正为胜 负为败
@@ -14,9 +14,6 @@ class PlayerFCZJ(Player):
         self.__fan_ji = 0
         self.lock = False
         self.__hua_zhu = 0
-
-
-
 
     @property
     def first_down(self):
@@ -32,7 +29,6 @@ class PlayerFCZJ(Player):
     def add_quan_count(self):
         self.__quan_count += 1
 
-
     @property
     def lucky_quan(self):
         return self.__lucky_quan
@@ -40,7 +36,6 @@ class PlayerFCZJ(Player):
     @lucky_quan.setter
     def lucky_quan(self, lucky_quan):
         self.__lucky_quan = lucky_quan
-
 
     @property
     def lian_sheng(self):
@@ -89,7 +84,6 @@ class PlayerFCZJ(Player):
     def clear_account(self):
         self.__record_account = []
 
-
     def round_over_info(self):
         data = super().round_over_info()
         result = {
@@ -102,4 +96,3 @@ class PlayerFCZJ(Player):
         }
         data.update(result)
         return data
-

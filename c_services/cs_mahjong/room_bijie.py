@@ -16,7 +16,7 @@ class RoomBJ(Room):
         super().__init__(tid, service, room_conf)
         self.__shu_zi_ji = self.rule_detail.get("shu_zi_ji", 0)  # 数字鸡
 
-    def check_extra_ji(self,ji,score,count):
+    def check_extra_ji(self, ji, score, count):
         if self.yin_ji and ji in self.fan_yin_ji_cards:
             # 银鸡处理（只有翻鸡才有，流局无）
             per_score = score + self.ji_pai_score.get(JiType.YIN_JI, 1) * count
@@ -28,7 +28,7 @@ class RoomBJ(Room):
                 per_score = score + self.ji_pai_score.get(ji, 1) * count
         return per_score
 
-    def get_tian_ting_operates(self,p):
+    def get_tian_ting_operates(self, p):
         """获取玩家天听操作"""
         operates = []
         if p.seat_id == self.dealer_id:
@@ -44,7 +44,6 @@ class RoomBJ(Room):
             operates.extend(self.calc_operates_in_tian_ting(p))
         return operates
 
-
     def check_hu_and_ting(self, p: Player, result, can_gang_list):
         can_hu, hu_info = self.hu_de_qi(p)
         if can_hu:
@@ -52,16 +51,21 @@ class RoomBJ(Room):
                 result.append(ActionType.ACTION_TYPE_HU)
 
         if not self.yuan_bao and not p.all_chu_cards and p.can_tian_ting > -1:
-            if self.can_select_tian_ting(p,self.deal_cards_count + 1):
+            if self.can_select_tian_ting(p, self.deal_cards_count + 1):
                 result.append(ActionType.ACTION_TYPE_TIAN_TING)
 
+    def check_hu_by_chu_pai(self, p, result):
+        can_hu, hu_info = self.hu_de_qi(p)
+        if can_hu:
+            result.append(ActionType.ACTION_TYPE_HU)
+        return result
 
     def kai_pai_check_out(self, accounts: dict):
         """
         开牌结算
         统一数据结构
         """
-        accounts,zhuo_ji = super().kai_pai_check_out(accounts)
+        accounts, zhuo_ji = super().kai_pai_check_out(accounts)
 
         if self.bao_ji:
             self.bao_ji_check(accounts)
@@ -72,8 +76,7 @@ class RoomBJ(Room):
 
         return accounts, zhuo_ji
 
-
-    def get_per_score(self,ji,score,count,default_ji,liu_ju):
+    def get_per_score(self, ji, score, count, default_ji, liu_ju):
 
         bei_lv = 1
         if not liu_ju:
@@ -110,12 +113,11 @@ class RoomBJ(Room):
         await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
         return StaCode.PASS, ""
 
-
     def check_out_lian_zhuang(self, accounts: dict):
         """结算连庄：连庄玩家从其他玩家获得（连庄次数-1）分"""
         if self.lian_zhuang != 1:  # 非连庄模式直接退出
             return
-        self.log_info( "结算连庄")
+        self.log_info("结算连庄")
         type_ = CheckType.CHECK_LIAN_ZHUANG
 
         # 预过滤有效玩家（非空且连庄≥2）
@@ -140,6 +142,3 @@ class RoomBJ(Room):
             # 连庄玩家加分
             self_data = self.self_ming_xi_data(type_, win_from, win_total)
             self.update_result_score(accounts, winner.seat_id, 1, self_data)
-
-
-

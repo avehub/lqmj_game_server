@@ -282,7 +282,7 @@ class BaseCardRoom(BaseRoom):
             new_data.append(record_data)
             p.clear_data_round_over()
 
-        self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
+        self.log_info( "round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
             self.log_info("一轮结束战绩插入", result_data)
@@ -341,8 +341,6 @@ class BaseCardRoom(BaseRoom):
     async def game_start(self):
         if not self.room_status_is_equal(RoomStatus.T_READY):
             return
-        for p in self.seats:
-            p.on_game_start_clear_data()
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
         if self.round_idx == 1:
@@ -353,7 +351,6 @@ class BaseCardRoom(BaseRoom):
     async def game_over(self, over_type=OverType.DEFAULT):
         if self.room_status_is_equal(RoomStatus.T_DISMISS):
             return
-        print("游戏结束")
         await self.async_set_room_status(RoomStatus.T_DISMISS)
         result = {"seats": [], "time_stamp": tool_dt.cur_time(), "tid": self.tid}
 
@@ -374,6 +371,8 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
+        for p in self.seats:
+            p.on_game_start_clear_data()
         await super().game_over()
 
     def get_player_ranking(self, account=None, is_round_over=False):
@@ -459,6 +458,27 @@ class BaseCardRoom(BaseRoom):
                 ExtraHuPai.DI_HU: 40,
                 ExtraHuPai.TIAN_HU: 60,
                 ExtraHuPai.SHA_BAO: 20,
+            })
+            return map_copy
+        elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
+            map_copy.update({
+                ExtraHuPai.GANG_SHANG_PAO: 10,
+                ExtraHuPai.GANG_SHANG_HUA: 10,
+                ExtraHuPai.QIANG_GANG_HU: 10,
+                ExtraHuPai.TIAN_TING: 40,
+                ExtraHuPai.DI_HU: 40,
+                ExtraHuPai.TIAN_HU: 40,
+                ExtraHuPai.SHA_BAO: 40,
+                ExtraHuPai.YING_HU: 10,
+                ExtraHuPai.XI_PAI: 25,
+                ExtraHuPai.COMMON_TIAN_TING: 20,
+                ExtraHuPai.COMMON_SHA_BAO: 20,
+
+                CheckType.CHECK_CHA_QUE: 1,
+                CheckType.CHECK_YUAN_QUE: 2,
+
+                CheckType.CHECK_LAI_ZI_JI: 2,
+                CheckType.CHECK_LAI_ZI_CHONG_XI: 25,
             })
             return map_copy
         else:

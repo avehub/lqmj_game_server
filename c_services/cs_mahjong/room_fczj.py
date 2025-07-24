@@ -1,6 +1,8 @@
 import random
 from copy import deepcopy
 
+from nsanic.libs.tool import json_encode
+
 from c_services.base.base_leisure_room import BaseLeisureRoom
 from common.proto.py_pb2.ws_c2s import ding_que_model, gang_model
 from common.proto.py_pb2.ws_leisure import S2CDealCardsMahjong, S2CStartDingQueInfo, S2CDingQueInfo, \
@@ -21,7 +23,7 @@ from ..const.cs_enum_const import RoomStatus, CmdRoom, CmdRobotCal
 
 
 class RoomFCZJ(BaseLeisureRoom):
-    def __init__(self, tid, service, room_conf,**extra_room_info):
+    def __init__(self, tid, service, room_conf, **extra_room_info):
         super().__init__(tid, service, room_conf, extra_room_info, Poker)
         self.__lai_zi_count = self.room_conf.get("lai_zi_count") or 4
         self.__deal_cards_count = 13
@@ -45,7 +47,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__can_fan_ji_seats = []  # 有资格捉鸡的玩家
         self.__fan_ji_cards = []  # 记录所有玩家翻的鸡牌
         self.__fan_ji_result = []  # 记录所有玩家翻的鸡牌，已计算+1或者金鸡
-        self.__default_ji = {CardsType.YAO_JI,CardsType.WU_GU_JI}
+        self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
         self.__zhuo_ji_cards = {}  # 记录捉鸡结算信息
         self.__chong_feng_ji_seat_id = 0  # 冲锋幺鸡玩家
         self.__chong_feng_wgj_seat_id = 0  # 冲锋乌骨鸡玩家
@@ -113,9 +115,9 @@ class RoomFCZJ(BaseLeisureRoom):
 
         for p in self.seats:
             if p.is_robot:
-                print("机器人定缺",p.seat_id)
+                print("机器人定缺", p.seat_id)
                 if p.que == 0:
-                    await self.delay_func(start_rs[re_times],self.robot_auto_ding_que,p)
+                    await self.delay_func(start_rs[re_times], self.robot_auto_ding_que, p)
                     re_times += 1
                 continue
             recommend_que = self.get_ding_que_suit(p.cards)
@@ -135,20 +137,20 @@ class RoomFCZJ(BaseLeisureRoom):
             que = self.get_ding_que_suit(p.cards)
             ding_que_model.que = que  # 设置 card 值
             serialized_data = ding_que_model.SerializeToString()
-            code,_ = await self.on_player_ding_que(p, serialized_data)
+            code, _ = await self.on_player_ding_que(p, serialized_data)
             if code != StaCode.PASS:
                 self.log_info("超时定缺错误", code)
                 return
         self.call_flow(1, self.start_game_after_ding_que)
 
-    async def robot_auto_ding_que(self, p:PlayerFCZJ):
+    async def robot_auto_ding_que(self, p: PlayerFCZJ):
         if self.flow_status != FlowStatus.T_IN_DING_QUE:
             return StaCode.FLOW_ERR
         que = self.get_ding_que_suit(p.cards)
         ding_que_model.que = que  # 设置 card 值
-        print("que",que)
+        print("que", que)
         serialized_data = ding_que_model.SerializeToString()
-        code,_ = await self.on_player_ding_que(p, serialized_data)
+        code, _ = await self.on_player_ding_que(p, serialized_data)
         if code != StaCode.PASS:
             self.log_info("机器人自动定缺错误", code)
 
@@ -161,7 +163,7 @@ class RoomFCZJ(BaseLeisureRoom):
         min_suit = min(counts, key=counts.get)
         return min_suit
 
-    async def on_player_ding_que(self, player:PlayerFCZJ, data):
+    async def on_player_ding_que(self, player: PlayerFCZJ, data):
         ding_que_model.ParseFromString(data)
         que = ding_que_model.que
         if not self.flow_status_is_equal(FlowStatus.T_IN_DING_QUE):
@@ -195,7 +197,7 @@ class RoomFCZJ(BaseLeisureRoom):
             self.call_flow(1, self.start_game_after_ding_que)
         return StaCode.PASS, ""
 
-    async def on_player_men(self, player:PlayerFCZJ):
+    async def on_player_men(self, player: PlayerFCZJ):
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             return StaCode.FLOW_ERR, "桌子状态不在游戏中，不可闷"
         if player.is_out:
@@ -221,7 +223,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.log_info("player", player.uid, "choose men action did suc!")
         return StaCode.PASS, ""
 
-    async def on_player_jian(self, player:PlayerFCZJ):
+    async def on_player_jian(self, player: PlayerFCZJ):
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             return StaCode.FLOW_ERR, "桌子状态不在游戏中，不可捡"
         if player.is_out:
@@ -236,11 +238,11 @@ class RoomFCZJ(BaseLeisureRoom):
         self.log_info(self.tid, player.uid, player.seat_id, "choose jian action did suc!")
         return StaCode.PASS, ""
 
-    async def on_player_pass(self, player:PlayerFCZJ):
+    async def on_player_pass(self, player: PlayerFCZJ):
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             return StaCode.FLOW_ERR, "桌子状态不在游戏中"
         if self.flow_status not in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_MO_PAI_CALL,
-                                    FlowStatus.T_IN_MING_GANG_PAI_CALL,FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
+                                    FlowStatus.T_IN_MING_GANG_PAI_CALL, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
                                     FlowStatus.T_IN_TIAN_HU):
             return StaCode.FLOW_ERR, "游戏流程不在可过流程"
 
@@ -260,22 +262,22 @@ class RoomFCZJ(BaseLeisureRoom):
         await self.inner_send(player, CmdRoom.PLAYER_PASS, one_of_model)
         return StaCode.PASS, ""
 
-    async def on_player_fan_ji(self,player:PlayerFCZJ,data):
+    async def on_player_fan_ji(self, player: PlayerFCZJ, data):
         if not self.flow_status_is_equal(FlowStatus.T_IN_FAN_JI):
-            return StaCode.FLOW_ERR,"不在翻鸡流程"
+            return StaCode.FLOW_ERR, "不在翻鸡流程"
         if player.fan_ji != 0:
-            return StaCode.FLOW_ERR,"已经翻过鸡了"
+            return StaCode.FLOW_ERR, "已经翻过鸡了"
         if data.fan_ji_index < 0 or data.fan_ji_index > 4:
-            return StaCode.ERR_ARG,"参数有误"
+            return StaCode.ERR_ARG, "参数有误"
 
-        fan_ji_card = self.player_fan_ji_call(player,data.fan_ji_index)
+        fan_ji_card = self.player_fan_ji_call(player, data.fan_ji_index)
         if fan_ji_card:
             fan_ji_result = {
                 "seat_id": player.seat_id,
-                "fan_ji_card":fan_ji_card,
+                "fan_ji_card": fan_ji_card,
             }
             fan_ji_model = S2CFanJi.pb_model(**fan_ji_result)
-            await self.inner_send(player,CmdRoom.FAN_JI,fan_ji_model)
+            await self.inner_send(player, CmdRoom.FAN_JI, fan_ji_model)
 
         is_all_choose = True
         for p in self.seats:
@@ -296,14 +298,14 @@ class RoomFCZJ(BaseLeisureRoom):
                 data.append(ji_result)
         fan_ji_info = {
             "fan_ji_cards": self.__fan_ji_cards,
-            "result":data,
+            "result": data,
         }
         fan_ji_model = S2CFanJiInfo.pb_model(**fan_ji_info)
-        await self.inner_broadcast(CmdRoom.FAN_JI_INFO,fan_ji_model)
-        self.call_flow(1.5,self.round_over)
-        return StaCode.PASS,""
+        await self.inner_broadcast(CmdRoom.FAN_JI_INFO, fan_ji_model)
+        self.call_flow(1.5, self.round_over)
+        return StaCode.PASS, ""
 
-    async def on_player_chu_pai(self, player:PlayerFCZJ, data):
+    async def on_player_chu_pai(self, player: PlayerFCZJ, data):
         gang_model.ParseFromString(data)
         card = gang_model.card or 0
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
@@ -334,7 +336,7 @@ class RoomFCZJ(BaseLeisureRoom):
             if len(player.ting_list) == 0:
                 allow_hu_map = {HuType.DI_LONG_QI: False, HuType.JIN_GOU_DIAO: False,
                                 HuType.QI_DUI: True}
-                ting_list = Rule.get_ting_hu_list([], player.cards, allow_hu_map,self.__lai_zi)
+                ting_list = Rule.get_ting_hu_list([], player.cards, allow_hu_map, self.__lai_zi)
                 player.ting_list = ting_list
                 player.lock_cards = deepcopy(player.cards)
                 data = {"lock_cards": player.lock_cards}
@@ -349,8 +351,7 @@ class RoomFCZJ(BaseLeisureRoom):
         print("on_player_chu_pai end")
         return StaCode.PASS, ""
 
-
-    async def player_give_up(self, player:PlayerFCZJ):
+    async def player_give_up(self, player: PlayerFCZJ):
         player.is_out = True
         m = s2c_one_of_model()
         m.seat_id = player.seat_id
@@ -358,7 +359,7 @@ class RoomFCZJ(BaseLeisureRoom):
             player.lian_sheng -= 1
         else:
             player.lian_sheng = -1
-        print("__wait_recharge_seats",self.__wait_recharge_seats,player.seat_id)
+        print("__wait_recharge_seats", self.__wait_recharge_seats, player.seat_id)
         self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.GIVE_UP, m)
         self.log_info(player.uid, player.seat_id, "放弃")
@@ -368,7 +369,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if len(self.__wait_recharge_seats) == 0:
             return await self.recharge_continue()
 
-    def player_zhuo_ji_call(self, p:PlayerFCZJ):
+    def player_zhuo_ji_call(self, p: PlayerFCZJ):
         """统计捉鸡数"""
         if p.is_out:
             return
@@ -404,14 +405,14 @@ class RoomFCZJ(BaseLeisureRoom):
                 # 分类处理三种鸡牌类型
                 if fan_ji in self.__default_ji:
                     self.process_default_ji(p, fan_ji, ji_key, all_ji_pai,
-                                             repeat_count, stand_ji_count)
+                                            repeat_count, stand_ji_count)
                 elif p.fan_ji > 0:
                     self.process_fan_ji_pai(p, fan_ji, ji_key, all_ji_pai,
                                             repeat_count)
 
         self.__zhuo_ji_cards[p.seat_id] = ji_key
 
-    def process_jin_ji(self, p:PlayerFCZJ, ji_key):
+    def process_jin_ji(self, p: PlayerFCZJ, ji_key):
         """处理金鸡逻辑"""
         if p.fan_ji == JiType.JIN_JI:
             base_score = self.__ji_pai_score_map[JiType.JIN_JI]
@@ -424,7 +425,7 @@ class RoomFCZJ(BaseLeisureRoom):
             ji_key.append(ji_pai)
             self.log_info(f"玩家:{p.uid} 金鸡", ji_pai)
 
-    def remove_chong_feng_ji(self, p:PlayerFCZJ, all_ji_pai):
+    def remove_chong_feng_ji(self, p: PlayerFCZJ, all_ji_pai):
         """移除冲锋鸡牌"""
         if self.__chong_feng_ji_seat_id == p.seat_id:
             self.safe_remove_ji(all_ji_pai, CardsType.YAO_JI.value, "YAO_JI")
@@ -438,8 +439,8 @@ class RoomFCZJ(BaseLeisureRoom):
         else:
             self.log_info(f"{log_name}不存在于all_ji_pai")
 
-    def process_default_ji(self, p:PlayerFCZJ, fan_ji, ji_key, all_ji_pai,
-                            repeat_count, stand_ji_count):
+    def process_default_ji(self, p: PlayerFCZJ, fan_ji, ji_key, all_ji_pai,
+                           repeat_count, stand_ji_count):
         """处理默认鸡牌（幺鸡/乌骨鸡）"""
         # 映射鸡牌类型到处理参数
         ji_map = {
@@ -474,9 +475,9 @@ class RoomFCZJ(BaseLeisureRoom):
             "ji_score": ji_score
         }
         ji_key.append(ji_pai)
-        self.log_info( f"玩家:{p.uid} {ji_name}", ji_pai,f'重复数:{repeat_count} 站鸡数:{stand_ji_count}')
+        self.log_info(f"玩家:{p.uid} {ji_name}", ji_pai, f'重复数:{repeat_count} 站鸡数:{stand_ji_count}')
 
-    def process_fan_ji_pai(self, p:PlayerFCZJ, fan_ji, ji_key, all_ji_pai, repeat_count):
+    def process_fan_ji_pai(self, p: PlayerFCZJ, fan_ji, ji_key, all_ji_pai, repeat_count):
         """处理翻牌鸡"""
         base_score = self.__ji_pai_score_map[JiType.FAN_PAI_JI]
         count = all_ji_pai.count(fan_ji)
@@ -488,7 +489,7 @@ class RoomFCZJ(BaseLeisureRoom):
             "ji_score": ji_score
         }
         ji_key.append(ji_pai)
-        self.log_info( f"玩家:{p.uid} 翻牌鸡", ji_pai,f'重复数:{repeat_count}')
+        self.log_info(f"玩家:{p.uid} 翻牌鸡", ji_pai, f'重复数:{repeat_count}')
 
     async def start_game_after_ding_que(self):
         self.curr_seat_id = self.dealer_id
@@ -541,22 +542,21 @@ class RoomFCZJ(BaseLeisureRoom):
 
         await self.turn_to_player_chu_pai(curr_player)
 
-
-    async def mo_pai_call_trustee(self, p:PlayerFCZJ):
+    async def mo_pai_call_trustee(self, p: PlayerFCZJ):
         if not p.trustee:
             return
         if p.lock:
             return
-        self.log_info( "mo_pai_call_trustee", self.flow_status)
+        self.log_info("mo_pai_call_trustee", self.flow_status)
         await self.mo_pai_call_time_out(p, do_trustee=False)
 
-    async def mo_pai_call_time_out(self ,p:PlayerFCZJ,do_trustee = False):
+    async def mo_pai_call_time_out(self, p: PlayerFCZJ, do_trustee=False):
         if not self.flow_status_is_equal(FlowStatus.T_IN_MO_PAI_CALL):
             return
         if p.can_operates() and not self.has_do_action(p):
             if p.lock and ActionType.ACTION_TYPE_MEN in p.operates and (
                     ActionType.ACTION_TYPE_AN_GANG in p.operates or ActionType.ACTION_TYPE_ZHUAN_WAN_GANG in p.operates):
-                code,_ = await self.on_player_men(p)
+                code, _ = await self.on_player_men(p)
                 if code != StaCode.PASS:
                     self.log_info(p.uid, "玩家 auto 闷 fail!!!")
                 await self.check_action_end()
@@ -565,14 +565,13 @@ class RoomFCZJ(BaseLeisureRoom):
                 self.save_player_action(p, ActionType.ACTION_TYPE_PASS)
                 one_of_model = s2c_one_of_model()
                 one_of_model.seat_id = self.curr_seat_id
-                await self.inner_send(p,CmdRoom.PLAYER_PASS,one_of_model)
+                await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
 
                 self.set_flow_status(FlowStatus.T_IN_CHU_PAI)  # 在出牌中
                 self.log_info(p.uid, "玩家摸牌call超时，直接进入出牌")
                 await self.chu_pai_time_out(p, do_trustee=do_trustee)
 
-
-    async def chu_pai_time_out(self, p:PlayerFCZJ, do_trustee=True):
+    async def chu_pai_time_out(self, p: PlayerFCZJ, do_trustee=True):
         if self.flow_status not in (FlowStatus.T_IN_DI_HU_CHU_PAI, FlowStatus.T_IN_CHU_PAI):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
@@ -587,7 +586,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
         return self.call_flow(1, self.enter_chu_pai_call)
 
-    async def chu_pai_trustee(self,p:PlayerFCZJ):
+    async def chu_pai_trustee(self, p: PlayerFCZJ):
         if self.flow_status not in (FlowStatus.T_IN_DI_HU_CHU_PAI, FlowStatus.T_IN_CHU_PAI):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
@@ -606,7 +605,7 @@ class RoomFCZJ(BaseLeisureRoom):
     async def check_robot_auto_chu_pai(self):
         player = self.curr_player()
         if not player:
-            self.log_info( "机器人出牌没找到 robot", player, self.curr_seat_id)
+            self.log_info("机器人出牌没找到 robot", player, self.curr_seat_id)
             return
         # 锁牌情况：自动将摸的牌打出，或出第一张牌（理论不会出现癞子，因为锁牌摸到癞子必胡）
         if player.lock or player.lock_cards or player.men_cards or player.tian_ting:
@@ -616,14 +615,14 @@ class RoomFCZJ(BaseLeisureRoom):
         cards = deepcopy(player.cards)
         if player.que > 0:
             if cards[-1] // 10 == player.que:
-                code,_ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(cards[-1]))
+                code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(cards[-1]))
                 if StaCode.PASS == code:
                     self.log_info(self.tid, player.uid, "机器人打出摸的缺牌：", cards[-1])
                     self.call_flow(1, self.enter_chu_pai_call)
                     return
             for card in player.cards:
                 if card // 10 == player.que:
-                    code,_ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(card))
+                    code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(card))
                     if StaCode.PASS == code:
                         self.log_info(player.uid, "机器人打出手里的缺牌：", card)
                         self.call_flow(1, self.enter_chu_pai_call)
@@ -643,7 +642,7 @@ class RoomFCZJ(BaseLeisureRoom):
         chu_pai_player = self.curr_player()
         chu_pai_player.operates = []
         jie_pao_count = 0
-        seconds =  TimerDelay.CHU_PAI_AFTER_WAIT_TIME
+        seconds = TimerDelay.CHU_PAI_AFTER_WAIT_TIME
         data = {
             "seat_id": self.curr_seat_id,
             "seconds": seconds,
@@ -674,8 +673,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
         if self.can_operates():
             print("进入chu_pai_call 有玩家可以操作")
-            self.log_info( "玩家 {} 出完牌call，其他玩家有操作".format(chu_pai_player.uid))
-            await self.delay_func(TimerDelay.KAI_HU_TIME,self.check_operate_after_kai_hu)
+            self.log_info("玩家 {} 出完牌call，其他玩家有操作".format(chu_pai_player.uid))
+            await self.delay_func(TimerDelay.KAI_HU_TIME, self.check_operate_after_kai_hu)
 
             self.call_flow_robot(TimerDelay.ROBOT_TIME, self.check_robot_operate)
             self.call_flow(TimerDelay.CHU_PAI_AFTER_WAIT_TIME, self.chu_pai_call_time_out, True)
@@ -703,7 +702,6 @@ class RoomFCZJ(BaseLeisureRoom):
         curr_player.zhuan_wan_gang(self.__curr_card)
 
         if self.__curr_card == curr_player.mo_pai:
-
             total_score = self.__extra_score_map[ExtraHuPai.ZHUAN_WAN_GANG]
 
             await self.kou_fen_notify(curr_player, total_score, [], ActionType.ACTION_TYPE_ZHUAN_WAN_GANG,
@@ -711,8 +709,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
         await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_ZHUAN_WAN_GANG, self.__curr_card])
 
-
-    async def kou_fen_notify(self, p:PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None):
+    async def kou_fen_notify(self, p: PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None):
         if loser_seats is None:
             loser_seats = []
         win_total_gold = 0
@@ -724,14 +721,14 @@ class RoomFCZJ(BaseLeisureRoom):
         }
 
         lose_data = {
-            "lose_to":[p.seat_id],
-            "relation":0,
+            "lose_to": [p.seat_id],
+            "relation": 0,
         }
 
         common_data = {
-            "gold":0,
-            "multiple":multiple,
-            "curr_card":self.__curr_card,
+            "gold": 0,
+            "multiple": multiple,
+            "curr_card": self.__curr_card,
             "act": act,
             "hu_type": hu_type
         }
@@ -752,7 +749,7 @@ class RoomFCZJ(BaseLeisureRoom):
             else:
                 lose_gold = win_gold
             win_total_gold += lose_gold
-            relation = self.confirm_relation(p_loser.seat_id,p.seat_id)
+            relation = self.confirm_relation(p_loser.seat_id, p.seat_id)
             lose_data["gold"] = - lose_gold
             lose_data["relation"] = relation
             win_from.append(p_loser.seat_id)
@@ -771,7 +768,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
         win_data["gold"] = win_total_gold
         win_data["win_from"] = win_from
-        self.multi_user_record_account(p,win_data)
+        self.multi_user_record_account(p, win_data)
         p.update_gold(win_total_gold)
 
         kf_data = {
@@ -779,17 +776,18 @@ class RoomFCZJ(BaseLeisureRoom):
             "check_out_type": ExtraHuPai.ZHUAN_WAN_GANG,
             "win_gold": win_total_gold,
             "winner_res_gold": p.gold,
-            "lose_list":lose_list,
+            "lose_list": lose_list,
             "extra_hu_type": extra_hu_list,
         }
-        print("kf_data",kf_data)
+        print("kf_data", kf_data)
         data_model = S2CKouFen.pb_model(**kf_data)
         await self.inner_broadcast(CmdRoom.TIMELY_KOU_FEN, data_model)
-        for seat_id in list(self.__wait_recharge_seats):
+        seats = self.__wait_recharge_seats.copy()
+        for seat_id in seats:
             player = self.get_player_by_seat_id(seat_id)
             await self.notify_is_revenge(player)
 
-    def multi_user_record_account(self, p:PlayerFCZJ, record_data):
+    def multi_user_record_account(self, p: PlayerFCZJ, record_data):
         """ 多个玩家关系记账 """
         count = len(record_data["win_from"])
         if count <= 0:
@@ -821,7 +819,7 @@ class RoomFCZJ(BaseLeisureRoom):
         else:
             return None
 
-    async def turn_to_player_chu_pai(self, p:PlayerFCZJ, after_peng=False):
+    async def turn_to_player_chu_pai(self, p: PlayerFCZJ, after_peng=False):
         print("进入turn_to_player_chu_pai")
         self.clear_table_actions()
         self.__curr_card = p.mo_pai  # 因为存在炸胡，在玩家出牌阶段玩家也可点击胡，所以保存当前牌
@@ -854,44 +852,44 @@ class RoomFCZJ(BaseLeisureRoom):
         self.call_flow(TimerDelay.CHU_PAI_TIME, self.chu_pai_time_out, p)
         self.call_flow_trustee(TimerDelay.TUO_GUAN_TIME, self.chu_pai_trustee, p)
 
-    async def lock_auto_chu_pai(self,p:PlayerFCZJ):
+    async def lock_auto_chu_pai(self, p: PlayerFCZJ):
         cards = p.get_out_not_lock_card()
         if not cards:
             self.log_info("chu_pai_time_out 玩家全锁无牌可出：", cards)
             return
         self.log_info("chu_pai_time_out 玩家可出：", cards)
         if cards[0] != CardsType.LAI_ZI:
-            code,_ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[0]))
+            code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[0]))
             if StaCode.PASS == code:
                 self.log_info(p.uid, "摸到的牌不是癞子，直接打出：", cards[0])
                 self.call_flow(1, self.enter_chu_pai_call)
                 return
 
-    async def no_lock_auto_chu_pai(self,p:PlayerFCZJ):
+    async def no_lock_auto_chu_pai(self, p: PlayerFCZJ):
         cards = deepcopy(p.cards)
         if p.que > 0:
             if cards[-1] // 10 == p.que:
-                code,_ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
+                code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
                 if StaCode.PASS == code:
                     self.log_info(self.tid, p.uid, "超时打缺：", cards[-1])
                     self.call_flow(1, self.enter_chu_pai_call)
                     return
             for card in p.cards:
                 if card // 10 == p.que:
-                    code,_ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
+                    code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
                     if StaCode.PASS == code:
-                        self.log_info( p.uid, "超时打缺_by_cards：", card)
+                        self.log_info(p.uid, "超时打缺_by_cards：", card)
                         self.call_flow(1, self.enter_chu_pai_call)
                         return
 
         if cards[-1] != CardsType.LAI_ZI:
-            code,_ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
+            code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
             if StaCode.PASS == code:
-                self.log_info( p.uid, "超时出牌_摸到什么打什么，除了癞子：", cards[-1])
+                self.log_info(p.uid, "超时出牌_摸到什么打什么，除了癞子：", cards[-1])
                 return self.call_flow(1, self.enter_chu_pai_call)
         for card in p.cards:
             if card != CardsType.LAI_ZI:
-                code,_ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
+                code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
                 if StaCode.PASS == code:
                     self.log_info(p.uid, "超时出牌_找手里不是癞子的牌：", card)
                     return self.call_flow(1, self.enter_chu_pai_call)
@@ -902,7 +900,7 @@ class RoomFCZJ(BaseLeisureRoom):
         serialized_data = gang_model.SerializeToString()
         return serialized_data
 
-    async def deal_first_ji(self, curr_p:PlayerFCZJ):
+    async def deal_first_ji(self, curr_p: PlayerFCZJ):
         """
         处理冲锋鸡handle
         冲锋幺鸡
@@ -917,7 +915,7 @@ class RoomFCZJ(BaseLeisureRoom):
             curr_p.chong_feng_ji = 1
             await self.send_first_ji_info("冲锋鸡玩家成功")
 
-        if  self.__curr_card == CardsType.WU_GU_JI and self.__round_first_wgj == 0:
+        if self.__curr_card == CardsType.WU_GU_JI and self.__round_first_wgj == 0:
             self.__round_first_wgj = 1
             self.__chong_feng_wgj_seat_id = self.curr_seat_id
             curr_p.chong_feng_wgj = 1
@@ -929,7 +927,7 @@ class RoomFCZJ(BaseLeisureRoom):
         data_model = S2CFirstJiMahjong.pb_model(**data)
         await self.inner_broadcast(CmdRoom.CONFIRM_CHONG_FENG_JI, data_model)
 
-    async def chu_pai_call_time_out(self,is_chu_pai = False):
+    async def chu_pai_call_time_out(self, is_chu_pai=False):
         print("进入chu_pai_call_time_out")
         if self.flow_status not in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_MO_PAI_CALL,
                                     FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
@@ -939,7 +937,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 continue
             if p.can_operates() and not self.has_do_action(p):
                 if is_chu_pai:
-                   await self.do_trustee(p)
+                    await self.do_trustee(p)
                 if p.lock and ActionType.ACTION_TYPE_MING_GANG in p.operates and ActionType.ACTION_TYPE_JIAN in p.operates:
                     code = self.on_player_jian(p)
                     if code != StaCode.PASS:
@@ -951,7 +949,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     one_of_model = s2c_one_of_model()
                     one_of_model.seat_id = self.curr_seat_id
                     await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
-                    await self.delay_func(0.1,self.check_action_end)
+                    await self.delay_func(0.1, self.check_action_end)
             if is_chu_pai:
                 await self.check_action_end()
 
@@ -959,7 +957,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if self.flow_status not in (
                 FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_MO_PAI_CALL, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
             return
-        self.log_info( desc, "chu_pai_call_tuo_guan", self.flow_status)
+        self.log_info(desc, "chu_pai_call_tuo_guan", self.flow_status)
         for p in self.seats:
             if p.is_robot:
                 continue
@@ -968,15 +966,14 @@ class RoomFCZJ(BaseLeisureRoom):
             if p.lock:
                 continue
             if p.can_operates() and not self.has_do_action(p):
-
                 self.save_player_action(p, ActionType.ACTION_TYPE_PASS)  # pass
                 self.log_info(self.tid, "玩家有操作，托管：", p.operates)
                 one_of_model = s2c_one_of_model()
                 one_of_model.seat_id = self.curr_seat_id
                 await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
-                await self.delay_func(0.1,self.check_action_end)
+                await self.delay_func(0.1, self.check_action_end)
 
-    def calc_operates_after_chu_pai(self, p:PlayerFCZJ):
+    def calc_operates_after_chu_pai(self, p: PlayerFCZJ):
         """计算出牌后其他玩家的操作"""
         result = []
         if not self.__curr_card:
@@ -987,14 +984,14 @@ class RoomFCZJ(BaseLeisureRoom):
         if can_hu:
             hu_type = hu_info["hu_type"]
             if p.is_robot:
-                if self.poker.left_count<=30:
+                if self.poker.left_count <= 30:
                     result.append(ActionType.ACTION_TYPE_JIAN)
                 else:
-                    hu_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map,self.__lai_zi)
-                    if hu_type==HuType.PING_HU and not p.lock:
+                    hu_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+                    if hu_type == HuType.PING_HU and not p.lock:
                         print("胡牌 没锁牌，机器人不平胡去做大牌")
                         result.append(ActionType.ACTION_TYPE_PASS)
-                    elif len(hu_list) <10:
+                    elif len(hu_list) < 10:
                         result.append(ActionType.ACTION_TYPE_PASS)
                     else:
                         result.append(ActionType.ACTION_TYPE_JIAN)
@@ -1006,7 +1003,7 @@ class RoomFCZJ(BaseLeisureRoom):
             if is_ming_gang:
 
                 temp_cards = [c for c in p.cards if c != self.__curr_card]
-                ting_list1 = Rule.get_ting_hu_list([], temp_cards, allow_hu_map,self.__lai_zi)
+                ting_list1 = Rule.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
                 # 一致的话可以杠
                 if ting_list1 == p.ting_list:
                     result.append(ActionType.ACTION_TYPE_MING_GANG)
@@ -1016,10 +1013,9 @@ class RoomFCZJ(BaseLeisureRoom):
             if p.can_peng(self.__curr_card, Rule):
                 result.append(ActionType.ACTION_TYPE_PENG)
 
-
         return result
 
-    def ming_gang_de_qi(self, p:PlayerFCZJ, card):
+    def ming_gang_de_qi(self, p: PlayerFCZJ, card):
         if self.curr_seat_id == p.seat_id:
             return False, card
         return p.can_ming_gang(Rule, card)
@@ -1053,11 +1049,11 @@ class RoomFCZJ(BaseLeisureRoom):
                 if ActionType.ACTION_TYPE_MEN in p.operates and p.lock:
                     code = self.on_player_men(p)
                     if code != StaCode.PASS:
-                        self.log_info( p.uid, "玩家 auto 闷 fail!!!")
+                        self.log_info(p.uid, "玩家 auto 闷 fail!!!")
                 elif ActionType.ACTION_TYPE_JIAN in p.operates and p.lock:
                     code = self.on_player_jian(p)
                     if code != StaCode.PASS:
-                        self.log_info( p.uid, "玩家 auto 捡 fail!!!")
+                        self.log_info(p.uid, "玩家 auto 捡 fail!!!")
                 p.lock = True
         if has_operate:
             self.check_action_end()
@@ -1072,13 +1068,13 @@ class RoomFCZJ(BaseLeisureRoom):
                 has_operate = True
                 gang_type = p.gang_in_operates()
                 if p.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
-                    code,_ = await self.on_player_men(p)
+                    code, _ = await self.on_player_men(p)
                     if code != StaCode.PASS:
-                        self.log_info("机器人操作闷有误",code)
+                        self.log_info("机器人操作闷有误", code)
                 elif p.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
-                    code,_ = await self.on_player_jian(p)
+                    code, _ = await self.on_player_jian(p)
                     if code != StaCode.PASS:
-                        self.log_info("机器人操作捡有误",code)
+                        self.log_info("机器人操作捡有误", code)
                 elif p.is_action_in_operates(ActionType.ACTION_TYPE_PENG):
                     print("机器人碰")
                     # todo: AI机器人计算是否碰
@@ -1086,7 +1082,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 elif gang_type:
                     print("机器人杠")
                     # todo: AI机器人计算是否杠
-                    await self.robot_auto_gang(p,gang_type)
+                    await self.robot_auto_gang(p, gang_type)
                 if code != StaCode.PASS:
                     self.log_info("机器人操作有误，选择pass")
                     await self.on_player_pass(p)
@@ -1176,11 +1172,10 @@ class RoomFCZJ(BaseLeisureRoom):
 
         return await self.everyone_pass()
 
-
     async def notify_many_hu(self, hu_list: list):
         """一炮多响通知"""
         if len(hu_list) > 1:
-            many_hu_data =[]
+            many_hu_data = []
             curr_p = self.curr_player()
             # p是胡牌者，curr_p是被胡者
             for seat_id in hu_list:
@@ -1196,7 +1191,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 total_score = base_score + extra_score
 
                 # 处理闷牌/闷牌记录
-                data = self.deal_men_jian_data(p, total_score, hu_info,CheckType.CHECK_JIAN)
+                data = self.deal_men_jian_data(p, total_score, hu_info, CheckType.CHECK_JIAN)
                 many_hu_data.append(data)
             data = {
                 "curr_seat_id": self.curr_seat_id,
@@ -1237,9 +1232,10 @@ class RoomFCZJ(BaseLeisureRoom):
             extra_score = self.cal_extra_hu_score(extra_hu_list)
             # 倍数 = 牌型分（已处理） + 额外番分
             total_score = base_score + extra_score
-            await self.kou_fen_notify(p, total_score, hu_types, CheckType.CHECK_JIAN,extra_hu_list,RechargeType.WAIT_RECHARGE_JIAN,[curr_p])
+            await self.kou_fen_notify(p, total_score, hu_types, CheckType.CHECK_JIAN, extra_hu_list, RechargeType.WAIT_RECHARGE_JIAN,
+                                      [curr_p])
 
-    def deal_ze_ren_ji(self, p:PlayerFCZJ) -> int:
+    def deal_ze_ren_ji(self, p: PlayerFCZJ) -> int:
         """
         处理责任鸡handle
         责任幺鸡
@@ -1273,7 +1269,7 @@ class RoomFCZJ(BaseLeisureRoom):
         return 0
 
     @staticmethod
-    def get_operates_after_peng(p:PlayerFCZJ):
+    def get_operates_after_peng(p: PlayerFCZJ):
         can_an_gang, gang_card_list = p.can_an_gang(Rule)
         can_zwg, gang_card = p.can_zhuan_wan_gang(Rule)
         operates = []
@@ -1281,11 +1277,11 @@ class RoomFCZJ(BaseLeisureRoom):
             operates.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
         if can_an_gang:
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
-        return operates,gang_card_list
+        return operates, gang_card_list
 
-    async def check_can_gang_after_peng(self, p:PlayerFCZJ):
+    async def check_can_gang_after_peng(self, p: PlayerFCZJ):
         """ 检测玩家碰后是否能杠 """
-        operates,gang_card_list = self.get_operates_after_peng(p)
+        operates, gang_card_list = self.get_operates_after_peng(p)
         if operates:
             self.clear_table_actions()
             self.set_flow_status(FlowStatus.T_IN_MO_PAI_CALL)  # 设置为在摸牌中
@@ -1311,7 +1307,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
         await self.turn_to_player_chu_pai(p, after_peng=True)
 
-    def calc_operates_after_zhuan_wan_gang(self, p:PlayerFCZJ):
+    def calc_operates_after_zhuan_wan_gang(self, p: PlayerFCZJ):
         """ 抢杠胡"""
         result = []
         can_hu, hu_info = self.hu_de_qi(p)
@@ -1323,18 +1319,18 @@ class RoomFCZJ(BaseLeisureRoom):
                 if self.poker.left_count <= 30:
                     result.append(ActionType.ACTION_TYPE_JIAN)
                 else:
-                    hu_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map,self.__lai_zi)
-                    if hu_type==HuType.PING_HU and not p.lock:
+                    hu_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+                    if hu_type == HuType.PING_HU and not p.lock:
                         print("胡牌 没锁牌且胡牌数量小于10，机器人不平胡去做大牌")
                         result.append(ActionType.ACTION_TYPE_PASS)
-                    elif len(hu_list) <10:
+                    elif len(hu_list) < 10:
                         result.append(ActionType.ACTION_TYPE_PASS)
                     else:
                         result.append(ActionType.ACTION_TYPE_JIAN)
 
         return result
 
-    async def enter_zhuan_wan_gang_call(self, curr_player:PlayerFCZJ, card):
+    async def enter_zhuan_wan_gang_call(self, curr_player: PlayerFCZJ, card):
         """
         :return:
         """
@@ -1375,8 +1371,7 @@ class RoomFCZJ(BaseLeisureRoom):
         #     return
         await self.do_zhuan_wan_gang_end()
 
-
-    async def enter_ming_gang_call(self, curr_player:PlayerFCZJ, card):
+    async def enter_ming_gang_call(self, curr_player: PlayerFCZJ, card):
 
         if self.flow_status not in (
                 FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_MO_PAI_CALL, FlowStatus.T_IN_TIAN_HU):
@@ -1390,11 +1385,10 @@ class RoomFCZJ(BaseLeisureRoom):
         # 杠基础分
         total_score = self.__extra_score_map[ExtraHuPai.MING_GANG]
         await self.kou_fen_notify(curr_player, total_score, [], CheckType.CHECK_MING_GANG,
-                                  [],RechargeType.WAIT_RECHARGE_MING_GANG,[from_p])
+                                  [], RechargeType.WAIT_RECHARGE_MING_GANG, [from_p])
 
         if self.__recharge_wait == 0:
-         await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_MING_GANG, card])
-
+            await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_MING_GANG, card])
 
     async def somebody_an_gang(self, gang_list: list) -> bool:
         if len(gang_list) != 1:
@@ -1437,9 +1431,7 @@ class RoomFCZJ(BaseLeisureRoom):
             else:
                 total_score = self.__extra_score_map.get(ExtraHuPai.AN_GANG)
                 await self.kou_fen_notify(p, total_score, [], CheckType.CHECK_AN_GANG,
-                                          [],RechargeType.WAIT_RECHARGE_AN_GANG)
-
-
+                                          [], RechargeType.WAIT_RECHARGE_AN_GANG)
 
             self.log_info(self.tid, "somebody_an_gang end1")
         if flag and self.__recharge_wait == 0:
@@ -1449,7 +1441,6 @@ class RoomFCZJ(BaseLeisureRoom):
 
         self.log_info(self.tid, "somebody_an_gang end2")
         return False
-
 
     async def somebody_ming_gang(self, gang_list: list) -> bool:
         if len(gang_list) != 1:
@@ -1578,12 +1569,11 @@ class RoomFCZJ(BaseLeisureRoom):
         allow_hu_map = {HuType.DI_LONG_QI: False, HuType.JIN_GOU_DIAO: False,
                         HuType.QI_DUI: True}
         if len(p.ting_list) == 0:
-            ting_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map,self.__lai_zi)
+            ting_list = Rule.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
             p.ting_list = ting_list
 
         if self.__recharge_wait == 0:
             self.call_flow(TimerDelay.KOU_FEI_TIME, self.__mo_pai)
-
 
     async def men_da_notify(self, hu_list: list):
         """血流红中捉鸡玩家闷牌结算"""
@@ -1609,21 +1599,19 @@ class RoomFCZJ(BaseLeisureRoom):
             data_model = S2CMenInfoMahjong.pb_model(**data)
             await self.inner_broadcast(CmdRoom.PLAYER_MEN_SUC, data_model)
 
-
-    async def notify_is_revenge(self, player:PlayerFCZJ):
+    async def notify_is_revenge(self, player: PlayerFCZJ):
         """ 判断是否复仇"""
         # 判断破产玩家，弹出充值，充值继续，不充值认输
         self.set_flow_status(FlowStatus.T_IN_RECHARGE)
         await super().notify_is_revenge(player)
 
-    async def notify_resurgence(self, player:PlayerFCZJ):
+    async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
         rm = s2c_recharge_model(player.seat_id, str(player.gold))
         self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.RECHARGE, rm)
         if len(self.__wait_recharge_seats) == 0:
             await self.recharge_continue()
-
 
     async def recharge_continue(self):
         action_map = {
@@ -1679,9 +1667,9 @@ class RoomFCZJ(BaseLeisureRoom):
             self.find_hua_zhu_players()
             if len(self.__no_jiao_pai_seats) == self.in_room_count:
                 self.liu_ju_notify()
-                return self.round_over( OverType.LIU_JU)
+                return self.round_over(OverType.LIU_JU)
             else:
-                return self.call_flow(2,self.start_fan_ji)
+                return self.call_flow(2, self.start_fan_ji)
 
         self.set_flow_status(FlowStatus.T_IN_MO_PAI)
         send_command = CmdRoom.PLAYER_MO_PAI
@@ -1693,20 +1681,20 @@ class RoomFCZJ(BaseLeisureRoom):
             if not p.is_robot:
                 p.add_quan_count()
 
-
         self.curr_seat_id = p.seat_id
 
-        if not p.is_robot and p.gold <= self.base_score * 15: # 记录玩家金币小于15倍
+        if not p.is_robot and p.gold <= self.base_score * 15:  # 记录玩家金币小于15倍
             p.add_first_down()
         # 真人玩家连输两次后有几率在规定打牌的圈数摸到癞子
-        if not p.is_robot and p.cards.count(p.cards.count(CardsType.LAI_ZI) ==1) and p.quan_count == p.lucky_quan and p.lian_sheng < 0 and p.lian_sheng % 2 == 0:
+        if not p.is_robot and p.cards.count(
+                p.cards.count(CardsType.LAI_ZI) == 1) and p.quan_count == p.lucky_quan and p.lian_sheng < 0 and p.lian_sheng % 2 == 0:
             mo_pai = self.poker.pop(CardsType.LAI_ZI)
-            self.log_info( p.uid, "玩家连输后给玩家摸癞子：", "圈数为", p.lucky_quan, mo_pai)
-        elif not p.is_robot and p.first_down==1 and p.gold<=self.base_score*15:
+            self.log_info(p.uid, "玩家连输后给玩家摸癞子：", "圈数为", p.lucky_quan, mo_pai)
+        elif not p.is_robot and p.first_down == 1 and p.gold <= self.base_score * 15:
             good_rate = int(UtilsTool.random_choice_num([0, 1], [0.75, 0.25]))
-            if good_rate== 1:
+            if good_rate == 1:
                 mo_pai = self.poker.pop(CardsType.LAI_ZI)
-                self.log_info( p.uid, "玩家金币降低到低分*15后给玩家摸癞子：", mo_pai)
+                self.log_info(p.uid, "玩家金币降低到低分*15后给玩家摸癞子：", mo_pai)
         else:
             if p.is_robot:
                 good_rate = int(UtilsTool.random_choice_num([0, 1], [0.65, 0.35]))
@@ -1719,7 +1707,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     card = random.choice(filtered_cards)
                     if self.poker.pop(card):
                         mo_pai = card
-                        self.log_info("走好运，摸到手里面有的牌",mo_pai,"seat_id",p.seat_id)
+                        self.log_info("走好运，摸到手里面有的牌", mo_pai, "seat_id", p.seat_id)
 
         mo_pai = self.poker.pop()
         p.rev_card(mo_pai)
@@ -1742,7 +1730,6 @@ class RoomFCZJ(BaseLeisureRoom):
 
         await self.enter_mo_pai_call()
         print("__mo_pai end", self.poker.left_count)
-
 
     async def start_fan_ji(self):
         """
@@ -1770,21 +1757,20 @@ class RoomFCZJ(BaseLeisureRoom):
             if p.jiao_pai:
                 self.__can_fan_ji_seats.append(p.seat_id)
                 if p.fan_ji <= 0 and p.is_robot:
-                    await self.delay_func(start_rs[re_times],self.robot_auto_fan_ji,p)
+                    await self.delay_func(start_rs[re_times], self.robot_auto_fan_ji, p)
                     re_times += 1
 
-            await self.inner_send(p,CmdRoom.START_FAN_JI,data_model)
+            await self.inner_send(p, CmdRoom.START_FAN_JI, data_model)
 
         self.call_flow(TimerDelay.FAN_JI_TIME, self.fan_ji_time_out)
         self.call_flow_trustee(TimerDelay.TUO_GUAN_TIME, self.trustee_fan_ji_time_out)
 
-
-    async def robot_auto_fan_ji(self, p:PlayerFCZJ):
+    async def robot_auto_fan_ji(self, p: PlayerFCZJ):
         if self.flow_status != FlowStatus.T_IN_FAN_JI:
             return StaCode.FLOW_ERR
         fan_ji_index = self.__fan_ji_list
         fan_ji_record = random.choice(fan_ji_index)  # 机器人随机翻
-        code,_ = await self.on_player_fan_ji(p, fan_ji_record)
+        code, _ = await self.on_player_fan_ji(p, fan_ji_record)
         if code != StaCode.PASS:
             self.log_info(p.uid, "捉鸡错误！code：", code)
             return
@@ -1796,12 +1782,12 @@ class RoomFCZJ(BaseLeisureRoom):
             p = self.get_player_by_seat_id(seat_id)
             if p.is_out:
                 continue
-            if p.fan_ji <=0:
+            if p.fan_ji <= 0:
                 fan_ji_index = self.__fan_ji_list
                 fan_ji_record = random.choice(fan_ji_index)
-                code,_ = await self.on_player_fan_ji(p.uid, fan_ji_record)
+                code, _ = await self.on_player_fan_ji(p.uid, fan_ji_record)
                 if code != StaCode.PASS:
-                    self.log_info( p.uid, "time_out 捉鸡错误！code：", code)
+                    self.log_info(p.uid, "time_out 捉鸡错误！code：", code)
                     return
         return self.call_flow(1.5, self.round_over)
 
@@ -1817,9 +1803,9 @@ class RoomFCZJ(BaseLeisureRoom):
             if p.fan_ji <= 0:
                 fan_ji_index = self.__fan_ji_list
                 fan_ji_record = random.choice(fan_ji_index)
-                code,_ = await self.on_player_fan_ji(p.uid, fan_ji_record)
+                code, _ = await self.on_player_fan_ji(p.uid, fan_ji_record)
                 if code != StaCode.PASS:
-                    self.log_info( p.uid, "trustee_time_out 捉鸡错误！code：", code)
+                    self.log_info(p.uid, "trustee_time_out 捉鸡错误！code：", code)
                     return
         is_all_choose = True
         for seat_id in self.__can_fan_ji_seats:
@@ -1830,8 +1816,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if is_all_choose:
             return self.call_flow(1.5, self.round_over)
 
-
-    def player_fan_ji_call(self,p:PlayerFCZJ,fan_ji_index):
+    def player_fan_ji_call(self, p: PlayerFCZJ, fan_ji_index):
         if p.is_out:
             return
         if p.seat_id not in self.__can_fan_ji_seats:
@@ -1857,7 +1842,6 @@ class RoomFCZJ(BaseLeisureRoom):
             self.__fan_ji_result.append(p.fan_ji)  # 翻坤牌（已+1，不含金）
         return fan_ji_card
 
-
     def find_hua_zhu_players(self):
         """ 查花猪：游戏结束时，手上牌还有缺牌的玩家 """
         for p in self.seats:
@@ -1868,10 +1852,9 @@ class RoomFCZJ(BaseLeisureRoom):
                 cards.remove(CardsType.LAI_ZI)
 
             suit_count = self.poker.cal_card_suit_count(cards)  # 计算同种花色出现的次数
-            if suit_count.get(p.que,0) > 0:
+            if suit_count.get(p.que, 0) > 0:
                 self.__hua_zhu_seats.append(p.seat_id)
                 p.hua_zhu = 1
-
 
     def deal_men_jian_data(self, p, win_total_score, hu_info, check_type=CheckType.CHECK_MEN):
         data = {
@@ -1882,16 +1865,16 @@ class RoomFCZJ(BaseLeisureRoom):
         data.update(hu_info)
         return data
 
-    def get_base_score(self,hu_type, extra_hu_list, is_zi_mo = False):
+    def get_base_score(self, hu_type, extra_hu_list, is_zi_mo=False):
         base_score = self.__pai_xing_score_map[hu_type] or 0
         target_hu_list = [ExtraHuPai.TIAN_HU, ExtraHuPai.DI_HU]
         if hu_type == HuType.PING_HU and set(extra_hu_list).intersection(target_hu_list):
             base_score = 0
         if is_zi_mo:
-            base_score *=2
+            base_score *= 2
         return base_score
 
-    def cal_extra_hu_score(self,extra_hu_lst):
+    def cal_extra_hu_score(self, extra_hu_lst):
         total_score = 0
         for extra_hu in extra_hu_lst:
             if extra_hu == ExtraHuPai.QIANG_GANG_HU:  # 抢杠胡：此杠被烧，被抢者额外输6分
@@ -1904,20 +1887,17 @@ class RoomFCZJ(BaseLeisureRoom):
             total_score += score
         return total_score
 
-
-
-
-    def has_do_action(self, p:PlayerFCZJ):
+    def has_do_action(self, p: PlayerFCZJ):
         for item in self.__player_actions:
             if item[0] == p.seat_id:
                 return True
         return False
 
-    def has_do_by_action(self, p:PlayerFCZJ, action):
+    def has_do_by_action(self, p: PlayerFCZJ, action):
         """ 记录玩家操作，不能重复操作 """
         if isinstance(action, list):
-            actions = [ActionType.ACTION_TYPE_MEN,ActionType.ACTION_TYPE_JIAN,
-                       ActionType.ACTION_TYPE_HU,]
+            actions = [ActionType.ACTION_TYPE_MEN, ActionType.ACTION_TYPE_JIAN,
+                       ActionType.ACTION_TYPE_HU, ]
             target_actions = actions
         else:
             target_actions = [action]
@@ -1926,10 +1906,10 @@ class RoomFCZJ(BaseLeisureRoom):
             for item in self.__player_actions
         )
 
-    def save_player_action(self, p:PlayerFCZJ, action, data=None):
+    def save_player_action(self, p: PlayerFCZJ, action, data=None):
         self.__player_actions.append([p.seat_id, action, data])
 
-    def calc_operates_after_mo_pai(self, p:PlayerFCZJ):
+    def calc_operates_after_mo_pai(self, p: PlayerFCZJ):
         """计算摸牌后能做的操作"""
         result = []
         can_gang_list = []
@@ -1982,17 +1962,17 @@ class RoomFCZJ(BaseLeisureRoom):
                     result.append(ActionType.ACTION_TYPE_AN_GANG)
         return result, can_gang_list
 
-    def hu_de_qi(self, p:PlayerFCZJ):
+    def hu_de_qi(self, p: PlayerFCZJ):
         """检查能不能胡 胡牌的类型"""
         can_hu, _, hu_type = self.player_can_hu(p)
         return can_hu, hu_type
 
-    def zhuan_wan_gang_de_qi(self, p:PlayerFCZJ):
+    def zhuan_wan_gang_de_qi(self, p: PlayerFCZJ):
         if self.curr_seat_id != p.seat_id:
             return False
         return p.can_zhuan_wan_gang(Rule)
 
-    def player_can_hu(self, player:PlayerFCZJ):
+    def player_can_hu(self, player: PlayerFCZJ):
         """
         首先判断手牌能不能胡
         其次判断玩家此时能不能胡（平胡不能直接胡）
@@ -2005,7 +1985,7 @@ class RoomFCZJ(BaseLeisureRoom):
         return self.check_can_hu(player, can_hu, info, hu_path)
 
     @staticmethod
-    def check_can_hu(player:PlayerFCZJ, can_hu, info, hu_path=None):
+    def check_can_hu(player: PlayerFCZJ, can_hu, info, hu_path=None):
         if hu_path is None:
             hu_path = []
         if player.que > 0:
@@ -2014,7 +1994,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     return False, [], False
         return can_hu, hu_path, info
 
-    def get_hu_type(self, p:PlayerFCZJ, dian_pao=False):
+    def get_hu_type(self, p: PlayerFCZJ, dian_pao=False):
         """
         此接口计算玩家手牌胡牌类型，玩家能不能胡不管
         params: dian_pao: 是否是计算点炮时的hu_type
@@ -2095,7 +2075,6 @@ class RoomFCZJ(BaseLeisureRoom):
 
         account["detail"][check_key] = account["detail"].get(check_key, 0) + scores
 
-
     def do_check_hua_zhu_score(self, accounts: dict):
         """
         查花猪
@@ -2125,7 +2104,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 # 记账
                 self.update_result_score(accounts, p.seat_id, key, score, gold)
                 self.update_result_score(accounts, other_p.seat_id, key, -score, -gold)
-                self.log_info( other_p.uid, other_p.seat_id, "结算花猪", p.hua_zhu)
+                self.log_info(other_p.uid, other_p.seat_id, "结算花猪", p.hua_zhu)
 
     def check_chong_feng_ji(self, accounts: dict):
         """结算冲锋鸡接口"""
@@ -2166,7 +2145,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     continue
                 self.update_result_score(accounts, other_p.seat_id, key, score, gold)
                 self.update_result_score(accounts, p.seat_id, key, -score, -gold)
-                self.log_info( p.uid, p.seat_id, "结算包冲锋鸡", key, score)
+                self.log_info(p.uid, p.seat_id, "结算包冲锋鸡", key, score)
         # 冲锋鸡玩家已叫牌
         else:
             for other_p in self.seats:
@@ -2176,7 +2155,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     continue
                 self.update_result_score(accounts, other_p.seat_id, key, -score, -gold)
                 self.update_result_score(accounts, p.seat_id, key, score, gold)
-                self.log_info( other_p.uid, other_p.seat_id, "结算赔冲锋鸡", key, score)
+                self.log_info(other_p.uid, other_p.seat_id, "结算赔冲锋鸡", key, score)
 
     def check_ze_ren_ji(self, accounts):
         """ 结算责任鸡接口 """
@@ -2187,7 +2166,6 @@ class RoomFCZJ(BaseLeisureRoom):
         if self.__ze_ren_wgj_seat_id and self.__chong_feng_wgj_seat_id == 0:
             key = JiType.WU_GU_ZRJ
             self.check_out_ze_ren_ji(accounts, self.__ze_ren_wgj_win_seat_id, self.__ze_ren_wgj_seat_id, key)
-
 
     def check_out_ze_ren_ji(self, accounts, ze_ren_win, ze_ren_lose, key):
         """
@@ -2220,7 +2198,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if get_zrj_p.jiao_pai > 0:
             self.update_result_score(accounts, get_zrj_p.seat_id, key, zrj_score, zrj_gold)
             self.update_result_score(accounts, lose_zrj_p.seat_id, key, -zrj_score, -zrj_gold)
-            self.log_info( lose_zrj_p.uid, lose_zrj_p.seat_id, "结算赔责任鸡", key, zrj_score)
+            self.log_info(lose_zrj_p.uid, lose_zrj_p.seat_id, "结算赔责任鸡", key, zrj_score)
             for other_p in self.seats:
                 if other_p.is_out:
                     continue
@@ -2231,13 +2209,13 @@ class RoomFCZJ(BaseLeisureRoom):
                 # 记录玩家结算明细，统一采用加分
                 self.update_result_score(accounts, other_p.seat_id, key, -score, -gold)
                 self.update_result_score(accounts, get_zrj_p.seat_id, key, score, gold)
-                self.log_info( other_p.uid, other_p.seat_id, "结算赔责任鸡", key, score)
+                self.log_info(other_p.uid, other_p.seat_id, "结算赔责任鸡", key, score)
         # 责任鸡玩家未叫牌
         else:
             if lose_zrj_p.jiao_pai > 0:
                 self.update_result_score(accounts, get_zrj_p.seat_id, key, -zrj_score, -zrj_gold)
                 self.update_result_score(accounts, lose_zrj_p.seat_id, key, zrj_score, zrj_gold)
-                self.log_info( get_zrj_p.uid, "结算包责任鸡", key, zrj_score)
+                self.log_info(get_zrj_p.uid, "结算包责任鸡", key, zrj_score)
                 for other_p in self.seats:
                     if other_p.is_out:
                         continue
@@ -2249,7 +2227,7 @@ class RoomFCZJ(BaseLeisureRoom):
                         continue
                     self.update_result_score(accounts, other_p.seat_id, key, score, gold)
                     self.update_result_score(accounts, get_zrj_p.seat_id, key, -score, -gold)
-                    self.log_info( get_zrj_p.uid, "结算包责任鸡", key, score)
+                    self.log_info(get_zrj_p.uid, "结算包责任鸡", key, score)
 
     def do_check_gang_score(self, accounts: dict):
         """杠分结算逻辑"""
@@ -2300,7 +2278,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     self.update_result_score(accounts, op.seat_id, key, score, gold)
 
                 log_msg = f"结算{gang_type}分，未叫牌退税"
-                self.log_info( p.uid, p.seat_id, log_msg)
+                self.log_info(p.uid, p.seat_id, log_msg)
 
             # 处理各类杠型
             process_gang_refund("MING_GANG", ming_gang_count, is_ming_gang=True)
@@ -2311,10 +2289,10 @@ class RoomFCZJ(BaseLeisureRoom):
         for p in active_players:
             # 跳过特殊状态玩家
             if p.seat_id in self.__shao_ji_gang_seats:
-                self.log_info( p.uid, p.seat_id, "玩家被烧杠，不再包杠")
+                self.log_info(p.uid, p.seat_id, "玩家被烧杠，不再包杠")
                 continue
             if p.seat_id in self.__hua_zhu_seats or p.hua_zhu > 0:
-                self.log_info( p.uid, p.seat_id, "玩家被花猪，不再包杠")
+                self.log_info(p.uid, p.seat_id, "玩家被花猪，不再包杠")
                 continue
 
             ming_gang_count, zwg_count, an_gang_count = self.cal_p_gang_count(p)
@@ -2356,7 +2334,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 # 聚合日志
                 status = "叫牌玩家" if is_jiao_pai else "未叫牌退税"
                 log_msg = f"结算{gang_type}分，{status}"
-                self.log_info( p.uid, p.seat_id, log_msg)
+                self.log_info(p.uid, p.seat_id, log_msg)
 
             # 处理各类杠型
             process_gang_settlement("MING_GANG", ming_gang_count, is_ming_gang=True)
@@ -2364,7 +2342,7 @@ class RoomFCZJ(BaseLeisureRoom):
             process_gang_settlement("AN_GANG", an_gang_count)
 
     @staticmethod
-    def cal_p_gang_count(p:PlayerFCZJ):
+    def cal_p_gang_count(p: PlayerFCZJ):
         """ 统计玩家明杠/暗杠/转弯杠的数量 """
         ming_gang_count = zwg_count = an_gang_count = 0
         for table_card in p.table_cards:
@@ -2396,7 +2374,6 @@ class RoomFCZJ(BaseLeisureRoom):
         # 5.结算杠分
         self.do_check_gang_score(accounts)
         return accounts
-
 
     def do_check_jiao_pai_score(self, accounts: dict):
         """
@@ -2519,7 +2496,6 @@ class RoomFCZJ(BaseLeisureRoom):
             accounts = self.do_check_by_fan_ji(accounts)
         return accounts
 
-
     async def round_over(self, over_type=OverType.DEFAULT):
         allow_hu_map = {HuType.DI_LONG_QI: False, HuType.JIN_GOU_DIAO: True,
                         HuType.QI_DUI: True}
@@ -2538,18 +2514,17 @@ class RoomFCZJ(BaseLeisureRoom):
                 self.log_info(self.tid, p.uid, "玩家缺牌未打完", p.cards, p.que)
                 continue
             p.jiao_pai = Rule.get_round_over_jiao_pai(
-                p.table_cards, p.cards, allow_hu_map,lai_zi = self.__lai_zi)
+                p.table_cards, p.cards, allow_hu_map, lai_zi=self.__lai_zi)
 
             if p.jiao_pai <= 0:
                 self.__no_jiao_pai_seats.append(p.seat_id)
 
-        if over_type ==OverType.LIU_JU:
+        if over_type == OverType.LIU_JU:
             over_check = self.do_check_out(True)
         elif over_type == OverType.OTHERS_GIVE_UP:
             over_check = {}
         else:
             over_check = self.do_check_out()
-
 
         round_data = {
             "round_idx": self.round_idx,
@@ -2575,10 +2550,10 @@ class RoomFCZJ(BaseLeisureRoom):
             ji_scores = self.__zhuo_ji_cards.get(p.seat_id, [])
 
             over_data = p.round_over_info()
-            print("over_data",over_data)
+            print("over_data", over_data)
             over_data["over_check"] = over_check.get(p.seat_id, [])
             over_data["ji_score"] = ji_scores
-            fan_ji_score_list.append({"fan_ji_score": over_gold, "res_gold":p.gold,"seat_id": p.seat_id})
+            fan_ji_score_list.append({"fan_ji_score": over_gold, "res_gold": p.gold, "seat_id": p.seat_id})
             account_model = S2CRecordAccountInfo.pb_model(p.round_account())
             await self.inner_send(p, CmdRoom.RECORD_ACCOUNT, account_model)
 
@@ -2588,7 +2563,7 @@ class RoomFCZJ(BaseLeisureRoom):
         fan_ji_score_model = S2CFanJiScore.pb_model(fan_ji_score_list)
         await self.inner_broadcast(CmdRoom.FAN_JI_SCORE, fan_ji_score_model)
         round_over_model = S2CRoundOverInfoByLeisure.pb_model(**round_data)
-        await self.inner_broadcast(CmdRoom.ROUND_OVER,round_over_model)
+        await self.inner_broadcast(CmdRoom.ROUND_OVER, round_over_model)
         await self.game_over()
 
     def calc_others_cards_and_piles(self, curr_player):
@@ -2615,23 +2590,25 @@ class RoomFCZJ(BaseLeisureRoom):
         }
         return data
 
-
     def solid_params(self, p):
         """
         todo: 设置机器人固定计算参数
         """
+        count_dict = {}
+        for card in self.poker.remain_cards:
+            key = str(card)
+            count_dict[key] = count_dict.get(key, 0) + 1
         data = {
             "uid": p.uid,
             "tid": self.tid,
-            "res": 1,
-            "self": p.seat_id,
+            "seat_id": p.seat_id,
             "curr_hand_cards": p.cards,
             "magic_card": CardsType.LAI_ZI if CardsType.LAI_ZI in p.cards else None,
             "piles": p.table_cards,
             "left_count": self.poker.left_count,
             "curr_card": self.__curr_card,
-            "remain_cards": self.poker.remain_cards,
-            'cs_type': self.service,
+            "remain_cards": count_dict,
+            'cs_type': self.service.service_type,
         }
         return data
 
@@ -2646,9 +2623,7 @@ class RoomFCZJ(BaseLeisureRoom):
             "secret": C_SERVICE_SECRET_KEY
         }
         self.log_info("发送机器人自动出牌计算数据: ", state)
-
         await self.cs2cs_by_rmq(ServiceEnum.ROBOT_MAHJONG_FC, CmdRobotCal.CAL_ACTION, state)
-
 
     async def robot_auto_pong(self, p):
         """
@@ -2677,7 +2652,6 @@ class RoomFCZJ(BaseLeisureRoom):
         }
         self.log_info("发送机器人自动杠计算数据: ", state)
         await self.cs2cs_by_rmq(ServiceEnum.ROBOT_MAHJONG_FC, CmdRobotCal.CAL_GANG, state)
-
 
     def cal_gang_card(self, p, gang_type):
         """
@@ -2718,7 +2692,6 @@ class RoomFCZJ(BaseLeisureRoom):
             else:
                 return cards
         return 0
-
 
     def get_ji_pai_score_map(self) -> dict:
         map_copy = JI_PAI_SCORE.copy()
@@ -2774,7 +2747,7 @@ class RoomFCZJ(BaseLeisureRoom):
             room_info["dice_num"] = self.__dice_num
             room_info["ding_que_list"] = self.__que_list
             room_info["operate_seats"] = self.get_operate_seats()
-        print("房间信息",room_info)
+        print("房间信息", room_info)
         if self.room_status == RoomStatus.T_CLOSED:
             self.log_info("房间已在关闭状态")
             return None
@@ -2787,7 +2760,6 @@ class RoomFCZJ(BaseLeisureRoom):
                 data.pop("operates", None)
 
         return S2CPlayerInfo05Mahjong.pb_model(room_player_info)
-
 
     def dealer_turn(self):
         if self.dealer_id > 0:
