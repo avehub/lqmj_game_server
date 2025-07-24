@@ -52,9 +52,6 @@ class ActivityDetail(GameAuthApi):
 
     async def get(self, req: Request, **kwargs):
         act_type = req.args.get("act_type")
-        u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
-
         # 1.获取活动配置
         if act_type:
             act_enum = ActivityType.find_member_by_val(act_type)
@@ -72,8 +69,6 @@ class ActivityDetail(GameAuthApi):
         if act_type == ActivityType.LUCK_SIGN_IN.key():
             data["luck"] = await act_by_type(act_type)
         return self.answer(data=data)
-
-
 
 
 class GetActivityAwards(GameAuthApi):
