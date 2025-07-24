@@ -6,7 +6,7 @@ from common.proto.py_pb2.ws_leisure import bid_model, do_bid_model, confirm_deal
     S2CTurnTOLandlords, redouble_model, do_redouble_model, play_cards_model, S2CRoundOverLandlords, \
     S2CPlayerInfo04Landlords, S2CRoomInfo03Landlords
 from .rule import Rule
-from common.public.enum_const import StaCode, ServiceEnum, TaskId, PlayType
+from common.public.enum_const import StaCode, ServiceEnum, TaskId#, PlayType
 from .const import FlowStatus, ActionType
 from .poker import Poker, Cards
 from c_services.base.base_leisure_room import BaseLeisureRoom
@@ -111,7 +111,7 @@ class Room(BaseLeisureRoom):
                         self.log_info("都未叫分，进入重新发牌", self.__bid_count)
                         return await self.re_deal_cards()
 
-                if self.play_type == PlayType.CLASSICAL:  # 全国玩法确定地主后加倍
+                if self.play_type == 1: #PlayType.CLASSICAL:  # 全国玩法确定地主后加倍
                     return await self.start_redouble()
 
                 await self.confirm_dealer()

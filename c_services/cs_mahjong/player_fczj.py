@@ -6,16 +6,14 @@ from c_services.cs_mahjong.player import Player
 class PlayerFCZJ(Player):
     def __init__(self, uid, is_robot):
         super().__init__(uid, is_robot)
-        self.__first_down = 0 #第一次金币下到15倍
+        self.__first_down = 0  # 第一次金币下到15倍
         self.__quan_count = 0  # 记录打了几圈
         self.__lucky_quan = 0
         self.__lian_sheng = 0  # 正为胜 负为败
         self.__record_account = []
         self.__fan_ji = 0
         self.lock = False
-
-
-
+        self.__hua_zhu = 0
 
     @property
     def first_down(self):
@@ -31,7 +29,6 @@ class PlayerFCZJ(Player):
     def add_quan_count(self):
         self.__quan_count += 1
 
-
     @property
     def lucky_quan(self):
         return self.__lucky_quan
@@ -39,7 +36,6 @@ class PlayerFCZJ(Player):
     @lucky_quan.setter
     def lucky_quan(self, lucky_quan):
         self.__lucky_quan = lucky_quan
-
 
     @property
     def lian_sheng(self):
@@ -65,6 +61,14 @@ class PlayerFCZJ(Player):
     def lock(self, is_lock):
         self.__is_lock = is_lock
 
+    @property
+    def hua_zhu(self):
+        return self.__hua_zhu
+
+    @hua_zhu.setter
+    def hua_zhu(self, hua_zhu):
+        self.__hua_zhu = hua_zhu
+
     def record_account(self, data, is_copy=True):
         """
         玩家记账
@@ -80,17 +84,15 @@ class PlayerFCZJ(Player):
     def clear_account(self):
         self.__record_account = []
 
-
     def round_over_info(self):
         data = super().round_over_info()
         result = {
             "hand_cards": self.cards,
             "table_cards": self.get_table_cards(),
-            "jiao_pai": self.__jiao_pai,
-            "fang_pao": self.__fang_pao,
-            "hu_type": self.__hu_type,
-            "ji_pai": self.__ji_pai,
+            "jiao_pai": self.jiao_pai,
+            "fang_pao": self.fang_pao,
+            "hu_type": self.hu_type,
+            "ji_pai": self.ji_pai,
         }
         data.update(result)
         return data
-

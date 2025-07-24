@@ -280,7 +280,7 @@ class MatchServer(BaseServer, LeisureService):
         #     p = Player(uid)
         #     p.init_prop_info(prop_info)
         # else:
-        level_id = await self.__find_suitable_leisure(level, user_info.get("gold"), cs_type)
+        level_id = await self.__find_suitable_leisure(level, user_info.get("gold"), cs_type, play_type)
         if not level_id:
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.GOLD_NOT_ENOUGH, req_id=req_id)
         p = Player(uid)

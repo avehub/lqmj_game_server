@@ -10,16 +10,16 @@ ALL_CARDS_WITHOUT_ZI_HUA = (
 LIU_JU_COUNT = 0  # 控制流局阈值
 XUE_LIU_LEFT_BI_HU = 3
 
-class PlayType(BaseEnum):
-    JIAN_LOU_XUE_LIU = 1,"捡漏麻将"
-    AN_LONG_XUE_ZHAN = 2,"血流麻将"
-    GUI_YANG_4 = 3,"贵阳麻将"
-    GUI_YANG_3 = 4,"三丁拐"
-    GUI_YANG_2 = 5,"两丁拐"
-    BI_JIE_MJ = 6,"毕节麻将"
-    ZUN_YI_LAI_ZI = 7,"遵义麻将(一筒赖子)"
-    LEISURE_FCZJ = 8,"休闲场发财捉鸡"
 
+class PlayType(BaseEnum):
+    JIAN_LOU_XUE_LIU = 1, "捡漏麻将"
+    AN_LONG_XUE_ZHAN = 2, "血流麻将"
+    GUI_YANG_4 = 3, "贵阳麻将"
+    GUI_YANG_3 = 4, "三丁拐"
+    GUI_YANG_2 = 5, "两丁拐"
+    BI_JIE_MJ = 6, "毕节麻将"
+    ZUN_YI_LAI_ZI = 7, "遵义麻将(一筒赖子)"
+    LEISURE_FCZJ = 8, "休闲场发财捉鸡"
 
 
 class ActionType(BaseEnum):
@@ -82,26 +82,26 @@ class HuType(BaseEnum):
     QING_QI_DUI = 108, "清七对"
     QING_DI_LONG = 109, "清地龙"
     QING_LONG_BEI = 110, "清龙对(清龙背|清龙七对)"
-    DOUBLE_DI_LONG_QI = 111,"双地龙七"
-    THREE_DI_LONG_QI = 112,"三地龙七"
-    JIN_GOU_DIAO = 113,"金钩钓"
-    QING_DOUBLE_DI_LONG_QI = 114,"清双地龙七"
-    QING_THREE_DI_LONG_QI = 115,"清三地龙七"
-    QING_JIN_GOU = 116,"清金钩"  #（只在二三丁拐下有）
+    DOUBLE_DI_LONG_QI = 111, "双地龙七"
+    THREE_DI_LONG_QI = 112, "三地龙七"
+    JIN_GOU_DIAO = 113, "金钩钓"
+    QING_DOUBLE_DI_LONG_QI = 114, "清双地龙七"
+    QING_THREE_DI_LONG_QI = 115, "清三地龙七"
+    QING_JIN_GOU = 116, "清金钩"  #（只在二三丁拐下有）
 
     # 遵义一筒赖子
-    DOUBLE_LONG_QI = 117,"双龙,遵义一筒赖子"
-    QING_DOUBLE_LONG_QI = 118,"清双龙,遵义一筒赖子"
-    THREE_LONG_QI = 119,"三龙,遵义一筒赖子"
-    QING_THREE_LONG_QI = 120,"清三龙,遵义一筒赖子"
+    DOUBLE_LONG_QI = 117, "双龙,遵义一筒赖子"
+    QING_DOUBLE_LONG_QI = 118, "清双龙,遵义一筒赖子"
+    THREE_LONG_QI = 119, "三龙,遵义一筒赖子"
+    QING_THREE_LONG_QI = 120, "清三龙,遵义一筒赖子"
 
     #发财捉鸡
-    SHI_BA_LUO_HAN = 121,"十八罗汉（知行合一）"
-    SI_JIE_GAO = 122,"四节高"
-    SI_AN_KE = 123,"四暗刻（四喜财）"
-    SHI_ER_JIN_CHAI = 124,"十二金钗（八音坐唱）"
-    SAN_JIE_GAO = 125,"三节高"
-    SAN_AN_KE = 126,"三暗刻（三星照）"
+    SHI_BA_LUO_HAN = 121, "十八罗汉（知行合一）"
+    SI_JIE_GAO = 122, "四节高"
+    SI_AN_KE = 123, "四暗刻（四喜财）"
+    SHI_ER_JIN_CHAI = 124, "十二金钗（八音坐唱）"
+    SAN_JIE_GAO = 125, "三节高"
+    SAN_AN_KE = 126, "三暗刻（三星照）"
 
     # 毕节麻将
     YIN_GOU_DIAO = 131, "银勾钓"
@@ -120,32 +120,34 @@ class SuitType(BaseEnum):
     SUIT_FENG = 4, "风"
     SUIT_JIAN = 5, "剑"
 
+
 @unique
 class FlowStatus(BaseEnum):
     """ 游戏流程状态 """
-    T_IN_IDLE = 0,"无状态"
-    T_IN_CHU_PAI = 1,"在出牌中"
-    T_IN_PUBLIC_OPRATE = 2,"公共操作过程中"
-    T_IN_MO_PAI = 3,"在摸牌中暗(未公示)"
-    T_IN_MO_PAI_CALL = 4,"在摸牌后的呼叫中"
-    T_IN_MING_GANG_PAI_CALL = 5 ,"抢杠胡判断流程"
-    T_IN_ZHUAN_WAN_GANG_PAI_CALL = 6,"抢杠胡判断流程"
-    T_IN_AN_GANG_PAI_CALL = 7,"抢杠胡判断流程"
-    T_IN_ROUND_START = 8 ,"一局开始"
-    T_IN_DEAL_CARDS = 9 ,"发牌中"
-    T_IN_EXCHANGE_CARDS = 10 ,"换牌流程"
-    T_IN_WILL_BEGIN_OPTION = 11 ,"开局前的玩家操作选项"
-    T_IN_TIAN_HU = 12 ,"庄家天胡"
-    T_IN_DI_HU_CHU_PAI = 13,"庄家天胡结束出牌 地胡判断阶段"
-    T_IN_CHECK_OUT = 14 ,"结算中"
-    T_IN_TIAN_TING = 15 ,"天听中"
-    T_IN_DING_QUE = 16,"定缺"
-    T_IN_GU_MAI = 17,"估卖"
-    T_IN_FOUR_BAO_TING = 18,"4张牌报听中"
-    T_IN_FAN_JI = 19,"牌摸完之后翻鸡"
-    T_IN_HUI_TOU_YI_XIAO = 20,"回头一笑流程"
-    T_IN_DING_JING = 21,"定精牌流程"
-    T_IN_WAIT_CHONG_ZHI = 22,"充值等待"
+    T_IN_IDLE = 0, "无状态"
+    T_IN_CHU_PAI = 1, "在出牌中"
+    T_IN_PUBLIC_OPRATE = 2, "公共操作过程中"
+    T_IN_MO_PAI = 3, "在摸牌中暗(未公示)"
+    T_IN_MO_PAI_CALL = 4, "在摸牌后的呼叫中"
+    T_IN_MING_GANG_PAI_CALL = 5, "抢杠胡判断流程"
+    T_IN_ZHUAN_WAN_GANG_PAI_CALL = 6, "抢杠胡判断流程"
+    T_IN_AN_GANG_PAI_CALL = 7, "抢杠胡判断流程"
+    T_IN_ROUND_START = 8, "一局开始"
+    T_IN_DEAL_CARDS = 9, "发牌中"
+    T_IN_EXCHANGE_CARDS = 10, "换牌流程"
+    T_IN_WILL_BEGIN_OPTION = 11, "开局前的玩家操作选项"
+    T_IN_TIAN_HU = 12, "庄家天胡"
+    T_IN_DI_HU_CHU_PAI = 13, "庄家天胡结束出牌 地胡判断阶段"
+    T_IN_CHECK_OUT = 14, "结算中"
+    T_IN_TIAN_TING = 15, "天听中"
+    T_IN_DING_QUE = 16, "定缺"
+    T_IN_GU_MAI = 17, "估卖"
+    T_IN_FOUR_BAO_TING = 18, "4张牌报听中"
+    T_IN_FAN_JI = 19, "牌摸完之后翻鸡"
+    T_IN_HUI_TOU_YI_XIAO = 20, "回头一笑流程"
+    T_IN_DING_JING = 21, "定精牌流程"
+    T_IN_RECHARGE = 22, "充值中"
+
 
 class TimerDelay(IntEnum):
     """ 延时时间 """
@@ -173,6 +175,7 @@ class TimerDelay(IntEnum):
     DING_QUE_TIME = 10  # todo:定缺时间
     KAI_HU_TIME = 1  # 自动胡时间
 
+
 @unique
 class ChangeThreeType(IntEnum):
     """ 换三张类型 """
@@ -181,11 +184,13 @@ class ChangeThreeType(IntEnum):
     SAME_POINT = 2  # 豹子换
     LIU_JU = 3  # 流局换
 
+
 @unique
 class ChangeCardsType(IntEnum):
     """ 换牌类型 """
     ANY_CARDS = 1  # 任意牌
     SAME_SUIT_CARDS = 2  # 同色牌
+
 
 @unique
 class OverType(IntEnum):
@@ -196,6 +201,7 @@ class OverType(IntEnum):
     FORCE = 4  # 强制解散
     OTHERS_GIVE_UP = 5  # 其它玩家认输
     CLUB_OWNER_DISMISS = 6  # 房主解散
+
 
 @unique
 class ExtraHuPai(IntEnum):
@@ -234,6 +240,7 @@ class ExtraHuPai(IntEnum):
     ZHUANG_HU = 311
     JING_DIAO = 312
 
+
 @unique
 class JiType(IntEnum):
     """
@@ -262,11 +269,13 @@ class JiType(IntEnum):
     CF_YI_WAN = 219  # 一万冲锋鸡
     YI_WAN_ZRJ = 220  # 一万责任鸡
     JIN_CF_YI_WAN = 221  # 一万冲锋金鸡
+    FAN_PAI_JI = 222  # 翻牌鸡
 
     AN_GANG = 301  # 暗杠
     MING_GANG = 302  # 明杠
     ZHUAN_WAN_GANG = 303  # 转弯杠
     JING_GANG = 304  # 精杠
+
 
 @unique
 class PlayerStatusType(IntEnum):
@@ -280,6 +289,7 @@ class PlayerStatusType(IntEnum):
     JIAO_AND_NO_JIAO = 4  # 存在一个叫一个未叫牌玩家（赔）
     NO_JIAO_2 = 5  # 2个均未叫（赔）
     JIAO_2 = 6  # 2个都叫牌
+
 
 @unique
 class CheckType(IntEnum):
@@ -396,7 +406,6 @@ PAI_XING_SCORE_MAP = {
     HuType.QING_JIN_GOU: 20,
 }
 
-
 # 动作优先级（仅房卡场）
 ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_HU: 99,
@@ -415,6 +424,7 @@ ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_PASS: 1,
 }
 
+
 @unique
 class RechargeType(IntEnum):
     """ 充值等待type """
@@ -423,6 +433,7 @@ class RechargeType(IntEnum):
     WAIT_RECHARGE_AN_GANG = 3
     WAIT_RECHARGE_MING_GANG = 4
     WAIT_RECHARGE_ZHUAN_WAN_GANG = 5
+
 
 @unique
 class SeatRelation(IntEnum):

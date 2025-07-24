@@ -8,15 +8,16 @@ from ..const.cs_enum_const import CmdRoom
 
 class RoomGY(RoomBJ):
     def __init__(self, tid, service, room_conf):
+        room_conf.get("rule_details")["zhan_ji"] = 1
+
         super().__init__(tid, service, room_conf)
         self.__cha_que = 0
         self.__yuan_que = 0
-        if self.play_type in (PlayType.GUI_YANG_2,PlayType.GUI_YANG_3) and self.liang_men_pai == 0:
+        if self.play_type in (PlayType.GUI_YANG_2, PlayType.GUI_YANG_3) and self.liang_men_pai == 0:
             self.__cha_que = 1
             self.__yuan_que = 1
 
-
-    def get_tian_ting_operates(self,p):
+    def get_tian_ting_operates(self, p):
         """获取玩家天听操作"""
         operates = []
         if p.seat_id == self.dealer_id:
@@ -29,17 +30,17 @@ class RoomGY(RoomBJ):
             operates.extend(self.calc_operates_in_tian_ting(p))
         return operates
 
-    async def on_player_ding_que(self,player,data):
+    async def on_player_ding_que(self, player, data):
         ding_que_model.ParseFromString(data)
         que = ding_que_model.que
         if not self.flow_status_is_equal(FlowStatus.T_IN_DING_QUE):
-            return StaCode.FLOW_ERR,"不在定缺流程中"
-        if self.liang_men_pai == 0 or self.play_type not in (PlayType.GUI_YANG_2,PlayType.GUI_YANG_2):
-            return StaCode.RULE_ERR,"当前玩法不存在定缺"
-        if player.que!=0:
-            return StaCode.ALREADY_DO,"当前玩家已经定缺过了"
+            return StaCode.FLOW_ERR, "不在定缺流程中"
+        if self.liang_men_pai == 0 or self.play_type not in (PlayType.GUI_YANG_2, PlayType.GUI_YANG_2):
+            return StaCode.RULE_ERR, "当前玩法不存在定缺"
+        if player.que != 0:
+            return StaCode.ALREADY_DO, "当前玩家已经定缺过了"
         if que not in self.que_list:
-            return StaCode.RULE_ERR,"参数错误，不在定缺范围内"
+            return StaCode.RULE_ERR, "参数错误，不在定缺范围内"
 
         player.que = que
         data = {
@@ -47,23 +48,22 @@ class RoomGY(RoomBJ):
             "seat_id": player.seat_id,
         }
         data_model = S2CDingQueInfo.pb_model(**data)
-        await self.inner_broadcast(CmdRoom.PLAYER_DING_QUE,data_model)
+        await self.inner_broadcast(CmdRoom.PLAYER_DING_QUE, data_model)
         is_all_ding_que = True
         for p in self.seats:
-            if p.que==0:
+            if p.que == 0:
                 is_all_ding_que = False
                 break
 
         if is_all_ding_que:
-            self.call_flow(1,self.start_game_after_ding_que)
-        return StaCode.Pass,""
+            self.call_flow(1, self.start_game_after_ding_que)
+        return StaCode.Pass, ""
 
     async def start_game_after_ding_que(self):
         if self.__yuan_que:
             for p in self.seats:
-                p.set_is_yuan_que() #置玩家原缺状态
+                p.set_is_yuan_que()  # 置玩家原缺状态
         await self.enter_mo_pai_call()
-
 
     def kai_pai_check_out(self, accounts: dict):
         """
@@ -75,17 +75,16 @@ class RoomGY(RoomBJ):
         self.check_out_yuan_que(accounts)
         # 查缺
         self.check_out_cha_que(accounts)
-        #包鸡
+        # 包鸡
         if self.bao_ji:
             self.bao_ji_check(accounts)
-        #包杠
+        # 包杠
         if self.bao_gang:
             self.bao_gang_check(accounts)
 
         self.check_out_lian_zhuang(accounts)
 
         return accounts, zhuo_ji
-
 
     def check_out_yuan_que(self, accounts: dict):
         """结算原缺：起手≤2门牌的玩家可从非原缺玩家处获得额外积分"""
@@ -120,7 +119,6 @@ class RoomGY(RoomBJ):
             receiver_data = self.self_ming_xi_data(type_, win_from, win_total)
             self.update_result_score(accounts, receiver.seat_id, 1, receiver_data)
 
-
     def check_out_cha_que(self, accounts: dict):
         """
         结算查缺
@@ -141,8 +139,8 @@ class RoomGY(RoomBJ):
             player_que_count[p.seat_id] = que_count
             valid_players.append(p)
 
-        receivers = [p for p in valid_players if player_que_count[p.seat_id] == 0] #没有缺牌玩家
-        payers = [p for p in valid_players if player_que_count[p.seat_id] > 0] #查缺玩家
+        receivers = [p for p in valid_players if player_que_count[p.seat_id] == 0]  # 没有缺牌玩家
+        payers = [p for p in valid_players if player_que_count[p.seat_id] > 0]  # 查缺玩家
 
         if not receivers or not payers:  # 全部缺牌或者没有缺牌玩家提前结束
             return
@@ -161,8 +159,7 @@ class RoomGY(RoomBJ):
             self_data = self.self_ming_xi_data(type_, win_from, win_total)
             self.update_result_score(accounts, receiver.seat_id, 1, self_data)
 
-
-    def get_per_score(self,ji,score,count,default_ji,liu_ju):
+    def get_per_score(self, ji, score, count, default_ji, liu_ju):
         bei_lv = 1
         if not liu_ju:
             if ji in self.__fan_jin_ji_cards:
@@ -174,7 +171,7 @@ class RoomGY(RoomBJ):
             per_score = self.ji_pai_score.get(ji, 1) * count * bei_lv
         return per_score
 
-    def check_extra_ji(self,ji,score,count):
+    def check_extra_ji(self, ji, score, count):
         if ji == CardsType.WU_GU_JI and ji not in self.default_ji:
             per_score = score + count
         elif self.yin_ji and ji in self.fan_yin_ji_cards:
@@ -183,11 +180,3 @@ class RoomGY(RoomBJ):
         else:
             per_score = score + self.ji_pai_score.get(ji, 1) * count
         return per_score
-
-
-
-
-
-
-
-

@@ -285,7 +285,8 @@ class BaseServer(BasePubService, CommonApi):
             req_id="",
             cs_type: ServiceEnum = 0
     ):
-        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=self.service_type)
+        cs_type = cs_type or self.service_type
+        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=cs_type)
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """

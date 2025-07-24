@@ -282,7 +282,7 @@ class BaseCardRoom(BaseRoom):
             new_data.append(record_data)
             p.clear_data_round_over()
 
-        self.log_info(self.tid, "round_index:", self.round_idx, "结算：", data)
+        self.log_info( "round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
             self.log_info("一轮结束战绩插入", result_data)
@@ -341,8 +341,6 @@ class BaseCardRoom(BaseRoom):
     async def game_start(self):
         if not self.room_status_is_equal(RoomStatus.T_READY):
             return
-        for p in self.seats:
-            p.on_game_start_clear_data()
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
         if self.round_idx == 1:
@@ -353,7 +351,6 @@ class BaseCardRoom(BaseRoom):
     async def game_over(self, over_type=OverType.DEFAULT):
         if self.room_status_is_equal(RoomStatus.T_DISMISS):
             return
-        print("游戏结束")
         await self.async_set_room_status(RoomStatus.T_DISMISS)
         result = {"seats": [], "time_stamp": tool_dt.cur_time(), "tid": self.tid}
 
@@ -374,6 +371,8 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
+        for p in self.seats:
+            p.on_game_start_clear_data()
         await super().game_over()
 
     def get_player_ranking(self, account=None, is_round_over=False):
@@ -461,6 +460,27 @@ class BaseCardRoom(BaseRoom):
                 ExtraHuPai.SHA_BAO: 20,
             })
             return map_copy
+        elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
+            map_copy.update({
+                ExtraHuPai.GANG_SHANG_PAO: 10,
+                ExtraHuPai.GANG_SHANG_HUA: 10,
+                ExtraHuPai.QIANG_GANG_HU: 10,
+                ExtraHuPai.TIAN_TING: 40,
+                ExtraHuPai.DI_HU: 40,
+                ExtraHuPai.TIAN_HU: 40,
+                ExtraHuPai.SHA_BAO: 40,
+                ExtraHuPai.YING_HU: 10,
+                ExtraHuPai.XI_PAI: 25,
+                ExtraHuPai.COMMON_TIAN_TING: 20,
+                ExtraHuPai.COMMON_SHA_BAO: 20,
+
+                CheckType.CHECK_CHA_QUE: 1,
+                CheckType.CHECK_YUAN_QUE: 2,
+
+                CheckType.CHECK_LAI_ZI_JI: 2,
+                CheckType.CHECK_LAI_ZI_CHONG_XI: 25,
+            })
+            return map_copy
         else:
             return map_copy
 
@@ -504,6 +524,31 @@ class BaseCardRoom(BaseRoom):
                 HuType.YING_WU_DUI: 12,  # 硬五对
                 HuType.QYS_RUAN_WU_DUI: 40,  # 清硬五对
                 HuType.QYS_YING_WU_DUI: 40,  # 清硬五对
+            })
+            return map_copy
+        elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
+            base_score = 5
+            map_copy.update({
+                HuType.PING_HU: base_score,
+                HuType.DA_DUI_ZI: base_score + 10,
+                HuType.QI_DUI: base_score + 20,
+                HuType.LONG_QI_DUI: base_score + 40,
+                HuType.DOUBLE_LONG_QI: base_score + 80,
+                HuType.THREE_LONG_QI: base_score + 120,
+                HuType.DI_LONG_QI: base_score + 40,
+                HuType.DOUBLE_DI_LONG_QI: base_score + 80,
+                HuType.THREE_DI_LONG_QI: base_score + 120,
+                HuType.JIN_GOU_DIAO: base_score + 20,
+                HuType.QING_YI_SE: base_score + 20,
+                HuType.QING_DA_DUI: base_score + 30,
+                HuType.QING_QI_DUI: base_score + 40,
+                HuType.QING_DI_LONG: base_score + 60,
+                HuType.QING_DOUBLE_DI_LONG_QI: base_score + 100,
+                HuType.QING_THREE_DI_LONG_QI: base_score + 140,
+                HuType.QING_LONG_BEI: base_score + 60,
+                HuType.QING_DOUBLE_LONG_QI: base_score + 100,
+                HuType.QING_THREE_LONG_QI: base_score + 140,
+                HuType.QING_JIN_GOU: base_score + 40
             })
             return map_copy
         else:

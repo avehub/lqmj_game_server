@@ -4,11 +4,11 @@ from common.public.enum_const import StaCode
 from .const import FlowStatus
 from .player_fczj import PlayerFCZJ
 from .room_fczj import RoomFCZJ
-from .service import MahjongServer
+from ..base.base_leisure_service import BaseLeisureService
 from ..const.cs_enum_const import CmdRoom, RoomStatus
 
 
-class MahjongServerFc(MahjongServer):
+class MahjongServerFc(BaseLeisureService):
     ROOM = RoomFCZJ
     PLAYER = PlayerFCZJ
 
@@ -26,77 +26,81 @@ class MahjongServerFc(MahjongServer):
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_GANG, player.uid, code, msg, ws_id=player.ws_id)
 
-    async def __on_robot_cal_action(self,uid,data):
+    async def __on_robot_cal_action(self, uid, data):
         tid = data.get("tid")
         card = data.get("card")
-        room, p = self.check_room_and_player(tid,uid)
+        room, p = self.check_room_and_player(tid, uid)
         if room is None or p is None:
             return
 
         if p.chu_pai_len() > 0:
-            self.log_info(tid,"uid",uid,"玩家已经出牌")
+            self.log_info(tid, "uid", uid, "玩家已经出牌")
 
-        code, msg = await room.on_player_chu_pai(p,room.serialized_chu_pai_data(card))
+        code, msg = await room.on_player_chu_pai(p, room.serialized_chu_pai_data(card))
         if code != StaCode.PASS:
-            self.log_info(tid,"uid",uid,"机器人出牌失败",code,msg)
+            self.log_info(tid, "uid", uid, "cs_robot_mahjong出牌失败", code, msg)
+            return
+        self.log_info(tid, "uid", uid, "cs_robot_mahjong出牌消息", data)
         await room.enter_chu_pai_call()
 
-    async def __on_robot_cal_peng(self,uid,data):
+    async def __on_robot_cal_peng(self, uid, data):
         card = data.get("card")
         tid = data.get("tid")
         card = data.get("card")
-        room, p = self.check_room_and_player(tid,uid)
+        room, p = self.check_room_and_player(tid, uid)
         if room is None or p is None:
             return
         if not card:
-            self.log_info(tid,"uid",uid,"不碰牌")
-            code,msg = await room.on_player_pass(p)
+            self.log_info(tid, "uid", uid, "cs_robot_mahjong不碰牌")
+            code, msg = await room.on_player_pass(p)
             if code != StaCode.PASS:
-                self.log_info(tid,"uid",uid,"机器人不碰牌失败",code,msg)
+                self.log_info(tid, "uid", uid, "cs_robot_mahjong不碰牌失败", code, msg)
                 return
             if room.flow_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
-               return await room.check_action_end()
+                return await room.check_action_end()
         else:
-            code,msg = await room.on_player_peng(p)
+            code, msg = await room.on_player_peng(p)
             if code != StaCode.PASS:
-                self.log_info(tid,"uid",uid,"机器人碰牌失败",code,msg)
+                self.log_info(tid, "uid", uid, "cs_robot_mahjong碰牌失败", code, msg)
                 return
+            self.log_info(tid, "uid", uid, "cs_robot_mahjong碰牌消息", data)
             return await room.check_action_end()
 
-    async def __on_robot_cal_gang(self,uid,data):
+    async def __on_robot_cal_gang(self, uid, data):
         tid = data.get("tid")
         card = data.get("card")
-        room, p = self.check_room_and_player(tid,uid)
+        room, p = self.check_room_and_player(tid, uid)
         if room is None or p is None:
             return
         if not card:
             if room.flow_status == FlowStatus.T_IN_PUBLIC_OPRATE:
-                self.log_info(tid,"uid",uid,"不杠牌,直接过")
-                code,msg = await room.on_player_pass(p)
+                self.log_info(tid, "uid", uid, "cs_robot_mahjong不杠牌,直接过")
+                code, msg = await room.on_player_pass(p)
                 if code != StaCode.PASS:
-                    self.log_info(tid,"uid",uid,"机器人不杠牌失败",code,msg)
+                    self.log_info(tid, "uid", uid, "cs_robot_mahjong不杠牌失败", code, msg)
                     return
                 return await room.check_action_end()
             else:
-                self.log_info(tid,"uid",uid,"不杠牌,直接打牌")
+                self.log_info(tid, "uid", uid, "cs_robot_mahjong不杠牌,直接打牌")
                 room.check_robot_auto_chu_pai()
         else:
-            code,msg = await room.on_player_gang(p,room.serialized_chu_pai_data(card))
+            code, msg = await room.on_player_gang(p, room.serialized_chu_pai_data(card))
             if code != StaCode.PASS:
-                self.log_info(tid,"uid",uid,"机器人杠牌失败",code,msg)
+                self.log_info(tid, "uid", uid, "cs_robot_mahjong杠牌失败", code, msg)
                 return
+            self.log_info(tid, "uid", uid, "cs_robot_mahjong杠牌消息", data)
             return await room.check_action_end()
 
-    def check_room_and_player(self,tid,uid):
+    def check_room_and_player(self, tid, uid):
         room = self.get_room(tid)
         if not room:
-            self.log_info(tid,"uid",uid,"房间不存在")
-            return None,None
-        if room.status != RoomStatus.T_PLAYING:
-            self.log_info(tid,"uid",uid,"房间状态不是游戏中")
-            return None,None
-        p = room.get_player(uid)
+            self.log_info(tid, "uid", uid, "房间不存在")
+            return None, None
+        if room.room_status != RoomStatus.T_PLAYING:
+            self.log_info(tid, "uid", uid, "房间状态不是游戏中")
+            return None, None
+        p = self.get_player(uid)
         if not p:
-            self.log_info(tid,"uid",uid,"玩家不存在")
-            return None,None
-        return room,p
+            self.log_info(tid, "uid", uid, "玩家不存在")
+            return None, None
+        return room, p

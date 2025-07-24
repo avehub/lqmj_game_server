@@ -260,7 +260,8 @@ class LpyMoveGenerator:
 
         one_list, two_list, three_list, four_list = args
         if card_num == 2:
-            two_list.remove(card)
+            if card in two_list:
+                two_list.remove(card)
 
         self.hand_cards = hand_cards_copy
         self.the_worst_xts_by_hu_type[FcHuPaiType.PING_HU] -= 2
