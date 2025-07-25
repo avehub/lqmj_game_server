@@ -12,6 +12,7 @@ from lucky_game.model_rc.base_rc import BaseRC
 from lucky_game.model_db.main import ConfActivity, UserActivity
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.const import ActivitySta, ConditionType, ActivityItem, ActivityType, RandType
+from tortoise.exceptions import OperationalError
 
 
 class ConfActivityRC(BaseRC):
@@ -51,13 +52,16 @@ class ConfActivityRC(BaseRC):
     async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, status: int = 1):
         """获取单条活动信息"""
         query = {"status": status}
-        if act_type:
-            query["act_type"] = act_type
-        if act_id:
-            query["act_id"] = act_id
-        info = await cls.db_model.filter(**query).first().values()
-        if not info:
-            return None, "暂时没找到这类型的活动哦"
+        try:
+            if act_type:
+                query["act_type"] = act_type
+            if act_id:
+                query["act_id"] = act_id
+            info = await cls.db_model.filter(**query).first().values()
+            if not info:
+                return None, "暂时没找到这类型的活动哦"
+        except OperationalError as e:
+            return None, f"获取活动信息失败: {str(e)}"
         return info, "成功"
 
 

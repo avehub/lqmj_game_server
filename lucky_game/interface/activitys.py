@@ -38,7 +38,7 @@ async def act_by_type(act_type):
     根据活动类型获取活动信息
     """
     conf_data = {}
-    if act_type == ActivityType.LUCK_SIGN_IN.key():
+    if act_type == ActivityType.LUCK_SIGN_IN:
         conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_LUCK)
 
     return conf_data
@@ -51,23 +51,28 @@ class ActivityDetail(GameAuthApi):
     """
 
     async def get(self, req: Request, **kwargs):
-        act_type = req.args.get("act_type")
-        # 1.获取活动配置
-        if act_type:
-            act_enum = ActivityType.find_member_by_val(act_type)
-            (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-            ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
-        else:
-            act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
-            ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
-        (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
+        try:
+            act_type = req.args.get("act_type")
+            # 1.获取活动配置
+            if act_type:
+                act_type = self.check_int(act_type, p_name="act_type")
+                act_enum = ActivityType.find_member_by_val(act_type)
+                (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
+                ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+            else:
+                act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
+                ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
+            (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
 
-        # 2.奖励内容
-        data = await act_by_awards(ac, act_type)
+            # 2.奖励内容
+            data = await act_by_awards(ac, act_type)
 
-        # 3.其他配置
-        if act_type == ActivityType.LUCK_SIGN_IN.key():
-            data["luck"] = await act_by_type(act_type)
+            # 3.其他配置
+            if act_type == ActivityType.LUCK_SIGN_IN:
+                data["luck"] = await act_by_type(act_type)
+        except Exception as e:
+            await self.log_err(f"ActivityDetail 执行失败，原因：{e}")
+            return self.answer(code=self.sta_code.FAIL, hint="获取活动信息失败")
         return self.answer(data=data)
 
 

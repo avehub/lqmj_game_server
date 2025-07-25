@@ -7,6 +7,8 @@ from common.utils.utils import UtilsTool
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem
 from c_services.const.cs_enum_const import CmdWorkers
+from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
+from lucky_game.model_rc.base_robot import BaseRobotRC
 
 
 class BaseUserInfo(GameAuthApi):
@@ -25,7 +27,15 @@ class UserInfo(GameAuthApi):
         q_uid = self.check_int(req.args.get("uid"), require=False, p_name="uid")
         if q_uid:
             uid = q_uid
-        data = await BaseUserRC.cache_by_uid(uid)
+        if uid > R_UID_THRESHOLD:
+            data = await BaseUserRC.cache_by_uid(uid)
+            # vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
+            # ur_data = await UserRankingRC.cache_by_unique(uid, u_info=user_info) or {}
+            # r_user_model["vip_level"] = vip_info.get("level")
+            # r_user_model["ranking_id"] = ur_data.get("ranking_id") or 0
+        else:
+            data = await BaseRobotRC.cache_by_pk(uid) or {}
+
         return self.answer(data=data)
 
 
