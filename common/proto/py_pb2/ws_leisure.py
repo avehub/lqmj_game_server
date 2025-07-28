@@ -869,6 +869,7 @@ class S2CRoundOverInfo:
             seat.jiao_pai = data.get("jiao_pai") or 0
             seat.fang_pao = data.get("fang_pao") or 0
             seat.hu_type = data.get("hu_type") or 0
+            seat.is_zha_hu = data.get("is_zha_hu") or 0
             seat.ji_pai.extend(data.get("ji_pai") or [])
             men_cards = data.get("men_cards") or []
             seat.hand_cards.extend(data.get("hand_cards") or [])

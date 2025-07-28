@@ -551,6 +551,7 @@ class ReasonCostGold(BaseEnum):
     MONOPOLY_AWARDS = 34, "玩大富翁奖励"
     CONVERT_AWARDS = 35, "兑换/折现奖励"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
+    CHECK_OUT_MAHJONG = 37,"麻将结算"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""

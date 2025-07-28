@@ -571,7 +571,6 @@ class Room(BaseCardRoom):
         """
         摸牌
         """
-        self.log_info("进入__mo_pai", self.poker.left_count)
         if self.flow_status_is_equal(FlowStatus.T_IN_CHECK_OUT):
             self.log_info(self.tid, "桌子已结算，不再摸牌")
             return
@@ -611,7 +610,7 @@ class Room(BaseCardRoom):
         mo_pai = self.poker.pop()
         p.rev_card(mo_pai)
         p.mo_pai = mo_pai
-        print("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards)
+        self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards,"剩余",self.poker.left_count)
         for player in self.seats:
             data = {
                 "seat_id": p.seat_id,
