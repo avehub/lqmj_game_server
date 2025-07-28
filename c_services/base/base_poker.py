@@ -137,8 +137,13 @@ class BasePoker:
                             result_dict[card] -= 1
                     hands.extend(combo)
                 combo_count += 1
+            valid_items = [key for key, value in result_dict.items() if value > 0]
+
             for i in range(13 - len(hands)):
-                hands.append(cards_pool.pop())
+                if valid_items:  # 确保非空
+                    card = valid_items.pop()
+                    hands.append(card)
+                    result_dict[card] -= 1
             players_hands[player_id] = hands
         print("players_hands",players_hands)
         self.__set_cards_list = players_hands

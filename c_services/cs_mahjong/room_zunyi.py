@@ -57,7 +57,8 @@ class RoomZY(RoomBJ):
             print("算胡")
             flag = self.is_must_qing_yi_se(p, table_cards, is_zi_mo)
             hu_type, hu_path = Rule.get_hu_type_by_score(
-                table_cards, p.cards, self.curr_card, self.__fan_ji_score, is_zi_mo, lai_zi=self.lai_zi, must_qys=flag)
+                table_cards, p.cards, self.curr_card, self.__fan_ji_score, is_zi_mo, lai_zi=self.lai_zi, must_qys=flag,
+                pai_xing_score_map=self.pai_xing_score_map, extra_score_map=self.extra_score_map)
             p.jiao_pai = hu_type
             p.hu_path = hu_path or []
         print("hu_type:", hu_type, "p.hu_path", p.hu_path)
@@ -551,13 +552,11 @@ class RoomZY(RoomBJ):
 
     def get_player_jiao_pai(self):
         """玩家叫牌牌型获取"""
-        allow_hu_map = {HuType.DI_LONG_QI: True, HuType.JIN_GOU_DIAO: True,
-                        HuType.QI_DUI: True}
         for p in self.seats:
             if p.seat_id in self.win_seat_list:
                 p.lian_zhuang += 1
             else:
                 p.lian_zhuang = 0
 
-            p.jiao_pai = Rule.get_round_over_jiao_pai(
-                p.table_cards, p.cards, allow_hu_map, lai_zi=self.lai_zi, ji_to_score=self.__fan_ji_score)
+            p.jiao_pai = Rule.get_round_over_jiao_pai_by_zun_yi(
+                p.table_cards, p.cards,0, self.lai_zi, self.__fan_ji_score,self.pai_xing_score_map,self.extra_score_map)

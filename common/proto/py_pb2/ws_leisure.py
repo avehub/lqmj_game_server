@@ -548,6 +548,15 @@ def pack_rule_details(obj, **kwargs):
     obj.rule_details.bao_ting_bi_men = rule_details.get("bao_ting_bi_men") or 0
     obj.rule_details.exchange_three = rule_details.get("exchange_three") or 0
     obj.rule_details.exchange_cards_type = rule_details.get("exchange_cards_type") or 0
+    obj.rule_details.yi_wan_ji = rule_details.get("yi_wan_ji") or 0
+    obj.rule_details.qing_yi_se_extra_add = rule_details.get("qing_yi_se_extra_add") or 0
+    obj.rule_details.shu_zi_ji = rule_details.get("shu_zi_ji") or 0
+    obj.rule_details.xi_pai_score = rule_details.get("xi_pai_score") or 0
+    obj.rule_details.wu_gu_ji_score = rule_details.get("wu_gu_ji_score") or 0
+    obj.rule_details.after_peng_can_bao_ting = rule_details.get("after_peng_can_bao_ting") or 0
+    obj.rule_details.yuan_bao = rule_details.get("yuan_bao") or 0
+    obj.rule_details.yin_ji = rule_details.get("yin_ji") or 0
+    obj.rule_details.lian_zhuang = rule_details.get("lian_zhuang") or 0
 
 
 class S2CReady07Mahjong:
@@ -582,6 +591,7 @@ class S2CRoomInfo04Mahjong:
         obj.is_friend = kwargs.get("is_friend") or 0
         obj.club_id = kwargs.get("club_id") or 0
         obj.pay_type = kwargs.get("pay_type") or 0
+        obj.lai_zi = kwargs.get("lai_zi") or 0
         return obj
 
 def pack_table_cards(obj, **kwargs):
@@ -613,6 +623,7 @@ class S2CPlayerInfo05Mahjong:
             p_info.is_bi_hu = one_data.get("is_bi_hu") or False
             p_info.out_cards.extend(one_data.get("out_cards") or [])
             p_info.lock_cards.extend(one_data.get("lock_cards") or [])
+            p_info.que = one_data.get("que") or 0
             pack_table_cards(p_info, **one_data)
             men_cards = one_data.get("men_cards") or []
             for men_data in men_cards:
@@ -819,6 +830,7 @@ class S2CDingQueInfo:
         obj = ws_leisure_pb2.S2CDingQueInfo()
         obj.que = kwargs.get("que") or 0
         obj.seat_id = kwargs.get("seat_id") or 0
+        return obj
 
 class S2CRoundOverInfo:
 

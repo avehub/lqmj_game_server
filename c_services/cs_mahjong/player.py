@@ -711,6 +711,8 @@ class Player(BaseLeisurePlayer):
         p_info["lock_cards"] = self.__lock_cards
         p_info["operates"] = self.operates[:]
         p_info["men_cards"] = self.__men_cards
+        p_info["que"] = self.__que
+        p_info["is_out"] = self.is_out
         return p_info
 
     def round_over_data(self):

@@ -424,6 +424,22 @@ ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_PASS: 1,
 }
 
+ACTION_PRIORITY_FC = {
+    ActionType.ACTION_TYPE_HU: 99,
+    ActionType.ACTION_TYPE_ZHA_HU: 98,
+    ActionType.ACTION_TYPE_QIANG_GANG_HU: 99,
+    ActionType.ACTION_TYPE_MEN: 99,
+    ActionType.ACTION_TYPE_ZHA_MEN: 98,
+    ActionType.ACTION_TYPE_JIAN: 99,
+    ActionType.ACTION_TYPE_ZHA_JIAN: 98,
+    ActionType.ACTION_TYPE_AN_GANG: 88,
+    ActionType.ACTION_TYPE_ZHUAN_WAN_GANG: 88,
+    ActionType.ACTION_TYPE_MING_GANG: 88,
+    ActionType.ACTION_TYPE_PENG: 70,
+    ActionType.ACTION_TYPE_TIAN_TING: 50,
+    ActionType.ACTION_TYPE_PASS: 1,
+}
+
 
 @unique
 class RechargeType(IntEnum):

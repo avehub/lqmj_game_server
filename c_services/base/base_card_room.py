@@ -80,10 +80,10 @@ class BaseCardRoom(BaseRoom):
         self.__not_playing_room_status = status
         self.__not_playing_dismiss = value
 
-    def back_room_status(self):
+    async def back_room_status(self):
         print("返回房间状态", self.__not_playing_dismiss, self.__not_playing_room_status)
         if self.__not_playing_dismiss:
-            self.async_set_room_status(self.__not_playing_room_status)
+            await self.async_set_room_status(self.__not_playing_room_status)
             self.__not_playing_dismiss = False
             self.__not_playing_room_status = RoomStatus.T_IDLE
 

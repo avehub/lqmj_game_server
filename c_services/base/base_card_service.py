@@ -63,8 +63,8 @@ class BaseCardService(BaseService):
         if not room.agree_dismiss_seats and not room.timer_dismiss:
             room.call_dismiss(120, room.force_dismiss, OverType.FORCE)
             if room.room_status not in (RoomStatus.T_DISMISS,RoomStatus.T_CLOSED):
-                await room.async_set_room_status(RoomStatus.T_DISMISS)
                 room.set_not_playing_dismiss(room.room_status,True)
+                await room.async_set_room_status(RoomStatus.T_DISMISS)
 
         req_dismiss_model.ParseFromString(data)
         agree = req_dismiss_model.agree or False
@@ -72,7 +72,7 @@ class BaseCardService(BaseService):
             room.add_agree_dismiss(player.seat_id)
         else:
             room.clear_agree_dismiss()
-            room.back_room_status()
+            await room.back_room_status()
 
         data = {
             "seat_id": player.seat_id,
