@@ -20,7 +20,7 @@ from lucky_game.handler.up_assets import UpAssets
 from nsanic.libs import tool_dt
 from lucky_game.handler.alipay import Alipay
 from common.utils.utils import UtilsTool
-from lucky_game.model_rc.base_store import ConfStoreRC
+from lucky_game.model_rc.base_store import StoreRC
 from common.proto.py_pb2.common import get_one_of_model
 from common.public.enum_const import DbKey, TaskId
 from nsanic.libs.tool import json_parse, json_encode
@@ -73,7 +73,7 @@ class BaseSomePay(GameAuthApi):
         if item_num == 3:
             express = await ConfActivityRC.get_activity_item_by_id(act_id=trade_item)
         else:
-            express = await ConfStoreRC.get_store_item_by_id(store_id=trade_item)
+            express = await StoreRC.get_store_item_by_id(store_id=trade_item)
 
         randed = False  # 是否返利
         if not express:

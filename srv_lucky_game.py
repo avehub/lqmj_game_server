@@ -5,6 +5,7 @@ from nsanic.middleware import CorsMiddle
 from lucky_game.config import conf_srv as conf
 from lucky_game.url_main import MainBp
 from sanic import Sanic
+from common.utils.exceptions import global_exception_handler
 
 signal_map = {}
 

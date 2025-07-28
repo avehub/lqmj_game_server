@@ -9,6 +9,8 @@ from common.public.enum_const import JWType
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.consts import StaCode
+from nsanic.exception import JsonFinish
+
 
 
 class BaseDecorator(BaseRps):
@@ -16,14 +18,21 @@ class BaseDecorator(BaseRps):
         super().__init__()
         self.__func = func
 
+
     def check_method(self, req: Request):
         if req.method in ('POST', 'PUT',) and req.json is None:
             return self.answer(self.sta_code.FAIL, hint="Missing body parameter")
 
     async def call_method(self, req, *args, **kwargs):
+        self.loginfo(
+            f"入参:",
+            {"uri": req, "headers": req.headers, "args": req.args, "json": req.json}
+        )
         response = self.__func(req, *args, **kwargs)
+
         if isawaitable(response):
             response = await response
+        self.loginfo(f"出参:", response)
         return response
 
     async def check_inner(
@@ -56,6 +65,28 @@ class BaseDecorator(BaseRps):
                 code=StaCode.ERR_ARG,
                 hint=f"The parameter {p_name} is not within the range of parameter values"
             )
+
+    async def answer(
+            self, code: int = None,
+            data: (dict, object, list) = None,
+            total: int = 0,
+            hint: str = '',
+            headers: dict = None,
+    ):
+
+        """
+            公共JSON响应函数
+
+            :param code: 响应码,请参照StaCode中取值, 默认响应成功状态
+            :param data: 响应数据, 可以是任意符合JSON规范类型的数据模型
+            :param total: 针对于分页响应的总数量
+            :param hint: 响应消息, 字符串, 设置值后会采取设置的值，否则会使用响应码映射的默认值
+            :param headers: 附加响应头
+            """
+        if not code:
+            code = self.sta_code.PASS
+
+        raise JsonFinish(code, data, total, hint, headers)
 
 
 class GameChecker(BaseDecorator):
