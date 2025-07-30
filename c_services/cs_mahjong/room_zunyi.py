@@ -24,6 +24,8 @@ class RoomZY(RoomBJ):
         self.__cf_yi_wan_seat_id = 0  # 冲锋一万玩家
         self.__ying_hu_score = self.extra_score_map.get(ExtraHuPai.YING_HU)
 
+
+
     def clear_room_round_start(self):
         super().clear_room_round_start()
         self.__fan_ji_score = {}
@@ -36,6 +38,8 @@ class RoomZY(RoomBJ):
         self.check_out_hu_lai_zi(accounts)
 
         self.check_out_ying_hu(accounts)
+
+        self.check_chong_xi(accounts)
 
         accounts, zhuo_ji = super().kai_pai_check_out(accounts)
 
@@ -502,7 +506,7 @@ class RoomZY(RoomBJ):
             return winner.table_cards[0][1]
         return 0
 
-    def __check_chong_xi(self, accounts: dict):
+    def check_chong_xi(self, accounts: dict):
         """
         结算冲喜
         手里有4个一筒，已听牌情况下，冲喜25分（有4张就算冲喜）
@@ -512,8 +516,8 @@ class RoomZY(RoomBJ):
         for p in self.seats:
             if p.jiao_pai <= 0:
                 continue
-            hand_lz_count = p.cards.count(self.__lai_zi)
-            out_lz_count = p.chu_cards.count(self.__lai_zi)
+            hand_lz_count = p.cards.count(self.lai_zi)
+            out_lz_count = p.chu_cards.count(self.lai_zi)
             # 2024/6/12
             if hand_lz_count + out_lz_count == 4:
                 cx_score = self.__xi_pai_score
@@ -522,14 +526,14 @@ class RoomZY(RoomBJ):
                 break
             elif hand_lz_count == 1 or out_lz_count == 1:
                 for table_card in p.table_cards:
-                    if table_card[0] == ActionType.ACTION_TYPE_PENG and table_card[1] == self.__lai_zi:
+                    if table_card[0] == ActionType.ACTION_TYPE_PENG and table_card[1] == self.lai_zi:
                         cx_score = self.__xi_pai_score
                         self.log_info(p.uid, "结算冲喜，碰", hand_lz_count, out_lz_count, cx_score)
                         self.inner_check(cx_score, p.seat_id, accounts)
                         break
             elif hand_lz_count == 0:
                 for table_card in p.table_cards:
-                    if table_card[0] != ActionType.ACTION_TYPE_PENG and table_card[1] == self.__lai_zi:
+                    if table_card[0] != ActionType.ACTION_TYPE_PENG and table_card[1] == self.lai_zi:
                         cx_score = self.__xi_pai_score
                         self.log_info(p.uid, "结算冲喜，杠", cx_score)
                         self.inner_check(cx_score, p.seat_id, accounts)
@@ -560,3 +564,8 @@ class RoomZY(RoomBJ):
 
             p.jiao_pai = Rule.get_round_over_jiao_pai_by_zun_yi(
                 p.table_cards, p.cards,0, self.lai_zi, self.__fan_ji_score,self.pai_xing_score_map,self.extra_score_map)
+
+
+
+
+

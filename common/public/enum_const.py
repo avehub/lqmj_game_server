@@ -134,7 +134,7 @@ class ServiceEnum(BaseEnum):
     ROBOT_MONSTER_SEQ = 102, "monster_seq", '神魔仙逆下篇机器人'
     ROBOT_WATER_FISH = 103, "water_fish", '暗水鱼机器人'
     ROBOT_LANDLORDS = 104, "landlords", '斗地主机器人'
-    ROBOT_MAHJONG_FC = 105, "mahjong_fc", '麻将发财捉鸡机器人'
+    ROBOT_MAHJONG_FC = 105, "mahjong_fc_robot", '麻将发财捉鸡机器人'
 
 
 LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MANY.val]

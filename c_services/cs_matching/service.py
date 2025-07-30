@@ -51,7 +51,7 @@ class MatchServer(BaseServer, LeisureService):
         self.__robot_cursor = 0
         self.__robot_count = 0
 
-        self.__matching_mode = MatchingMode.RAND_TIME
+        self.__matching_mode = MatchingMode.COMMON
         self.__match_search_extension_time: Dict[int, Dict[str, int]] = {}  # 赛季搜索扩展时间
         DelayCall(0.5, self.__init_data).start()
         DelayCall(2, self.__loop_match_by_type).loop_start()

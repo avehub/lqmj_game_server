@@ -96,3 +96,8 @@ class PlayerFCZJ(Player):
         }
         data.update(result)
         return data
+
+    def player_info(self, contain_cards=True):
+        p_info = super().player_info(contain_cards)
+        p_info["is_out"] = self.is_out
+        return p_info

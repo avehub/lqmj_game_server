@@ -7,7 +7,7 @@ from common.public.enum_const import ServiceEnum, StaCode
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from nsanic.libs import tool
 
-from ..const.cs_enum_const import CmdRoom
+from ..const.cs_enum_const import CmdRoom, RoomType
 
 
 class LeisureService():
@@ -79,6 +79,8 @@ class BaseLeisureService(BaseService, LeisureService):
         level = data.get("level")
         play_type = data.get("pt") or 1
         room_conf = await self.get_level_conf(level, play_type)
+        room_conf["room_type"] = RoomType.COMMON
+        room_conf["rule_details"] = {}
         extra_room_info = data.get("extra_room_info") or {}
         room = self.create_room(room, room_conf, **extra_room_info)
         self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)

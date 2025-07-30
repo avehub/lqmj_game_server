@@ -162,7 +162,7 @@ class RoomGY(RoomBJ):
     def get_per_score(self, ji, score, count, default_ji, liu_ju):
         bei_lv = 1
         if not liu_ju:
-            if ji in self.__fan_jin_ji_cards:
+            if ji in self.fan_jin_ji_cards:
                 bei_lv = 2
 
         if ji == CardsType.WU_GU_JI and ji not in default_ji:

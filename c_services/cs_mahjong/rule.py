@@ -540,6 +540,7 @@ class Rule(metaclass=NoInstances):
 
         return True, hu_path
 
+
     @staticmethod
     def check_value_is_valid_with_lai_zi(cards, step_data, index, hz_count):
         """
@@ -686,17 +687,13 @@ class Rule(metaclass=NoInstances):
 
         flag, path = Rule.is_da_dui_zi(cards, lai_zi)
         if flag:
-            if lai_zi != CardsType.LAI_ZI:
-                return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
-            else:
-                flag, path = Rule.is_18_luo_han(table_cards, cards, lai_zi)
-                if flag:
-                    return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
+            return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
 
         is_hu, path = Rule.can_common_hu(cards, lai_zi)
         if is_hu:
             return HuType.PING_HU, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         return 0, []
+
 
     @staticmethod
     def only_can_hu(table_cards, cards, card, lai_zi=CardsType.LAI_ZI):
@@ -736,6 +733,7 @@ class Rule(metaclass=NoInstances):
             return HuType.PING_HU
         return False
 
+
     @staticmethod
     def can_tian_ting(table_cards, cards: list, que=0, allow_hu_map: dict = None):
         """
@@ -758,6 +756,7 @@ class Rule(metaclass=NoInstances):
             if can_hu:
                 return True
         return False
+
 
     @staticmethod
     def which_cards_to_play_can_tian_ting(table_cards, cards, allow_hu_map: dict = None):
@@ -783,6 +782,7 @@ class Rule(metaclass=NoInstances):
 
         return False, tian_ting_cards
 
+
     @staticmethod
     def can_ting_pai(table_cards, hand_cards, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI, is_gy=False, is_wu_dui=False):
         """
@@ -793,13 +793,17 @@ class Rule(metaclass=NoInstances):
         cards.append(lai_zi)  # 加入一张癞子牌
         return Rule.can_hu(table_cards, cards, allow_hu_map=allow_hu_map, lai_zi=lai_zi, is_gy=is_gy, is_wu_dui=is_wu_dui)
 
+
     @staticmethod
-    def can_ting_pai_by_zun_yi(table_cards, hand_cards, card=0, ji_to_score=None, lai_zi=CardsType.LAI_ZI):
+    def can_ting_pai_by_zun_yi(table_cards, hand_cards, card=0, ji_to_score=None, lai_zi=CardsType.LAI_ZI,
+                               pai_xing_score_map=PAI_XING_SCORE_MAP, extra_score_map=EXTRA_SCORE_MAP):
         cards = deepcopy(hand_cards)
         if len(cards) % 3 < 2:
             cards.append(lai_zi)
             card = lai_zi
-        return Rule.get_hu_type_by_score(table_cards, cards, card, ji_to_score, lai_zi=lai_zi)
+        return Rule.get_hu_type_by_score(table_cards, cards, card, ji_to_score, lai_zi=lai_zi,
+                                         pai_xing_score_map=pai_xing_score_map, extra_score_map=extra_score_map)
+
 
     @staticmethod
     def get_ting_hu_list(table_cards, cards: list, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI):
@@ -828,6 +832,7 @@ class Rule(metaclass=NoInstances):
                 hu_card.append(card)
         return hu_card
 
+
     @staticmethod
     def has_hu_is_qing_yi_se(table_cards, cards, card, lai_zi=CardsType.LAI_ZI):
         """清一色"""
@@ -839,6 +844,7 @@ class Rule(metaclass=NoInstances):
         hua_se = set(map(lambda value: value // 10, cards))
         return len(hua_se) == 1
 
+
     @staticmethod
     def can_ming_gang(cards: list, card, lai_zi=CardsType.LAI_ZI):
         """ 判断是否能明杠 """
@@ -847,6 +853,7 @@ class Rule(metaclass=NoInstances):
         if Rule.calc_value_count(cards, card) >= 3:
             return True, card
         return False, 0
+
 
     @staticmethod
     def can_zhuan_wan_gang(cards: list, table_cards: list, card=0):
@@ -858,6 +865,7 @@ class Rule(metaclass=NoInstances):
 
         card = next((c for c in check_cards if c in peng_cards), None)
         return (True, card) if card else (False, 0)
+
 
     @staticmethod
     def can_an_gang(cards: list, card=0):
@@ -874,12 +882,14 @@ class Rule(metaclass=NoInstances):
             return True, can_gang_list
         return False, can_gang_list
 
+
     @staticmethod
     def can_peng(cards: list, card, lai_zi=CardsType.LAI_ZI):
         """ 判断是否能碰 """
         if card == lai_zi:
             return False
         return Rule.calc_value_count(cards, card) >= 2
+
 
     @staticmethod
     def is_shun_zi(cards):
@@ -900,19 +910,23 @@ class Rule(metaclass=NoInstances):
                 return False, []
         return True, path
 
+
     @staticmethod
     def is_value_ke_zi(cards):
         """ 判断牌值是否刻子，注意这里不能直接传牌过来，只能传牌值，不能带花色 """
         return len(cards) == 3 and cards[0] == cards[1] == cards[2]
+
 
     @staticmethod
     def calc_value_count(cards, value):
         """计算给定值在列表中出现的次数"""
         return cards.count(value)
 
+
     @staticmethod
     def remove_by_value(card_data, value, remove_count=1):
         return UtilsTool.remove_by_value(card_data, value, remove_count)
+
 
     @staticmethod
     def __split_list_by_straight(l: list) -> list:
@@ -934,6 +948,7 @@ class Rule(metaclass=NoInstances):
                 continue
         return result
 
+
     @staticmethod
     def get_card_to_count(cards):
         """统计整组牌张数量"""
@@ -941,6 +956,7 @@ class Rule(metaclass=NoInstances):
         for v in cards:
             count_list[v] = count_list.get(v, 0) + 1
         return count_list
+
 
     @staticmethod
     def is_has_que(cards, que):
@@ -951,6 +967,7 @@ class Rule(metaclass=NoInstances):
             if Rule.get_suit(card) == que:
                 return True
         return False
+
 
     @staticmethod
     def r_can_tian_ting(table_cards, hand_cards, que=0, allow_hu_map: dict = None, is_zy=False, lai_zi=CardsType.LAI_ZI):
@@ -990,9 +1007,9 @@ class Rule(metaclass=NoInstances):
             # 13张牌：直接检测当前牌组
             return check_ting(cards)
 
+
     @staticmethod
-    def get_round_over_jiao_pai(table_cards, hand_cards, allow_hu_map: dict, curr_card=0, is_gy=False, lai_zi=0, is_wu_dui=False
-                                , ji_to_score=None):
+    def get_round_over_jiao_pai(table_cards, hand_cards, allow_hu_map: dict, curr_card=0, is_gy=False, lai_zi=0, is_wu_dui=False):
         """
         此接口处理玩家叫牌类型，外部不再处理
         """
@@ -1010,23 +1027,49 @@ class Rule(metaclass=NoInstances):
                 tian_ting_hand_cards = deepcopy(hand_cards)
                 tian_ting_hand_cards.remove(curr_c)
                 # 打出一张之后能听牌
-                if lai_zi == CardsType.YI_TONG:
-                    can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, tian_ting_hand_cards, ji_to_score=ji_to_score, lai_zi=lai_zi)
-                else:
-                    can_hu, hu_path = Rule.can_ting_pai(
-                        table_cards, tian_ting_hand_cards, allow_hu_map, lai_zi, is_gy, is_wu_dui
-                    )
+                can_hu, hu_path = Rule.can_ting_pai(
+                    table_cards, tian_ting_hand_cards, allow_hu_map, lai_zi, is_gy, is_wu_dui
+                )
                 if can_hu:
                     return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
         else:
-            if lai_zi == CardsType.YI_TONG:
-                can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, ji_to_score=ji_to_score, lai_zi=lai_zi)
-            else:
-                can_hu, hu_path = Rule.can_ting_pai(
-                    table_cards, cards, allow_hu_map, lai_zi, is_gy, is_wu_dui)
+            can_hu, hu_path = Rule.can_ting_pai(
+                table_cards, cards, allow_hu_map, lai_zi, is_gy, is_wu_dui)
             if can_hu:
                 return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
         return 0
+
+
+    @staticmethod
+    def get_round_over_jiao_pai_by_zun_yi(table_cards, hand_cards, curr_card=0, lai_zi=0, ji_to_score=None,
+                                          pai_xing_score_map=PAI_XING_SCORE_MAP, extra_score_map=EXTRA_SCORE_MAP):
+        """
+        此接口处理玩家叫牌类型，外部不再处理
+        """
+        lai_zi = lai_zi or CardsType.LAI_ZI
+        cards = deepcopy(hand_cards)
+        # 如果有14张 打出一张之后 算听牌
+        if len(hand_cards) % 3 == 2:
+            cards_list = list(cards)
+            cards_list.sort()
+            curr_c = 0
+            for card in cards_list:
+                if curr_c == card:
+                    continue
+                curr_c = card
+                tian_ting_hand_cards = deepcopy(hand_cards)
+                tian_ting_hand_cards.remove(curr_c)
+                # 打出一张之后能听牌
+                can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, tian_ting_hand_cards, 0, ji_to_score,
+                                                              lai_zi, pai_xing_score_map, extra_score_map)
+                if can_hu:
+                    return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
+        else:
+            can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, 0, ji_to_score, lai_zi, pai_xing_score_map, extra_score_map)
+            if can_hu:
+                return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
+        return 0
+
 
     @staticmethod
     def get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card):
@@ -1058,6 +1101,7 @@ class Rule(metaclass=NoInstances):
         }
         return qing_map.get(jiao_pai, HuType.QING_YI_SE)
 
+
     @staticmethod
     def get_card_list_by_count(cards: list, count, with_more=False):
         same_value_list = Poker.get_same_value_cards(cards)
@@ -1068,6 +1112,7 @@ class Rule(metaclass=NoInstances):
             if with_more and len(same_value_list[i]) > count:
                 temp_list.append(same_value_list[i])
         return temp_list
+
 
     @staticmethod
     def is_peng_peng_hu(hu_path):
@@ -1080,6 +1125,7 @@ class Rule(metaclass=NoInstances):
                 if len(combo_set) == 2 and CardsType.LAI_ZI not in combo_set:
                     return False
         return True
+
 
     @staticmethod
     def is_wu_dui(cards, card=0, lai_zi=CardsType.LAI_ZI):
@@ -1117,6 +1163,7 @@ class Rule(metaclass=NoInstances):
                         return HuType.RUAN_WU_DUI, []
         return False, []
 
+
     @staticmethod
     def is_qi_dui(lai_zi, lai_zi_count, *args):
         """
@@ -1139,6 +1186,7 @@ class Rule(metaclass=NoInstances):
                 ]
             # 有四个癞子时的七对可以是双龙七
         return False, []
+
 
     @staticmethod
     def is_long_qi_dui(lai_zi, lai_zi_count, *args):
@@ -1247,6 +1295,7 @@ class Rule(metaclass=NoInstances):
 
         return dragon_type, all_paths
 
+
     @staticmethod
     def get_max_score_hu_path_by_fan_ji(
             path_list: list,
@@ -1345,6 +1394,7 @@ class Rule(metaclass=NoInstances):
                 max_score_path = path
                 has_path = True
         return max_score, max_score_path
+
 
     @staticmethod
     def get_hu_type_by_score(
@@ -1453,6 +1503,7 @@ class Rule(metaclass=NoInstances):
             return HuType.PING_HU, best_path
         return False, []
 
+
     @staticmethod
     def let_lai_zi_to_card_by_comb(lai_zi, comb: list) -> list:
         """
@@ -1527,6 +1578,7 @@ class Rule(metaclass=NoInstances):
                 ]
         return []
 
+
     @staticmethod
     def is_ying_hu_by_hu_path(cards: list, path: list, lai_zi: int, di_long_qi_peng_card=0):
         """
@@ -1560,6 +1612,7 @@ class Rule(metaclass=NoInstances):
             if card_to_count2.get(c, 0) != count:
                 return False
         return True
+
 
     @staticmethod
     def is_di_long_qi_new(table_cards, cards, card, lai_zi):
@@ -1631,6 +1684,7 @@ class Rule(metaclass=NoInstances):
 
             return False, []
 
+
     @staticmethod
     def check_is_satisfy_di_long_qi(zhuo_card, cards, card, lai_zi) -> bool:
         """ 检查是否满足是地龙七 """
@@ -1652,6 +1706,7 @@ class Rule(metaclass=NoInstances):
             return False
 
         return True
+
 
     @staticmethod
     def is_x_long(lai_zi, lai_zi_count, *args, x=1):
@@ -1681,6 +1736,7 @@ class Rule(metaclass=NoInstances):
                 hu_type = HuType.DOUBLE_LONG_QI
             return hu_type, path
         return False, []
+
 
     @staticmethod
     def is_da_dui_zi_new(cards, lai_zi, lai_zi_count, *args):
@@ -1743,6 +1799,7 @@ class Rule(metaclass=NoInstances):
                 return HuType.DA_DUI_ZI, all_path
 
         return False, []
+
 
     @staticmethod
     def let_lai_zi_make_ji_by_ping_hu(
@@ -1847,6 +1904,7 @@ class Rule(metaclass=NoInstances):
 
         return best_score, best_path
 
+
     @staticmethod
     def dismantle_hu_path(hu_path, lai_zi):
         """
@@ -1889,20 +1947,3 @@ class Rule(metaclass=NoInstances):
 
         return all_hu_path
 
-    @staticmethod
-    def is_18_luo_han(table_cards, cards, lai_zi):
-        """判断是否是十八罗汉"""
-        # 必须先有4个杠
-        if not cards:
-            return False, []
-        if len(table_cards) < 4:  # 无4杠直接排除
-            return False, []
-        else:
-            for zp in table_cards:
-                if zp[0] == ActionType.ACTION_TYPE_PENG:
-                    return False, []
-        flag, path = Rule.is_jin_gou_diao(cards, lai_zi)
-        if flag:
-            return HuType.SHI_BA_LUO_HAN, path
-        else:
-            return flag, path
