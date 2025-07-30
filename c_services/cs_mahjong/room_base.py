@@ -1534,7 +1534,7 @@ class Room(BaseCardRoom):
             }
             opt_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:
-                self.log_info("有玩家可以抢杠胡",p.seat_id,operates,"is_bi_hu",is_bi_hu)
+                self.log_info("有玩家可以抢杠胡",p.seat_id,operates,"is_bi_hu",data["is_bi_hu"])
                 await self.inner_send(p, CmdRoom.PUBLIC_OPERATES, opt_model)
 
         if self.can_somebody_hu():  # 有人可以胡，则需要等待
