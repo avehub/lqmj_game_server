@@ -5,7 +5,7 @@
 """
 import datetime
 import random
-from typing import Type
+from typing import Type, Union, Tuple, List, Dict, Any
 from nsanic.orm.db_model import DBModel
 from nsanic.libs.tool import json_encode, json_parse
 from tortoise.exceptions import OperationalError
@@ -16,6 +16,8 @@ from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.const import AwardType, CompleteSta
 # from lucky_game.model_db.main import StatsWatchAdTimes, ConfAward, RecordsUserSignIn
 from lucky_game.model_db.extra import RecordsUserLuck, RecordsUserActiveScore, RecordsUserRaffle
+from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_db.main import LogUserActivity
 
 
 class UserBehaviorsRC():
@@ -171,7 +173,7 @@ class UserBehaviorsRC():
 
         active_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ACTIVE_SCORE)
         active_awards_sta = ConfJsonRC.stat_of_completion(active_score, active_achieved,
-                                                                active_conf.get("targets", []))
+                                                          active_conf.get("targets", []))
 
         return active_awards_sta, active_score
 
@@ -229,9 +231,6 @@ class UserBehaviorsRC():
 
         sign_awards_sta = ConfJsonRC.stat_of_completion(len(sign_in_date), sign_in_achieved, sign_targets)
         return CompleteSta.COMPLETED.val in sign_awards_sta
-
-
-
 
     @classmethod
     async def cache_user_raffle_records(cls, unique: dict):
@@ -359,3 +358,6 @@ class UserBehaviorsRC():
         sign_in_date = json_parse(si_d) if si_d else []
         sign_in_achieved = json_parse(si_a) if si_a else []
         return sign_in_date, sign_in_achieved
+
+
+

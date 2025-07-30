@@ -400,3 +400,5 @@ class UserActivityRC(BaseRC):
                     return ActivityType.WEEK_CARD.val
 
         return ActivityType.DEFAULT.val
+
+

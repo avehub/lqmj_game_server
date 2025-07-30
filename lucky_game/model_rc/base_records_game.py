@@ -94,14 +94,7 @@ class BaseRecordsGameRC(BaseCommonRC):
             data = []
             # 根据当前局数进行数据重组
             if record_segment:
-                result = {}
-                for item in record_segment:
-                    index = item["round_num"] - 1
-                    if index not in result:
-                        result[index] = []
-                    result[index].append(item)
-                # 将字典转为列表
-                data = list(result.values())
+                data = await cls.list_by_group(record_segment, "round_num")
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"

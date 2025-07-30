@@ -64,14 +64,13 @@ class PayMode(BaseEnum):
 
 class PayType(BaseEnum):
     """ 支付类型 """
-    BY_FREE = 0, "免费兑换"
+    BY_FREE = 0, "免费领取"
     BY_RMB = 1, "充值兑换"
     BY_DIAMOND = 2, "钻石兑换"
     BY_GOLD = 3, "金币兑换"
     BY_DY_DIAMOND = 4, "抖音钻石兑换"
     BY_FIVE_AGGREGATES = 5, "五蕴丹兑换"
-    BY_WATCH_AD = 6, "看广告兑换"
-
+    BY_WATCH_AD = 6, "看广告领取"
 
 @unique
 class OrderStatus(BaseEnum):
@@ -199,16 +198,12 @@ class AwardType(BaseEnum):
     """获奖类型（和动作有关）"""
     DEFAULT = 0, "默认"
     LOGIN = 1, "登录"
-    SIGN_IN = 2, "签到"
-    ADVERT = 3, "看广告"
+    SIGN_IN_RF = 2, "抽奖签到"
+    ADVERT_RF = 3, "广告抽奖"
     SHARE = 4, "分享"
-    RAFFLE_LUCK = 5, "运势抽奖"
-    SIGN_IN_RF = 6, "抽奖签到"
-    LUCK = 7, "运势"
-    ACTIVE = 8, "活跃"
-    OPEN_TREASURE_BOX = 9, "开启宝盒"
-    MONOPOLY_RAND_AWARD = 10, "大富翁随机奖励"
-    SIGN_IN_WK = 11, "每周七日签到"
+    ACTIVE = 5, "活跃"
+    OPEN_TREASURE_BOX = 6, "开启宝盒"
+    MONOPOLY_RAND_AWARD = 7, "大富翁随机奖励"
 
 
 @unique
@@ -233,6 +228,13 @@ class ActivitySta(BaseEnum):
     ACT_NOT_JOIN = 0, "未参与"
     ACT_INCOMPLETE = 1, "未完结"
     ACT_COMPLETED = 99, "已完结"
+
+@unique
+class ActivityStatus(BaseEnum):
+    """活动状态"""
+    ACT_NOT_BEGUN = 0, "未开始"
+    ACT_UNDER_WAY = 1, "进行中"
+    ACT_FINISHED = -1, "已结束"
 
 
 @unique

@@ -7,49 +7,44 @@ from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 from common.proto.py_pb2.common import switch_enum, get_one_of_model, switch_type_enum
 from common.public.enum_const import DbKey, ServiceEnum
+from common.public.common_class import CommonApi
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.base_store import StoreRC
+from lucky_game.model_rc.base_store import StoreRC, GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
     BossType, HeldSta, PlatForm
 
 
 class StoreHandler(GameAuthApi):
-    """ 加载各类型商店 """
+    """ 获取商店商品 """
 
     async def get(self, req: Request, **kwargs):
-        boss_type = self.check_int(req.args.get("boss_type") or 0, require=True, p_name="boss_type")
-        bs_enum = BossType.find_member_by_val(boss_type)
-        (not isinstance(bs_enum, BossType)) and self.answer(self.sta_code.ERR_ARG, hint='该商店类型不存在')
-
+        platform = self.check_int(req.args.get("platform"), require=False, p_name="平台ID")
+        type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
+        status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-
-        match boss_type:
-            # case BossType.MONOPOLY_STORE:
-            #     cs_type = self.check_int(req.args.get("cs_type", 5), p_name="cs_type")
-            #     cs_enum = ServiceEnum.find_member_by_val(cs_type)
-            #     (not cs_enum) and self.answer(self.sta_code.ERR_ARG, hint="游戏暂未开放法相系统")
-            #
-            #     items_lists = await ConfMonopolyStoreRC.get_monopoly_store_items(uid)
-            #     (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION, hint='大富翁商店加载失败，请稍后再试')
-            case _:
-                platform = req.args.get('platform') or ''
-                os = req.args.get('c_os') or ''
-
-                items_lists = await StoreRC.get_store_items(uid, platform=platform, os=os)
-                (not items_lists) and self.answer(self.sta_code.NO_CONFIGURATION,
-                                                  hint='游戏商店加载失败，请稍后再试')
-
-        self.log_info(uid, f"StoreHandler {bs_enum.phrase}加载成功")
-        return self.answer(data=items_lists)
+        if not platform:
+            platform = PlatForm.all_values()
+        data = []
+        store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
+        self.loginfo("store", store)
+        (not store) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
+        if store:
+            sid = [item.get("sid") for item in store]
+            self.loginfo("sid", sid)
+            goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
+            self.loginfo("goods", goods)
+            if goods:
+                data = await CommonApi.list_by_group(goods, "sid")
+        return self.answer(data=data)
 
 
 class PayByRedemption(GameAuthApi):
-    """ 商店兑换购物 """
+    """ 商品兑换购物 """
 
     async def post(self, req: Request, **kwargs):
         is_notice = self.check_int(req.json.get("is_notice", 1), default=1, p_name='is_notice')

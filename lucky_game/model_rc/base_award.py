@@ -102,7 +102,8 @@ class AwardRC(BaseRC):
     tb_name = db_model.sheet_name()
 
     @classmethod
-    async def get_award_by_filter(cls, award_id: any = None, award_type: any = None, level: int = None, name: str = None,
+    async def get_award_by_filter(cls, award_id: any = None, award_type: any = None, level: int = None,
+                                  name: str = None,
                                   order_field: str = None):
         """按条件获取奖项"""
         try:
@@ -126,7 +127,7 @@ class AwardRC(BaseRC):
                 query["name__contains"] = name
             if order_field is None:
                 order_field = "-award_id"
-
+            print("query:", query)
             result = await cls.db_model.filter(**query).order_by(order_field).values()
             if not result:
                 return None, "暂无战绩"

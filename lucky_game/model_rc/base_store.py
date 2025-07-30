@@ -5,11 +5,12 @@ from nsanic.libs import tool_dt
 from common.utils.kit_dt import KitDt
 from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
-from lucky_game.model_db.main import Stores
+from lucky_game.model_db.main import Stores, Goods
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_rc import BaseRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import StoreType, PayType, AdSlotItem
+from tortoise.exceptions import OperationalError
 
 
 class StoreRC(BaseRC):
@@ -29,8 +30,6 @@ class StoreRC(BaseRC):
     async def get_store_items(cls, uid, store_type=StoreType.DEFAULT, platform='', os=''):
         items = await cls.cache_all_conf_item()
         if items:
-            # for item in items:
-            #     DouYin.adjust_payment_for_douyin(item, platform, os)
             items_list = await cls.organize_store_data(uid, items, store_type, filter_types=cls.COMMON_STORE_TYPES)
             return items_list
         return
@@ -39,10 +38,7 @@ class StoreRC(BaseRC):
     async def get_store_item_by_id(cls, store_id, platform='', os=''):
         """按ID获取商店项目"""
         item = await cls.cache_conf_by_pk(store_id)
-        if item:
-            DouYin.adjust_payment_for_douyin(item, platform, os)
-            return item
-        return
+        return item
 
     @classmethod
     def __check_item_validity(cls, item):
@@ -132,6 +128,100 @@ class StoreRC(BaseRC):
                 return True
             return False
         return True
+
+    @classmethod
+    async def get_store_filter(cls, platform: any = None, sid: any = None, status: int = None, type_id: any = None,
+                        start_time: int = None, end_time: int = None, currency: int = None,
+                        order_by: str = None, sku_id: any = None, fields: str = None):
+        """获取用户参与活动次数"""
+        try:
+            query = {}
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform"] = platform
+            if sid is not None:
+                if isinstance(sid, list):
+                    query["sid__in"] = sid
+                else:
+                    query["sid"] = sid
+            if type_id is not None:
+                if isinstance(type_id, list):
+                    query["type_id__in"] = type_id
+                else:
+                    query["type_id"] = type_id
+            if sku_id is not None:
+                if isinstance(sku_id, list):
+                    query["sku_id__in"] = sku_id
+                else:
+                    query["sku_id"] = sku_id
+            if status is not None:
+                query["status"] = status
+            if currency is not None:
+                query["currency"] = currency
+            if order_by is None:
+                order_by = "-rank"
+            if start_time is not None:
+                query["start_time__gte"] = start_time
+            if end_time is not None:
+                query["end_time__lte"] = end_time
+            data = await cls.db_model.filter(**query).order_by(order_by).values()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return data, "成功"
+class GoodRC(BaseRC):
+    """商品(道具)"""
+    db_model = Goods
+    tb_name = db_model.sheet_name()
+
+    @classmethod
+    async def get_good_filter(cls, good_id: any = None, sid: any = None, status: int = None, type_id: any = None,
+                              start_time: int = None, end_time: int = None, kind: int = None, currency: int = None,
+                        order_by: str = None, bag_type: int = None, sku_id: any = None, fields: str = None):
+        """获取用户参与活动次数"""
+        try:
+            query = {}
+            if good_id is not None:
+                if isinstance(good_id, list):
+                    query["good_id__in"] = good_id
+                else:
+                    query["good_id"] = good_id
+            if sid is not None:
+                if isinstance(sid, list):
+                    query["sid__in"] = sid
+                else:
+                    query["sid"] = sid
+            if type_id is not None:
+                if isinstance(type_id, list):
+                    query["type_id__in"] = type_id
+                else:
+                    query["type_id"] = type_id
+            if sku_id is not None:
+                if isinstance(sku_id, list):
+                    query["sku_id__in"] = sku_id
+                else:
+                    query["sku_id"] = sku_id
+            if status is not None:
+                query["status"] = status
+            if kind is not None:
+                query["kind"] = kind
+            if currency is not None:
+                query["currency"] = currency
+            if order_by is None:
+                order_by = "-rank"
+            if bag_type is not None:
+                query["bag_type"] = bag_type
+            if start_time is not None:
+                query["up_time__gte"] = start_time
+            if end_time is not None:
+                query["down_time__lte"] = end_time
+            data = await cls.db_model.filter(**query).order_by(order_by).values()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return data, "成功"
+
+
 
 
 
