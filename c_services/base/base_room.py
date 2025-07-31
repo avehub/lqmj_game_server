@@ -530,6 +530,8 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats.clear()
 
+        self.cancel_all_timer()
+
     def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """
         self.__service = service
