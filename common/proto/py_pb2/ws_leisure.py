@@ -946,7 +946,7 @@ class S2CKouFen:
         lose_list = kwargs.get("lose_list") or []
         for data in lose_list:
             lose = obj.lose_list.add()
-            lose.lose_seat_id = data.get("loes_seat_id") or 0
+            lose.lose_seat_id = data.get("lose_seat_id") or 0
             lose.lose_gold = data.get("lose_gold") or 0
             lose.loser_res_gold = data.get("loser_res_gold") or 0
         obj.extra_hu_type.extend(kwargs.get("extra_hu_type") or [])
@@ -957,6 +957,7 @@ class S2CStartFanJi:
     def pb_model(cls,**kwargs):
         obj = ws_leisure_pb2.S2CStartFanJi()
         obj.seconds = kwargs.get("seconds") or 0
+        obj.can_fan_ji = kwargs.get("can_fan_ji") or False
         obj.fan_ji_list.extend(kwargs.get("fan_ji_list") or [])
         return obj
 
@@ -1029,6 +1030,7 @@ class S2CRoundOverInfoByLeisure:
             seat.hu_type = data.get("hu_type") or 0
             seat.hand_cards.extend(data.get("hand_cards") or [])
             seat.ji_pai.extend(data.get("ji_pai") or [])
+            pack_table_cards(seat, **data)
         return obj
 
 # ################################## 麻将 ##################################

@@ -31,6 +31,7 @@ req_dismiss_model = ws_leisure_pb2.C2SReqDismissRoom()
 enter_room_model = ws_leisure_pb2.C2SEnterRoom()
 set_cards_model = ws_leisure_pb2.C2SSetCard()
 ding_que_model = ws_leisure_pb2.C2SDingQue()
+fan_ji_index_model = ws_leisure_pb2.C2SFanJi()
 
 #茶馆
 leave_club_model = ws_leisure_pb2.C2SLeaveClubRoom()

@@ -2400,7 +2400,7 @@ class Room(BaseCardRoom):
         return StaCode.PASS, ""
 
     async def on_player_ready(self, player: Player):
-        print("玩家准备", player.uid)
+        self.log_info("玩家准备", player.uid)
         if self.room_status not in (RoomStatus.T_IDLE, RoomStatus.T_CHECK_OUT):
             return StaCode.FLOW_ERR, "桌子不在可准备状态"
         player.is_ready = True
@@ -4307,12 +4307,23 @@ class Room(BaseCardRoom):
         self.log_info("force_dismiss", self.not_playing_dismiss)
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             if self.not_playing_dismiss:
-                self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
+                if self.room_status == RoomStatus.T_DISMISS:
+                    self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
+                    if self.not_playing_room_status != RoomStatus.T_PLAYING:
+                        self.set_room_status(self.not_playing_room_status)
+                        return await self.game_over()
+                    await self.liu_ju()
+                    return
+                self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                 return await super(BaseCardRoom, self).game_over()
+            self.set_room_status(self.not_playing_room_status)
             return await self.game_over()
+        await self.liu_ju()
+
+    async def liu_ju(self):
         await self.liu_ju_notify()
         self.__win_seat_list = []
         await super().force_dismiss()

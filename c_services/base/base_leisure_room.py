@@ -493,6 +493,9 @@ class BaseLeisureRoom(BaseRoom):
                     send_list.append(self.notify_buy_gift_pack(player, CmdRoom.GOLD_NOT_ENOUGH))
         send_list and await asyncio.gather(*send_list)
 
+    async def send_quit_chat(self, send_seat_id, recv_seat_id, chat_info, m):
+        await self.inner_broadcast(CmdRoom.BROADCAST_CHAT, m)
+
     # async def safe_box_auto_complement(self, player):
     #     """ 保险箱自动补足 """
     #     status = await self.service.safe_box_auto_complement(player)

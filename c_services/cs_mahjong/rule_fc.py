@@ -261,7 +261,7 @@ class RuleFc(Rule):
             if flag:
                 if qing_yi_se:
                     return HuType.QING_LONG_BEI,path
-                return flag,path
+                return HuType.LONG_QI_DUI,path
 
         if cards_len == 14:
 
@@ -270,7 +270,7 @@ class RuleFc(Rule):
             if flag:
                 if qing_yi_se:
                     return HuType.QING_LONG_BEI,path
-                return flag,path
+                return HuType.LONG_QI_DUI,path
 
             # 七对
             flag, path = Rule.is_qi_dui(lai_zi, lai_zi_count, singles, two, threes, fours)
@@ -319,7 +319,7 @@ class RuleFc(Rule):
         # 平胡
         flag, path_list = RuleFc.can_common_hu(cards, lai_zi)
         if flag:
-            if cards.count(lai_zi) == 0:
+            if path_list.count(lai_zi) == 0:
                 return HuType.PING_HU, path_list
         return False, []
 
@@ -335,7 +335,7 @@ class RuleFc(Rule):
         cards = list(cards)
         method_map = {
             0: Rule.can_hu_without_lai_zi,
-            1: Rule.can_hu_with_one_lai_zi,
+            1: RuleFc.can_hu_with_one_lai_zi,
             2: RuleFc.can_hu_with_two_lai_zi,
             3: RuleFc.can_hu_with_three_lai_zi,
             4: RuleFc.can_hu_with_four_lai_zi,
@@ -348,6 +348,17 @@ class RuleFc(Rule):
                 hu_path = list(filter(lambda v: v != [], hu_path))
             return flag, hu_path
         return False, []
+
+
+    @staticmethod
+    def can_hu_with_one_lai_zi(cards, lai_zi):
+        """
+        一个癞子判断胡牌
+        手里有将，则先尝试用将牌组合，判断能否胡
+        如果没有将，则直接尝试红中补将
+        """
+        Rule.remove_by_value(cards, lai_zi, -1)
+        return RuleFc.__can_hu_with_pairs_and_jiang(cards, 1, 2, lai_zi)
 
 
     @staticmethod
@@ -440,7 +451,7 @@ class RuleFc(Rule):
     @staticmethod
     def __can_hu_with_pairs_and_jiang(cards, lai_zi_count, remove_jiang, lai_zi=CardsType.LAI_ZI):
 
-        one_list, two_list, three_list, four_list = Rule.search_cards_by_count(cards, 1, 2, 3, 4)
+        one_list, two_list, three_list, four_list,_ = Rule.search_cards_by_count(cards, 1, 2, 3, 4)
         for jiang in two_list:
             flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)
             if flag:
@@ -463,3 +474,31 @@ class RuleFc(Rule):
             if flag:
                 return True, hu_path
         return False, []
+
+
+    @staticmethod
+    def get_ting_hu_list(table_cards, cards: list, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI):
+        """ 获取叫哪些牌 """
+        all_cards = list(ALL_CARDS_WITHOUT_ZI_HUA)
+        hu_card = []
+        count_gt_4 = Rule.search_count(cards, 4)
+        for c in count_gt_4 or []:
+            all_cards.remove(c)
+
+        suits_to_count = {}
+        for c in cards:
+            c_suit = Rule.get_suit(c)
+            suits_to_count[c_suit] = suits_to_count.get(c_suit, 0) + 1
+
+        valid_cards = []
+        for card in all_cards:
+            if suits_to_count.get(Rule.get_suit(card)):
+                valid_cards.append(card)
+
+        for card in valid_cards:
+            temp_cards = list(cards)
+            temp_cards.append(card)
+            flag, hu_path = RuleFc.can_hu(table_cards, temp_cards, allow_hu_map=allow_hu_map, lai_zi=lai_zi)
+            if flag:
+                hu_card.append(card)
+        return hu_card

@@ -83,7 +83,7 @@ class RoomBJ(Room):
             if ji in self.fan_jin_ji_cards:
                 bei_lv = 10
 
-        if self.__yin_ji and ji == CardsType.YI_TONG:
+        if self.yin_ji and ji == CardsType.YI_TONG:
             per_score = self.ji_pai_score.get(ji, 1) * count  # 翻到银鸡才有5分
         else:
             if self.__shu_zi_ji and ji != CardsType.YAO_JI:

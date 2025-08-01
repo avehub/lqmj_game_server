@@ -234,12 +234,6 @@ class ExtraHuPai(IntEnum):
     JIAN_HU = 305  # 捡胡
     HUA_ZHU = 306  # todo:花猪
 
-    # 江西麻将
-    DE_GUO = 307
-    DE_ZHONG_DE = 308
-    ZHUANG_HU = 311
-    JING_DIAO = 312
-
 
 @unique
 class JiType(IntEnum):

@@ -264,7 +264,7 @@ class Player(BaseLeisurePlayer):
         return self.__shao_tong_xing_zheng
 
     def on_round_over_clear(self):
-        self.is_lock = False
+        self.__is_lock = False
         self.__has_shang_ga = False
         self.__mo_pai = 0
         self.__shang_ga_score = 0
@@ -590,7 +590,7 @@ class Player(BaseLeisurePlayer):
         """
         fan_ji_list = fan_ji_list or set()
 
-        all_bird = default_ji | fan_ji_list  # 并集
+        all_bird = default_ji | set(fan_ji_list)  # 并集
 
         if include_hand_card:
             # 手牌
