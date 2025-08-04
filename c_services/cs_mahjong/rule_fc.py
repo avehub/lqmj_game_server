@@ -303,7 +303,7 @@ class RuleFc(Rule):
                     return an_ke,an_ke_path
                 if qing_yi_se:
                     return HuType.QING_DA_DUI,path
-                flag, _ = RuleFc.is_12_jin_chai(table_cards, cards)
+                flag, path = RuleFc.is_12_jin_chai(table_cards, cards)
                 if flag:
                     return flag, path
 

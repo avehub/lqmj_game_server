@@ -93,3 +93,11 @@ class PlayerFCZJ(Player):
         p_info = super().player_info(contain_cards)
         p_info["is_out"] = self.is_out
         return p_info
+
+    def clear_player(self):
+        self.__first_down = 0
+        self.__quan_count = 0
+        self.__record_account = []
+        self.__fan_ji = 0
+        self.__hua_zhu = 0
+        super().clear_player()

@@ -76,11 +76,11 @@ class RoomGY(RoomBJ):
         # 查缺
         self.check_out_cha_que(accounts)
         # 包鸡
-        if self.bao_ji:
-            self.bao_ji_check(accounts)
-        # 包杠
-        if self.bao_gang:
-            self.bao_gang_check(accounts)
+        # if self.bao_ji:
+        #     self.bao_ji_check(accounts)
+        # # 包杠
+        # if self.bao_gang:
+        #     self.bao_gang_check(accounts)
 
         self.check_out_lian_zhuang(accounts)
 

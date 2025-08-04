@@ -2869,7 +2869,8 @@ class Room(BaseCardRoom):
         for c in ex_cards:
             card_count[c] = card_count.get(c, 0) + 1
         ex_cards_index = []
-        cards = sorted(player.cards)
+        player.sort_cards()
+        cards = player.cards.copy()
         for card, count in card_count.items():
             try:
                 c_index = cards.index(card)
@@ -4181,7 +4182,7 @@ class Room(BaseCardRoom):
     def other_ming_xi_data(type_, lose_to=-1, score=0, card=0, hu_type=None, extra_hu_type=None, get_bearer=-1):
         data = {
             "check_type": type_,
-            "lose_to": lose_to,
+            "lose_to": [lose_to],
             "card": card,
             "score": score,
         }

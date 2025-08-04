@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod
 class BaseRoom(metaclass=ABCMeta):
     """ 基础玩法类 """
 
-    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0):
+    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0,extra_count =0):
         self.__tid = tid
         self.__service = service
         self.__room_status = RoomStatus.T_IDLE
@@ -35,7 +35,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
-        self.__poker = poker(not_include)
+        self.__poker = poker(not_include,extra_count)
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer

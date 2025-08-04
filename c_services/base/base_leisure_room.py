@@ -16,8 +16,8 @@ from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
 
 
 class BaseLeisureRoom(BaseRoom):
-    def __init__(self, tid, service, room_conf, extra_room_info, poker):
-        super().__init__(tid, service, room_conf, poker)
+    def __init__(self, tid, service, room_conf, extra_room_info, poker,extra_count = 0):
+        super().__init__(tid, service, room_conf, poker, extra_count = extra_count)
         self.__record_ori_gold = {}  # 记录玩家金币信息
         self.__task_collect = {}  # 任务收集器
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
@@ -495,6 +495,7 @@ class BaseLeisureRoom(BaseRoom):
 
     async def send_quit_chat(self, send_seat_id, recv_seat_id, chat_info, m):
         await self.inner_broadcast(CmdRoom.BROADCAST_CHAT, m)
+
 
     # async def safe_box_auto_complement(self, player):
     #     """ 保险箱自动补足 """

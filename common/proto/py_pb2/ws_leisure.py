@@ -844,7 +844,7 @@ class S2CRoundOverInfo:
             new_obj.score = other_data.get("score") or 0
             new_obj.hu_type = other_data.get("hu_type") or 0
             new_obj.get_bearer = other_data.get("get_bearer") or 0
-            new_obj.lose_to = other_data.get("lose_to") or 0
+            new_obj.lose_to.extend(other_data.get("lose_to") or [])
             new_obj.extra_hu_type.extend(other_data.get("extra_hu_type") or [])
             new_obj.win_from.extend(other_data.get("win_from") or [])
 
@@ -994,7 +994,7 @@ class S2CRecordAccountInfo:
             account.act = data.get("act") or 0
             account.win_from.extend(data.get("win_from") or [])
             account.lose_to.extend(data.get("lose_to") or [])
-            account.hu_type.extend(data.get("lose_to") or [])
+            account.hu_type.extend(data.get("hu_type") or [])
         return obj
 
 class S2CFanJiScore:
@@ -1032,6 +1032,20 @@ class S2CRoundOverInfoByLeisure:
             seat.ji_pai.extend(data.get("ji_pai") or [])
             pack_table_cards(seat, **data)
         return obj
+
+class S2CManyHuInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CManyHuInfo()
+        obj.curr_seat_id = kwargs.get("curr_seat_id") or 0
+        obj.curr_card = kwargs.get("curr_card") or 0
+        hu_list = kwargs.get("hu_list") or []
+        for men_data in hu_list:
+            hu_card = obj.hu_list.add()
+            hu_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
+        return obj
+
+
 
 # ################################## 麻将 ##################################
 
