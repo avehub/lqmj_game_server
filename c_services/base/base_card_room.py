@@ -256,8 +256,7 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        is_round_over = True if over_type != OverType.FORCE else False
-        score_rank_map = self.get_player_ranking(account, is_round_over)
+        score_rank_map = self.get_player_ranking(account, True)
         for p in self.seats:
             if not p:
                 continue

@@ -3147,7 +3147,7 @@ class Room(BaseCardRoom):
         if liu_ju and self.play_type > 2:
             return
         double_bao = self.__double_bao and is_bao
-        fan_bird_list = self.__ji_cards.copy()
+        fan_bird_list = self.__ji_cards.copy() if not self.__ji_cards else self.__ji_cards
         type_ = CheckType.CHECK_JI
         for p in self.seats:
             if p.jiao_pai <= 0 or p.is_zha_hu:
@@ -4312,10 +4312,11 @@ class Room(BaseCardRoom):
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
                 if self.room_status == RoomStatus.T_DISMISS:
-                    self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                     if self.not_playing_room_status != RoomStatus.T_PLAYING:
                         self.set_room_status(self.not_playing_room_status)
+                        self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                         return await self.game_over()
+                    self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                     await self.liu_ju()
                     return
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
