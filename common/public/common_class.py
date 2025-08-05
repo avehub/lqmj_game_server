@@ -8,6 +8,9 @@ from nsanic.libs.tool import json_encode, json_parse
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
+from datetime import datetime
+import calendar
+from typing import Tuple, Union
 
 
 class CommonApi(LogMeta):
@@ -166,3 +169,65 @@ class CommonApi(LogMeta):
         else:
             str_json = data
         return json_parse(str_json)
+
+    @classmethod
+    async def seconds_since_midnight(cls, now: datetime = None) -> int:
+        """
+        返回当前时间距离当天凌晨（00:00:00）过去的秒数
+
+        Returns:
+            int: 当天凌晨到现在的秒数
+        """
+        if now is None:
+            now = datetime.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return int((now - midnight).total_seconds())
+
+    @classmethod
+    async def get_time_range(cls, period: str = 'month') -> Tuple[int, int]:
+        """
+        获取本月或当天的第一天和最后一天的时间戳
+
+        Args:
+            period (str): 'month' 获取本月的时间戳, 'day' 获取当天的时间戳
+
+        Returns:
+            Tuple[int, int]: (开始时间戳, 结束时间戳)
+        """
+        # 获取当前时间
+        now = datetime.now()
+
+        if period == 'day':
+            # 获取当天的日期时间（00:00:00）
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            # 获取当天的日期时间（23:59:59）
+            end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+            return int(start_of_day.timestamp()), int(end_of_day.timestamp())
+
+        elif period == 'month':
+            # 获取本月第一天的日期时间（00:00:00）
+            first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            # 获取本月最后一天的日期
+            last_day = calendar.monthrange(now.year, now.month)[1]
+            # 获取本月最后一天的日期时间（23:59:59）
+            last_day_dt = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
+            return int(first_day.timestamp()), int(last_day_dt.timestamp())
+
+        else:
+            raise ValueError("Invalid period specified. Use 'month' or 'day'.")
+
+    @classmethod
+    async def list_by_group(cls, arr: list[dict[str, any]], key: str, unordered: bool = True):
+        result = {}
+        try:
+            for item in arr:
+                index = item[key]
+                if index not in result:
+                    result[index] = []
+                result[index].append(item)
+            # 将字典转为列表
+            if unordered:
+                return list(result.values())
+        except Exception as e:
+            return result
+
