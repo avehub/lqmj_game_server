@@ -8,6 +8,8 @@ from nsanic.libs.rds_client import RdsError
 from nsanic.exception import JsonFinish
 from http import HTTPStatus
 from common.public.enum_const import StaCode
+from sanic.handlers import ErrorHandler
+from sanic.exceptions import SanicException
 
 
 @dataclass
@@ -72,3 +74,7 @@ class RCatchExpt():
         cls.__log_err_info(req, traceback.format_exc())
         data = {'code': 500, 'msg': 'There are some error, please connect administrator to check.'}
         return response.json(data, status=500)
+
+    #@app.report_exception
+    # async def catch_any_exception(cls, exception: Exception):
+    #     print("Caught exception:", exception)

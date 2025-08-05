@@ -15,7 +15,7 @@ class ConfSrv(BaseConf):
     RUN_PORT = 8989
     HOST = '0.0.0.0'
     DEBUG_MODE = DEBUG_MODE
-    ACCESS_LOG = False
+    ACCESS_LOG = True
 
     RUN_FAST = RUN_FAST
     VER_CODE = None
@@ -24,6 +24,7 @@ class ConfSrv(BaseConf):
     ALLOW_HEADER = ['Authorization', 'Content-Type']
     RESP_TYPE = 'JSON'
 
+    # FALLBACK_ERROR_FORMAT = "auto"
     SECRET_KEY = C_SERVICE_SECRET_KEY  # 子游戏密钥（消息验证）
     SERVER_SECRET_KEY = SERVER_SECRET_KEY  # 服务器密钥（加密使用）
     STA_CODE = StaCode

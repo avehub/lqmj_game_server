@@ -66,28 +66,6 @@ class BaseDecorator(BaseRps):
                 hint=f"The parameter {p_name} is not within the range of parameter values"
             )
 
-    async def answer(
-            self, code: int = None,
-            data: (dict, object, list) = None,
-            total: int = 0,
-            hint: str = '',
-            headers: dict = None,
-    ):
-
-        """
-            公共JSON响应函数
-
-            :param code: 响应码,请参照StaCode中取值, 默认响应成功状态
-            :param data: 响应数据, 可以是任意符合JSON规范类型的数据模型
-            :param total: 针对于分页响应的总数量
-            :param hint: 响应消息, 字符串, 设置值后会采取设置的值，否则会使用响应码映射的默认值
-            :param headers: 附加响应头
-            """
-        if not code:
-            code = self.sta_code.PASS
-
-        raise JsonFinish(code, data, total, hint, headers)
-
 
 class GameChecker(BaseDecorator):
     """ 游戏检查器 """

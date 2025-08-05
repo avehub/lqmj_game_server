@@ -31,7 +31,7 @@ from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaH
 # from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
-from lucky_game.interface.activitys import ActivityDetail
+from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
@@ -132,6 +132,9 @@ class MainBp(BaseBlue):
 
         # 活动相关
         Urls("/QueryActivity/", ActivityDetail),  # 查询活动详情
+        Urls("/JoinActivity/", JoinActivity),  # 参与活动
+        Urls("/GainActivity/", GainActivity),  # 领取活动奖励
+        Urls("/ProgressActivity/", ProgressActivity),  # 活动进度
 
         # # 支付相关
         # Urls("/MakeOrder/", MakeOrder),  # 创建订单
@@ -190,7 +193,7 @@ class MainBp(BaseBlue):
         # Urls("/GameTaskUpdateForRookie/", GameTaskUpdateForRookie),  # 新手引导中更新任务（西行路新手引导中专用）
         #
         # # 充值/消费相关
-        # Urls("/StoreHandler/", StoreHandler),  # 加载各类型商店
+        Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
         # Urls("/PayByRedemption/", PayByRedemption),  # 商店兑换购物
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
@@ -200,22 +203,6 @@ class MainBp(BaseBlue):
         # Urls("/VipLevelHandler/", VipLevelHandler),  # 获取VIP等级配置
         # Urls("/VipLevelPullAwards/", VipLevelPullAwards),  # VIP用户领取奖励
         # Urls("/QueryUserVipLevel/", QueryUserVipLevel),  # 查询用户VIP等级信息
-        #
-        # # 皮肤系统
-        # Urls("/SkinDharmaForm/", SkinDharmaForm),  # 法相一级：法相之形
-        # Urls("/SkinDharmaAppear/", SkinDharmaAppear),  # 法相二级：法相显现
-        # Urls("/UseSkinItem/", UseSkinItem),  # 装备卡牌皮肤
-        # Urls("/UpgradeSkinItem/", UpgradeSkinItem),  # 卡牌皮肤升星
-        # Urls("/GetGameSkinUsedItems/", GetGameSkinUsedItems),  # 皮肤使用项查询
-        # Urls("/GetSkinAllStarItems/", GetSkinAllStarItems),  # 获取所有星级信息
-        # Urls("/UseLimitedTimeSkin/", UseLimitedTimeSkin),  # 使用限时皮肤
-        # Urls("/QueryUserSkinAmount/", QueryUserSkinAmount),  # 查询玩家持有皮肤数
-        # Urls("/QueryUserAdFreePrivilege/", QueryUserAdFreePrivilege),  # 查询用户免广告特权
-        #
-        # # 漫漫西行路
-        # Urls("/WestWayQueryMap/", WestWayQueryMap),  # 西行路地图
-        # Urls("/WestWayQueryGoods/", WestWayQueryGoods),  # 西行路物资
-        # Urls("/WestWayPlaySteps/", WestWayPlaySteps),  # 西行路行进
         #
         # # 排位系统
         # Urls("/GetSeasonRankingConf/", GetSeasonRankingConf),  # 获取排位赛季配置

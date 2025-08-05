@@ -329,20 +329,13 @@ class Stores(DBModel):
     sid = fields.IntField(max_length=10, pk=True, description='商店ID')
     platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
-    label = fields.CharField(max_length=64, unique=True, default=0, description="唯一标识")
-    original = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="原价")
-    price = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="售价")
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
-    total = fields.IntField(max_length=10, null=True, default=0, description="总量：-1无限")
     purchase_limit = fields.CharField(max_length=256, null=True, default='', description='限购条件')
-    name = fields.CharField(max_length=64, null=True, default=0, description="名称")
+    name = fields.CharField(max_length=64, null=True, default='', description="名称")
     img = fields.CharField(max_length=256, null=True, default='', description='图片')
     desc = fields.CharField(max_length=256, null=True, default='', description='描述')
-    content = fields.JSONField(null=True, description='商品内容：JSON存储')
-    status = fields.SmallIntField(max_length=2, null=True, description='状态：0下架 1上架')
-    up_time = fields.DatetimeField(null=True, default=None, description='上架时间')
-    down_time = fields.DatetimeField(null=True, default=None, description='下架时间')
+    status = fields.SmallIntField(max_length=2, null=True, description='状态：0隐藏 1显示')
     start_time = fields.DatetimeField(null=True, default=None, description='有效期开始时间')
     end_time = fields.DatetimeField(null=True, default=None, description='有效期结束时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
@@ -350,19 +343,24 @@ class Stores(DBModel):
 
 class Goods(DBModel):
     """商品(道具)表"""
-    id = fields.IntField(max_length=10, pk=True, description='商品ID')
+    good_id = fields.IntField(max_length=10, pk=True, description='商品ID')
     sid = fields.IntField(max_length=10, index=True, default=0, description='商城ID')
     kind = fields.SmallIntField(max_length=2, null=True, description='特性：0虚拟 1实物')
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
+    currency = fields.SmallIntField(max_length=2, null=True, default=0, description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
+    purchase_limit = fields.CharField(max_length=256, null=True, default='', description='限购条件')
+    original = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="原价")
+    price = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="售价")
     total = fields.IntField(max_length=10, null=True, default=0, description="总量：-1无限")
-    name = fields.CharField(max_length=64, null=True, default=0, description="商品名称")
+    name = fields.CharField(max_length=64, null=True, default='', description="商品名称")
     img = fields.CharField(max_length=256, null=True, default='', description='商品图片')
     desc = fields.CharField(max_length=256, null=True, default='', description='商品描述')
     content = fields.JSONField(null=True, description='商品内容：JSON存储')
     status = fields.SmallIntField(max_length=2, null=True, description='状态：0下架 1上架')
-    start_time = fields.DatetimeField(null=True, default=None, description='商品有效期开始时间')
-    end_time = fields.DatetimeField(null=True, default=None, description='商品有效期结束时间')
+    up_time = fields.DatetimeField(null=True, default=None, description='上架时间')
+    down_time = fields.DatetimeField(null=True, default=None, description='下架时间')
+    rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
     bag_type = fields.SmallIntField(max_length=2, null=True, default=0, description='背包类型：0常规 1延时')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
@@ -371,7 +369,8 @@ class Orders(DBModel):
     """用户订单表"""
     id = fields.IntField(max_length=10, pk=True, description='变动ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
-    sid = fields.IntField(max_length=28, index=True, description='购买商店ID')
+    good_id = fields.IntField(max_length=28, index=True, description='商品ID')
+    sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     amount = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="支付金额")
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
@@ -411,7 +410,7 @@ class GuildUsers(DBModel):
 class Awards(DBModel):
     """ 奖励信息表 """
     award_id = fields.IntField(max_length=10, pk=True, description='奖励ID')
-    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 2活动 3任务 ')
+    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 3活动 3任务 ')
     level = fields.SmallIntField(max_length=2, index=True, description='奖励等级')
     name = fields.CharField(max_length=20, null=True, description='奖励名称')
     content = fields.JSONField(null=True, description='奖励内容：JSON存储')
@@ -430,7 +429,6 @@ class AwardGains(DBModel):
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
-        unique_together = (("reward_type", "type_id", "uid"),)  # 联合主键
         table = "award_gains"
 
 
@@ -761,6 +759,7 @@ class LogUserActivity(DBModel):
     join_time = fields.BigIntField(index=True, default=0, description='参与时间', )
     uid = fields.IntField(max_length=28, index=True, description='玩家ID', )
     pay_type = fields.IntEnumField(enum_type=PayType, default=PayType.BY_FREE, description='支付类型')
+    award_type = fields.IntEnumField(enum_type=AwardType, default=AwardType.DEFAULT, description='奖励类型')
 
     class Meta:
         table = "log_user_activity"
