@@ -112,7 +112,8 @@ class BasePoker:
     def deal_good_cards(self,player_count: int = 4):
 
         cards_pool = self.CARDS_ENUM.all_cards().copy()
-        result_dict = dict(Counter(cards_pool))
+        result_dict = dict(Counter(cards_pool)).copy()
+        print("result_dict",result_dict)
 
         players_hands = [[] for _ in range(player_count + 1)]
         for player_id in range(player_count):
@@ -137,8 +138,13 @@ class BasePoker:
                             result_dict[card] -= 1
                     hands.extend(combo)
                 combo_count += 1
+            valid_items = [key for key, value in result_dict.items() if value > 0]
+
             for i in range(13 - len(hands)):
-                hands.append(cards_pool.pop())
+                if valid_items:  # 确保非空
+                    card = valid_items.pop()
+                    hands.append(card)
+                    result_dict[card] -= 1
             players_hands[player_id] = hands
         print("players_hands",players_hands)
         self.__set_cards_list = players_hands
@@ -242,7 +248,7 @@ class BasePoker:
 
 
         # 设置摸牌
-        order_cards.extend(set_mo_cards)
+        # order_cards.extend(set_mo_cards)
         order_cards.extend(remain_cards)
         print("order_cards",order_cards)
         order_cards = [self.get_card_by_key(c) for c in order_cards]

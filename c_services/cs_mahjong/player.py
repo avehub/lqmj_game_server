@@ -264,7 +264,7 @@ class Player(BaseLeisurePlayer):
         return self.__shao_tong_xing_zheng
 
     def on_round_over_clear(self):
-        self.is_lock = False
+        self.__is_lock = False
         self.__has_shang_ga = False
         self.__mo_pai = 0
         self.__shang_ga_score = 0
@@ -415,7 +415,6 @@ class Player(BaseLeisurePlayer):
         """ 锁牌，锁住除lock_cards的牌 """
         self.__lock_cards = []
         temp_cards = deepcopy(self.cards)
-        print("锁牌", temp_cards, self.__lock_cards)
         for card in lock_cards:
             temp_cards.remove(card)
         self.__lock_cards = temp_cards
@@ -591,7 +590,7 @@ class Player(BaseLeisurePlayer):
         """
         fan_ji_list = fan_ji_list or set()
 
-        all_bird = default_ji | fan_ji_list  # 并集
+        all_bird = default_ji | set(fan_ji_list)  # 并集
 
         if include_hand_card:
             # 手牌
@@ -711,6 +710,8 @@ class Player(BaseLeisurePlayer):
         p_info["lock_cards"] = self.__lock_cards
         p_info["operates"] = self.operates[:]
         p_info["men_cards"] = self.__men_cards
+        p_info["que"] = self.__que
+        p_info["is_out"] = self.is_out
         return p_info
 
     def round_over_data(self):

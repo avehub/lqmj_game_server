@@ -83,7 +83,7 @@ class RoomBJ(Room):
             if ji in self.fan_jin_ji_cards:
                 bei_lv = 10
 
-        if self.__yin_ji and ji == CardsType.YI_TONG:
+        if self.yin_ji and ji == CardsType.YI_TONG:
             per_score = self.ji_pai_score.get(ji, 1) * count  # 翻到银鸡才有5分
         else:
             if self.__shu_zi_ji and ji != CardsType.YAO_JI:
@@ -121,12 +121,12 @@ class RoomBJ(Room):
         type_ = CheckType.CHECK_LIAN_ZHUANG
 
         # 预过滤有效玩家（非空且连庄≥2）
-        valid_winners = [w for w in self.__winner_list if w and w.lian_zhuang >= 2]
+        valid_winners = [w for w in self.winner_list if w and w.lian_zhuang >= 2]
         if not valid_winners:  # 无有效连庄玩家提前退出
             return
 
         # 预过滤需付分玩家（非空且非连庄玩家）
-        payers = [p for p in self.__seats if p and p not in valid_winners]
+        payers = [p for p in self.seats if p and p not in valid_winners]
 
         # 批量处理连庄玩家
         for winner in valid_winners:

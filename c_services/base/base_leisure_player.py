@@ -55,6 +55,9 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__timer = DelayCall(seconds, func, *params, **kwargs)
         self.__timer.start()
 
+    def cancel_timer(self):
+        self.__cancel_timer()
+
     @property
     def is_out(self):
         return self.__is_out

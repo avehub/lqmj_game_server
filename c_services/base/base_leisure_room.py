@@ -16,8 +16,8 @@ from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
 
 
 class BaseLeisureRoom(BaseRoom):
-    def __init__(self, tid, service, room_conf, extra_room_info, poker):
-        super().__init__(tid, service, room_conf, poker)
+    def __init__(self, tid, service, room_conf, extra_room_info, poker,extra_count = 0):
+        super().__init__(tid, service, room_conf, poker, extra_count = extra_count)
         self.__record_ori_gold = {}  # 记录玩家金币信息
         self.__task_collect = {}  # 任务收集器
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
@@ -89,9 +89,10 @@ class BaseLeisureRoom(BaseRoom):
             self.__record_ori_gold[p.seat_id] = p.gold
             seat2uid[p.seat_id] = p.uid
         self.log_info("游戏开始", seat2uid, self.__record_ori_gold)
-        await self.inner_broadcast(CmdRoom.ROUND_START)
+        # await self.inner_broadcast(CmdRoom.ROUND_START)
 
     async def do_trustee(self, player):
+        self.log_info("玩家",player.seat_id,player.uid,"trustee",player.trustee)
         is_trustee = False if player.trustee else True
         player.trustee = is_trustee
         tm = s2c_trustee_model(player.seat_id, is_trustee)
@@ -386,7 +387,7 @@ class BaseLeisureRoom(BaseRoom):
         # flag = UtilsTool.random_choice_num([0, 1], [0, 1])
         if flag:
             return await self.__do_resurgence(player)
-        return self.call_flow_robot(random.randint(2, 5), self.player_give_up, player)
+        return await self.delay_func(random.randint(2, 5), self.player_give_up, player)
 
     async def notify_resurgence(self, player):
         """ 通知复活 """
@@ -425,9 +426,10 @@ class BaseLeisureRoom(BaseRoom):
         self.set_room_status(RoomStatus.T_RECHARGE_ING)
         self.log_info(player.uid, player.seat_id, "进入是否复仇")
         sec = 30
+        if not player.is_robot:
+            self.call_flow(sec, self.player_give_up, player)
         await self.notify_buy_gift_pack(player, seconds=sec)
-        await self.delay_func(sec, self.player_give_up, player)
-        #self.call_flow(sec, self.player_give_up, player)
+
 
     async def player_give_up(self, player):
         player.is_out = True
@@ -490,6 +492,10 @@ class BaseLeisureRoom(BaseRoom):
                     self.log_info(player.uid, "游戏结束下发返还礼包")
                     send_list.append(self.notify_buy_gift_pack(player, CmdRoom.GOLD_NOT_ENOUGH))
         send_list and await asyncio.gather(*send_list)
+
+    async def send_quit_chat(self, send_seat_id, recv_seat_id, chat_info, m):
+        await self.inner_broadcast(CmdRoom.BROADCAST_CHAT, m)
+
 
     # async def safe_box_auto_complement(self, player):
     #     """ 保险箱自动补足 """

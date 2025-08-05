@@ -234,12 +234,6 @@ class ExtraHuPai(IntEnum):
     JIAN_HU = 305  # 捡胡
     HUA_ZHU = 306  # todo:花猪
 
-    # 江西麻将
-    DE_GUO = 307
-    DE_ZHONG_DE = 308
-    ZHUANG_HU = 311
-    JING_DIAO = 312
-
 
 @unique
 class JiType(IntEnum):
@@ -421,6 +415,22 @@ ACTION_PRIORITY = {
     ActionType.ACTION_TYPE_PENG: 96,
     ActionType.ACTION_TYPE_JIAN: 95,
     ActionType.ACTION_TYPE_ZHA_JIAN: 94,
+    ActionType.ACTION_TYPE_PASS: 1,
+}
+
+ACTION_PRIORITY_FC = {
+    ActionType.ACTION_TYPE_HU: 99,
+    ActionType.ACTION_TYPE_ZHA_HU: 98,
+    ActionType.ACTION_TYPE_QIANG_GANG_HU: 99,
+    ActionType.ACTION_TYPE_MEN: 99,
+    ActionType.ACTION_TYPE_ZHA_MEN: 98,
+    ActionType.ACTION_TYPE_JIAN: 99,
+    ActionType.ACTION_TYPE_ZHA_JIAN: 98,
+    ActionType.ACTION_TYPE_AN_GANG: 88,
+    ActionType.ACTION_TYPE_ZHUAN_WAN_GANG: 88,
+    ActionType.ACTION_TYPE_MING_GANG: 88,
+    ActionType.ACTION_TYPE_PENG: 70,
+    ActionType.ACTION_TYPE_TIAN_TING: 50,
     ActionType.ACTION_TYPE_PASS: 1,
 }
 

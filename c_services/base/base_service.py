@@ -52,6 +52,8 @@ class BaseService(BaseServer, SessionManager):
         """ 离线处理 """
         player.offline = True
         self.log_info(room.tid, player.uid, "玩家掉线")
+        if room.room_type == RoomType.COMMON:
+            await room.player_quit_room(player,player.uid)
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
     @staticmethod

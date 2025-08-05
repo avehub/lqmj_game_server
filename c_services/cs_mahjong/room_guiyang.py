@@ -35,7 +35,7 @@ class RoomGY(RoomBJ):
         que = ding_que_model.que
         if not self.flow_status_is_equal(FlowStatus.T_IN_DING_QUE):
             return StaCode.FLOW_ERR, "不在定缺流程中"
-        if self.liang_men_pai == 0 or self.play_type not in (PlayType.GUI_YANG_2, PlayType.GUI_YANG_2):
+        if self.liang_men_pai != 0 or self.play_type not in (PlayType.GUI_YANG_2, PlayType.GUI_YANG_3):
             return StaCode.RULE_ERR, "当前玩法不存在定缺"
         if player.que != 0:
             return StaCode.ALREADY_DO, "当前玩家已经定缺过了"
@@ -76,11 +76,11 @@ class RoomGY(RoomBJ):
         # 查缺
         self.check_out_cha_que(accounts)
         # 包鸡
-        if self.bao_ji:
-            self.bao_ji_check(accounts)
-        # 包杠
-        if self.bao_gang:
-            self.bao_gang_check(accounts)
+        # if self.bao_ji:
+        #     self.bao_ji_check(accounts)
+        # # 包杠
+        # if self.bao_gang:
+        #     self.bao_gang_check(accounts)
 
         self.check_out_lian_zhuang(accounts)
 
@@ -91,7 +91,7 @@ class RoomGY(RoomBJ):
         if self.__yuan_que != 1:
             return
 
-        self.log_info(self.__tid, "开始结算源缺")
+        self.log_info("开始结算源缺")
         type_ = CheckType.CHECK_YUAN_QUE
         base_score = self.extra_score_map.get(type_, 2)
 
@@ -126,7 +126,7 @@ class RoomGY(RoomBJ):
         """
         if self.__cha_que != 1:
             return
-        self.log_info(self.__tid, "开始结算查缺")
+        self.log_info( "开始结算查缺")
         type_ = CheckType.CHECK_CHA_QUE
 
         # 预过滤有效玩家
@@ -162,7 +162,7 @@ class RoomGY(RoomBJ):
     def get_per_score(self, ji, score, count, default_ji, liu_ju):
         bei_lv = 1
         if not liu_ju:
-            if ji in self.__fan_jin_ji_cards:
+            if ji in self.fan_jin_ji_cards:
                 bei_lv = 2
 
         if ji == CardsType.WU_GU_JI and ji not in default_ji:

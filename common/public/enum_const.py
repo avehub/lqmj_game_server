@@ -111,24 +111,22 @@ class ServiceEnum(BaseEnum):
     """ 服务枚举号 """
     WS_HALL = 1, "lucky_ws", '大厅网关'
     WS_CHILD = 2, "lucky_wsc", '子网关'
-    C_MATCHING = 3, "matching", '子服务-匹配服务'
-    C_WORKERS = 4, "workers", '任务服务（异步调度任务（不停地消费）：服务端内部使用）'
+    C_MATCHING = 3, "lucky_matching", '子服务-匹配服务'
+    C_WORKERS = 4, "lucky_workers", '任务服务（异步调度任务（不停地消费）：服务端内部使用）'
 
     C_MONSTER = 5, "monster", GameType.LEISURE
     C_MONSTER_SEQUEL = 6, "monster_sequel", GameType.LEISURE
     C_MONSTER_MANY = 7, "monster_many", GameType.LEISURE
     C_NOTICE = 8, "notice", '通知服务号，不以服务启动，只作为消息通知服务号'
-    C_CHAT = 9, "chat", '聊天服务'
-    C_CLUB = 10, "club", '俱乐部服务'
+    C_CHAT = 9, "lucky_chat", '聊天服务'
+    C_CLUB = 10, "lucky_club", '俱乐部服务'
 
     C_MAHJONG_FC = 11, "mahjong_fc", GameType.LEISURE
 
-    C_WATER_FISH = 20, "water_fish", GameType.LEISURE
-    C_LANDLORDS = 21, "landlords", GameType.LEISURE
-    C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
-    C_MAHJONG_GY = 23,"mahjong_gy",GameType.ROOM_CARD
-    C_MAHJONG_ZY = 24,"mahjong_zy",GameType.ROOM_CARD
-    C_MAHJONG_BJ = 25,"mahjong_bj",GameType.ROOM_CARD
+    C_MAHJONG_XY = 22, "mahjong_xy", GameType.ROOM_CARD
+    C_MAHJONG_GY = 23, "mahjong_gy", GameType.ROOM_CARD
+    C_MAHJONG_ZY = 24, "mahjong_zy", GameType.ROOM_CARD
+    C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'

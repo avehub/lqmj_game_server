@@ -12,7 +12,7 @@ class PlayerFCZJ(Player):
         self.__lian_sheng = 0  # 正为胜 负为败
         self.__record_account = []
         self.__fan_ji = 0
-        self.lock = False
+        self.is_lock = False
         self.__hua_zhu = 0
 
     @property
@@ -54,14 +54,6 @@ class PlayerFCZJ(Player):
         self.__fan_ji = fan_ji
 
     @property
-    def lock(self):
-        return self.__is_lock
-
-    @lock.setter
-    def lock(self, is_lock):
-        self.__is_lock = is_lock
-
-    @property
     def hua_zhu(self):
         return self.__hua_zhu
 
@@ -96,3 +88,16 @@ class PlayerFCZJ(Player):
         }
         data.update(result)
         return data
+
+    def player_info(self, contain_cards=True):
+        p_info = super().player_info(contain_cards)
+        p_info["is_out"] = self.is_out
+        return p_info
+
+    def clear_player(self):
+        self.__first_down = 0
+        self.__quan_count = 0
+        self.__record_account = []
+        self.__fan_ji = 0
+        self.__hua_zhu = 0
+        super().clear_player()

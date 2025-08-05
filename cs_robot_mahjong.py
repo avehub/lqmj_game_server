@@ -1,5 +1,5 @@
 """
-任务启动服务
+麻将机器人算牌服务
 """
 
 from common.utils.init import start
