@@ -65,6 +65,7 @@ class StaCode(BaseCode):
     RULE_ERR = -104, 0, '规则错误'
     FLOW_ERR = -105, 0, '流程错误'
     ALREADY_DO = -106, 0, '已经操作过'
+    RESOURCE_NOT_ENOUGH = -107, 0, '资源不足'
 
 
 @unique

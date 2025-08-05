@@ -31,7 +31,7 @@ from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaH
 # from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
-from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity
+from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity
 # from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
@@ -134,6 +134,7 @@ class MainBp(BaseBlue):
         Urls("/QueryActivity/", ActivityDetail),  # 查询活动详情
         Urls("/JoinActivity/", JoinActivity),  # 参与活动
         Urls("/GainActivity/", GainActivity),  # 领取活动奖励
+        Urls("/ProgressActivity/", ProgressActivity),  # 活动进度
 
         # # 支付相关
         # Urls("/MakeOrder/", MakeOrder),  # 创建订单

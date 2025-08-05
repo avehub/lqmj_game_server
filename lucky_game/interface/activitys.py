@@ -97,4 +97,48 @@ class GainActivity(GameAuthApi):
         return self.answer(data={"status": sta}, hint=e)
 
 
+class ProgressActivity(GameAuthApi):
+    """
+    活动进度
+    """
+    async def get(self, req: Request, **kwargs):
+        try:
+            uid = kwargs.get("u_info").get("uid")
+            act_type = self.check_int(req.args.get("act_type"), require=True, p_name="活动类型")
+            ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+            # 校验活动
+            (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
+                                                                                         hint="活动不存在或已结束")
+            sta, msg, data = await Base().act_progress(uid, ac.get("act_id"), act_type)
+            if not sta:
+                self.answer(self.sta_code.FAIL, hint=msg)
+            if data:
+                # 剩余签到次数计算
+                if act_type == ActivityType.LUCK_SIGN_IN:
+                    data["progress"]["is_free_signed"] = data["progress"]["today_total"] > 0
+                    data["progress"]["today_surplus"] = ac["join_limit_day"] - data["progress"]["today_total"]
+
+                award_ids = ac.get("condition_awards").get("award_ids")
+                if data["gains"]:
+                    for gain in data["gains"]:
+                        if gain.get("award_id") not in award_ids:
+                            gain.append({
+                                "award_id": gain.get("award_id"),
+                                "status": -1
+                            })
+                else:
+                    gain = []
+                    for award_id in award_ids:
+                        gain.append({"award_id": award_id, "status": -1})
+                    data["gains"] = gain
+        except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            self.log_err(f"ProgressActivity 执行失败，原因：{e}")
+            return self.answer(code=self.sta_code.FAIL, hint="获取活动进度失败")
+        return self.answer(data=data, hint=msg)
+
+
+
 

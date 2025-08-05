@@ -192,7 +192,7 @@ class AwardGainsRC(BaseCommonRC):
                     query["id__in"] = gain_id
                 else:
                     query["id"] = gain_id
-            valid_fields = {"status", "remark", "status"}
+            valid_fields = {"status", "remark", "updated"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)

@@ -7,13 +7,13 @@ from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
 from lucky_game.model_db.main import Stores, Goods
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
-from lucky_game.model_rc.base_rc import BaseRC
+from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import StoreType, PayType, AdSlotItem
 from tortoise.exceptions import OperationalError
 
 
-class StoreRC(BaseRC):
+class StoreRC(BaseCommonRC):
     """游戏商店"""
     db_model = Stores
     tb_name = db_model.sheet_name()
@@ -170,7 +170,8 @@ class StoreRC(BaseRC):
         except OperationalError as e:
             return None, f"查询失败:{e}"
         return data, "成功"
-class GoodRC(BaseRC):
+
+class GoodRC(BaseCommonRC):
     """商品(道具)"""
     db_model = Goods
     tb_name = db_model.sheet_name()
@@ -220,6 +221,16 @@ class GoodRC(BaseRC):
         except OperationalError as e:
             return None, f"查询失败:{e}"
         return data, "成功"
+
+    @classmethod
+    async def get_good_info(cls, sku: str) -> dict:
+        """获取商品信息"""
+        data, msg = await cls.get_good_filter(sku_id=sku)
+        if not data:
+            return {}
+        return data[0]
+
+
 
 
 

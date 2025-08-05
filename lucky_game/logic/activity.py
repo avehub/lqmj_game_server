@@ -45,6 +45,13 @@ async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pa
     return True
 
 
+async def act_count(uid: int, act_id: int, period: str):
+    start_time, end_time = await CommonApi.get_time_range(period)
+    sta, signed = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
+                                                             end_time=end_time, count=True)
+    return sta, signed
+
+
 class Base:
     conf: ConfSrv = conf_srv
 
@@ -94,7 +101,7 @@ class Base:
             once_items, _ = await AwardRC.get_award_by_filter(award_id=ids)
         if condition_awards:
             ids = condition_awards["award_ids"]
-            condition_items, _ = await AwardRC.get_award_by_filter(award_id=ids)
+            condition_items, _ = await AwardRC.get_award_by_filter(award_id=ids, order_field="award_id")
             # if act_type == ActivityType.LUCK_SIGN_IN:
         return once_items, condition_items
 
@@ -166,6 +173,41 @@ class Base:
                     NLogger.info(f"领取奖励：uid={uid}，award_id={award.get('type_id')}，act_id={act_id}, remark={remark}")
         return sta, e
 
+    async def act_progress(self, uid: int, act_id: int, act_type: int):
+        result = {}
+        if act_type == ActivityType.LUCK_SIGN_IN:
+            start_time, end_time = await CommonApi.get_time_range()
+        else:
+            start_time = end_time = None
+        progres_sta, progress = await UserActivityProgressRC.get_activity_progress_once(
+            uid=uid,
+            act_id=act_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        gain_sta, gains = await AwardGainsRC.get_award_gains(
+            uid=uid,
+            act_id=act_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        if not progres_sta:
+            return False, "活动进度异常", result
+        if not gain_sta:
+            return False, "获取领取奖励内容异常", result
+        if act_type == ActivityType.LUCK_SIGN_IN:
+            if not progress:
+                progress = {}
+            progress["today_total"] = 0
+            sta, signed = await act_count(uid, act_id, "day")
+            if sta and signed:
+                progress["today_total"] = signed
+            if gains:
+                gains = [i for i in gains if i.get("type_id") > 6]
+        result["progress"] = progress
+        result["gains"] = gains
+        return True, "成功", result
+
     async def __user_box(self, uid: int, amount: int, field="gold", explain: str = "参加活动"):
         """背包性资源奖励发放"""
         sta, e = ExtraUserResourceChangesRC.change_user_resource(uid, field, amount, explain=explain)
@@ -185,8 +227,7 @@ class SignIn(Base):
         start_time, end_time = await CommonApi.get_time_range("day")
         NLogger.info(f"act_type={act_type},act_id={act_id},award_type={award_type}")
         if award_type == AwardType.SIGN_IN_RF:
-            sta, signed = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
-                                                                     end_time=end_time, count=True)
+            sta, signed = await act_count(uid, act_id, "day")
             if sta and signed:
                 return False, "今日已签到"
         else:
@@ -195,7 +236,8 @@ class SignIn(Base):
             sta, sign_count = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
                                                                         end_time=end_time, count=True)
             NLogger.info(f"sign_count:{sign_count}")
-            if sign_count > activity.get("join_limit_day"):
+            join_limit_day = activity.get("join_limit_day") - 1
+            if sign_count > join_limit_day:
                 return False, "已达最大领取次数"
 
         # 获取返给用户签到奖励
@@ -218,13 +260,13 @@ class SignIn(Base):
         # 更新签到记录
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)
         once_item, _ = await self.act_by_awards(uid, activity)
-        return True, {"gain_awards": awards, "once_awards": once_item}
+        return True, {"gain_awards": [awards], "once_awards": once_item}
 
-    async def check_today_sign(self, uid: int) -> bool:
+    async def check_today_sign(self, uid: int) -> dict:
         """ 检查用户今日是否已签到 """
         signed = await self.cache_get_signed(uid)
         NLogger.info(f"signed={signed}")
-        return True if signed else False
+        return signed if signed else {}
 
     async def cache_set_signed(self, uid, data):
         """缓存用户签到信息"""
@@ -247,7 +289,7 @@ class SignIn(Base):
         if not refresh and rewards:
             return rewards
         rewards = {
-            "luck": await self.act_awards_other(act_type),
+            "luck": rewards["luck"] if rewards else await self.act_awards_other(act_type),
             "rewards": []
         }
         for award in awards:

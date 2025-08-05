@@ -369,7 +369,8 @@ class Orders(DBModel):
     """用户订单表"""
     id = fields.IntField(max_length=10, pk=True, description='变动ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
-    sid = fields.IntField(max_length=28, index=True, description='购买商店ID')
+    good_id = fields.IntField(max_length=28, index=True, description='商品ID')
+    sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     amount = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="支付金额")
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")

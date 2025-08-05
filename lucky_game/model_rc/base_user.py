@@ -456,6 +456,7 @@ class BaseUserRC(BaseCommonRC):
             # "tst_mark": False,
         }
 
+
 class BaseBanRC(BaseCommonRC):
     db_model = RecordsUserBan
     tb_name = db_model.sheet_name()

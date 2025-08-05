@@ -32,6 +32,7 @@ class OperatingSystem(StrEnum):
     Android = "android"
     IOS = "ios"
     PC = "pc"
+    VIVO = "vivo"
 
 
 class PlayTemplate(BaseEnum):
@@ -71,6 +72,17 @@ class PayType(BaseEnum):
     BY_DY_DIAMOND = 4, "抖音钻石兑换"
     BY_FIVE_AGGREGATES = 5, "五蕴丹兑换"
     BY_WATCH_AD = 6, "看广告领取"
+
+
+class CurrencyType(BaseEnum):
+    """ 货币类型 """
+    DEFAULT = 0, "免费"
+    BY_GOLD = 1, "金币"
+    BY_DIAMOND = 2, "钻石"
+    BY_ROOM_CARD = 3, "房卡"
+    BY_YELLOW_DIAMOND = 4, "黄钻"
+    BY_RMB = 5, "人民币"
+    BY_WATCH_AD = 6, "看广告"
 
 @unique
 class OrderStatus(BaseEnum):
@@ -215,11 +227,11 @@ class ActivityType(BaseEnum):
     WEEK_CARD = 3, "周卡"
     LIFETIME_CARD = 4, "终生卡"
     WAR_ORDER = 5, "战令"
-    PACKAGE = 6, "礼包"
-    DISCOUNT = 7, "幸运折扣"
-    INFINITE_PLAY = 8, "无限畅玩"
+    PACKAGE = 6, "限时登录"
+    SHARE = 7, "分享"
+    INFINITE_PLAY = 8, "救济金"
     LUCK_SIGN_IN = 9, "抽奖签到"
-    TOTAL_SIGN_IN = 10, "累计签到"
+
 
 
 @unique
