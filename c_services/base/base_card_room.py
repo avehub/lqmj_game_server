@@ -40,7 +40,7 @@ class BaseCardRoom(BaseRoom):
         self.__agree_dismiss_seats = set()
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
-        self.__record_id = 1
+        self.__record_id = 0
         self.__last_round_result = {}
         self.__not_playing_room_status = RoomStatus.T_IDLE
         self.__not_playing_dismiss = False
@@ -361,9 +361,10 @@ class BaseCardRoom(BaseRoom):
             result["seats"].append(p.game_over_data)
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
-            over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
-                                                                            , final_ranking, final_grade, p.game_over_data, num)
-            self.log_info("总结算战绩插入", over_record)
+            if self.__record_id > 0:
+                over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
+                                                                                , final_ranking, final_grade, p.game_over_data, num)
+                self.log_info("总结算战绩插入", over_record)
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)

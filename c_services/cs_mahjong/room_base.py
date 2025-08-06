@@ -607,7 +607,7 @@ class Room(BaseCardRoom):
         mo_pai = self.poker.pop()
         p.rev_card(mo_pai)
         p.mo_pai = mo_pai
-        self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards,"剩余",self.poker.left_count)
+        self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards, "剩余", self.poker.left_count)
         for player in self.seats:
             data = {
                 "seat_id": p.seat_id,
@@ -911,7 +911,7 @@ class Room(BaseCardRoom):
         self.set_flow_status(FlowStatus.T_IN_PUBLIC_OPRATE)
         chu_pai_player = self.curr_player()
         chu_pai_player.operates = []
-        self.log_info("玩家",chu_pai_player.seat_id,"出牌",self.__curr_card)
+        self.log_info("玩家", chu_pai_player.seat_id, "出牌", self.__curr_card)
         jie_pao_count = 0
         can_hu_or_jian = 0
         can_peng_or_gang = 0
@@ -1532,7 +1532,7 @@ class Room(BaseCardRoom):
             }
             opt_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:
-                self.log_info("有玩家可以抢杠胡",p.seat_id,operates,"is_bi_hu",data["is_bi_hu"])
+                self.log_info("有玩家可以抢杠胡", p.seat_id, operates, "is_bi_hu", data["is_bi_hu"])
                 await self.inner_send(p, CmdRoom.PUBLIC_OPERATES, opt_model)
 
         if self.can_somebody_hu():  # 有人可以胡，则需要等待
@@ -2729,7 +2729,7 @@ class Room(BaseCardRoom):
         is_wu_dui = self.play_type == PlayType.BI_JIE_MJ
         allow_hu_map = {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: not is_gy, HuType.DI_LONG_QI: self.__di_long_qi, }
         hu_type, hu_path = Rule.can_hu(table_cards, hand_cards, self.__curr_card, allow_hu_map, self.__lai_zi, is_gy, is_wu_dui)
-        print("hu_path",hu_path)
+        print("hu_path", hu_path)
         if not hu_type:
             return {}, False, []
 
@@ -4309,7 +4309,7 @@ class Room(BaseCardRoom):
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
-                if self.room_status == RoomStatus.T_DISMISS:
+                if self.room_status == RoomStatus.T_DISMISS and self.record_id > 0:
                     if self.not_playing_room_status != RoomStatus.T_PLAYING:
                         self.set_room_status(self.not_playing_room_status)
                         self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
@@ -4318,6 +4318,7 @@ class Room(BaseCardRoom):
                     await self.liu_ju()
                     return
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
+                print("直接解散 不记录战绩")
                 return await super(BaseCardRoom, self).game_over()
             self.set_room_status(self.not_playing_room_status)
             return await self.game_over()
