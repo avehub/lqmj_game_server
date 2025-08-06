@@ -148,9 +148,9 @@ class StoreRC(BaseCommonRC):
                     query["sid"] = sid
             if type_id is not None:
                 if isinstance(type_id, list):
-                    query["type_id__in"] = type_id
+                    query["type__in"] = type_id
                 else:
-                    query["type_id"] = type_id
+                    query["type"] = type_id
             if sku_id is not None:
                 if isinstance(sku_id, list):
                     query["sku_id__in"] = sku_id
@@ -166,6 +166,7 @@ class StoreRC(BaseCommonRC):
                 query["start_time__gte"] = start_time
             if end_time is not None:
                 query["end_time__lte"] = end_time
+            print("query", query)
             data = await cls.db_model.filter(**query).order_by(order_by).values()
         except OperationalError as e:
             return None, f"查询失败:{e}"

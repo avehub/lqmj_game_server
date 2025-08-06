@@ -31,18 +31,18 @@ class StoreHandler(GameAuthApi):
         uid = u_info.get("uid")
         if not platform:
             platform = PlatForm.all_values()
-        data = []
         store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
         self.loginfo("store", store)
-        (not store) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
-        if store:
-            sid = [item.get("sid") for item in store]
-            self.loginfo("sid", sid)
-            goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
-            self.loginfo("goods", goods)
-            if goods:
-                data = await CommonApi.list_by_group(goods, "sid")
-        return self.answer(data=data)
+        if not store:
+            return self.answer(data=store, hint=e)
+        sid = [item.get("sid") for item in store]
+        self.loginfo("sid", sid)
+        goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
+        self.loginfo("goods", goods)
+        if not goods:
+            return self.answer(data=goods, hint=e)
+            # data = await self.list_by_group(goods, "sid", unordered=False)
+        return self.answer(data=goods)
 
 
 class PayByRedemption(GameAuthApi):

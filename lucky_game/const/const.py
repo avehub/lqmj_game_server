@@ -158,10 +158,10 @@ class GamePropType(BaseEnum):
 class StoreType(BaseEnum):
     """商品类型"""
     DEFAULT = 0, "默认", ''
-    DIAMOND = 1, "钻石", 'diamond'
+    DIAMOND = 1, "道具", ''
     GOLD = 2, "金币", 'gold'
-    PROP = 3, "道具", ''
-    SKIN = 4, "皮肤", ''
+    PROP = 3, "钻石", 'diamond'
+    SKIN = 4, "房卡", 'room_card'
     S_MAGIC = 5, "法宝", ''
     S_PACKAGE = 6, "礼包", ''
 

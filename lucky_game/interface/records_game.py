@@ -238,6 +238,7 @@ class PastRanks(GameAuthApi):
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
         play_type = self.check_str(req.args.get("play_type"), default=None, require=False, p_name="玩法类型")
+        cs_type = self.check_str(req.args.get("cs_type"), default=None, require=False, p_name="子服务类型")
         final_score = self.check_int(req.args.get("final_score"), default=None, require=False, p_name="最佳分数")
         data, e = await BaseRecordsGameRC.get_past_list(
             uid=uid,
@@ -247,6 +248,7 @@ class PastRanks(GameAuthApi):
             page=page,
             page_size=page_size,
             play_type=play_type,
+            cs_type=cs_type,
             final_score=final_score,
         )
         return self.answer(data=data, hint=e)

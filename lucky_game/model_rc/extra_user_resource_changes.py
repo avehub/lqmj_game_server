@@ -102,6 +102,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     @classmethod
     async def change_user_resource(cls, uid: int, change_field: str, change_value: int, operation: str = 'add', explain: str = ""):
         """用户资源变更"""
+        print("change_field", change_field)
+        print("values", cls.CURRENCY_MAP.values())
         if change_field not in cls.CURRENCY_MAP.values():
             return False, "无效的资源类型"
         try:

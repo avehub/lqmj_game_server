@@ -163,7 +163,7 @@ class RecordsGameTotalRC(BaseCommonRC):
     @classmethod
     async def query_record_total_by_sql(cls, club_id: any = None, room_id: any = None, uid: any = None,
                                         record_rid: any = None, record_tid: any = None, start_time: int = None,
-                                        end_time: int = None, cs_type: int = None, final_score: int = None,
+                                        end_time: int = None, cs_type: any = None, final_score: int = None,
                                         order_field: str = None, page: int = None, page_size: int = None,
                                         group_field: str = None, order_type: str = None, play_type: any = None,
                                         filtration: str = "*"):
@@ -205,7 +205,10 @@ class RecordsGameTotalRC(BaseCommonRC):
             if end_time is not None:
                 where += f" AND created < {end_time}"
             if cs_type is not None:
-                where += f" AND cs_type = {cs_type}"
+                if isinstance(cs_type, list):
+                    where += f" AND cs_type in ({','.join(map(str, cs_type))})"
+                else:
+                    where += f" AND cs_type = {cs_type}"
             if final_score is not None:
                 where += f" AND final_score >= {final_score}"
             if order_field is None:

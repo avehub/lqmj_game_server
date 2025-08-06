@@ -171,7 +171,7 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_past_list(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
-                                uid: int = None, cs_type: int = None, play_type: any = None, page_size: int = None,
+                                uid: int = None, cs_type: any = None, play_type: any = None, page_size: int = None,
                                 final_score: int = None, page: int = None):
         try:
             if start_time is None and end_time is None:

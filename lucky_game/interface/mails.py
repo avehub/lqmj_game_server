@@ -8,6 +8,7 @@ from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_db.main import Mails
 from lucky_game.model_rc.base_mails import MailsRC
+from lucky_game.model_rc.base_award import AwardRC
 from common.public.enum_const import DbKey
 from lucky_game.const import MailSta, PullSta, MailOpType, ReasonCostGold, ReasonCostDiamond
 # # from lucky_game.model_rc.base_skin import UserSkinRC
@@ -21,6 +22,28 @@ class MailsListHandler(GameAuthApi):
         uid = user.get("uid")
 
         mail_list = await MailsRC.get_mails_list(uid)
+        if mail_list:
+            attachments = [i.get('attachment').get("award_ids") for i in mail_list]
+            self.loginfo(f'邮件附件 {attachments}')
+            if attachments:
+                award_ids = []
+                for i in attachments:
+                    award_ids.extend(i)
+                self.loginfo(f'邮件附件奖励IDS {award_ids}')
+                award_data, e = await AwardRC.get_award_by_filter(award_id=award_ids)
+                self.loginfo(f'邮件附件奖励 {award_data}')
+                if award_data:
+                    award_dict = {item['award_id']: item for item in award_data}
+                    self.loginfo(f'邮件附件奖励DICT {award_dict}')
+                    for i in mail_list:
+                        i_award_ids = i.get('attachment').get("award_ids")
+                        i['attachment']['awards'] = []
+                        for i_award_id in i_award_ids:
+                            i_award = award_dict.get(i_award_id)
+                            if i_award:
+                                i['attachment']['awards'].append(i_award)
+
+                        self.loginfo(f'邮件附件奖励匹配 {i}')
         return self.answer(data=mail_list)
 
 

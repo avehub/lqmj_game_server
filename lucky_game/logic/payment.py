@@ -21,6 +21,7 @@ from dg_sdk import DGTools
 from lucky_game.handler.wechat import WeChat
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+from lucky_game.handler.ios_pay import ios_payment_service
 
 
 class PaymentLogic:
@@ -421,3 +422,89 @@ class PaymentLogic:
 
         NLogger.error("CompletePaidOrder 订单交易成功")
         return all_goods, all_gifts
+
+    async def IOSPaymentHandler(self, request: Request, **kwargs):
+        """
+        处理iOS应用内购买
+        """
+        try:
+            # 获取请求参数
+            order_id = request.json.get("order_id")
+            receipt_data = request.json.get("receipt_data")
+
+            if not all([order_id, receipt_data]):
+                return self.answer(
+                    code=400,
+                    message="Missing required parameters"
+                )
+
+            # 查询订单
+            order = await OrderRC.get_order_info(order_no=order_id)
+            if not order:
+                return self.answer(
+                    code=404,
+                    message="Order not found"
+                )
+
+            # 验证订单状态
+            if order.get("status") != OrderStatus.WAIT_PAY:
+                return self.answer(
+                    code=400,
+                    message="Invalid order status"
+                )
+
+            # 处理支付
+            result = await ios_payment_service.process_payment(order_id, receipt_data)
+
+            if not result.get("success"):
+                return self.answer(
+                    code=result.get("code", 400),
+                    message=result.get("message", "Payment verification failed")
+                )
+
+            # 更新订单状态
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                # 更新订单状态为已支付
+                await OrderRC.up_order(
+                    {
+                        "status": OrderStatus.PAID,
+                        "out_order_no": result["data"]["transaction_id"],
+                        "updated": int(time.time())
+                    },
+                    order_id
+                )
+
+                # 发放游戏内物品
+                # 这里根据你的业务逻辑实现
+                # 例如：await self._deliver_items(order, result["data"])
+
+            return self.answer(
+                data={
+                    "order_id": order_id,
+                    "status": OrderStatus.PAID
+                }
+            )
+
+        except Exception as e:
+            NLogger.error(f"iOS payment processing failed: {str(e)}")
+            return self.answer(
+                code=500,
+                message="Internal server error"
+            )
+
+    async def _deliver_items(self, order: dict, receipt_data: dict):
+        """发放游戏内物品"""
+        # 根据订单信息发放对应的游戏内物品
+        # 例如：
+        # await ExtraUserResourceChangesRC.change_user_resource(
+        #     uid=order["uid"],
+        #     resource_type="diamond",
+        #     amount=100,
+        #     operation="add",
+        #     reason="ios_payment",
+        #     extra_data={
+        #         "order_id": order["order_no"],
+        #         "product_id": receipt_data.get("product_id")
+        #     }
+        # )
+        pass
