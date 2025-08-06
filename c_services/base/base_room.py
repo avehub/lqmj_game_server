@@ -501,7 +501,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def force_dismiss(self):
         self.log_info("强制解散：", self.room_status, self.flow_status)
-        if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS):
+        if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_CLOSED):
             return
         # 该条判断主要为了避免重复回收房间
         if self.service.get_room(self.__tid):

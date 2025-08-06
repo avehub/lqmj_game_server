@@ -17,6 +17,9 @@ from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_game.const import ReasonCostGold
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
+from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
+from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from . import const
 from .const import FlowStatus, PlayType, TimerDelay, ActionType, HuType, CardsType, ExtraHuPai, CheckType, OverType, RechargeType, JiType, \
     SeatRelation, JI_PAI_SCORE, PAI_XING_SCORE_MAP, EXTRA_SCORE_MAP
@@ -68,12 +71,15 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__ji_pai_score_map = self.get_ji_pai_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
         self.__extra_score_map = self.get_extra_score_map()
+        self.__record_id = 0
 
-        # self.test()
+        self.test()
 
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
         await super().round_start()
+        record_info = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
+        self.__record_id = record_info[0].record_rid
         self.__dice_num = RuleFc.random_dice(2)
         self.dealer_turn()
         self.curr_seat_id = self.dealer_id
@@ -875,7 +881,8 @@ class RoomFCZJ(BaseLeisureRoom):
         for seat_id in seats:
             print("通知是否复活")
             player = self.get_player_by_seat_id(seat_id)
-            await self.notify_is_revenge(player)
+            if not player.is_out:
+                await self.notify_is_revenge(player)
 
     def multi_user_record_account(self, p: PlayerFCZJ, record_data):
         """ 多个玩家关系记账 """
@@ -1356,6 +1363,7 @@ class RoomFCZJ(BaseLeisureRoom):
             # 倍数 = 牌型分（已处理） + 额外番分
             total_score = base_score + extra_score
 
+            self.update_player_max_score(p,total_score,base_score,extra_score,hu_type,extra_hu_list)
             data = self.deal_men_jian_data(p, total_score, hu_info, CheckType.CHECK_JIAN)
             data_model = S2CMenInfoMahjong.pb_model(**data)
             p.add_jian_cards(data)
@@ -1726,13 +1734,11 @@ class RoomFCZJ(BaseLeisureRoom):
             is_zi_mo = hu_info["is_zi_mo"]
             p.hu_type = 2 if is_zi_mo else 1
             win_total_score = 0
-            win_total_gold = 0
-            lose_list = []
             hu_pai_type = [hu_type] + extra_hu_list
             base_score = self.get_base_score(hu_type, extra_hu_list, is_zi_mo)  # 基础牌型分
             extra_score = self.cal_extra_hu_score(extra_hu_list)  # 额外胡分
             score = base_score + extra_score
-
+            self.update_player_max_score(p, score, base_score, extra_score, hu_type, extra_hu_list)
             data = self.deal_men_jian_data(p, win_total_score, hu_info)
             p.add_men_cards(data)
 
@@ -2197,18 +2203,6 @@ class RoomFCZJ(BaseLeisureRoom):
 
         if self.poker.left_count <= const.LIU_JU_COUNT:
             extra_fan.append(ExtraHuPai.SEA_MOON)
-
-        qing_upgrade_map = {
-            HuType.QI_DUI: HuType.QING_QI_DUI,
-            HuType.LONG_QI_DUI: HuType.QING_LONG_BEI,
-            HuType.DA_DUI_ZI: HuType.QING_DA_DUI,
-            HuType.DI_LONG_QI: HuType.QING_DI_LONG,
-            HuType.JIN_GOU_DIAO: HuType.QING_JIN_GOU
-        }
-        is_qing_yi_se = RuleFc.has_hu_is_qing_yi_se(deepcopy(p.table_cards), deepcopy(p.cards), self.__curr_card, self.__lai_zi)
-
-        if is_qing_yi_se:
-            hu_type = qing_upgrade_map.get(hu_type, HuType.QING_YI_SE)
 
         result = {
             "card": p.mo_pai,
@@ -2682,7 +2676,16 @@ class RoomFCZJ(BaseLeisureRoom):
 
         over_gold = 0
         fan_ji_score_list = []
+        new_data = []
+        update_task = []
         for p in self.seats:
+            record_data = {
+                "record_rid": self.__record_id,
+                "record_tid": 0,
+                "cs_type": self.service.service_type,
+                "round_num": self.round_idx,
+                "replay_msg": [],
+            }
             p.cancel_timer()  # 清理延时
             if over_check:
                 over_seat_id = over_check.get(p.seat_id)
@@ -2690,8 +2693,11 @@ class RoomFCZJ(BaseLeisureRoom):
                     over_gold = over_seat_id.get('gold', 0)
                 else:
                     over_gold = 0
-
+            print("over_gold",over_gold,"p.seat_id",p.seat_id)
             p.update_gold(over_gold)
+            if not p.is_robot:
+                update_task.append(self.update_user_gold(p, over_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
+
             # 麻将一局结束返分（金币）结算，相关表更新
             ji_scores = self.__zhuo_ji_cards.get(p.seat_id, [])
 
@@ -2699,11 +2705,20 @@ class RoomFCZJ(BaseLeisureRoom):
             print("over_data", over_data)
             over_data["over_check"] = over_check.get(p.seat_id, [])
             over_data["ji_score"] = ji_scores
+            record_data["uid"] = p.uid
+            record_data["round_status"] = 1 if p.round_score >= 0 else 0
+            record_data["round_score"] = p.round_score
+            record_data["round_ranking"] = 0
+            record_data["round_result"] = p.round_over_info()
+            new_data.append(record_data)
             fan_ji_score_list.append({"fan_ji_score": over_gold, "res_gold": p.gold, "seat_id": p.seat_id})
             account_model = S2CRecordAccountInfo.pb_model(p.round_account())
             await self.inner_send(p, CmdRoom.RECORD_ACCOUNT, account_model)
 
-        print("一轮结束")
+        if update_task:
+            await asyncio.gather(*update_task)
+        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+        self.log_info("一轮结束战绩插入", result_data)
         round_data["seats"] = self.room_win_lose_data()
         round_data["winner"] = self.__win_seat_list
         if over_type != OverType.OTHERS_GIVE_UP:
@@ -2711,6 +2726,7 @@ class RoomFCZJ(BaseLeisureRoom):
             await self.inner_broadcast(CmdRoom.FAN_JI_SCORE, fan_ji_score_model)
         round_over_model = S2CRoundOverInfoByLeisure.pb_model(**round_data)
         await self.inner_broadcast(CmdRoom.ROUND_OVER, round_over_model)
+        await self.record_game()
         await self.game_over()
         self.clear_round_over()
 
@@ -2941,12 +2957,11 @@ class RoomFCZJ(BaseLeisureRoom):
         self.dealer_id = dealer
         return
 
-    # @staticmethod
-    # def test():
-    #     hand_cards = [21, 21, 21, 34, 34, 34, 51]
-    #     allow_hu_map = {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: True, HuType.DI_LONG_QI: True, }
-    #     hu_card = RuleFc.get_ting_hu_list([], hand_cards, allow_hu_map)
-    #     print("hu_card",hu_card)
+    @staticmethod
+    def test():
+        hand_cards = [11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 38, 39, 51, 37]
+        flag, path_list = RuleFc.can_common_hu(hand_cards, 51)
+        print("flag",flag,"path_list",path_list)
 
     def clear_round_over(self):
         self.__recharge_wait = 0
@@ -2970,3 +2985,41 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__player_actions = []  # 玩家动作
         self.__curr_card_exist = 0  # 当前牌是否存在
         self.__can_fan_ji_seats = []
+        self.__record_id = 0
+
+    async def record_game(self):
+
+        all_scores = [p.round_score for p in self.seats if p]
+        sorted_scores = sorted(all_scores, reverse=True)
+        score_rank_map = {}
+        for idx, score in enumerate(sorted_scores):
+            score_rank_map[score] = idx + 1
+
+        for idx, p in enumerate(self.seats):
+            if not p or p.is_robot:
+                continue
+            num = 1 if idx == 0 else 0
+            final_ranking = score_rank_map[p.round_score]
+            final_grade = 1 if final_ranking == 1 else 0
+            over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.round_score >= 0, p.round_score
+                                                                            , final_ranking, final_grade, p.game_over_data, num)
+            self.log_info("休闲场总结算战绩插入", over_record)
+
+    @staticmethod
+    def update_player_max_score(p:PlayerFCZJ, total_score, base_score, extra_score, hu_type, extra_hu_list):
+        if not p.is_robot:
+            # 更新玩家最高总分
+            if total_score > p.max_multiple:
+                p.max_multiple = total_score
+
+            # 统一处理牌型分数逻辑
+            if base_score == 0:
+                # 当基础分为0时，用额外分比较牌型
+                if extra_score > p.hu_type_score:
+                    p.hu_type_score = extra_score
+                    p.max_hu_type = extra_hu_list[0]  # 使用明确的首个元素
+            else:
+                # 基础分不为0时直接比较
+                if base_score > p.hu_type_score:
+                    p.hu_type_score = base_score
+                    p.max_hu_type = hu_type

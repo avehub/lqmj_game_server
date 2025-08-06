@@ -50,6 +50,7 @@ class MatchServer(BaseServer, LeisureService):
         self.__all_robot = []
         self.__robot_cursor = 0
         self.__robot_count = 0
+        self.__platform = 0
 
         self.__matching_mode = MatchingMode.RAND_TIME
         self.__match_search_extension_time: Dict[int, Dict[str, int]] = {}  # 赛季搜索扩展时间
@@ -204,6 +205,7 @@ class MatchServer(BaseServer, LeisureService):
             "u_list": ing_player_list,
             "level": session.level,
             "pt": session.play_type,
+            "platform": self.__platform,
             "secret": self.conf.SECRET_KEY,
             # 房间信息（类似于开房选项）
             "extra_room_info": {
@@ -224,6 +226,7 @@ class MatchServer(BaseServer, LeisureService):
         parse_data = C2SEnterLeisure.decode(data)
         cs_type = parse_data.data.cs_type
         req_id = parse_data.req_id
+        self.__platform = parse_data.platform
         info = await self.get_player_in_service(uid)
         cmd = CmdMatch.MATCH_LEISURE
         if info:

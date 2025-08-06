@@ -57,7 +57,7 @@ class RoomGY(RoomBJ):
 
         if is_all_ding_que:
             self.call_flow(1, self.start_game_after_ding_que)
-        return StaCode.Pass, ""
+        return StaCode.PASS, ""
 
     async def start_game_after_ding_que(self):
         if self.__yuan_que:

@@ -14,6 +14,9 @@ class PlayerFCZJ(Player):
         self.__fan_ji = 0
         self.is_lock = False
         self.__hua_zhu = 0
+        self.__max_hu_type = 0
+        self.__max_multiple = 0
+        self.__hu_type_score = 0
 
     @property
     def first_down(self):
@@ -61,6 +64,30 @@ class PlayerFCZJ(Player):
     def hua_zhu(self, hua_zhu):
         self.__hua_zhu = hua_zhu
 
+    @property
+    def max_hu_type(self):
+        return self.__max_hu_type
+
+    @max_hu_type.setter
+    def max_hu_type(self, max_hu_type):
+        self.__max_hu_type = max_hu_type
+
+    @property
+    def max_multiple(self):
+        return self.__max_multiple
+
+    @max_multiple.setter
+    def max_multiple(self, max_multiple):
+        self.__max_multiple = max_multiple
+
+    @property
+    def hu_type_score(self):
+        return self.__hu_type_score
+
+    @hu_type_score.setter
+    def hu_type_score(self, hu_type_score):
+        self.__hu_type_score = hu_type_score
+
     def record_account(self, data, is_copy=True):
         """
         玩家记账
@@ -85,6 +112,18 @@ class PlayerFCZJ(Player):
             "fang_pao": self.fang_pao,
             "hu_type": self.hu_type,
             "ji_pai": self.ji_pai,
+            "max_hu_type": self.__max_hu_type,
+            "max_multiple": self.__max_multiple
+        }
+        data.update(result)
+        return data
+
+    @property
+    def game_over_data(self):
+        data = super().game_over_data
+        result = {
+            "max_hu_type": self.__max_hu_type,
+            "max_multiple": self.__max_multiple
         }
         data.update(result)
         return data

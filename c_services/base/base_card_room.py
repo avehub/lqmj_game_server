@@ -11,8 +11,6 @@ from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
-from lucky_admin.const import WeightEnum
-from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
@@ -42,7 +40,7 @@ class BaseCardRoom(BaseRoom):
         self.__agree_dismiss_seats = set()
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
-        self.__record_id = 1
+        self.__record_id = 0
         self.__last_round_result = {}
         self.__not_playing_room_status = RoomStatus.T_IDLE
         self.__not_playing_dismiss = False
@@ -162,6 +160,7 @@ class BaseCardRoom(BaseRoom):
     async def start_next_round(self):
         """ 开始下一局 """
         self.incr_round_count()
+        # self.dealer_id = 0
         await self.async_set_room_status(RoomStatus.T_IDLE)
 
     def clear_room_round_start(self):
@@ -256,8 +255,7 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        is_round_over = True if over_type != OverType.FORCE else False
-        score_rank_map = self.get_player_ranking(account, is_round_over)
+        score_rank_map = self.get_player_ranking(account, True)
         for p in self.seats:
             if not p:
                 continue
@@ -363,16 +361,18 @@ class BaseCardRoom(BaseRoom):
             result["seats"].append(p.game_over_data)
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
-            over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
-                                                                            , final_ranking, final_grade, p.game_over_data, num)
-            self.log_info("总结算战绩插入", over_record)
+            if self.__record_id > 0:
+                over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
+                                                                                , final_ranking, final_grade, p.game_over_data, num)
+                self.log_info("总结算战绩插入", over_record)
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
         for p in self.seats:
-            p.on_game_start_clear_data()
+            if p:
+                p.on_game_start_clear_data()
         await super().game_over()
 
     def get_player_ranking(self, account=None, is_round_over=False):
