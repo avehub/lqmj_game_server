@@ -73,7 +73,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__record_id = 0
 
-        # self.test()
+        self.test()
 
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
@@ -1363,6 +1363,7 @@ class RoomFCZJ(BaseLeisureRoom):
             # 倍数 = 牌型分（已处理） + 额外番分
             total_score = base_score + extra_score
 
+            self.update_player_max_score(p,total_score,base_score,extra_score,hu_type,extra_hu_list)
             data = self.deal_men_jian_data(p, total_score, hu_info, CheckType.CHECK_JIAN)
             data_model = S2CMenInfoMahjong.pb_model(**data)
             p.add_jian_cards(data)
@@ -1733,13 +1734,11 @@ class RoomFCZJ(BaseLeisureRoom):
             is_zi_mo = hu_info["is_zi_mo"]
             p.hu_type = 2 if is_zi_mo else 1
             win_total_score = 0
-            win_total_gold = 0
-            lose_list = []
             hu_pai_type = [hu_type] + extra_hu_list
             base_score = self.get_base_score(hu_type, extra_hu_list, is_zi_mo)  # 基础牌型分
             extra_score = self.cal_extra_hu_score(extra_hu_list)  # 额外胡分
             score = base_score + extra_score
-
+            self.update_player_max_score(p, score, base_score, extra_score, hu_type, extra_hu_list)
             data = self.deal_men_jian_data(p, win_total_score, hu_info)
             p.add_men_cards(data)
 
@@ -2696,8 +2695,8 @@ class RoomFCZJ(BaseLeisureRoom):
                     over_gold = 0
             print("over_gold",over_gold,"p.seat_id",p.seat_id)
             p.update_gold(over_gold)
-            # if not p.is_robot:
-            #     update_task.append(self.update_user_gold(p, over_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
+            if not p.is_robot:
+                update_task.append(self.update_user_gold(p, over_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
 
             # 麻将一局结束返分（金币）结算，相关表更新
             ji_scores = self.__zhuo_ji_cards.get(p.seat_id, [])
@@ -2958,12 +2957,11 @@ class RoomFCZJ(BaseLeisureRoom):
         self.dealer_id = dealer
         return
 
-    # @staticmethod
-    # def test():
-    #     hand_cards = [21, 21, 21, 34, 34, 34, 51]
-    #     allow_hu_map = {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: True, HuType.DI_LONG_QI: True, }
-    #     hu_card = RuleFc.get_ting_hu_list([], hand_cards, allow_hu_map)
-    #     print("hu_card",hu_card)
+    @staticmethod
+    def test():
+        hand_cards = [11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 38, 39, 51, 37]
+        flag, path_list = RuleFc.can_common_hu(hand_cards, 51)
+        print("flag",flag,"path_list",path_list)
 
     def clear_round_over(self):
         self.__recharge_wait = 0
@@ -3006,3 +3004,22 @@ class RoomFCZJ(BaseLeisureRoom):
             over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.round_score >= 0, p.round_score
                                                                             , final_ranking, final_grade, p.game_over_data, num)
             self.log_info("休闲场总结算战绩插入", over_record)
+
+    @staticmethod
+    def update_player_max_score(p:PlayerFCZJ, total_score, base_score, extra_score, hu_type, extra_hu_list):
+        if not p.is_robot:
+            # 更新玩家最高总分
+            if total_score > p.max_multiple:
+                p.max_multiple = total_score
+
+            # 统一处理牌型分数逻辑
+            if base_score == 0:
+                # 当基础分为0时，用额外分比较牌型
+                if extra_score > p.hu_type_score:
+                    p.hu_type_score = extra_score
+                    p.max_hu_type = extra_hu_list[0]  # 使用明确的首个元素
+            else:
+                # 基础分不为0时直接比较
+                if base_score > p.hu_type_score:
+                    p.hu_type_score = base_score
+                    p.max_hu_type = hu_type

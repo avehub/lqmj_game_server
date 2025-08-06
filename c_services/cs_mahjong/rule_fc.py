@@ -287,6 +287,7 @@ class RuleFc(Rule):
 
             # 大对子
         flag, path_list = Rule.is_da_dui_zi_new(cards, lai_zi, lai_zi_count, singles, two, threes, fours)
+        print("path_list11", path_list,"flag",flag)
         if flag:
             if cards.count(lai_zi) == 0:
                 return flag, path_list[0]
@@ -336,9 +337,17 @@ class RuleFc(Rule):
         for table_card in table_cards:
             cards_copy.extend(list(table_card)[1:-1])
         cards_copy.extend(cards)
-        print("cards_copy",cards_copy)
         flag, path_list = RuleFc.can_common_hu(cards_copy, lai_zi)
         if flag:
+            result, an_ke, an_ke_path = RuleFc.get_ke_zi_count(path_list, table_cards, lai_zi)
+            if len(result) == 4:
+                return HuType.SI_JIE_GAO, path_list
+            if an_ke == HuType.SI_AN_KE:
+                return an_ke, an_ke_path
+            if len(result) == 3:
+                return HuType.SAN_JIE_GAO, path_list
+            if an_ke == HuType.SAN_AN_KE:
+                return an_ke, an_ke_path
             if path_list.count(lai_zi) == 0:
                 return HuType.PING_HU, path_list
         return False, []
