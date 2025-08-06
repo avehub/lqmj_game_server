@@ -13,6 +13,7 @@ class RoomBJ(Room):
         room_conf.get("rule_details")["bao_ting"] = 1
         room_conf.get("rule_details")["ze_ren_ji"] = 1
         room_conf.get("rule_details")["chong_feng_ji"] = 1
+        room_conf.get("rule_details")["zi_mo_jia_bei"] = 1
         super().__init__(tid, service, room_conf)
         self.__shu_zi_ji = self.rule_detail.get("shu_zi_ji", 0)  # 数字鸡
 

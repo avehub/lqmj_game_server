@@ -11,8 +11,6 @@ from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
-from lucky_admin.const import WeightEnum
-from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
@@ -162,6 +160,7 @@ class BaseCardRoom(BaseRoom):
     async def start_next_round(self):
         """ 开始下一局 """
         self.incr_round_count()
+        # self.dealer_id = 0
         await self.async_set_room_status(RoomStatus.T_IDLE)
 
     def clear_room_round_start(self):
@@ -371,7 +370,8 @@ class BaseCardRoom(BaseRoom):
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
         for p in self.seats:
-            p.on_game_start_clear_data()
+            if p:
+                p.on_game_start_clear_data()
         await super().game_over()
 
     def get_player_ranking(self, account=None, is_round_over=False):

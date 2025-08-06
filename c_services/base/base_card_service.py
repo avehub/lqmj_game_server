@@ -19,7 +19,7 @@ class BaseCardService(BaseService):
 
     async def _on_new_match(self, uid, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
-        print("匹配",data)
+        self.log_info("匹配信息",data)
         await self.new_match(uid, data)
 
     async def new_match(self, uid, data):

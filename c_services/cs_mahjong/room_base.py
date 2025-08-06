@@ -239,7 +239,7 @@ class Room(BaseCardRoom):
             room_info["operate_seats"] = self.get_operate_seats()
             room_info["shang_ga_list"] = self.__shang_ga_list
         room_info["lai_zi"] = self.__lai_zi
-        print("房间信息", room_info)
+        # self.log_info("房间信息", room_info)
         if self.room_status == RoomStatus.T_CLOSED:
             self.log_info("房间已在关闭状态")
             return None
@@ -358,8 +358,6 @@ class Room(BaseCardRoom):
 
     def dealer_turn(self):
         """ 庄家轮转的逻辑 """
-        if self.dealer_id > 0:
-            return
         dealer = self.dealer()
         if not dealer:  # 首局随机庄
             if self.owner:
@@ -390,7 +388,6 @@ class Room(BaseCardRoom):
 
     def clear_room_round_start(self):
         super().clear_room_round_start()
-        self.__winner_list = []
         self.__win_seat_list = []
         self.__gang_hou_mo_pai = []
         self.__gang_hou_chu_pai = []
@@ -697,7 +694,6 @@ class Room(BaseCardRoom):
             if not self.__decision_sec:
                 return
             return
-        print("mo_pai_call end")
         await self.turn_to_player_chu_pai(curr_player)
 
     def calc_operates_after_mo_pai(self, p: Player):
@@ -911,9 +907,11 @@ class Room(BaseCardRoom):
         if self.flow_status not in [FlowStatus.T_IN_CHU_PAI, FlowStatus.T_IN_DI_HU_CHU_PAI,
                                     FlowStatus.T_IN_MO_PAI_CALL]:
             return
+
         self.set_flow_status(FlowStatus.T_IN_PUBLIC_OPRATE)
         chu_pai_player = self.curr_player()
         chu_pai_player.operates = []
+        self.log_info("玩家",chu_pai_player.seat_id,"出牌",self.__curr_card)
         jie_pao_count = 0
         can_hu_or_jian = 0
         can_peng_or_gang = 0
@@ -4332,3 +4330,7 @@ class Room(BaseCardRoom):
 
     def refresh_room_conf(self, service, room_conf):
         self.__init__(self.tid, service, room_conf)
+
+    def clear_room(self):
+        self.__winner_list = []
+        super().clear_room()

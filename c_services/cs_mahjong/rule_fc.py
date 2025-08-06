@@ -56,7 +56,7 @@ class RuleFc(Rule):
             single = []
             for i in card_list:
                 card_count = Rule.calc_value_count(card_list, i)
-                if card_count == 3 and i not in three:
+                if card_count >= 3 and i not in three:
                     three.append(i)
                 elif card_count == 2 and i not in two:
                     two.append(i)
@@ -233,6 +233,17 @@ class RuleFc(Rule):
             return flag, path
 
     @staticmethod
+    def get_ke_zi_count(path,table_cards,lai_zi=CardsType.LAI_ZI):
+        flat_list = []  # 创建空列表
+        for sublist in path:
+            flat_list.extend(sublist)
+        for table_card in table_cards:
+            flat_list.extend(list(table_card)[1:-1])
+        result = RuleFc.find_best_sequence(flat_list)
+        an_ke, an_ke_path = RuleFc.is_an_ke(table_cards, path, lai_zi)
+        return result,an_ke, an_ke_path
+
+    @staticmethod
     def can_hu(table_cards, cards, card=0, allow_hu_map: dict = None, lai_zi=CardsType.LAI_ZI, is_gy=False, is_wu_dui=False):
         """
         暴露给桌子对象的判胡接口
@@ -243,14 +254,9 @@ class RuleFc(Rule):
         if Rule.is_card(card) and len(cards) % 3 != 2:
             cards.append(card)
 
-        flag, path = Rule.is_jin_gou_diao(cards, lai_zi)
-        if flag == HuType.JIN_GOU_DIAO:
-            return flag,path
-
         cards_not_lai_zi = cards[:]
         lai_zi_count = Rule.remove_by_value(cards_not_lai_zi, lai_zi, -1)
-        hua_se = {c // 10 for c in cards_not_lai_zi}
-        qing_yi_se = hua_se.pop() if len(hua_se) == 1 else 0
+        qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(table_cards), deepcopy(cards), card, lai_zi)
         cards_len = len(cards)
 
         singles, two, threes, fours, _ = Rule.search_cards_by_count(cards_not_lai_zi, 1, 2, 3, 4)
@@ -288,40 +294,56 @@ class RuleFc(Rule):
             if flag:
                 return flag, path
             for path in path_list:
-                flat_list = []  # 创建空列表
 
+                result, an_ke, an_ke_path =  RuleFc.get_ke_zi_count(path,table_cards,lai_zi)
                 # 遍历每个子列表，将其元素添加到主列表
-                for sublist in path:
-                    flat_list.extend(sublist)
-                for table_card in table_cards:
-                    flat_list.extend(list(table_card)[1:-1])
-                result = RuleFc.find_best_sequence(flat_list)
-                an_ke, an_ke_path = RuleFc.is_an_ke(table_cards,path,lai_zi)
+
                 if len(result) == 4:
                     return HuType.SI_JIE_GAO, path
                 if an_ke == HuType.SI_AN_KE:
                     return an_ke,an_ke_path
                 if qing_yi_se:
                     return HuType.QING_DA_DUI,path
-                flag, path = RuleFc.is_12_jin_chai(table_cards, cards)
-                if flag:
-                    return flag, path
+                flag1, path = RuleFc.is_12_jin_chai(table_cards, cards)
+                if flag1:
+                    return flag1, path
 
                 if len(result) == 3:
                     return HuType.SAN_JIE_GAO,path
                 if an_ke == HuType.SAN_AN_KE:
                     return an_ke,an_ke_path
 
-            flag, path = Rule.is_jin_gou_diao(cards, lai_zi)
-            if flag == HuType.JIN_GOU_DIAO:
-                return flag, path
+            flag2, path = Rule.is_jin_gou_diao(cards, lai_zi)
+            if flag2 == HuType.JIN_GOU_DIAO:
+                result, an_ke, an_ke_path = RuleFc.get_ke_zi_count(path, table_cards, lai_zi)
+                if len(result) == 4:
+                    return HuType.SI_JIE_GAO, path
+                if an_ke == HuType.SI_AN_KE:
+                    return an_ke,an_ke_path
+                if len(result) == 3:
+                    return HuType.SAN_JIE_GAO,path
+                if an_ke == HuType.SAN_AN_KE:
+                    return an_ke,an_ke_path
+                return flag2, path
+            if path_list:
+                return flag, path_list[0]
+            else:
+                print("path_list",path_list,"cards",cards)
+                return flag, path_list
 
         # 平胡
-        flag, path_list = RuleFc.can_common_hu(cards, lai_zi)
+        cards_copy = []
+        for table_card in table_cards:
+            cards_copy.extend(list(table_card)[1:-1])
+        cards_copy.extend(cards)
+        print("cards_copy",cards_copy)
+        flag, path_list = RuleFc.can_common_hu(cards_copy, lai_zi)
         if flag:
             if path_list.count(lai_zi) == 0:
                 return HuType.PING_HU, path_list
         return False, []
+
+
 
 
     @staticmethod
