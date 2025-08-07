@@ -231,6 +231,7 @@ class ActivityType(BaseEnum):
     SHARE = 7, "分享"
     INFINITE_PLAY = 8, "救济金"
     LUCK_SIGN_IN = 9, "抽奖签到"
+    AUTHENTICATION = 10, "实名认证"
 
 
 

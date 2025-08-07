@@ -70,3 +70,6 @@ class GameAuthApi(BaseApi):
 class BaseWS(BaseWebsocket):
     conf = conf_srv
     conn_manager = WsConnector
+
+class SpecialApi(BaseApi):
+    decorators = []

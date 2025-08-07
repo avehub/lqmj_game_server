@@ -233,7 +233,7 @@ class RedDotType(BaseEnum):
     RD_MONOPOLY = 13, "大富翁有骰子"
     RD_MONOPOLY_FREE_DICE = 14, "大富翁免费骰子"
     RD_MONOPOLY_TASK = 15, "大富翁任务"
-    RD_SIGN_IN = 16, "可签到/累计签到达成（七日）"
+    RD_SIGN_IN = 16, "可签到/累计签到达成（每月）"
     RD_RANKING_AWARDS = 17, "境界突破奖励"
     RD_DOUYIN_REVISIT = 18, "抖音侧边栏奖励"
     RD_SIGN_IN_WK = 19, "可签到 / 累计签到达成（每周七日）"

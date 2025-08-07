@@ -124,7 +124,7 @@ class BaseRecordsGameRC(BaseCommonRC):
 
     @classmethod
     async def get_by_club_id(cls, club_id: int = None, room_id: int = None, start_time: int = None, end_time: int = None,
-                             cs_type: int = None, uid: int = None, final_score: int = None, order_field: str = None,
+                             cs_type: any = None, uid: int = None, final_score: int = None, order_field: str = None,
                              page_size: int = None, page: int = None):
         """根据茶ID馆获取 (默认七日内)战绩"""
         try:

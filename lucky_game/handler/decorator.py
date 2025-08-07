@@ -142,7 +142,7 @@ class CurrentLimiting(BaseDecorator):
         await self.conf.rds.expired(cache_key, self.exp)  # 设置键过期时间
 
         if incr_value > self.limit_times:
-            self.answer(code=self.sta_code.REQ_FREQUENT)
+            return self.answer(code=self.sta_code.REQ_FREQUENT)
 
         return await self.call_method(req, *args, **kwargs)
 

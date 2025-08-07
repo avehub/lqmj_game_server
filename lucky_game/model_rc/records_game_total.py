@@ -74,7 +74,7 @@ class RecordsGameTotalRC(BaseCommonRC):
     @classmethod
     async def get_record_total_by_filter(cls, club_id: any = None, room_id: any = None, uid: any = None, play_type: any = None,
                                          record_rid: any = None, record_tid: any = None, start_time: int = None,
-                                         end_time: int = None, cs_type: int = None, final_score: int = None,
+                                         end_time: int = None, cs_type: any = None, final_score: int = None,
                                          order_field: str = None, page: int = None, page_size: int = None,
                                          group_field: str = "record_tid"):
         """根据条件获取总局战绩列表"""
@@ -115,7 +115,10 @@ class RecordsGameTotalRC(BaseCommonRC):
             if end_time is not None:
                 query["created__lt"] = end_time
             if cs_type is not None:
-                query["cs_type"] = cs_type
+                if isinstance(cs_type, list):
+                    query["cs_type__in"] = cs_type
+                else:
+                    query["cs_type"] = cs_type
             if final_score is not None:
                 query["final_score__gte"] = final_score
             if order_field is None:
@@ -219,6 +222,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                 order_type = "DESC"
             total = 0
             sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
+            print(sql)
             if page and page_size:
                 total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field}")
                 if isinstance(total, list):

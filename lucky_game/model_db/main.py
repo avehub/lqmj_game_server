@@ -420,7 +420,7 @@ class Awards(DBModel):
 class AwardGains(DBModel):
     """ 奖励领取记录表 """
     id = fields.IntField(max_length=10, pk=True, description='领取ID')
-    reward_type = fields.SmallIntField(max_length=2, index=True, description='奖励类型:0常规 1福利码')
+    reward_type = fields.SmallIntField(max_length=2, index=True, description='奖励类型:0活动 1福利码 2任务 3邮件附件')
     type_id = fields.IntField(max_length=10, index=True, description='奖励类型ID')
     act_id = fields.IntField(max_length=10, index=True, description='活动ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')

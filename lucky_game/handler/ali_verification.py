@@ -101,7 +101,6 @@ class AliVerification:
 
         # 获取验证码信息
         code_info = await cls.conf.rds.get_hash_all(redis_key)
-        print("code_info:", code_info)
         if not code_info:
             return False, "验证码不存在或已过期"
         code_info = {k.decode('utf-8'): v.decode('utf-8') for k, v in code_info.items()}
@@ -112,8 +111,6 @@ class AliVerification:
         # 检查是否过期
         current_time = int(time.time())
         expire_time = int(code_info.get('expire_time', 0))
-        print("current_time:", current_time)
-        print("expire_time:", expire_time)
         if current_time > expire_time:
             await cls.conf.rds.drop_hash_bulk(redis_key, ['code', 'send_time', 'expire_time', 'verified', 'attempts'])
             return False, "验证码已过期"

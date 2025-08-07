@@ -434,6 +434,7 @@ class BaseUserRC(BaseCommonRC):
         union = kwargs.get(register_type)
         name = kwargs.get("nickname")
         dev_ident = kwargs.get("dev_ident")
+        phone = kwargs.get("phone")
         if register_type == cls.KEY_PHONE_CACHE:
             name = ''.join(list(union)[-4:])
         elif register_type in [cls.KEY_UNION_ID, cls.KEY_OPENID]:
@@ -444,11 +445,11 @@ class BaseUserRC(BaseCommonRC):
         else:
             name = generate_natural_random(4)
         return {
-            "avatar": SERVER_ADDR + "/resource/default/avatar.png",
             "nickname": name,
             "sex": 0,
-            # "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
-            # "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
+            "phone": phone,
+            "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('phone_openid', union, extra_str=phone)),
+            "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('phone_unionid', union, extra_str=phone)),
             # "safe_key": RngMaker.mk_str(18),
             # "valid_key": RngMaker.mk_str(16),
             # "dev_ident": dev_ident,

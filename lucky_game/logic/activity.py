@@ -1,3 +1,4 @@
+""" 活动、奖品相关逻辑处理 """
 import random
 import ast
 from typing import Union, Tuple
@@ -126,32 +127,39 @@ class Base:
                 other_awards = conf_data[random.randint(0, len(conf_data) - 1)]
         return other_awards
 
-    async def gain_awards(self, uid: int, awards: any, act_id: int = None, award_id: int = None, explain: str = "参加活动") -> bool:
+    async def gain_awards(self, uid: int, awards: any = None, act_id: int = 0, award_id: int = 0, explain: str = "参加活动",
+                          reward_type: int = 0) -> bool:
         """ 发放奖励 """
         sta = False
         field_values = await ExtraUserResourceChangesRC.change_field()
         # 奖励内容解析
+        if awards is None:
+            if award_id:
+                award_content, _ = await AwardRC.get_award_info(award_id=award_id)
+                NLogger.info(f"发放奖励完整数据：award_content={award_content}")
+                awards = award_content["rewards"]
         NLogger.info(f"发放奖励内容解析：awards={awards}")
         if awards and isinstance(awards, list):
             for award in awards:
-                reward_type = award.get("type")
-                reward_amount = award.get("amount")
-                if reward_type in field_values:
-                    NLogger.info(f"发放奖励：uid={uid}，reward_type={reward_type}，reward_amount={reward_amount}")
+                award_type = award.get("type")
+                award_amount = award.get("amount")
+                if award_type in field_values:
+                    NLogger.info(f"发放奖励：uid={uid}，award_type={award_type}，award_amount={award_amount}")
                     sta, e = await AwardGainsRC.add_gains(
                         uid,
                         act_id,
                         award_id if award_id else award.get("award_id"),
-                        0,
-                        remark={"type": reward_type, "amount": reward_amount}
+                        reward_type,
+                        remark={"type": award_type, "amount": award_amount}
                     )
+                    NLogger.info(f"发放奖励入库结果：sta={sta}，e={e}")
         else:
             NLogger.info(f"发放奖励：uid={uid}，reward_type={awards['type']}，reward_amount={awards['amount']}")
             sta, e = await AwardGainsRC.add_gains(
                 uid,
                 act_id,
                 award_id if award_id else awards["award_id"],
-                0,
+                reward_type,
                 remark={"type": awards['type'], "amount": awards['amount']}
             )
         return sta
@@ -289,7 +297,7 @@ class SignIn(Base):
         awards = await self.draw_reward(rewards["rewards"])
         NLogger.info(f"awards={awards}")
         # 发放奖励
-        gain_sta = await self.gain_awards(uid, awards, act_id, explain=activity.get("act_name"))
+        gain_sta = await self.gain_awards(uid, awards=awards, act_id=act_id, explain=activity.get("act_name"))
         if not gain_sta:
             return False, "奖励发放失败", {}
         # 自动领取
@@ -368,7 +376,7 @@ class SignIn(Base):
                 continue
             if rule["content"]["day"] == current_value:
                 # 发放奖励
-                sta = await self.gain_awards(uid, rule["content"]["rewards"], act_id=act_id, award_id=rule["award_id"])
+                sta = await self.gain_awards(uid, awards=rule["content"]["rewards"], act_id=act_id, award_id=rule["award_id"])
                 break
         return sta
 
@@ -425,7 +433,7 @@ class Package(Base):
         awards = rewards["rewards"]
         NLogger.info(f"awards={awards}")
         # 发放奖励
-        gain_sta = await self.gain_awards(uid, awards, act_id, award_id=award_id, explain=activity.get("act_name"))
+        gain_sta = await self.gain_awards(uid, awards=awards, act_id=act_id, award_id=award_id, explain=activity.get("act_name"))
         if not gain_sta:
             return False, "奖励发放失败", {}
         # 自动领取
@@ -471,7 +479,7 @@ class Share(Base):
             if not condition_awards:
                 return False, "奖励配置错误", {}
             # 发放奖励
-            gain_sta = await self.gain_awards(uid, condition_awards, act_id, award_id=award_id, explain=activity.get("act_name"))
+            gain_sta = await self.gain_awards(uid, awards=condition_awards, act_id=act_id, explain=activity.get("act_name"))
             if not gain_sta:
                 return False, "奖励发放失败", {}
             # 自动领取

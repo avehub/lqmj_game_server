@@ -9,6 +9,7 @@ from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem
 from c_services.const.cs_enum_const import CmdWorkers
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
+from lucky_game.logic.activity import Base
 
 
 class BaseUserInfo(GameAuthApi):
@@ -87,10 +88,9 @@ class Certification(BaseUserInfo):
             self.answer(self.sta_code.HAD_CERTIFICATED)
 
         status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
-        self.log_info("实名结果：", result)
+        self.log_info("实名结果：", "status", status, "result", result)
         if not status:
             self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
-
         pi = result.get('data').get('result').get('pi')
         sex = UtilsTool.determine_gender(id_card)
         new_info = {
@@ -101,6 +101,8 @@ class Certification(BaseUserInfo):
         if pi:
             new_info["pi"] = pi
         p_info = await BaseUserRC.update_info(u_info, new_info)
+        # 领取实名认证礼包
+        await Base().gain_awards(u_info.get("uid"), award_id=18, act_id=6)
         return self.format_response_info(p_info)
 
 
