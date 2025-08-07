@@ -43,6 +43,7 @@ class RoomBJ(Room):
                 operates.extend(self.calc_operates_in_tian_ting(p, True))
         else:
             operates.extend(self.calc_operates_in_tian_ting(p))
+        p.operates = operates
         return operates
 
     def check_hu_and_ting(self, p: Player, result, can_gang_list):

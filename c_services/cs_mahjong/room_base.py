@@ -337,19 +337,20 @@ class Room(BaseCardRoom):
 
         all_cards = self.poker.deal_cards(self.max_player_count, self.deal_cards_count)
         data = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for i, p in enumerate(self.seats):
             p.cards = all_cards[i]
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c
                 data["mo_pai"] = c
             data["left_count"] = self.poker.left_count
             data_model = S2CDealCardsMahjong.pb_model(**data)
+            self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
         if self.is_exchange_three():
@@ -524,11 +525,11 @@ class Room(BaseCardRoom):
 
         data = {}
         cards_count = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for p in self.seats:
             data["mo_pai"] = 0
             p.sort_cards()
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c
@@ -2490,7 +2491,10 @@ class Room(BaseCardRoom):
             p.tian_ting = 1
             p.can_tian_ting = -1
             allow_hu_map = {HuType.QI_DUI: True, HuType.DI_LONG_QI: False}
-            _, tian_ting_cards = Rule.which_cards_to_play_can_tian_ting(p.table_cards, p.cards, allow_hu_map)
+            if self.play_type != PlayType.ZUN_YI_LAI_ZI:
+                _, tian_ting_cards = Rule.which_cards_to_play_can_tian_ting(p.table_cards, p.cards, allow_hu_map)
+            else:
+                _, tian_ting_cards = Rule.get_tian_ting_cards(p.table_cards, p.cards, p.que, lai_zi=self.__lai_zi)
             result["tian_ting"] = p.tian_ting
             data_model = S2CTianTingInfo.pb_model(**result)
             await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model, exclude_uid=p.uid)
@@ -2556,6 +2560,7 @@ class Room(BaseCardRoom):
             "left_count": self.poker.left_count,
         }
         for p in self.seats:
+
             if self.__four_card_bao_ting and p.cards_len < 13:
                 continue
             data["operates"] = self.get_tian_ting_operates(p)
@@ -2579,7 +2584,8 @@ class Room(BaseCardRoom):
             if can_hu:
                 if p.cards_len == self.deal_cards_count + 1:
                     operates.append(ActionType.ACTION_TYPE_HU)
-                    operates.append(ActionType.ACTION_TYPE_TIAN_TING)
+                    if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
+                        operates.append(ActionType.ACTION_TYPE_TIAN_TING)
                 else:
                     if not self.__bi_men_yi_shou:
                         operates.append(ActionType.ACTION_TYPE_HU)

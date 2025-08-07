@@ -73,7 +73,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__record_id = 0
 
-        self.test()
 
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
@@ -101,20 +100,20 @@ class RoomFCZJ(BaseLeisureRoom):
         self.poker.deal_good_cards(self.max_player_count)
         all_cards = self.poker.deal_cards(self.max_player_count, self.__deal_cards_count)
         data = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for i, p in enumerate(self.seats):
             p.cards = all_cards[i]
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c
                 data["mo_pai"] = c
             data["left_count"] = self.poker.left_count
             data_model = S2CDealCardsMahjong.pb_model(**data)
-            print("玩家手牌", p.cards, "座位号", p.seat_id)
+            self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
         self.call_flow(1, self.start_ding_que)
 
@@ -405,6 +404,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__player_actions.clear()
         if player.card_is_lock():
             # 若玩家起手能胡选择天听不锁牌，此处再锁牌
+            print("player.ting_list",player.ting_list)
             if len(player.ting_list) == 0:
                 allow_hu_map = {HuType.DI_LONG_QI: True, HuType.JIN_GOU_DIAO: True,
                                 HuType.QI_DUI: True}
@@ -1122,6 +1122,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 temp_cards = [c for c in p.cards if c != self.__curr_card]
                 ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
                 # 一致的话可以杠
+                print("ting_list1",ting_list1,"p.ting_list",p.ting_list)
                 if ting_list1 == p.ting_list:
                     result.append(ActionType.ACTION_TYPE_MING_GANG)
         else:
@@ -2092,8 +2093,8 @@ class RoomFCZJ(BaseLeisureRoom):
                     hand_card = deepcopy(p.cards)
                     hand_card.remove(p.mo_pai)
                     table_cards = deepcopy(p.table_cards)
-                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, p.que)
-                    if len(p.cards) == 1 and self.__lai_zi in p.cards:
+                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, self.__lai_zi)
+                    if len(p.cards) == 2 and self.__lai_zi in p.cards:
                         result.append(ActionType.ACTION_TYPE_MEN)
                     elif hu_type == HuType.PING_HU and not p.is_lock:
                         print("摸牌能胡 没锁牌，机器人不平胡去做大牌")
@@ -2119,6 +2120,7 @@ class RoomFCZJ(BaseLeisureRoom):
                         temp_cards = [c for c in p.cards if c != gang_card]
                         # 听牌一致的话可以杠
                         ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
+                        print("ting_list12",ting_list1,"p.ting_list",p.ting_list)
                         if ting_list1 and ting_list1 == p.ting_list:
                             can_gang_list.append(gang_card)
                             len(can_gang_list) == 1 and result.append(ActionType.ACTION_TYPE_AN_GANG)
@@ -2957,12 +2959,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.dealer_id = dealer
         return
 
-    @staticmethod
-    def test():
-        hand_cards = [11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 38, 39, 51, 37]
-        flag, path_list = RuleFc.can_common_hu(hand_cards, 51)
-        print("flag",flag,"path_list",path_list)
-
     def clear_round_over(self):
         self.__recharge_wait = 0
         self.__wait_recharge_seats = []
@@ -2994,15 +2990,19 @@ class RoomFCZJ(BaseLeisureRoom):
         score_rank_map = {}
         for idx, score in enumerate(sorted_scores):
             score_rank_map[score] = idx + 1
+        final_result = {
+            "level_desc": self.level_desc
+        }
 
         for idx, p in enumerate(self.seats):
             if not p or p.is_robot:
                 continue
             num = 1 if idx == 0 else 0
+            final_result.update(p.game_over_data)
             final_ranking = score_rank_map[p.round_score]
             final_grade = 1 if final_ranking == 1 else 0
             over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.round_score >= 0, p.round_score
-                                                                            , final_ranking, final_grade, p.game_over_data, num)
+                                                                            , final_ranking, final_grade, final_result, num)
             self.log_info("休闲场总结算战绩插入", over_record)
 
     @staticmethod
@@ -3012,14 +3012,35 @@ class RoomFCZJ(BaseLeisureRoom):
             if total_score > p.max_multiple:
                 p.max_multiple = total_score
 
-            # 统一处理牌型分数逻辑
             if base_score == 0:
                 # 当基础分为0时，用额外分比较牌型
                 if extra_score > p.hu_type_score:
                     p.hu_type_score = extra_score
-                    p.max_hu_type = extra_hu_list[0]  # 使用明确的首个元素
+                    p.max_hu_type = extra_hu_list[0]
             else:
                 # 基础分不为0时直接比较
                 if base_score > p.hu_type_score:
                     p.hu_type_score = base_score
                     p.max_hu_type = hu_type
+
+
+    @staticmethod
+    def compare_hu_type(last_hu_type, curr_hu_type):
+        map_copy = PAI_XING_SCORE_MAP.copy()
+        map_copy.update({
+            HuType.SHI_BA_LUO_HAN: 24,  # 十八罗汉
+            HuType.SI_JIE_GAO: 24,  # 四节高
+            HuType.SI_AN_KE: 16,  # 四暗刻
+            HuType.SHI_ER_JIN_CHAI: 12,  # 十二金钗
+            HuType.SAN_JIE_GAO: 12,  # 三节高
+            HuType.SAN_AN_KE: 8,  # 三暗刻
+            HuType.JIN_GOU_DIAO: 8,  # 金钩钓
+        })
+        last_base_score = map_copy[last_hu_type] or 0
+        curr_base_score = map_copy[curr_hu_type] or 0
+        if last_base_score >= curr_base_score:
+            return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
+        else:
+            return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
+
+

@@ -75,13 +75,13 @@ class HuType(BaseEnum):
     PING_HU = 101, "平胡"
     DA_DUI_ZI = 102, "大对子"
     QI_DUI = 103, "七对"
-    LONG_QI_DUI = 104, "龙七对(5个对子 + 1刻)"
+    LONG_QI_DUI = 104, "龙七对"
     DI_LONG_QI = 105, "地龙七(5个对子 + 1碰)"
     QING_YI_SE = 106, "清一色"
     QING_DA_DUI = 107, "清大对"
     QING_QI_DUI = 108, "清七对"
     QING_DI_LONG = 109, "清地龙"
-    QING_LONG_BEI = 110, "清龙对(清龙背|清龙七对)"
+    QING_LONG_BEI = 110, "清龙背"
     DOUBLE_DI_LONG_QI = 111, "双地龙七"
     THREE_DI_LONG_QI = 112, "三地龙七"
     JIN_GOU_DIAO = 113, "金钩钓"
@@ -96,12 +96,12 @@ class HuType(BaseEnum):
     QING_THREE_LONG_QI = 120, "清三龙,遵义一筒赖子"
 
     #发财捉鸡
-    SHI_BA_LUO_HAN = 121, "十八罗汉（知行合一）"
+    SHI_BA_LUO_HAN = 121, "知行合一"
     SI_JIE_GAO = 122, "四节高"
-    SI_AN_KE = 123, "四暗刻（四喜财）"
-    SHI_ER_JIN_CHAI = 124, "十二金钗（八音坐唱）"
+    SI_AN_KE = 123, "四喜财"
+    SHI_ER_JIN_CHAI = 124, "八音坐唱"
     SAN_JIE_GAO = 125, "三节高"
-    SAN_AN_KE = 126, "三暗刻（三星照）"
+    SAN_AN_KE = 126, "三星照"
 
     # 毕节麻将
     YIN_GOU_DIAO = 131, "银勾钓"

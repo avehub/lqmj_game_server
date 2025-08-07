@@ -24,7 +24,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__room_type = room_conf.get("room_type") or RoomType.COMMON
         self.__play_type = room_conf.get("play_type") or 1
         self.__level = room_conf.get("level") or ''
-        self.__level_desc = room_conf.get("desc") or ''
+        self.__level_desc = room_conf.get("level_desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
 
         self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
