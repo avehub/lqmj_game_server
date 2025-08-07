@@ -337,13 +337,13 @@ class Room(BaseCardRoom):
 
         all_cards = self.poker.deal_cards(self.max_player_count, self.deal_cards_count)
         data = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for i, p in enumerate(self.seats):
             p.cards = all_cards[i]
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c
@@ -524,11 +524,11 @@ class Room(BaseCardRoom):
 
         data = {}
         cards_count = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for p in self.seats:
             data["mo_pai"] = 0
             p.sort_cards()
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c

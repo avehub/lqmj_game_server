@@ -74,10 +74,14 @@ class BasePoker:
             try:
                 # 查找目标牌位置（从当前游标开始搜索）
                 idx = self.__cards.index(card, self.__cursor)
-                # 移除并返回该牌
-                c = self.__cards.pop(idx)
-                # 牌总数减1（若需要）
-                self.__cards_count -= 1
+
+                if self.__cursor >= self.__cards_count:
+                    return 0
+
+                # 交换目标牌与其后一位（多重赋值实现交换）
+                self.__cards[idx], self.__cards[self.__cursor] = self.__cards[self.__cursor], self.__cards[idx]
+                c = self.__cards[self.__cursor]
+                self.__cursor += 1
                 return c
             except ValueError:  # 目标牌不存在
                 return 0
@@ -222,7 +226,7 @@ class BasePoker:
         all_cards_map = {}
         for c in self.all_cards:
             all_cards_map[c] = all_cards_map.get(c, 0) + 1
-
+        print("all_cards_map",all_cards_map)
         all_set_cards_map = {}
         for c in all_set_cards + set_mo_cards:
             all_set_cards_map[c] = all_set_cards_map.get(c, 0) + 1

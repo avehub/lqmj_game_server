@@ -1136,7 +1136,7 @@ class Rule(metaclass=NoInstances):
             return False, []
         cards = list(cards)
         lai_zi_count = Rule.remove_by_value(cards, lai_zi, -1)
-        count_list, singles, two, threes, fours = Rule.search_cards_by_count(cards, 1, 2, 3, 4)
+        singles, two, threes, fours,_= Rule.search_cards_by_count(cards, 1, 2, 3, 4)
         singles_len = len(singles)
         threes_len = len(threes)
         fours_len = len(fours)
@@ -1795,6 +1795,10 @@ class Rule(metaclass=NoInstances):
                     all_path.append(path)
                     path = []
                     lz_count = lai_zi_count
+
+                if lz_count >=2 and not all_path:
+                    path.extend(pub_path)
+                    all_path.append(path)
 
                 return HuType.DA_DUI_ZI, all_path
 

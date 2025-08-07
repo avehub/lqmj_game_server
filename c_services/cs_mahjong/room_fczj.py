@@ -73,7 +73,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__record_id = 0
 
-        self.test()
+        # self.test()
 
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
@@ -101,13 +101,13 @@ class RoomFCZJ(BaseLeisureRoom):
         self.poker.deal_good_cards(self.max_player_count)
         all_cards = self.poker.deal_cards(self.max_player_count, self.__deal_cards_count)
         data = {}
+        c = self.poker.pop()  # 庄占起手，再摸一张
         for i, p in enumerate(self.seats):
             p.cards = all_cards[i]
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
             if p.seat_id == self.dealer_id:
-                c = self.poker.pop()  # 庄占起手，再摸一张
                 self.__curr_card = c
                 p.rev_card(c)
                 p.mo_pai = c
@@ -1122,6 +1122,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 temp_cards = [c for c in p.cards if c != self.__curr_card]
                 ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
                 # 一致的话可以杠
+                print("ting_list1",ting_list1,"p.ting_list",p.ting_list)
                 if ting_list1 == p.ting_list:
                     result.append(ActionType.ACTION_TYPE_MING_GANG)
         else:
@@ -2093,7 +2094,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     hand_card.remove(p.mo_pai)
                     table_cards = deepcopy(p.table_cards)
                     hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, p.que)
-                    if len(p.cards) == 1 and self.__lai_zi in p.cards:
+                    if len(p.cards) == 2 and self.__lai_zi in p.cards:
                         result.append(ActionType.ACTION_TYPE_MEN)
                     elif hu_type == HuType.PING_HU and not p.is_lock:
                         print("摸牌能胡 没锁牌，机器人不平胡去做大牌")
@@ -2119,6 +2120,7 @@ class RoomFCZJ(BaseLeisureRoom):
                         temp_cards = [c for c in p.cards if c != gang_card]
                         # 听牌一致的话可以杠
                         ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
+                        print("ting_list12",ting_list1,"p.ting_list",p.ting_list)
                         if ting_list1 and ting_list1 == p.ting_list:
                             can_gang_list.append(gang_card)
                             len(can_gang_list) == 1 and result.append(ActionType.ACTION_TYPE_AN_GANG)
@@ -2957,11 +2959,14 @@ class RoomFCZJ(BaseLeisureRoom):
         self.dealer_id = dealer
         return
 
-    @staticmethod
-    def test():
-        hand_cards = [11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 38, 39, 51, 37]
-        flag, path_list = RuleFc.can_common_hu(hand_cards, 51)
-        print("flag",flag,"path_list",path_list)
+    # @staticmethod
+    # def test():
+    #     hand_cards = [51, 51, 23, 23, 23, 25, 25, 25]
+    #     cards_not_lai_zi = hand_cards[:]
+    #     lai_zi_count = RuleFc.remove_by_value(cards_not_lai_zi, 51, -1)
+    #     singles, two, threes, fours, _ = RuleFc.search_cards_by_count(cards_not_lai_zi, 1, 2, 3, 4)
+    #     flag, path_list = RuleFc.is_da_dui_zi_new(hand_cards, 51, lai_zi_count, singles, two, threes, fours)
+    #     print(flag, path_list)
 
     def clear_round_over(self):
         self.__recharge_wait = 0

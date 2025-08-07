@@ -254,6 +254,19 @@ class RuleFc(Rule):
         if Rule.is_card(card) and len(cards) % 3 != 2:
             cards.append(card)
 
+        def lai_zi_2_hong_zhong(value):
+            if value == lai_zi:
+                return CardsType.LAI_ZI
+            return value
+
+        def hong_zhong_2_lai_zi(value):
+            if value == CardsType.LAI_ZI:
+                return lai_zi
+            return value
+
+        if lai_zi != CardsType.LAI_ZI:
+            cards = list(map(lai_zi_2_hong_zhong, cards))
+
         cards_not_lai_zi = cards[:]
         lai_zi_count = Rule.remove_by_value(cards_not_lai_zi, lai_zi, -1)
         qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(table_cards), deepcopy(cards), card, lai_zi)
@@ -287,7 +300,6 @@ class RuleFc(Rule):
 
             # 大对子
         flag, path_list = Rule.is_da_dui_zi_new(cards, lai_zi, lai_zi_count, singles, two, threes, fours)
-        print("path_list11", path_list,"flag",flag)
         if flag:
             if cards.count(lai_zi) == 0:
                 return flag, path_list[0]
@@ -333,19 +345,19 @@ class RuleFc(Rule):
                 return flag, path_list
 
         # 平胡
-        cards_copy = []
-        for table_card in table_cards:
-            cards_copy.extend(list(table_card)[1:-1])
-        cards_copy.extend(cards)
-        flag, path_list = RuleFc.can_common_hu(cards_copy, lai_zi)
+        flag, path_list = RuleFc.can_common_hu(cards, lai_zi)
+        hu_path = list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path_list))
+        print("平胡",hu_path)
         if flag:
-            result, an_ke, an_ke_path = RuleFc.get_ke_zi_count(path_list, table_cards, lai_zi)
+            result, an_ke, an_ke_path = RuleFc.get_ke_zi_count(hu_path, table_cards, lai_zi)
             if len(result) == 4:
                 return HuType.SI_JIE_GAO, path_list
             if an_ke == HuType.SI_AN_KE:
                 return an_ke, an_ke_path
             if len(result) == 3:
                 return HuType.SAN_JIE_GAO, path_list
+            if qing_yi_se:
+                return HuType.QING_YI_SE, path_list
             if an_ke == HuType.SAN_AN_KE:
                 return an_ke, an_ke_path
             if path_list.count(lai_zi) == 0:
