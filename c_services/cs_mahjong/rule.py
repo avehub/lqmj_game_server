@@ -782,6 +782,47 @@ class Rule(metaclass=NoInstances):
 
         return False, tian_ting_cards
 
+    @staticmethod
+    def get_tian_ting_cards(table_cards, cards, que=0, lai_zi=CardsType.LAI_ZI):
+        """
+        打出哪些牌后能保证天听  此接口必须在桌子里先判断没出过牌
+        返回打出哪些牌后剩余牌保持叫牌的 牌列表
+        """
+        tian_ting_cards = []
+        cards_copy = deepcopy(cards)
+        cards_copy.sort()
+        if que > 0:
+            que_cards = []
+            for c in cards_copy:
+                if Rule.get_suit(c) == que:
+                    que_cards.append(c)
+
+            if que_cards:
+                return True, que_cards
+
+        if len(cards) == 13:
+            can_hu = Rule.only_can_hu(table_cards, cards_copy, card=lai_zi, lai_zi=lai_zi)
+            if can_hu:
+                return True, tian_ting_cards
+        c = 0
+        for card in cards_copy:
+            if c == card:
+                continue
+            c = card
+            if card in tian_ting_cards:
+                tian_ting_cards.append(card)
+                continue
+            tian_ting_hand_cards = deepcopy(cards)
+            tian_ting_hand_cards.remove(card)
+            can_hu = Rule.only_can_hu(table_cards, tian_ting_hand_cards, card=lai_zi, lai_zi=lai_zi)
+            if can_hu:
+                tian_ting_cards.append(card)
+
+        if len(tian_ting_cards) > 0:
+            return True, tian_ting_cards
+
+        return False, []
+
 
     @staticmethod
     def can_ting_pai(table_cards, hand_cards, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI, is_gy=False, is_wu_dui=False):

@@ -281,7 +281,7 @@ class RoomZY(RoomBJ):
                 continue
             if p.seat_id in self.shao_ji_gang_seats:
                 continue
-            p.calc_all_ji_pai(self.default_ji, fan_bird_list, self.man_tang_ji, False)  # 计算玩家有几个鸡牌
+            p.calc_all_ji_pai(self.default_ji, fan_bird_list, self.man_tang_ji, include_hand_card = False)  # 计算玩家有几个鸡牌
             p_ji_cards = p.ji_pai[:]  # list
             is_winner = p in self.winner_list
             p_hand_ji = p.calc_hand_ji_by_lai_zi(

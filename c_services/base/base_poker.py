@@ -117,7 +117,6 @@ class BasePoker:
 
         cards_pool = self.CARDS_ENUM.all_cards().copy()
         result_dict = dict(Counter(cards_pool)).copy()
-        print("result_dict",result_dict)
 
         players_hands = [[] for _ in range(player_count + 1)]
         for player_id in range(player_count):
@@ -377,7 +376,6 @@ class BasePoker:
                 first_match = next((num for num in dz_cards if (num // 10) % 10 == combo_suit and num % 10 >= dui_zi), None)
             result.extend([first_match]*2)
 
-        print("result", result)
         return result
 
     def has_cards(self, cards):

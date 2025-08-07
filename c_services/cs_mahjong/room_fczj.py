@@ -73,7 +73,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__record_id = 0
 
-        # self.test()
 
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
@@ -114,7 +113,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 data["mo_pai"] = c
             data["left_count"] = self.poker.left_count
             data_model = S2CDealCardsMahjong.pb_model(**data)
-            print("玩家手牌", p.cards, "座位号", p.seat_id)
+            self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
         self.call_flow(1, self.start_ding_que)
 
@@ -405,6 +404,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__player_actions.clear()
         if player.card_is_lock():
             # 若玩家起手能胡选择天听不锁牌，此处再锁牌
+            print("player.ting_list",player.ting_list)
             if len(player.ting_list) == 0:
                 allow_hu_map = {HuType.DI_LONG_QI: True, HuType.JIN_GOU_DIAO: True,
                                 HuType.QI_DUI: True}
@@ -2959,15 +2959,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.dealer_id = dealer
         return
 
-    # @staticmethod
-    # def test():
-    #     hand_cards = [51, 51, 23, 23, 23, 25, 25, 25]
-    #     cards_not_lai_zi = hand_cards[:]
-    #     lai_zi_count = RuleFc.remove_by_value(cards_not_lai_zi, 51, -1)
-    #     singles, two, threes, fours, _ = RuleFc.search_cards_by_count(cards_not_lai_zi, 1, 2, 3, 4)
-    #     flag, path_list = RuleFc.is_da_dui_zi_new(hand_cards, 51, lai_zi_count, singles, two, threes, fours)
-    #     print(flag, path_list)
-
     def clear_round_over(self):
         self.__recharge_wait = 0
         self.__wait_recharge_seats = []
@@ -3017,14 +3008,35 @@ class RoomFCZJ(BaseLeisureRoom):
             if total_score > p.max_multiple:
                 p.max_multiple = total_score
 
-            # 统一处理牌型分数逻辑
             if base_score == 0:
                 # 当基础分为0时，用额外分比较牌型
                 if extra_score > p.hu_type_score:
                     p.hu_type_score = extra_score
-                    p.max_hu_type = extra_hu_list[0]  # 使用明确的首个元素
+                    p.max_hu_type = extra_hu_list[0]
             else:
                 # 基础分不为0时直接比较
                 if base_score > p.hu_type_score:
                     p.hu_type_score = base_score
                     p.max_hu_type = hu_type
+
+
+    @staticmethod
+    def compare_hu_type(last_hu_type, curr_hu_type):
+        map_copy = PAI_XING_SCORE_MAP.copy()
+        map_copy.update({
+            HuType.SHI_BA_LUO_HAN: 24,  # 十八罗汉
+            HuType.SI_JIE_GAO: 24,  # 四节高
+            HuType.SI_AN_KE: 16,  # 四暗刻
+            HuType.SHI_ER_JIN_CHAI: 12,  # 十二金钗
+            HuType.SAN_JIE_GAO: 12,  # 三节高
+            HuType.SAN_AN_KE: 8,  # 三暗刻
+            HuType.JIN_GOU_DIAO: 8,  # 金钩钓
+        })
+        last_base_score = map_copy[last_hu_type] or 0
+        curr_base_score = map_copy[curr_hu_type] or 0
+        if last_base_score >= curr_base_score:
+            return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
+        else:
+            return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
+
+
