@@ -2093,7 +2093,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     hand_card = deepcopy(p.cards)
                     hand_card.remove(p.mo_pai)
                     table_cards = deepcopy(p.table_cards)
-                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, p.que)
+                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, self.__lai_zi)
                     if len(p.cards) == 2 and self.__lai_zi in p.cards:
                         result.append(ActionType.ACTION_TYPE_MEN)
                     elif hu_type == HuType.PING_HU and not p.is_lock:
@@ -2990,15 +2990,19 @@ class RoomFCZJ(BaseLeisureRoom):
         score_rank_map = {}
         for idx, score in enumerate(sorted_scores):
             score_rank_map[score] = idx + 1
+        final_result = {
+            "level_desc": self.level_desc
+        }
 
         for idx, p in enumerate(self.seats):
             if not p or p.is_robot:
                 continue
             num = 1 if idx == 0 else 0
+            final_result.update(p.game_over_data)
             final_ranking = score_rank_map[p.round_score]
             final_grade = 1 if final_ranking == 1 else 0
             over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.round_score >= 0, p.round_score
-                                                                            , final_ranking, final_grade, p.game_over_data, num)
+                                                                            , final_ranking, final_grade, final_result, num)
             self.log_info("休闲场总结算战绩插入", over_record)
 
     @staticmethod
