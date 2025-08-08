@@ -6,7 +6,7 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem
-from c_services.const.cs_enum_const import CmdWorkers
+from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.logic.activity import Base
@@ -110,10 +110,10 @@ class FetchRedDotsByOpportunity(GameAuthApi):
     """根据时机拉取红点"""
 
     async def get(self, req: Request, **kwargs):
-        rd_enum = self.check_int(req.args.get("rd_enum"), require=True, p_name="rd_enum")
+        rd_enum = self.check_int(req.args.get("rd_enum"), require=False, p_name="rd_enum")
         # 1.批量获取红点（前端确定WS已经建立连接之后调用）
         # 该列表只能客户端在某些时机调用
-        rd_type_list = RED_DOTS_OPPORTUNITY_MAP.get(rd_enum)
+        rd_type_list = rd_enum or RedDotType.all_values()
         if not rd_type_list:
             self.answer(hint="ok")
 

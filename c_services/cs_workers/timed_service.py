@@ -11,9 +11,9 @@ from lucky_admin.model_db.main import RecordsAdminTimedTask
 from lucky_game.const import SeasonStatus
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.handler.douyin import DouYin
-from lucky_game.model_db.main import RecordsUserRankingHistory
-from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
-from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
+# from lucky_game.model_db.main import RecordsUserRankingHistory
+# from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
+# from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
@@ -81,8 +81,8 @@ class TimedService():
 
         # 1.从00:00点，30分钟刷新排行榜数据：00: 30, 01:00, 01:30...
         # self.__scheduler.add_cron_job(self.__order_do_tasks, hour='0-23', minute='0/30')
-        self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')  # 每小时
-        self.__scheduler.add_cron_job(self.__reset_ranking_score, minute='*/3')  # 每3分钟执行一次
+        # self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')  # 每小时
+        # self.__scheduler.add_cron_job(self.__reset_ranking_score, minute='*/3')  # 每3分钟执行一次
 
         # self.__scheduler.add_cron_job(self.__stats_juliang_ads_data, minute='*/3')  # 每3分钟执行一次测试
 
@@ -95,11 +95,11 @@ class TimedService():
         # 4.刷新机器人排位分数分  2小时刷新一次
         # 0-23/2 表示从0点到23点的每一小时，每隔2小时执行一次任务。
         # self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23/2')
-        self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23', minute='0/30')  # 半小时刷一次
+        # self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23', minute='0/30')  # 半小时刷一次
         # self.__scheduler.add_interval_job(self.__refresh_robot_ranking_info, seconds=5)
 
         # 5.数据统计任务，每天0点过后执行
-        self.__scheduler.add_cron_job(self.__stats_data_tasks, hour=0, minute=0)  # 每天执行一次
+        # self.__scheduler.add_cron_job(self.__stats_data_tasks, hour=0, minute=0)  # 每天执行一次
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, minute='*/3')  # 每5分钟执行一次 测试
 
     async def __stats_data_tasks(self):

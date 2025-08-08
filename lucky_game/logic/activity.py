@@ -15,25 +15,6 @@ from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
 
 
-async def atc_frequency(uid: int, act_id: int = None, start_date: int = None, end_date: int = None) -> int:
-    """ 获取用户已签到天数 """
-    if start_date is None:
-        start_date, _ = await CommonApi.get_time_range("month")
-    if end_date is None:
-        _, end_date = await CommonApi.get_time_range("month")
-    # 次数
-    sta, count = await LogUserActivityRC.activity_frequency(
-        uid=uid,
-        act_id=act_id,
-        start_time=start_date,
-        end_time=end_date,
-        count=True
-    )
-    if not sta:
-        count = 0
-    return count
-
-
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
     """活动行为记录"""
     # 用户行为记录
@@ -47,6 +28,7 @@ async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pa
 
 
 async def act_count(uid: int, act_id: int, period: str):
+    """ 获取用户已参与活动次数 """
     start_time, end_time = await CommonApi.get_time_range(period)
     sta, signed = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
                                                              end_time=end_time, count=True)
@@ -444,9 +426,10 @@ class Package(Base):
         return True, "成功", {"gain_awards": [awards]}
 
     async def get_progress(self, award_id: int):
-        status = time_status = -1
-        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=14)
-        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=18, end_hour=21)
+        status = -1
+        time_status = -1
+        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=13)
+        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=18, end_hour=20)
         now = tool_dt.cur_time()
         if award_id == 14:
             if am_range_start <= now <= am_range_end:
@@ -473,6 +456,7 @@ class Share(Base):
         # 检查今日是否已领取
         sta, count = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, pay_type=pay_type,
                                                           start_time=range_start, end_time=range_end, count=True)
+        awards = []
         if sta and count < join_limit_day:
             _, condition_awards = await self.act_by_awards(uid, activity)
             NLogger.info(f"rewards={condition_awards}")
@@ -483,11 +467,24 @@ class Share(Base):
             if not gain_sta:
                 return False, "奖励发放失败", {}
             # 自动领取
+            award_id = condition_awards[0].get("award_id")
             await self.give_awards(uid, award_id, act_id)
             # 更新记录
             await self.up_act_progress(uid, act_id, act_type)
             await atc_behavior(uid, act_id, act_type, award_type, pay_type)
-        return True, "成功", {"gain_awards": [awards]}
+            awards = condition_awards[0]["content"]["rewards"]
+        return True, "成功", {"gain_awards": awards}
+
+
+class InfinitePlay(Base):
+    """ 救济金 """
+    async def handler(self, activity: dict, uid: int, award_type: int):
+        """ 处理救济金活动 """
+        act_type = activity.get("act_type")
+        act_id = activity.get("act_id")
+        pay_type = PayType.BY_FREE
+
+        return True, "成功", {"gain_awards": []}
 
 
 

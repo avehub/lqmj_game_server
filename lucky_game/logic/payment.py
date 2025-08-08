@@ -135,12 +135,12 @@ class PaymentLogic:
         else:
             # 支付成功校验
             order, msg = await OrderRC.get_order_info(order_id)
-            if not order or order.get("status") != OrderStatus.PAID.val:
+            if not order or order.get("status") != OrderStatus.PAID:
                 return False, "订单不存在或支付超时"
             # 修改订单状态
             order_sta, e = await OrderRC.up_order(
                 {
-                    "status": OrderStatus.PAY_SUCCESS.val
+                    "status": OrderStatus.PAID
                 },
                 order_id
             )

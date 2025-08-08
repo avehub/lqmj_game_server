@@ -224,7 +224,7 @@ class RecordsGameTotalRC(BaseCommonRC):
             sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
             print(sql)
             if page and page_size:
-                total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field}")
+                total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} {order_type}")
                 if isinstance(total, list):
                     total = len(total)
                 if total > 0:

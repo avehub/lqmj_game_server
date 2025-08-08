@@ -55,7 +55,7 @@ class MailsOperateUser(GameAuthApi):
             self.log_info(uid, f'邮件{ot_enum.phrase}操作结果 {sta}')
             if not sta:
                 return self.answer(code=self.sta_code.FAIL, hint=msg)
-            return self.answer(data=up_goods, hint='OK!')
+            return self.answer(data=up_goods if opt_type == MailOpType.PULL else [])
 
     async def mails_read(self, _, mail_id, mail_data):
         if mail_data.get('mail_sta') == MailSta.READ:
@@ -129,7 +129,7 @@ class MailsOperateOneClick(GameAuthApi):
             self.log_info(uid, f'邮件{ot_enum.phrase}一键操作结果 {sta}')
             if not sta:
                 return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer(data=data)
+        return self.answer(data=data if opt_type == MailOpType.PULL else [])
 
     async def mails_del_auto(self, _, mail_data):
         update_mail = []

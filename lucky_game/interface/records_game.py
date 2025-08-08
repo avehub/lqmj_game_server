@@ -1,6 +1,8 @@
 """
 游戏战绩相关接口
 """
+import ast
+
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
@@ -9,7 +11,8 @@ from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from common.public.enum_const import ServiceEnum
 from datetime import datetime, timedelta
-import ast
+from c_services.cs_mahjong.room_fczj import RoomFCZJ
+from c_services.cs_mahjong.const import HuType
 
 
 class UserRecords(GameAuthApi):
@@ -142,7 +145,14 @@ class UserAggregateRanks(GameAuthApi):
             end_time=end_time,
             cs_type=cs_type,
         )
-        score = win = fail = total = grade = max_multiple = max_hu_type = 0
+        score = 0
+        win = 0
+        fail = 0
+        total = 0
+        grade = 0
+        max_multiple = 0
+        max_hu_type = HuType.PING_HU
+        max_hu_name = ""
         if data:
             for item in data:
                 total += 1
@@ -154,7 +164,8 @@ class UserAggregateRanks(GameAuthApi):
                 else:
                     fail += 1
                 max_multiple = max(max_multiple, item["final_result"].get("max_multiple", 0))
-                max_hu_type = max(max_hu_type, item["final_result"].get("max_hu_type", 0))
+                if item["final_result"].get("max_hu_type"):
+                    max_hu_type, max_hu_name = RoomFCZJ.compare_hu_type(max_hu_type, item["final_result"].get("max_hu_type"))
         result = {
             "total": total,
             "score": score,
@@ -164,6 +175,7 @@ class UserAggregateRanks(GameAuthApi):
             "end_time": end_time,
             "max_multiple": max_multiple,
             "max_hu_type": max_hu_type,
+            "max_hu_name": max_hu_name,
         }
         return self.answer(data=result)
 

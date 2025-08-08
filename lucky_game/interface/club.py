@@ -9,7 +9,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
-from c_services.const.cs_enum_const import RoomStatus, CmdClub
+from c_services.const.cs_enum_const import RoomStatus, CmdClub, RedDotType
 from common.public.common_class import CommonApi
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.public.conf import C_SERVICE_SECRET_KEY
@@ -188,6 +188,14 @@ class ClubCheck(BaseClub):
         sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
+        # 红点通知茶馆用户申请结果
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_NOTICE)
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            RedDotType.RD_CLUB_APPLY,
+            {"club_id": e.get("club_id"), "status": sta},
+            e.get("uid"),
+        )
         return self.answer()
 
 
@@ -205,6 +213,14 @@ class ClubApply(BaseClub):
             sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
+        # 红点通知茶馆管理员审批
+        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_NOTICE)
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            RedDotType.RD_CLUB_APPLY,
+            {"club_id": club_id},
+            uid,
+        )
         return self.answer()
 
 

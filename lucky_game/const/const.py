@@ -87,11 +87,11 @@ class CurrencyType(BaseEnum):
 @unique
 class OrderStatus(BaseEnum):
     """充值订单的状态"""
-    DEFAULT = 0, "默认"
-    WAIT_PAY = 1, "等待支付"
-    PAID = 2, "已支付"
-    OVERDUE = 3, "订单已过期"
-    REFUND = 4, "已退款"
+    WAIT_PAY = 0, "等待支付"
+    FAIL = 1, "支付失败"
+    CLOSED = 2, "订单关闭"
+    REFUND = 3, "已退款"
+    PAID = 99, "支付成功"
 
 
 @unique
@@ -318,6 +318,7 @@ class MailSta(BaseEnum):
 @unique
 class MailType(BaseEnum):
     """邮件类型"""
+    DEFAULT = 0, "默认"
     SYS = 1, "系统邮件"
     SEASON_SETTLE = 2, "赛季结算邮件"
 
