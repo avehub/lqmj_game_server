@@ -941,14 +941,14 @@ class S2CKouFen:
         obj = ws_leisure_pb2.S2CKouFen()
         obj.win_seat_id = kwargs.get("win_seat_id") or 0
         obj.check_out_type = kwargs.get("check_out_type") or 0
-        obj.win_gold = kwargs.get("win_gold") or 0
-        obj.winner_res_gold = kwargs.get("winner_res_gold") or 0
+        obj.win_gold = str(kwargs.get("win_gold") or 0)
+        obj.winner_res_gold = str(kwargs.get("winner_res_gold") or 0)
         lose_list = kwargs.get("lose_list") or []
         for data in lose_list:
             lose = obj.lose_list.add()
             lose.lose_seat_id = data.get("lose_seat_id") or 0
-            lose.lose_gold = data.get("lose_gold") or 0
-            lose.loser_res_gold = data.get("loser_res_gold") or 0
+            lose.lose_gold = str(data.get("lose_gold") or 0)
+            lose.loser_res_gold = str(data.get("loser_res_gold") or 0)
         obj.extra_hu_type.extend(kwargs.get("extra_hu_type") or [])
         return obj
 
@@ -990,7 +990,7 @@ class S2CRecordAccountInfo:
             account.curr_card = data.get("curr_card") or 0
             account.relation = data.get("relation") or 0
             account.multiple = data.get("multiple") or 0
-            account.gold = data.get("gold") or 0
+            account.gold = str(data.get("gold") or 0)
             account.act = data.get("act") or 0
             account.win_from.extend(data.get("win_from") or [])
             account.lose_to.extend(data.get("lose_to") or [])
@@ -1003,8 +1003,8 @@ class S2CFanJiScore:
         obj = ws_leisure_pb2.S2CFanJiScore()
         for data in data_list:
             fan_ji = obj.result.add()
-            fan_ji.fan_ji_score = data.get("fan_ji_score") or 0
-            fan_ji.res_gold = data.get("res_gold") or 0
+            fan_ji.fan_ji_score = str(data.get("fan_ji_score") or 0)
+            fan_ji.res_gold = str(data.get("res_gold") or 0)
             fan_ji.seat_id = data.get("seat_id") or 0
         return obj
 
@@ -1022,8 +1022,8 @@ class S2CRoundOverInfoByLeisure:
         for data in seats_data:
             seat = obj.seats.add()
             seat.seat_id = data.get("seat_id") or 0
-            seat.win_gold = data.get("win_gold") or 0
-            seat.res_gold = data.get("res_gold") or 0
+            seat.win_gold = str(data.get("win_gold") or 0)
+            seat.res_gold = str(data.get("res_gold") or 0)
             seat.is_win = data.get("is_win") or 0
             seat.jiao_pai = data.get("jiao_pai") or 0
             seat.fang_pao = data.get("fang_pao") or 0
