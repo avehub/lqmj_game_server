@@ -29,7 +29,42 @@ class PaymentLogic:
     def __init__(self):
         pass
 
-    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int):
+    async def check_good_validity(self, u_info, express: dict):
+        """检查商品有效性，包括限购次数以及销售时间范围"""
+        (not express.get("status") or express.get("total") == 0) and self.answer(code=self.sta_code.GOODS_NOT_FOUND,
+                                                                                 hint="该商品暂时缺货")
+        # 检查销售时间
+        cur_time = tool_dt.cur_time()
+        start_sale_time = express.get("up_time") or 0
+        end_sale_time = express.get("down_time") or 0
+        if start_sale_time > 0 and cur_time < start_sale_time:
+            return False, '商品尚未开始销售', {}
+        if 0 < end_sale_time < cur_time:
+            return False, '商品已经结束销售', {}
+
+        uid = u_info.get("uid")
+        purchase_limit = express.get("purchase_limit")
+        sku = express.get("sku")
+        # 限购条件校验
+        buy_record = {}
+        if purchase_limit:
+            buy_limit = json_parse(purchase_limit).get("buy_limit")
+            if buy_limit:
+                buy_record = await BaseUserRC.get_count_buy_limit(uid, sku)
+                # 如果没有购买记录，则初始化一个新的记录
+                if not buy_record:
+                    buy_record = {"buy_times": 0, "buy_limit": buy_limit}
+                buy_times = buy_record.get("buy_times") or 0
+                need_count = buy_times + 1
+                # 检查限购次数是否超出
+                if need_count > buy_limit:
+                    return False, '已达到限购次数，请下次再来', {}
+
+                # 更新限购次数
+                buy_record["buy_times"] = need_count
+        return True, 'OK', buy_record
+
+    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1):
         """
         支付前校验及生成订单
         :param u_info:
@@ -39,7 +74,7 @@ class PaymentLogic:
         :return:
         """
         currency = express.get("currency")
-        price = express.get("price")
+        price = express.get("price") * num
         field = field_name = ""
         if price > 0:
             match currency:
@@ -62,7 +97,7 @@ class PaymentLogic:
             amount = u_info.get(field)
             if amount < price:
                 return False, f'{field_name}不足', {}
-        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, express.get("num", 1))
+        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
     async def pay(self, uid: int, platform: int, data_before: dict, express: dict,):
@@ -76,7 +111,7 @@ class PaymentLogic:
         price = express.get("price")
         sku = express.get("sku")
         if currency in [CurrencyType.BY_GOLD, CurrencyType.BY_DIAMOND, CurrencyType.BY_YELLOW_DIAMOND, CurrencyType.BY_ROOM_CARD]:
-            # 用户资源更新
+            # 扣除资源
             change_field = data_before.get("field", "")
             if change_field:
                 sub_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
@@ -89,42 +124,39 @@ class PaymentLogic:
                 if not sub_sta:
                     return False, e
         else:
-            # 充值处理 调用第三方支付
+            # 充值处理
             pass
         # 扣除商品数量
         if express.get("total") > 0:
             await GoodRC.update_int_field(sku, "total", 1, "sub")
 
-        return
+        return True, "ok"
 
     async def __pay_type(self, pay_mode: int, c_os: str, platform: int,):
-        WEBPAGE = 1, "webpage", '网页'
-        WECHAT_MP = 2, "wechat_mp", '微信公众号平台'
-        NATIVE_APP = 3, "native_app", '原生app'
-        WECHAT_MINI_GAME = 4, "minigame_wechat", '微信小游戏'
-        ALI_MINI_GAME = 5, "minigame_alipay", '支付宝小游戏'
-        DOUYIN_MINI_GAME = 6, "minigame_douyin", '抖音小游戏'
         if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP, PlatForm.WECHAT_MINI_GAME]:
             # 汇付天下
             pass
-        if platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.IOS:
+        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.IOS:
             # 苹果
             pass
-        if platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.Android:
-            # 安卓
+        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.Android:
+            # 微信
             pass
-        if platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.VIVO:
+        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.VIVO:
             # VIVO
             pass
-        if platform == PlatForm.WEBPAGE and pay_mode == OperatingSystem.VIVO:
-            # VIVO
+        # elif platform == PlatForm.WEBPAGE and pay_mode == OperatingSystem.PC:
+        else:
+            # 支付宝
             pass
-    async def pay_after(self, u_info: dict, express: dict, order_id: str):
+        return True, {}
+
+    async def pay_after(self, u_info: dict, express: dict, order_no: str):
         """
         支付后处理
         :param u_info:
         :param express:
-        :param order_id:
+        :param order_no:
         :return:
         """
         uid = u_info.get("uid")
@@ -134,16 +166,20 @@ class PaymentLogic:
             pass
         else:
             # 支付成功校验
-            order, msg = await OrderRC.get_order_info(order_id)
+            order, msg = await OrderRC.get_order_info(order_no)
             if not order or order.get("status") != OrderStatus.PAID:
                 return False, "订单不存在或支付超时"
-            # 修改订单状态
-            order_sta, e = await OrderRC.up_order(
-                {
-                    "status": OrderStatus.PAID
-                },
-                order_id
-            )
+            # 当为兑换商品时，直接修改订单状态
+            if order.get("currency") != CurrencyType.BY_RMB:
+                order_sta, e = await OrderRC.up_order(
+                    {
+                        "status": OrderStatus.PAID
+                    },
+                    order_id
+                )
+                NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
+            if order.get("status") != OrderStatus.PAID:
+                return False, "订单状态异常"
 
             # 更新用户资源
             add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
@@ -155,10 +191,10 @@ class PaymentLogic:
             )
             if not add_sta:
                 return False, e
-            # 推送资源变更消息
+
             return True, "ok"
 
-    async def create_order(self, uid, express, pay_mode, platform, count=1):
+    async def create_order(self, uid, express, pay_mode, platform, num: int = 1):
         # 创建订单
         order_no = ''
         data = {
@@ -166,10 +202,10 @@ class PaymentLogic:
             "good_id": express.get("good_id"),
             "sku": express.get("sku"),
             "platform": platform,
-            "amount": express.get("price"),
+            "amount": express.get("price") * num,
             "currency": express.get("currency"),
             "pay_mode": pay_mode,
-            "num": count,
+            "num": num,
             "order_no": order_no,
             "status": 0,
             "explain": "",

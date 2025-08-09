@@ -11,6 +11,7 @@ from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import StoreType, PayType, AdSlotItem
 from tortoise.exceptions import OperationalError
+from lucky_game.handler.random_utils import generate_random_string
 
 
 class StoreRC(BaseCommonRC):
@@ -180,7 +181,7 @@ class GoodRC(BaseCommonRC):
     @classmethod
     async def get_good_filter(cls, good_id: any = None, sid: any = None, status: int = None, type_id: any = None,
                               start_time: int = None, end_time: int = None, kind: int = None, currency: int = None,
-                        order_by: str = None, bag_type: int = None, sku_id: any = None, fields: str = None):
+                        order_by: str = None, bag_type: int = None, sku: any = None, fields: str = None):
         """获取用户参与活动次数"""
         try:
             query = {}
@@ -199,11 +200,11 @@ class GoodRC(BaseCommonRC):
                     query["type_id__in"] = type_id
                 else:
                     query["type_id"] = type_id
-            if sku_id is not None:
-                if isinstance(sku_id, list):
-                    query["sku_id__in"] = sku_id
+            if sku is not None:
+                if isinstance(sku, list):
+                    query["sku__in"] = sku
                 else:
-                    query["sku_id"] = sku_id
+                    query["sku"] = sku
             if status is not None:
                 query["status"] = status
             if kind is not None:
@@ -226,10 +227,49 @@ class GoodRC(BaseCommonRC):
     @classmethod
     async def get_good_info(cls, sku: str) -> dict:
         """获取商品信息"""
-        data, msg = await cls.get_good_filter(sku_id=sku)
+        data, msg = await cls.get_good_filter(sku=sku)
         if not data:
             return {}
         return data[0]
+
+
+    @classmethod
+    async def __make_sku(cls, length: int = 8) -> str:
+        """生成商品sku"""
+        while True:
+            sku = generate_random_string(length, use_uppercase=True, use_lowercase=False, use_digits=False)
+            good_info = await cls.get_good_info(sku)
+            if not good_info:
+                return sku
+
+    async def create_good(cls, sid: int, type: int, currency: int, name: str, img: str, original: float, price: float,
+                      content: str, status: int = 1, desc: str = None, purchase_limit: str = None,
+                      total: int = -1, kind: int = 0, up_time: int = None, down_time: int = None, bag_type: int = 0,
+                          rank: int = 0) -> dict:
+        good = {
+            "sid": sid,
+            "kind": kind,
+            "type": type,
+            "currency": currency,
+            "sku": await cls.__make_sku(),
+            "total": total,
+            "purchase_limit": purchase_limit,
+            "name": name,
+            "img": img,
+            "desc": desc,
+            "original": original,
+            "price": price,
+            "content": content,
+            "status": status,
+            "up_time": up_time,
+            "down_time": down_time,
+            "bag_type": bag_type,
+            "rank": rank,
+        }
+        new = await cls.db_model.add_one(good)
+        if not new:
+            return None, "添加失败"
+        return new, "成功"
 
 
 

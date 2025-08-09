@@ -56,12 +56,12 @@ class AliGrantType(StrEnum):
 
 class PayMode(BaseEnum):
     """支付方式"""
-    NO_MODE = 0, ""
-    WECHAT_MINI_GAME = 1, "微信小游戏支付"
-    ALIPAY_MINI_GAME = 2, "支付宝小游戏支付"
-    DOUYIN_MINI_GAME = 3, "抖音小游戏支付"
-    IOS_TO_H5 = 4, "IOS转H5支付"
-
+    DEFAULT_MODE = 0, "默认"
+    HUI_FU_PAY = 1, "汇付天下(App_Android、H5、微信小程序_IOS)"
+    ALIPAY = 2, "支付宝支付(H5)"
+    WECHAT_PAY = 3, "微信(微信小程序_Android)"
+    VIVO_PAY = 4, "VIVO支付"
+    APPLE_PAY = 5, "苹果支付"
 
 class PayType(BaseEnum):
     """ 支付类型 """
@@ -521,9 +521,8 @@ class LvDefendType(BaseEnum):
 
 
 RED_DOTS_OPPORTUNITY_MAP = {
-    # red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_RELIEF, RedDotType.RD_BAG],
-    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_BAG],
-    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS],
+    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
+    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
 }
 
 

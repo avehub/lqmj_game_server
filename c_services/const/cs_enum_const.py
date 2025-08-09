@@ -243,9 +243,10 @@ class RedDotType(BaseEnum):
     RD_SIGN_IN_WK = 19, "可签到 / 累计签到达成（每周七日）"
     RD_SHARE = 20, "分享奖励"
     RD_LIMIT_LOGIN = 21, "限时登录"
-    RD_CLUB_APPLY = 22, "俱乐部申请/审批"
-    RD_CLUB_USER_LIST = 23, "俱乐部用户列表"
-    RD_CLUB_KICK = 24, "俱乐部踢出"
+    RD_CLUB_APPLY = 22, "俱乐部申请"
+    RD_CLUB_CHECK = 23, "俱乐部审批"
+    RD_CLUB_USER_LIST = 24, "俱乐部用户列表"
+    RD_CLUB_KICK = 25, "俱乐部踢出"
 
 
 class CmdRobotMethods(BaseEnum):

@@ -374,7 +374,7 @@ class Orders(DBModel):
     platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     amount = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="支付金额")
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
-    pay_mode = fields.IntEnumField(enum_type=PayMode, null=True, default=PayMode.NO_MODE, description="支付方式")
+    pay_mode = fields.IntEnumField(enum_type=PayMode, null=True, default=PayMode.DEFAULT_MODE, description="支付方式")
     num = fields.IntField(max_length=10, null=True, default=0, description="购买数量")
     order_no = fields.CharField(max_length=32, null=True, default=0, description="订单编号")
     out_order_no = fields.IntField(max_length=10, null=True, default=0, description="外部订单编号")

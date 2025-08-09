@@ -11,6 +11,8 @@ from common.utils.utils import UtilsTool
 from datetime import datetime
 import calendar
 from typing import Tuple, Union
+from c_services.const.cs_enum_const import CmdNotice
+from common.proto.py_pb2.common import common_pb2
 
 
 class CommonApi(LogMeta):
@@ -44,6 +46,8 @@ class CommonApi(LogMeta):
         通过rmq推送消息到网关
         该方法默认消息不持久化
         """
+
+        cls.loginfo(f"cs2cs_by_rmq: {cs_type}, {c_code}, {uid}, {msg}, {r_key}, {exp}, {delivery_mode}")
         await cls.conf.rmq.cs2cs_rmp(cs_type, c_code, uid, msg, r_key, exp, delivery_mode)
 
     @classmethod
@@ -107,6 +111,12 @@ class CommonApi(LogMeta):
         pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
         cmd = UtilsTool.packet_command(cs_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+    @classmethod
+    async def send_red_dot(cls, uid, rd_type):
+        """ 红点消息 """
+        model = common_pb2.S2COneFieldWeb()
+        model.red_dot = rd_type
+        await cls.send_msg_to_player(CmdNotice.RED_DOT, uid=uid, msg=model, cs_type=ServiceEnum.C_NOTICE)
 
     @classmethod
     async def req_by_rpc(cls, cs_type: ServiceEnum, c_code, uid, msg, r_key=''):

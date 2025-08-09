@@ -1,6 +1,8 @@
 import random
 import hashlib
 import time
+import string
+from typing import Optional
 
 def generate_natural_random(num_digits: int, salt: str = None) -> int:
     """
@@ -36,3 +38,43 @@ def generate_natural_random(num_digits: int, salt: str = None) -> int:
 
         if len(final_digits) == num_digits:
             return int(final_digits)
+
+
+
+def generate_random_string(length: int,
+                           use_uppercase: bool = True,
+                           use_lowercase: bool = True,
+                           use_digits: bool = True,
+                           custom_chars: Optional[str] = None) -> str:
+    """
+    生成指定长度的随机字符串
+
+    Args:
+        length: 生成字符串的长度
+        use_uppercase: 是否包含大写字母
+        use_lowercase: 是否包含小写字母
+        use_digits: 是否包含数字
+        custom_chars: 自定义字符集
+
+    Returns:
+        生成的随机字符串
+    """
+    if length <= 0:
+        raise ValueError("字符串长度必须大于0")
+
+    # 构建字符池
+    chars = ""
+    if custom_chars:
+        chars = custom_chars
+    else:
+        if use_uppercase:
+            chars += string.ascii_uppercase
+        if use_lowercase:
+            chars += string.ascii_lowercase
+        if use_digits:
+            chars += string.digits
+
+    if not chars:
+        raise ValueError("字符池为空，请至少选择一种字符类型或提供自定义字符集")
+
+    return ''.join(random.choice(chars) for _ in range(length))

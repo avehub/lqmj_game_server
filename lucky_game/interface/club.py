@@ -10,8 +10,7 @@ from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus, CmdClub, RedDotType
-from common.public.common_class import CommonApi
-from common.public.enum_const import StaCode, ServiceEnum, CacheKey
+from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
@@ -19,7 +18,7 @@ from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 class BaseClub(GameAuthApi):
     async def _check_other_params(self, other):
         """ 检查其他参数 """
-        other_dict = await CommonApi.json_by_dict(other)
+        other_dict = await self.json_by_dict(other)
         if not isinstance(other_dict, dict):
             return self.answer(StaCode.FAIL, hint="other参数格式错误")
         self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
@@ -189,12 +188,9 @@ class ClubCheck(BaseClub):
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
         # 红点通知茶馆用户申请结果
-        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_NOTICE)
-        await self.cs2cs_by_rmq(
-            cs_enum,
-            RedDotType.RD_CLUB_APPLY,
-            {"club_id": e.get("club_id"), "status": sta},
+        await self.send_red_dot(
             e.get("uid"),
+            RedDotType.RD_CLUB_CHECK,
         )
         return self.answer()
 
@@ -208,19 +204,21 @@ class ClubApply(BaseClub):
         club_id = req.json.get("club_id")
         self.check_int(club_id, require=True, p_name="茶馆ID")
         # 校验是否已申请
-        has, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid=uid, club_id=club_id, status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
+        has, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX,
+                                                                  uid=uid, club_id=club_id,
+                                                                  status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
         if not has:
             sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
         # 红点通知茶馆管理员审批
-        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_NOTICE)
-        await self.cs2cs_by_rmq(
-            cs_enum,
-            RedDotType.RD_CLUB_APPLY,
-            {"club_id": club_id},
-            uid,
-        )
+        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=club_id)
+        if club_manage:
+            for manage in club_manage:
+                await self.send_red_dot(
+                    manage.get("uid"),
+                    RedDotType.RD_CLUB_APPLY,
+                )
         return self.answer()
 
 

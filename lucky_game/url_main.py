@@ -25,14 +25,13 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     DouYinGameQueryOrder, GetBalanceByDouYinGame, ReduceBalanceByDouYinGame, ReduceBalanceByWechatMiniProgram, \
 #     GetBalanceByWechatMiniProgram, MiniProgramRecvPush, HuiFuGetPayInfo, HuiFuPayQueryOrder, HuiFuPayNotify, \
 #     CompletePaidOrder
-from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaHandler
+from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler
 # from lucky_game.interface.interaction import MakeAdOrder, CompleteAdOrder, SignInHandler, SignInComplete, \
 #     SignInTotalComplete, GetReliefHandler, GetReliefConf, GetCommonAwardsConf, PullCommonAwards, OpenTreasureBox
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity
-# from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
@@ -199,7 +198,7 @@ class MainBp(BaseBlue):
         #
         # # 充值/消费相关
         Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
-        # Urls("/PayByRedemption/", PayByRedemption),  # 商店兑换购物
+        Urls("/PayByGood/", PayByGood),  # 商店购物
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
