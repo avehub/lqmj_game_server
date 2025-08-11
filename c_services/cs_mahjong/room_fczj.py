@@ -257,7 +257,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if player.is_out:
             return StaCode.FLOW_ERR, "玩家已被淘汰，不可捡"
         if self.flow_status not in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
-                                    FlowStatus.T_IN_TIAN_HU, FlowStatus.T_IN_MING_GANG_PAI_CALL):
+                                    FlowStatus.T_IN_TIAN_HU):
             return StaCode.FLOW_ERR, "当前流程不可捡"
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
             return StaCode.RULE_ERR, "玩家没有可捡操作"
@@ -701,21 +701,20 @@ class RoomFCZJ(BaseLeisureRoom):
                 code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(cards[-1]))
                 if StaCode.PASS == code:
                     self.log_info(self.tid, player.uid, "机器人打出摸的缺牌：", cards[-1])
-                    self.call_flow(1, self.enter_chu_pai_call)
+                    self.call_flow(0.5, self.enter_chu_pai_call)
                     return
             for card in player.cards:
                 if card // 10 == player.que:
                     code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(card))
                     if StaCode.PASS == code:
                         self.log_info(player.uid, "机器人打出手里的缺牌：", card)
-                        self.call_flow(1, self.enter_chu_pai_call)
+                        self.call_flow(0.5, self.enter_chu_pai_call)
                         return
 
         # todo: 机器人自动计算出牌
         await self.robot_auto_attack(player)
 
     async def enter_chu_pai_call(self):
-        print("进入chu_pai_call")
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             return
         if self.flow_status not in [FlowStatus.T_IN_CHU_PAI, FlowStatus.T_IN_DI_HU_CHU_PAI,
@@ -763,7 +762,6 @@ class RoomFCZJ(BaseLeisureRoom):
             self.__jie_pao_count = jie_pao_count
 
         if self.can_operates():
-            print("进入chu_pai_call 有玩家可以操作")
             DelayCall(TimerDelay.KAI_HU_TIME, self.check_operate_after_kai_hu).start()
             self.log_info("玩家 {} 出完牌call，其他玩家有操作".format(chu_pai_player.uid))
             self.call_flow_robot(TimerDelay.ROBOT_TIME, self.check_robot_operate)
@@ -772,9 +770,9 @@ class RoomFCZJ(BaseLeisureRoom):
 
             return
 
-        await self.everyone_pass()
+        await self.everyone_pass(0.5)
 
-    async def everyone_pass(self):
+    async def everyone_pass(self,sec = 1.0):
         print("everyone_pass", self.flow_status)
         p = self.curr_player()
         await self.deal_first_ji(p)
@@ -785,7 +783,7 @@ class RoomFCZJ(BaseLeisureRoom):
         elif self.flow_status == FlowStatus.T_IN_TIAN_HU:
             return await self.turn_to_player_chu_pai(p)
         # 都不要再摸牌
-        return self.call_flow(1, self.__mo_pai)  # 即时结算等待
+        return self.call_flow(sec, self.__mo_pai)  # 即时结算等待
 
     async def do_zhuan_wan_gang_end(self):
         curr_player = self.__curr_action_player
@@ -961,7 +959,7 @@ class RoomFCZJ(BaseLeisureRoom):
             code, _ = await self.delay_func(1, self.on_player_chu_pai, p, self.serialized_chu_pai_data(cards[0]))
             if StaCode.PASS == code:
                 self.log_info(p.uid, "摸到的牌不是癞子，直接打出：", cards[0])
-                self.call_flow(1, self.enter_chu_pai_call)
+                self.call_flow(0.5, self.enter_chu_pai_call)
                 return True
         return False
 
@@ -972,28 +970,28 @@ class RoomFCZJ(BaseLeisureRoom):
                 code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
                 if StaCode.PASS == code:
                     self.log_info(self.tid, p.uid, "超时打缺：", cards[-1])
-                    self.call_flow(1, self.enter_chu_pai_call)
+                    self.call_flow(0.5, self.enter_chu_pai_call)
                     return True
             for card in p.cards:
                 if card // 10 == p.que:
                     code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
                     if StaCode.PASS == code:
                         self.log_info(p.uid, "超时打缺_by_cards：", card)
-                        self.call_flow(1, self.enter_chu_pai_call)
+                        self.call_flow(0.5, self.enter_chu_pai_call)
                         return True
 
         if cards[-1] != CardsType.LAI_ZI:
             code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
             if StaCode.PASS == code:
                 self.log_info(p.uid, "超时出牌_摸到什么打什么，除了癞子：", cards[-1])
-                self.call_flow(1, self.enter_chu_pai_call)
+                self.call_flow(0.5, self.enter_chu_pai_call)
                 return True
         for card in p.cards:
             if card != CardsType.LAI_ZI:
                 code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(card))
                 if StaCode.PASS == code:
                     self.log_info(p.uid, "超时出牌_找手里不是癞子的牌：", card)
-                    self.call_flow(1, self.enter_chu_pai_call)
+                    self.call_flow(0.5, self.enter_chu_pai_call)
                     return True
         return False
 
@@ -3046,5 +3044,3 @@ class RoomFCZJ(BaseLeisureRoom):
             return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
         else:
             return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
-
-

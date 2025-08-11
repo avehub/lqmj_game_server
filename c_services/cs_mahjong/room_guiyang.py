@@ -28,6 +28,7 @@ class RoomGY(RoomBJ):
                 operates.extend(self.calc_operates_in_tian_ting(p, True))
         else:
             operates.extend(self.calc_operates_in_tian_ting(p))
+        p.operates = operates
         return operates
 
     async def on_player_ding_que(self, player, data):

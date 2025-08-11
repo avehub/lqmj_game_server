@@ -126,6 +126,8 @@ class RuleFc(Rule):
                 suits[suit] = {}
             suits[suit][val] = suits[suit].get(val, 0) + 1
 
+        suits = {suit: {val: count for val, count in vals.items() if count >= 3}
+                 for suit, vals in suits.items()}
         # 2. 检测连续刻子链（三节高/四节高）
         best_sequence = []  # 存储最长连续序列
 
@@ -148,8 +150,7 @@ class RuleFc(Rule):
 
             # 筛选有效连续刻子链（每个牌值数量≥3）
             valid_chains = [
-                chain for chain in sequences
-                if len(chain) >= 3 and all(counts[val] >= 3 for val in chain)
+                chain for chain in sequences if len(chain) >= 3
             ]
 
             # 选择最长连续链
