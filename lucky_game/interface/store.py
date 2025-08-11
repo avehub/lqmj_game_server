@@ -1,6 +1,7 @@
 """
 商店相关接口
 """
+import traceback
 from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -51,7 +52,7 @@ class PayByGood(GameAuthApi):
         platform = self.check_int(req.args.get("platform"), require=True, p_name='平台ID')
         sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')
         pay_mode = self.check_int(req.json.get("pay_mode"), require=True, p_name='支付方式')
-        num = self.check_int(req.json.get("num"), require=False, p_name='购买数量')
+        num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
         plat_enum = PlatForm.find_member_by_val(platform)
         pay_enum = PayMode.find_member_by_val(pay_mode)
         (not isinstance(plat_enum, PlatForm) or not isinstance(pay_enum, PayMode)) and self.answer(self.sta_code.ERR_ARG, hint='无效参数')
@@ -66,12 +67,12 @@ class PayByGood(GameAuthApi):
         check_sta, check_desc, buy_record = await payment.check_good_validity(u_info, express)
         (not check_sta) and self.answer(code=self.sta_code.NOT_IN_VALID_STATE, hint=f"{check_desc}")
 
-        pay_type = express.get("pay_type")
+        pay_type = express.get("currency")
         pt_enum = PayType.find_member_by_val(pay_type)
         (not isinstance(pt_enum, PayType)) and self.answer(self.sta_code.ERR_ARG, hint='没有此兑换方式')
 
         self.loginfo(f"商店购物：user={u_info}，good={express}")
-        # 资源处理
+        # 购买商品事务处理
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 # 支付前校验
@@ -80,7 +81,7 @@ class PayByGood(GameAuthApi):
                 if not sta_before:
                     return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
                 # 支付中
-                sta_pay, msg = await payment.pay(u_info, platform, data_before, express)
+                sta_pay, msg = await payment.pay(u_info, data_before, express)
                 self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
                 # 支付后（如果为兑换商品则直接处理）
                 if pay_type != PayType.BY_RMB:
@@ -89,7 +90,10 @@ class PayByGood(GameAuthApi):
 
                 await BaseUserRC.cache_count_buy_limit(uid, sku, buy_record)
         except Exception as e:
-            self.log_err(f'{pt_enum.phrase}事务执行失败，原因：{e}')
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            self.logerr(f'{pt_enum.phrase}事务执行失败，原因：{e}')
             self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
 
         return self.answer(data=data_before.get("order"))

@@ -1,4 +1,7 @@
 """ 支付相关逻辑处理 """
+import decimal
+
+from nsanic.libs.mk_random import RngMaker
 from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -74,7 +77,13 @@ class PaymentLogic:
         :return:
         """
         currency = express.get("currency")
-        price = express.get("price") * num
+        price = express.get("price")
+        # 确保 price 是 Decimal 类型
+        if isinstance(price, (int, float)):
+            price = decimal.Decimal(price)
+        elif not isinstance(price, decimal.Decimal):
+            return False, '商品价格格式不正确', {}
+        price *= num
         field = field_name = ""
         if price > 0:
             match currency:
@@ -97,19 +106,18 @@ class PaymentLogic:
             amount = u_info.get(field)
             if amount < price:
                 return False, f'{field_name}不足', {}
+        express["price"] = price
         order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
-    async def pay(self, uid: int, platform: int, data_before: dict, express: dict,):
+    async def pay(self, uid: int, data_before: dict, express: dict):
         """
         支付处理
         :return:
         """
-        if in_transaction():
-            return False, "请勿重复支付"
         currency = express.get("currency")
-        price = express.get("price")
         sku = express.get("sku")
+        price = express.get("price") or 0
         if currency in [CurrencyType.BY_GOLD, CurrencyType.BY_DIAMOND, CurrencyType.BY_YELLOW_DIAMOND, CurrencyType.BY_ROOM_CARD]:
             # 扣除资源
             change_field = data_before.get("field", "")
@@ -175,7 +183,7 @@ class PaymentLogic:
                     {
                         "status": OrderStatus.PAID
                     },
-                    order_id
+                    order_no
                 )
                 NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
             if order.get("status") != OrderStatus.PAID:
@@ -194,48 +202,49 @@ class PaymentLogic:
 
             return True, "ok"
 
-    async def create_order(self, uid, express, pay_mode, platform, num: int = 1):
+    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = ""):
         # 创建订单
-        order_no = ''
-        data = {
-            "uid": uid,
-            "good_id": express.get("good_id"),
-            "sku": express.get("sku"),
-            "platform": platform,
-            "amount": express.get("price") * num,
-            "currency": express.get("currency"),
-            "pay_mode": pay_mode,
-            "num": num,
-            "order_no": order_no,
-            "status": 0,
-            "explain": "",
-        }
-        insert_id, msg = await OrderRC.add_order(**data)
-        if not insert_id:
-            NLogger.error("MakeOrder 订单表插入失败:",  msg, data)
+        order_no = await RngMaker.gen_num(str_len=32)
+        new, msg = await OrderRC.add_order(
+            uid=uid,
+            good_id=express.get("good_id"),
+            sku=express.get("sku"),
+            platform=platform,
+            amount=express.get("price"),
+            currency=express.get("currency"),
+            pay_mode=pay_mode,
+            num=num,
+            order_no=order_no,
+            status=OrderStatus.WAIT_PAY if express.get("price") > 0 else OrderStatus.PAID,
+            explain=explain,
+        )
+        NLogger.info("create_order 订单插入状态: new_order", new, msg)
+        if not new:
             return {}, "订单创建失败"
 
         # 订单创建完成，按下单平台返回数据
         map_func = {
-            PayMode.WECHAT_MINI_GAME.val: self.deal_order_general,
-            PayMode.ALIPAY_MINI_GAME.val: self.deal_order_general,
-            PayMode.DOUYIN_MINI_GAME.val: self.deal_order_general,
-            PayMode.IOS_TO_H5.val: self.deal_order_general
+            PayMode.DEFAULT_MODE.val: self.deal_order_general,
+            PayMode.HUI_FU_PAY.val: self.deal_order_general,
+            PayMode.ALIPAY.val: self.deal_order_general,
+            PayMode.WECHAT_PAY.val: self.deal_order_general,
+            PayMode.VIVO_PAY.val: self.deal_order_general,
+            PayMode.APPLE_PAY.val: self.deal_order_general
         }
         deal_func = map_func.get(pay_mode)
         if deal_func and callable(deal_func):
-            order_info = await deal_func(uid, data)
-            NLogger.info(f"MakeOrder uid: {uid} 订单创建结果", order_info)
+            order_info = await deal_func(uid, new.order_no, new.created, new.amount)
+            NLogger.info(f"create_order uid: {uid} 订单创建结果", order_info)
             return order_info, "ok"
         return {}, "无此交易方式"
 
 
-    async def deal_order_general(self, _, insert_data):
+    async def deal_order_general(self, _, order_no, trade_time, trade_amount):
         """通用订单处理"""
         return_data = {
-            "order_id": insert_data.get("order_no"),
-            "trade_time": insert_data.get("trade_time"),
-            "trade_amount": insert_data.get("trade_amount")
+            "order_no": order_no,
+            "trade_time": trade_time,
+            "trade_amount": trade_amount
         }
         return return_data
 
