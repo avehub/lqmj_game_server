@@ -108,7 +108,8 @@ class ProgressActivity(GameAuthApi):
     """
     async def get(self, req: Request, **kwargs):
         try:
-            uid = kwargs.get("u_info").get("uid")
+            u_info = kwargs.get("u_info")
+            uid = u_info.get("uid")
             act_type = self.check_int(req.args.get("act_type"), require=True, p_name="活动类型")
             ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
             # 校验活动
@@ -148,6 +149,10 @@ class ProgressActivity(GameAuthApi):
                             # 限时登录
                             package_gain = await Package().get_progress(award_id)
                             gain.append(package_gain)
+                        elif act_type == ActivityType.INFINITE_PLAY:
+                            # 救济金
+                            status = 0 if u_info.get("gold", 0) < ConfActivityRC.RELIEF_THRESHOLD else -1
+                            gain.append({"award_id": award_id, "status": status})
                         else:
                             gain.append({"award_id": award_id, "status": -1})
                 data["gains"] = gain
