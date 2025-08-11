@@ -404,11 +404,10 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__player_actions.clear()
         if player.card_is_lock():
             # 若玩家起手能胡选择天听不锁牌，此处再锁牌
-            print("player.ting_list",player.ting_list)
             if len(player.ting_list) == 0:
                 allow_hu_map = {HuType.DI_LONG_QI: True, HuType.JIN_GOU_DIAO: True,
                                 HuType.QI_DUI: True}
-                ting_list = RuleFc.get_ting_hu_list([], player.cards, allow_hu_map, self.__lai_zi)
+                ting_list = RuleFc.get_ting_hu_list([], player.cards, allow_hu_map, self.__lai_zi,player.que)
                 player.ting_list = ting_list
                 player.lock_cards = deepcopy(player.cards)
                 data = {"lock_cards": player.lock_cards}
@@ -1103,7 +1102,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 if self.poker.left_count <= 30:
                     result.append(ActionType.ACTION_TYPE_JIAN)
                 else:
-                    hu_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+                    hu_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi,p.que)
                     if len(p.cards) == 1 and self.__lai_zi in p.cards:
                         result.append(ActionType.ACTION_TYPE_JIAN)
                     elif hu_type == HuType.PING_HU and not p.is_lock:
@@ -1120,7 +1119,7 @@ class RoomFCZJ(BaseLeisureRoom):
             if is_ming_gang:
 
                 temp_cards = [c for c in p.cards if c != self.__curr_card]
-                ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
+                ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi,p.que)
                 # 一致的话可以杠
                 print("ting_list1",ting_list1,"p.ting_list",p.ting_list)
                 if ting_list1 == p.ting_list:
@@ -1466,7 +1465,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 if self.poker.left_count <= 30:
                     result.append(ActionType.ACTION_TYPE_JIAN)
                 else:
-                    hu_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+                    hu_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi,p.que)
                     if hu_type == HuType.PING_HU and not p.is_lock:
                         print("胡牌 没锁牌且胡牌数量小于10，机器人不平胡去做大牌")
                         result.append(ActionType.ACTION_TYPE_PASS)
@@ -1700,7 +1699,8 @@ class RoomFCZJ(BaseLeisureRoom):
             p.can_tian_ting = -1
             p.is_lock = True
             if len(p.ting_list) == 0:
-                ting_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+                table_cards = deepcopy(p.table_cards)
+                ting_list = RuleFc.get_ting_hu_list(table_cards, p.cards, allow_hu_map, self.__lai_zi,p.que)
                 p.ting_list = ting_list
 
         if self.__recharge_wait == 0:
@@ -1718,7 +1718,9 @@ class RoomFCZJ(BaseLeisureRoom):
         allow_hu_map = {HuType.DI_LONG_QI: True, HuType.JIN_GOU_DIAO: True,
                         HuType.QI_DUI: True}
         if len(p.ting_list) == 0:
-            ting_list = RuleFc.get_ting_hu_list([], p.cards, allow_hu_map, self.__lai_zi)
+            table_cards = deepcopy(p.table_cards)
+            ting_list = RuleFc.get_ting_hu_list(table_cards, p.cards, allow_hu_map, self.__lai_zi,p.que)
+            print("闷", ting_list)
             p.ting_list = ting_list
 
         if self.__recharge_wait == 0:
@@ -2093,7 +2095,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     hand_card = deepcopy(p.cards)
                     hand_card.remove(p.mo_pai)
                     table_cards = deepcopy(p.table_cards)
-                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, self.__lai_zi)
+                    hu_list = RuleFc.get_ting_hu_list(table_cards, hand_card, allow_hu_map, self.__lai_zi,p.que)
                     if len(p.cards) == 2 and self.__lai_zi in p.cards:
                         result.append(ActionType.ACTION_TYPE_MEN)
                     elif hu_type == HuType.PING_HU and not p.is_lock:
@@ -2116,10 +2118,11 @@ class RoomFCZJ(BaseLeisureRoom):
 
                 if is_an_gang:
                     valid_gang_cards = [gc for gc in gang_card_list if gc == p.mo_pai]
+                    table_cards = deepcopy(p.table_cards)
                     for gang_card in valid_gang_cards:
                         temp_cards = [c for c in p.cards if c != gang_card]
                         # 听牌一致的话可以杠
-                        ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
+                        ting_list1 = RuleFc.get_ting_hu_list(table_cards, temp_cards, allow_hu_map, self.__lai_zi,p.que)
                         print("ting_list12",ting_list1,"p.ting_list",p.ting_list)
                         if ting_list1 and ting_list1 == p.ting_list:
                             can_gang_list.append(gang_card)
@@ -2869,7 +2872,7 @@ class RoomFCZJ(BaseLeisureRoom):
                     temp_cards.remove(gang_card)
 
                     # 听牌一致的话可以杠
-                    ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi)
+                    ting_list1 = RuleFc.get_ting_hu_list([], temp_cards, allow_hu_map, self.__lai_zi,p.que)
                     if ting_list1 == p.ting_list:
                         can_gang_list.append(gang_card)
                 self.log_info(self.tid, "玩家不能改牌 但能暗杠1", can_gang_list)
@@ -2990,6 +2993,7 @@ class RoomFCZJ(BaseLeisureRoom):
         score_rank_map = {}
         for idx, score in enumerate(sorted_scores):
             score_rank_map[score] = idx + 1
+
         final_result = {
             "level_desc": self.level_desc
         }

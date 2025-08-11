@@ -149,6 +149,7 @@ class BasePoker:
                     hands.append(card)
                     result_dict[card] -= 1
             players_hands[player_id] = hands
+        # players_hands[0] = [51,51,12,12,13,13,24,24,25,25,26,26,27]
         print("players_hands",players_hands)
         self.__set_cards_list = players_hands
         return players_hands
