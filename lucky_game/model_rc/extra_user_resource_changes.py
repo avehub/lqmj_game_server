@@ -1,6 +1,8 @@
 """
 用户资源变动记录
 """
+import decimal
+
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ExtraUserResourceChanges
 from lucky_game.model_rc.base_rc import BaseCommonRC
@@ -100,8 +102,10 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
 
     @classmethod
-    async def change_user_resource(cls, uid: int, change_field: str, change_value: int, operation: str = 'add', explain: str = ""):
+    async def change_user_resource(cls, uid: int, change_field: str, change_value: decimal.Decimal, operation: str = 'add', explain: str = ""):
         """用户资源变更"""
+        print("change_field", change_field)
+        print("values", cls.CURRENCY_MAP.values())
         if change_field not in cls.CURRENCY_MAP.values():
             return False, "无效的资源类型"
         try:

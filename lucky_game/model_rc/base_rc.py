@@ -1,3 +1,4 @@
+import decimal
 from typing import Union
 from nsanic.libs.tool import json_parse, json_encode
 from nsanic.orm.rc_model import RCModel
@@ -286,14 +287,14 @@ class BaseCommonRC(RCModel, CommonApi):
         return result
 
     @classmethod
-    async def update_int_field(cls, pk_id: int, field_name: str, value: int, operation: str = 'add'):
+    async def update_int_field(cls, pk_id: int, field_name: str, value: [int | Decimal], operation: str = 'add'):
         """
         更新数据表的整型字段
 
         Args:
             pk_id (int): 主键ID
             field_name (str): 要修改的字段名
-            value (int): 修改的值
+            value (int | Decimal): 修改的值
             operation (str): 操作类型，'add' 或 'sub'，默认为'add'
 
         Returns:
@@ -311,7 +312,6 @@ class BaseCommonRC(RCModel, CommonApi):
             current_value = data[field_name]
             if not isinstance(current_value, (int, Decimal)):
                 return False, f"字段{field_name}不是数值类型"
-
             # 计算新值
             if operation == 'add':
                 new_value = current_value + value

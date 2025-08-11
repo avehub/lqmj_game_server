@@ -25,14 +25,13 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     DouYinGameQueryOrder, GetBalanceByDouYinGame, ReduceBalanceByDouYinGame, ReduceBalanceByWechatMiniProgram, \
 #     GetBalanceByWechatMiniProgram, MiniProgramRecvPush, HuiFuGetPayInfo, HuiFuPayQueryOrder, HuiFuPayNotify, \
 #     CompletePaidOrder
-from lucky_game.interface.store import StoreHandler, PayByRedemption, SwitchStaHandler
+from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler
 # from lucky_game.interface.interaction import MakeAdOrder, CompleteAdOrder, SignInHandler, SignInComplete, \
 #     SignInTotalComplete, GetReliefHandler, GetReliefConf, GetCommonAwardsConf, PullCommonAwards, OpenTreasureBox
-# from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
+from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity
-# from lucky_game.interface.west_way import WestWayQueryMap, WestWayQueryGoods, WestWayPlaySteps
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
@@ -48,6 +47,7 @@ from lucky_game.interface.club_behavior import GetBehaviorExtra
 from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 from lucky_game.interface.game import GetLeisureList
+from lucky_game.interface.config import GetConf
 
 
 
@@ -133,8 +133,12 @@ class MainBp(BaseBlue):
         # 活动相关
         Urls("/QueryActivity/", ActivityDetail),  # 查询活动详情
         Urls("/JoinActivity/", JoinActivity),  # 参与活动
-        Urls("/GainActivity/", GainActivity),  # 领取活动奖励
+        Urls("/GiveAward/", GainActivity),  # 领取活动奖励
         Urls("/ProgressActivity/", ProgressActivity),  # 活动进度
+
+
+        # 配置相关
+        Urls("/QueryConf/", GetConf),
 
         # # 支付相关
         # Urls("/MakeOrder/", MakeOrder),  # 创建订单
@@ -181,9 +185,9 @@ class MainBp(BaseBlue):
         # Urls("/OpenTreasureBox/", OpenTreasureBox),  # 开启宝盒
         #
         # # 邮件相关
-        # Urls("/MailsListHandler/", MailsListHandler),  # 获取邮件列表
-        # Urls("/MailsOperateUser/", MailsOperateUser),  # 指定操作邮件
-        # Urls("/MailsOperateOneClick/", MailsOperateOneClick),  # 一键操作邮件
+        Urls("/MailsListHandler/", MailsListHandler),  # 获取邮件列表
+        Urls("/MailsOperateUser/", MailsOperateUser),  # 指定操作邮件
+        Urls("/MailsOperateOneClick/", MailsOperateOneClick),  # 一键操作邮件
         #
         # # 任务/活跃系统
         # Urls("/GameTaskHandler/", GameTaskHandler),  # 加载任务配置
@@ -194,7 +198,7 @@ class MainBp(BaseBlue):
         #
         # # 充值/消费相关
         Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
-        # Urls("/PayByRedemption/", PayByRedemption),  # 商店兑换购物
+        Urls("/PayByGood/", PayByGood),  # 商店购物
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型

@@ -7,6 +7,7 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from c_services.const.cs_enum_const import CmdClub
 from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
+from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class JoinBlack(GameAuthApi):
@@ -75,6 +76,7 @@ class KickRelation(GameAuthApi):
         if not behavior:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+        await BaseClubRC.update_club_int_field(relation_info["club_id"], "num", 1, "sub")
         data = {"secret": C_SERVICE_SECRET_KEY, "club_id": relation_info["club_id"], "uid": relation_info["uid"]}
         await self.cs2cs_by_rmq(
             cs_enum,

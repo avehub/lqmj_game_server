@@ -76,13 +76,16 @@ class BaseLogin(GameAuthApi):
         dev_ident = login_info.get("dev_id")
 
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
-        avatar = user_info.get("avatar", ASSET_SERVER_ADDR + f"/lucky_game/avatar/avatar_{random.randint(1, 7)}.png")
+        avatar = user_info.get("avatar", f"avatar/avatar_{random.randint(1, 7)}.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
             name = f"游客{self.rng.mk_str(4, True)}"
             user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
             user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
+
+        print("login_info", login_info)
+        print("user_info", user_info)
         info = {
             'name': name,
             'safe_key': safe_key,
@@ -97,6 +100,7 @@ class BaseLogin(GameAuthApi):
             "unionid": user_info.get("unionid"),
             "openid": user_info.get("openid"),
             "avatar": avatar,
+            "phone": user_info.get("phone", ""),
         }
         return info
 

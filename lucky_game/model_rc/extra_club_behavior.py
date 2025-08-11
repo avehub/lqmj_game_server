@@ -95,7 +95,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                         return False, e
         except OperationalError as e:
             return False, f"失败：{str(e)}"
-        return True, "更新成功"
+        return True, data
 
     @classmethod
     async def delete_club_behavior(cls, behavior_id: int):

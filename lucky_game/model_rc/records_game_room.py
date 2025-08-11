@@ -116,7 +116,7 @@ class RecordsGameRoomRC(BaseCommonRC):
             if end_time is not None:
                 query["end_time__lt"] = end_time
             if order_field is None:
-                order_field = "record_rid"
+                order_field = "-record_rid"
             if page and page_size:
                 total, _ = await cls.count_record_room(**query)
                 records = []

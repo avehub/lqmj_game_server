@@ -1,6 +1,7 @@
 """
 商店相关接口
 """
+import traceback
 from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -31,26 +32,27 @@ class StoreHandler(GameAuthApi):
         uid = u_info.get("uid")
         if not platform:
             platform = PlatForm.all_values()
-        data = []
         store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
         self.loginfo("store", store)
-        (not store) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
-        if store:
-            sid = [item.get("sid") for item in store]
-            self.loginfo("sid", sid)
-            goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
-            self.loginfo("goods", goods)
-            if goods:
-                data = await CommonApi.list_by_group(goods, "sid")
-        return self.answer(data=data)
+        if not store:
+            return self.answer(data=store, hint=e)
+        sid = [item.get("sid") for item in store]
+        self.loginfo("sid", sid)
+        goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
+        self.loginfo("goods", goods)
+        if not goods:
+            return self.answer(data=goods, hint=e)
+            # data = await self.list_by_group(goods, "sid", unordered=False)
+        return self.answer(data=goods)
 
 
-class PayByRedemption(GameAuthApi):
-    """ 购买商品 """
+class PayByGood(GameAuthApi):
+    """ 商店购物 """
     async def post(self, req: Request, **kwargs):
         platform = self.check_int(req.args.get("platform"), require=True, p_name='平台ID')
         sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')
-        pay_mode = self.check_str(req.json.get("pay_mode"), require=True, p_name='支付方式')
+        pay_mode = self.check_int(req.json.get("pay_mode"), require=True, p_name='支付方式')
+        num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
         plat_enum = PlatForm.find_member_by_val(platform)
         pay_enum = PayMode.find_member_by_val(pay_mode)
         (not isinstance(plat_enum, PlatForm) or not isinstance(pay_enum, PayMode)) and self.answer(self.sta_code.ERR_ARG, hint='无效参数')
@@ -59,81 +61,46 @@ class PayByRedemption(GameAuthApi):
 
         # 查询商品、校验
         express = await GoodRC.get_good_info(sku)
+        payment = PaymentLogic()
+
         (not express) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="商品异常，请联系客服")
-        check_sta, check_desc, buy_record = await self.__check_good_validity(u_info, express)
+        check_sta, check_desc, buy_record = await payment.check_good_validity(u_info, express)
         (not check_sta) and self.answer(code=self.sta_code.NOT_IN_VALID_STATE, hint=f"{check_desc}")
 
-        pay_type = express.get("pay_type")
-        (pay_type == PayType.BY_RMB) and self.answer(code=self.sta_code.ERR_ARG, hint='该物品只支持充值获取')
+        pay_type = express.get("currency")
         pt_enum = PayType.find_member_by_val(pay_type)
         (not isinstance(pt_enum, PayType)) and self.answer(self.sta_code.ERR_ARG, hint='没有此兑换方式')
 
-        # 资源处理
-        price = express.get("price")
+        self.loginfo(f"商店购物：user={u_info}，good={express}")
+        # 购买商品事务处理
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                sta_before, msg, data_before = await PaymentLogic().pay_before(u_info, express, pay_mode, platform)
+                # 支付前校验
+                sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
+                self.loginfo(f"支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
                 if not sta_before:
                     return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
-                # 用户资源更新
-                change_field = data_before.get("field", "")
-                if change_field:
-                    sub_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
-                        uid,
-                        change_field,
-                        price,
-                        "sub",
-                        explain=f"消费{data_before.get('field_name')}"
-                    )
-                    if not sub_sta:
-                        return self.answer(self.sta_code.FAIL, hint=e)
+                # 支付中
+                sta_pay, msg = await payment.pay(u_info, data_before, express)
+                self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
+                # 支付后（如果为兑换商品则直接处理）
+                if pay_type != PayType.BY_RMB:
+                    sta_after, msg = await payment.pay_after(u_info, express, data_before.get("order")["order_no"])
+                    self.loginfo(f"支付成功后资源变更：sta_after={sta_after}，msg={msg}")
 
-                self.loginfo(f"购买商品：user={u_info}，good={express}")
-                # 扣除商品数量
-                if express.get("total") > 0:
-                    await GoodRC.update_int_field(sku, "total", 1, "sub")
                 await BaseUserRC.cache_count_buy_limit(uid, sku, buy_record)
         except Exception as e:
-            self.log_err(f'{pt_enum.phrase}事务执行失败，原因：{e}')
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            self.logerr(f'{pt_enum.phrase}事务执行失败，原因：{e}')
             self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
 
         return self.answer(data=data_before.get("order"))
 
 
 
-    async def __check_good_validity(self, u_info, express: dict):
-        """检查商品有效性，包括限购次数以及销售时间范围"""
-        (not express.get("status") or express.get("total") == 0) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="该商品暂时缺货")
-        # 检查销售时间
-        cur_time = tool_dt.cur_time()
-        start_sale_time = express.get("up_time", 0)
-        end_sale_time = express.get("down_time", 0)
-        if start_sale_time > 0 and cur_time < start_sale_time:
-            return False, '商品尚未开始销售', {}
-        if 0 < end_sale_time < cur_time:
-            return False, '商品已经结束销售', {}
 
-        uid = u_info.get("uid")
-        purchase_limit = express.get("purchase_limit")
-        sku = express.get("sku")
-        # 限购条件校验
-        buy_record = {}
-        if purchase_limit:
-            buy_limit = json_parse(purchase_limit).get("buy_limit")
-            if buy_limit:
-                buy_record = await BaseUserRC.get_count_buy_limit(uid, sku)
-                # 如果没有购买记录，则初始化一个新的记录
-                if not buy_record:
-                    buy_record = {"buy_times": 0, "buy_limit": buy_limit}
-                buy_times = buy_record.get("buy_times") or 0
-                need_count = buy_times + 1
-                # 检查限购次数是否超出
-                if need_count > buy_limit:
-                    return False, '已达到限购次数，请下次再来', {}
-
-                # 更新限购次数
-                buy_record["buy_times"] = need_count
-        return True, 'OK', buy_record
 
 
     @staticmethod

@@ -56,12 +56,12 @@ class AliGrantType(StrEnum):
 
 class PayMode(BaseEnum):
     """支付方式"""
-    NO_MODE = 0, ""
-    WECHAT_MINI_GAME = 1, "微信小游戏支付"
-    ALIPAY_MINI_GAME = 2, "支付宝小游戏支付"
-    DOUYIN_MINI_GAME = 3, "抖音小游戏支付"
-    IOS_TO_H5 = 4, "IOS转H5支付"
-
+    DEFAULT_MODE = 0, "默认"
+    HUI_FU_PAY = 1, "汇付天下(App_Android、H5、微信小程序_IOS)"
+    ALIPAY = 2, "支付宝支付(H5)"
+    WECHAT_PAY = 3, "微信(微信小程序_Android)"
+    VIVO_PAY = 4, "VIVO支付"
+    APPLE_PAY = 5, "苹果支付"
 
 class PayType(BaseEnum):
     """ 支付类型 """
@@ -87,11 +87,11 @@ class CurrencyType(BaseEnum):
 @unique
 class OrderStatus(BaseEnum):
     """充值订单的状态"""
-    DEFAULT = 0, "默认"
-    WAIT_PAY = 1, "等待支付"
-    PAID = 2, "已支付"
-    OVERDUE = 3, "订单已过期"
-    REFUND = 4, "已退款"
+    WAIT_PAY = 0, "等待支付"
+    FAIL = 1, "支付失败"
+    CLOSED = 2, "订单关闭"
+    REFUND = 3, "已退款"
+    PAID = 99, "支付成功"
 
 
 @unique
@@ -158,10 +158,10 @@ class GamePropType(BaseEnum):
 class StoreType(BaseEnum):
     """商品类型"""
     DEFAULT = 0, "默认", ''
-    DIAMOND = 1, "钻石", 'diamond'
+    DIAMOND = 1, "道具", ''
     GOLD = 2, "金币", 'gold'
-    PROP = 3, "道具", ''
-    SKIN = 4, "皮肤", ''
+    PROP = 3, "钻石", 'diamond'
+    SKIN = 4, "房卡", 'room_card'
     S_MAGIC = 5, "法宝", ''
     S_PACKAGE = 6, "礼包", ''
 
@@ -231,6 +231,7 @@ class ActivityType(BaseEnum):
     SHARE = 7, "分享"
     INFINITE_PLAY = 8, "救济金"
     LUCK_SIGN_IN = 9, "抽奖签到"
+    AUTHENTICATION = 10, "实名认证"
 
 
 
@@ -317,6 +318,7 @@ class MailSta(BaseEnum):
 @unique
 class MailType(BaseEnum):
     """邮件类型"""
+    DEFAULT = 0, "默认"
     SYS = 1, "系统邮件"
     SEASON_SETTLE = 2, "赛季结算邮件"
 
@@ -519,9 +521,8 @@ class LvDefendType(BaseEnum):
 
 
 RED_DOTS_OPPORTUNITY_MAP = {
-    # red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_RELIEF, RedDotType.RD_BAG],
-    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_BAG],
-    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS],
+    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
+    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
 }
 
 

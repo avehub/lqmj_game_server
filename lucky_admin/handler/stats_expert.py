@@ -12,8 +12,8 @@ from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.const import OrderStatus, EventTracking, AdEventType, QUERY_EVENT
 from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_db.extra import RecordsUserEvent, RecordsGameGrade
-from lucky_game.model_db.main import RecordsTradeOrder, StatsUserDataAnalysis, User, StatsRetentionAdsUser, \
-    RecordsAdsEvent, StatsGameTimes, StatsRetentionOwnUser
+# from lucky_game.model_db.main import RecordsTradeOrder, StatsUserDataAnalysis, User, StatsRetentionAdsUser, \
+#     RecordsAdsEvent, StatsGameTimes, StatsRetentionOwnUser
 
 
 class StatsExpert(LogMeta):

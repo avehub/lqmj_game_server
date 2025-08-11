@@ -152,7 +152,7 @@ ALTER TABLE my_table AUTO_INCREMENT = 100000;
 
 ~~~ protobuf
 // 通过-I或--proto_path选项来指定额外的搜索路径。
-protoc -I=./proto --python_out=. ./proto/file1.proto
+ ./luck_proto/protoc_27_1.exe -I=luck_proto --python_out=common/proto/pb2 luck_proto/common.proto
 ~~~
 
 
