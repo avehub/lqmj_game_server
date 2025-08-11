@@ -55,6 +55,8 @@ class Base:
             return await Package().handler(activity, uid, award_type)
         elif act_type == ActivityType.SHARE:
             return await Share().handler(activity, uid, award_type)
+        elif act_type == ActivityType.INFINITE_PLAY:
+            return await Share().handler(activity, uid, award_type)
 
     async def act_gain(self, activity: dict, uid: int, award_id: int):
         """ 领取活动奖励 """
@@ -339,12 +341,10 @@ class SignIn(Base):
 
     async def draw_reward(self, rewards: list) -> dict:
         """ 从奖励列表中抽取一个奖励 """
-        random_num = random.random()
-        num = 0
-        for reward in rewards:
-            num += reward["probability"]
-            if random_num <= num:
-                return reward
+        if not rewards:
+            raise ValueError("奖励列表不能为空")
+        weights = [reward["probability"] for reward in rewards]
+        return random.choices(rewards, weights=weights)[0]
 
     async def gain_condition_awards(self, act_awards: dict, uid: int, act_id: int, current_value: int = 0):
         """ 根据条件获取奖励 """
@@ -423,7 +423,7 @@ class Package(Base):
         # 更新记录
         await self.up_act_progress(uid, act_id, act_type)
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)
-        return True, "成功", {"gain_awards": [awards]}
+        return True, "成功", {"gain_awards": awards}
 
     async def get_progress(self, award_id: int):
         status = -1
@@ -460,10 +460,13 @@ class Share(Base):
         if sta and count < join_limit_day:
             _, condition_awards = await self.act_by_awards(uid, activity)
             NLogger.info(f"rewards={condition_awards}")
-            if not condition_awards:
+            rewards = condition_awards[0].get("content") or {}
+            if not rewards:
                 return False, "奖励配置错误", {}
+            awards = rewards["rewards"]
+            NLogger.info(f"awards={awards}")
             # 发放奖励
-            gain_sta = await self.gain_awards(uid, awards=condition_awards, act_id=act_id, explain=activity.get("act_name"))
+            gain_sta = await self.gain_awards(uid, awards=awards, act_id=act_id, award_id=condition_awards[0].get("award_id"), explain=activity.get("act_name"))
             if not gain_sta:
                 return False, "奖励发放失败", {}
             # 自动领取
