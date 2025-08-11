@@ -8,7 +8,7 @@ from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, Cm
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
-from common.public.enum_const import TaskId, DbKey, LEISURE_GAME_LIST, ServiceEnum
+from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
@@ -17,23 +17,28 @@ from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
-from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
+# from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
 from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.base_mails import MailsRC
-from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.base_store import ConfStoreRC
+# from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
+# from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
+from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
+# from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
 from lucky_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatement
-from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
-from lucky_game.model_db.main import Mails, RecordsUserRankingHistory, RecordsTradeOrder
-from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, \
+# from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
+from lucky_game.model_db.main import Mails, Orders
+from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
     CompleteSta, EventTracking, OrderStatus
+from lucky_game.logic.activity import act_count, Base, Package
+from lucky_game.model_rc.base_activity import ConfActivityRC
+from lucky_game.model_rc.user_activity import AwardGainsRC
+from lucky_game.model_rc.club_users import ClubUsersRC
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 
 
 class WorkersServer(JsonBaseServer):
@@ -49,32 +54,17 @@ class WorkersServer(JsonBaseServer):
         super().__init__()
         self.__timed_server = None
         self.add_handlers({
-            CmdWorkers.UPDATE_GAME_TIMES: self.__update_game_times,
-            CmdWorkers.INSERT_GAME_GRADE: self.__insert_game_grade,
-            CmdWorkers.UPDATE_GAME_TASK: self.__update_game_task,
-            CmdWorkers.INSERT_GOLD_STATEMENT: self.__insert_gold_statement,
-            CmdWorkers.INSERT_DIAMOND_STATEMENT: self.__insert_diamond_statement,
             CmdWorkers.MANAGER_SEND_MAILS: self.__manager_send_mails,
-            CmdWorkers.NEW_USER_GIVE_GIFT: self.__new_user_give_gift,
             CmdWorkers.GET_RED_DOT_LIST: self.__get_red_dot_by_list,
             CmdWorkers.UPDATE_USER_VIP_LEVEL: self.__update_user_vip_level,
             CmdWorkers.UPDATE_ITEM_ORDER_COUNT: self.__update_item_order_count,
-            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_prop,
             CmdWorkers.BAN_PLAYER: self.__ban_player,
-            CmdWorkers.SET_NEW_SEASON: self.__set_new_season,
-            CmdWorkers.CHECK_LIMITED_GOODS: self.__check_limited_goods,
             CmdWorkers.NOTIFY_ANNOUNCEMENT: self.__notify_announcement,
-            CmdWorkers.LOGIN_SIGN_IN: self.__login_sign_in,
-            CmdWorkers.BACKGROUND_SCHEDULED_TASK: self.__background_scheduled_task,
-            CmdWorkers.CANCEL_BACKGROUND_SCHEDULED_TASK: self.__cancel_background_scheduled_task,
-            CmdWorkers.FETCH_ACTIVE_MAILS: self.__fetch_active_mails,
-            CmdWorkers.USER_EVENT_TRACKING: self.__user_event_tracking,
-            # CmdWorkers.PROCESS_SAFE_BOX: self.__process_safe_box,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
-        DelayCall(1, self.__get_date_task_exec).start()
-        DelayCall(1, self.__rand_loop_game_announcement).start()
+        # DelayCall(1, self.__get_date_task_exec).start()
+        # DelayCall(1, self.__rand_loop_game_announcement).start()
 
     async def __rand_loop_game_announcement(self):
         while 1:
@@ -91,27 +81,7 @@ class WorkersServer(JsonBaseServer):
         res = await PlayerGameTimesRC.update_game_times(data)
         self.log_info(uid, "更新玩家次数", res)
 
-    async def __insert_game_grade(self, _, data):
-        """ 插入游戏战绩 """
-        up_rank = data.pop('up_rank', False)
-        grade_data = data.get('data')
-        self.log_info("插入玩家战绩", data, up_rank)
-        if up_rank:
-            for one_data in grade_data:
-                rank_score = one_data.get("rank_score")
-                uid = one_data.get("uid")
-                rank_score = await UserRankingRC.update_user_ranking_score(uid, rank_score, 1)
-                one_data["rank_score"] = rank_score
 
-                await self.__user_event_tracking(uid, {'event_tracking': EventTracking.AFTER_FIRST_GAME.val})
-        await RecordsGameGrade.split_bulk_insert(grade_data)
-
-    async def __update_game_task(self, uid, data):
-        """ 更新游戏任务 """
-        self.log_info(uid, "更新游戏任务", data)
-        finish_flag, old_task = await UserTaskRC.update_user_task_records(uid, data)
-        if finish_flag:
-            await self.__send_notice_to_task(uid, old_task.get("task_type"))
 
     async def __update_user_vip_level(self, uid, data):
         """ 更新VIP经验值 """
@@ -178,25 +148,26 @@ class WorkersServer(JsonBaseServer):
     def __get_red_dot_tasks(self, uid, rd_type_list):
         """根据红点类型生成任务列表"""
         map_func = {
-            RedDotType.RD_SIGN_IN_RF.val: self.__notice_by_sign_in_by_raffle,
-            RedDotType.RD_SIGN_IN.val: self.__notice_by_sign_in_by_seven,
-            RedDotType.RD_SIGN_IN_WK.val: self.__notice_by_sign_in_by_week,
+            # 每日免费抽奖签到
+            RedDotType.RD_SIGN_IN_RF.val: self.__login_sign_in,
+            # 每月累计签到奖励
+            RedDotType.RD_SIGN_IN.val: self.__notice_by_sign_in_by_month,
+            # 每日商店免费金币
             RedDotType.RD_STORE.val: self.__notice_by_store,
-            RedDotType.RD_TASK.val: self.__notice_by_task,
+            # 未读邮件
             RedDotType.RD_MAILS.val: self.__notice_by_mails,
-            RedDotType.RD_VIP.val: self.__notice_by_vip,
-            RedDotType.RD_FIRST_CHARGE.val: self.__notice_by_first_charge,
-            RedDotType.RD_WEEK_CARD.val: self.__notice_by_week_card,
-            RedDotType.RD_LIFETIME_CARD.val: self.__notice_by_lifetime_card,
-            RedDotType.RD_PERSONAL.val: self.__notice_by_personal,
-            # RedDotType.RD_RELIEF.val: self.__notice_by_relief,
-            RedDotType.RD_BAG.val: self.__notice_by_bag,
-            RedDotType.RD_SKIN.val: self.__notice_by_skin,
-            RedDotType.RD_MONOPOLY.val: self.__notice_by_monopoly,
-            RedDotType.RD_MONOPOLY_FREE_DICE.val: self.__notice_by_monopoly_store,
-            RedDotType.RD_MONOPOLY_TASK.val: self.__notice_by_monopoly_task,
-            RedDotType.RD_RANKING_AWARDS.val: self.__notice_by_ranking_awards,
-            RedDotType.RD_DOUYIN_REVISIT.val: self.__notice_by_douyin_revisit
+            # 首次充值
+            # RedDotType.RD_FIRST_CHARGE.val: self.__notice_by_first_charge,
+            # 救济金
+            RedDotType.RD_RELIEF.val: self.__notice_by_relief,
+            # 分享
+            RedDotType.RD_SHARE.val: self.__notice_by_share,
+            # 限时登录
+            RedDotType.RD_LIMIT_LOGIN.val: self.__notice_by_limit_login,
+            # 茶馆申请、审批
+            RedDotType.RD_CLUB_APPLY.val: self.__notice_by_club_apply,
+            # 茶馆用户变动
+            RedDotType.RD_CLUB_USER_LIST.val: self.__notice_by_club_user_list,
         }
         # 按RedDotType分组
         get_tasks = []
@@ -217,18 +188,13 @@ class WorkersServer(JsonBaseServer):
         model.red_dot = rd_type
         await self.notice_ws_by_rmq(CmdNotice.RED_DOT, uid=uid, msg=model)
 
-    async def __notice_by_sign_in_by_raffle(self, uid):
-        """抽奖签到红点"""
-        sta = await UserBehaviorsRC.get_sign_in_unclaimed(uid, AwardType.SIGN_IN_RF)
-        self.red_dot_log(uid, "抽奖签到红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN_RF)
 
-    async def __notice_by_sign_in_by_seven(self, uid):
-        """七日签到红点"""
-        sta = await UserBehaviorsRC.get_sign_in_unclaimed(uid, AwardType.SIGN_IN)
-        self.red_dot_log(uid, "七日签到红点查询", sta)
-        if sta:
+    async def __notice_by_sign_in_by_month(self, uid):
+        """每月累计签到奖励红点"""
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
+        sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, count=True)
+        self.red_dot_log(uid, "每月累计签到奖励红点查询", sta)
+        if sta and gains > 0:
             await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN)
 
     async def __notice_by_sign_in_by_week(self, uid):
@@ -240,7 +206,7 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_store(self, uid):
         """游戏商店红点"""
-        sta = await ConfStoreRC.get_store_free_chance(uid, StoreItem.FREE_GOLD)
+        sta = await StoreRC.get_store_free_chance(uid, StoreItem.FREE_GOLD)
         self.red_dot_log(uid, "游戏商店红点查询", sta)
         if sta:
             await self.__notify_red_dot(uid, RedDotType.RD_STORE)
@@ -258,13 +224,6 @@ class WorkersServer(JsonBaseServer):
         self.red_dot_log(uid, "任务红点推送")
         await self.__notify_red_dot(uid, rd_type)
 
-    async def __notice_by_task(self, uid):
-        """任务红点"""
-        sta = await UserTaskRC.get_task_unclaimed(uid, TaskType.DAILY_TASK)
-        self.red_dot_log(uid, "任务红点查询", sta)
-        if sta:
-            await self.__send_notice_to_task(uid, TaskType.DAILY_TASK)
-
     async def __notice_by_vip(self, uid, sta=None):
         """VIP红点查询"""
         if not sta:
@@ -281,7 +240,7 @@ class WorkersServer(JsonBaseServer):
         if sta:
             await self.__notify_red_dot(uid, RedDotType.RD_LIFETIME_CARD)
 
-    async def __notice_by_week_card(self, uid):
+#     async def __notice_by_week_card(self, uid):
         """周卡红点"""
         w_cards = (ActivityItem.WEEK_CARD_2.val, ActivityItem.WEEK_CARD_1.val)
         sta = await UserActivityRC.get_activity_unclaimed(uid, w_cards)
@@ -298,17 +257,49 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_relief(self, uid):
         """救济红点"""
-        sta = await InteractionRC.get_relief_chance(uid)
-        self.red_dot_log(uid, "救济红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        if u_info.get("gold", 0) < ConfActivityRC.RELIEF_THRESHOLD:
+            act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.INFINITE_PLAY)
+            sta, msg, progress = await Base().act_progress(uid, act.get("act_id", 0), ActivityType.INFINITE_PLAY)
+            num = 0
+            if sta and progress:
+                num = act.get("join_limit_day") - progress.get("today_total", 0)
+            self.red_dot_log(uid, "救济红点查询", progress)
+            if num > 0:
+                await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
 
-    async def __notice_by_personal(self, uid):
-        """个人中心红点"""
-        sta = await BaseUserRC.deal_user_update_goods(uid, key_name=UserCosmeticRC.KEY_NEWLY)
-        self.red_dot_log(uid, "个人中心红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_PERSONAL)
+    async def __notice_by_share(self, uid):
+        """分享红点"""
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.SHARE)
+        sta, count = await act_count(uid, act.get("act_id", 0), "day")
+        if count > 0:
+            self.log_info(uid, "今天已完成分享")
+            return
+        else:
+            await self.__notify_red_dot(uid, RedDotType.RD_SHARE)
+
+    async def __notice_by_limit_login(self, uid):
+        """ 限时登录红点 """
+        progress = await Package().get_progress(14)
+        self.log_info(uid, "限时登录", progress)
+        if progress["status"] == 0:
+            await self.__notify_red_dot(uid, RedDotType.RD_LIMIT_LOGIN)
+
+    async def __notice_by_club_user_list(self, uid):
+        """ 茶馆用户变动红点 """
+        pass
+
+    async def __notice_by_club_apply(self, uid):
+        """ 茶馆申请变动红点 """
+        club_ids, e = await ClubUsersRC.get_club_user_by_uid_club_ids(uid, in_role=[1, 9])
+        if club_ids:
+            data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
+                type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX,
+                club_id=club_ids,
+                status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT
+            )
+            if data:
+                await self.__notify_red_dot(uid, RedDotType.RD_CLUB_APPLY)
 
     async def __notice_by_bag(self, uid):
         """背包红点"""
@@ -317,62 +308,7 @@ class WorkersServer(JsonBaseServer):
         if sta:
             await self.__notify_red_dot(uid, RedDotType.RD_BAG)
 
-    async def __notice_by_skin(self, uid):
-        """皮肤红点"""
-        new_sta = await BaseUserRC.deal_user_update_goods(uid, key_name=UserSkinRC.KEY_NEWLY)
-        self.red_dot_log(uid, "新皮肤红点查询", new_sta)
-        if new_sta:
-            return await self.__notify_red_dot(uid, RedDotType.RD_SKIN)
 
-        up_sta = await UserSkinRC.deal_upgradable_skin(uid)
-        self.red_dot_log(uid, "可升级皮肤查询", up_sta)
-        if up_sta:
-            return await self.__notify_red_dot(uid, RedDotType.RD_SKIN)
-
-    async def __notice_by_monopoly(self, uid):
-        """大富翁有骰子红点"""
-        data = await UserBagRC.get_user_bag_by_id(uid, goods_id=GoodsItem.DICE.val)
-        dice_count = data.get("goods_count") or 0
-        self.red_dot_log(uid, "大富翁红点查询", dice_count)
-        if dice_count >= 1:
-            await self.__notify_red_dot(uid, RedDotType.RD_MONOPOLY)
-
-    async def __notice_by_monopoly_store(self, uid):
-        """ 大富翁商店可领取红点 """
-        sta = await ConfStoreRC.get_store_free_chance(uid, StoreItem.FREE_DICE)
-        self.red_dot_log(uid, "大富翁商店红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_MONOPOLY_FREE_DICE)
-
-    async def __notice_by_monopoly_task(self, uid):
-        """ 大富翁是任务可领取红点 """
-        sta = await UserTaskRC.get_task_unclaimed(uid, TaskType.MONOPOLY_TASK)
-        self.red_dot_log(uid, "大富翁任务红点查询", sta)
-        if sta:
-            await self.__send_notice_to_task(uid, TaskType.MONOPOLY_TASK)
-
-    async def __notice_by_ranking_awards(self, uid):
-        """ 境界奖励未领取红点 """
-        sta = await UserRankingRC.get_ranking_unclaimed(uid)
-        self.red_dot_log(uid, "排位境界红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_RANKING_AWARDS)
-
-    async def __notice_by_douyin_revisit(self, uid):
-        """ 抖音侧边栏未领取红点 """
-        sta = await UserTaskRC.get_douyin_revisit_chance(uid)
-        self.red_dot_log(uid, "抖音侧边栏红点查询", sta)
-        if sta:
-            await self.__notify_red_dot(uid, RedDotType.RD_DOUYIN_REVISIT)
-
-    async def __process_safe_box(self, uid, _):
-        """激活/升级/扩容保险箱"""
-        top_conf = await UserActivityRC.check_top_lifetime_card(uid)
-        self.log_info(uid, "激活/升级/扩容保险箱", top_conf)
-        if top_conf:
-            vip_conf = await UserVipRC.get_vip_conf_by_uid(uid)
-            await UserSafeBoxRC.process_safe_box(
-                uid, top_conf.get("space", 0), top_conf.get("draw_add_times", 0), vip_conf.get("increase_space", 0))
 
     async def __update_item_order_count(self, uid, data):
         """ 更新玩家完成订单数 """
@@ -467,62 +403,6 @@ class WorkersServer(JsonBaseServer):
 
         await Mails.bulk_create(mails_tasks, batch_size=self.ONCE_OPERATION_LIMIT)
 
-    async def season_settle_mails(self, _, data):
-        """ 赛季结算奖励邮件  """
-        cur_season_id = data.get("season_id")
-        # 1.查询符合条件的玩家
-        receive_users = await RecordsUserRankingHistory.filter(
-            season=cur_season_id,
-            season_achieved=False,
-            game_count__gte=data.get("condition", 30)).all()
-
-        # 2.获取每个玩家的赛季奖励
-        _, ranking_data = await ConfRankingRC.get_season_awards_items(cur_season_id)
-        if not ranking_data:
-            return
-
-        # 3.构建邮件数据
-        mails = []
-        rev_uid_list = []
-        for u in receive_users:
-            # 4.根据最高分来检查奖励
-            top_score = u.top_score
-            cur_ranking_data = ConfRankingRC.get_ranking_data_by_score(ranking_data, top_score)
-            if cur_ranking_data:  # 检查是否有奖励，无奖不发
-                ranking_name = cur_ranking_data.get('ranking_name', "")
-                mail_data = {
-                    'receiver': u.uid,
-                    'mail_type': MailType.SEASON_SETTLE,
-                    'title': f'S{cur_season_id}赛季结算奖励',
-                    'content': f'恭喜你在S{cur_season_id}赛季中修为达到{ranking_name}境界，获得以下奖励：',
-                    'attachment': cur_ranking_data.get('season_awards'),
-                    'sender': "system"
-                }
-                mails.append(mail_data)
-                rev_uid_list.append(u.uid)
-
-        # 5.发送邮件并通知
-        receiver = {'type': 'group', 'uid_list': rev_uid_list}
-        await self.__manager_send_mails(_, {'receiver': receiver, 'mails': mails})
-
-        # 6.更新历史表中当前赛季奖励状态为True
-        await RecordsUserRankingHistory.filter(season_id=cur_season_id).update(season_achieved=True)
-
-    async def __set_new_season(self, _, data):
-        """ 设置新赛季 """
-        season_desc = data.get("season_desc")
-        off_season_time = data.get("off_season_time")
-        condition = data.get("condition") or 30
-        if not season_desc or not off_season_time:
-            self.log_info("新赛季名称或休赛期时长不能为空！")
-            return
-        if not isinstance(off_season_time, int) or not isinstance(condition, int):
-            self.log_info("场数限制或休赛期时长必须为整数！")
-            return
-        flag, msg = await ConfSeasonRC.add_season(**data)
-        if not flag:
-            return self.log_info(f"赛季添加失败：{msg}")
-        self.log_info(f"赛季添加成功：{season_desc}")
 
     async def __ban_player(self, _, data):
         """ 封禁玩家 """
@@ -573,39 +453,17 @@ class WorkersServer(JsonBaseServer):
         pb_data = S2CTopAnnouncements.pb_model(ann_list)
         await self.notice_ws_by_rmq(CmdNotice.TOP_ANNOUNCEMENT, uid, msg=pb_data)
 
-    async def __login_sign_in(self, uid, _):
+    async def __login_sign_in(self, uid):
         """登陆签到"""
-        award_type = AwardType.SIGN_IN
-        today_time_node = KitDt.timestamp_today()
-
         # 1.检查是否完成签到
-        task_info = await UserTaskRC.cache_task_record_by_id(uid, TaskId.ROOKIE_SEVEN_SIGN_IN.val)
-        if task_info.get('task_sta') == CompleteSta.COMPLETED and task_info.get('cur_value', 0) >= 7:
-            self.log_info(uid, "七日签到已完成")
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
+        sta, count = await act_count(uid, act.get("act_id", 0), "day")
+        if count > 0:
+            self.log_info(uid, "今天的签到已完成")
             return
+        else:
+            await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN_RF)
 
-        # 2.检查今天签到情况
-        query_params = {"uid": uid, "award_type": award_type}
-        sign_info = await UserBehaviorsRC.get_sign_in_records(uid, award_type) or {}
-        sign_in_date, sign_in_achieved = UserBehaviorsRC.parse_sign_in_info(sign_info)
-
-        if len(sign_in_achieved) >= 7:
-            self.log_info(uid, f"七日签到奖励已领完 {sign_in_achieved}")
-            return
-        if today_time_node in sign_in_date:
-            self.log_info(uid, f"今天的签到已完成 {today_time_node}")
-            return
-
-        # 3.签到
-        sign_in_date.append(today_time_node)
-        new_sign_info = {
-            "uid": uid,
-            "time_node": today_time_node,
-            "award_type": award_type,
-            "sign_in_date": json_encode(sign_in_date) if sign_in_date else '[]'
-        }
-        self.log_info(uid, f"进行登陆签到 {today_time_node}")
-        await UserBehaviorsRC.update_user_sign_in_records(query_params, new_sign_info, sign_info)
 
     @staticmethod
     def task_h_key(uid, start_time):
@@ -648,7 +506,7 @@ class WorkersServer(JsonBaseServer):
         if job_id and cmd == CmdWorkers.MANAGER_SEND_MAILS:
             await RecordsAdminMailsRC.update_info(data.get("m_id"), {"job_id": job_id})
 
-    async def __cancel_background_scheduled_task(self, _, data):
+#     async def __cancel_background_scheduled_task(self, _, data):
         """ 取消后台定时任务 """
         start_time = data.get("start_time")
         job_id = data.get("job_id")
@@ -686,16 +544,16 @@ class WorkersServer(JsonBaseServer):
     async def start_server(self):
         """ 重写启动服务 """
         if self.server_id == 1:
-            print("启动定时服务>>>")
-            from .timed_service import TimedService
-            self.__timed_server = TimedService(self.conf, self)
+            # print("启动定时服务>>>")
+            # from .timed_service import TimedService
+            # self.__timed_server = TimedService(self.conf, self)
             try:
-                self.__timed_server.start()
+                # self.__timed_server.start()
                 await super().start_server()
             except asyncio.CancelledError:
                 pass
-            finally:
-                self.__timed_server.close()  # 关闭scheduler
+            # finally:
+            #     self.__timed_server.close()  # 关闭scheduler
             return
         await super().start_server()
 
@@ -723,7 +581,7 @@ class WorkersServer(JsonBaseServer):
                 return
         # 首次付费判断
         elif event_tracking == EventTracking.AFTER_FIRST_PAY.val:
-            pay_record = await RecordsTradeOrder.get_by_dict(
+            pay_record = await Orders.get_by_dict(
                 {"uid": uid, "order_status": OrderStatus.PAID.val}, limit=1)
             if pay_record:
                 self.log_info(f"用户 {uid} 非首次付费")
@@ -738,18 +596,3 @@ class WorkersServer(JsonBaseServer):
                 "event_time": tool_dt.cur_time()
             })
 
-            # 检查并补充注册记录
-            # reg_record = await RecordsUserEvent.get_by_dict(
-            #     {"uid": uid, "event_tracking": EventTracking.AFTER_REGISTER.val}, limit=1)
-            # if not reg_record:
-            #     u_info = await BaseUserRC.cache_by_uid(uid)
-            #     if u_info:
-            #         await RecordsUserEvent.split_add_one({
-            #             "uid": uid,
-            #             "event_tracking": EventTracking.AFTER_REGISTER.val,
-            #             "event_desc": EventTracking.AFTER_REGISTER.phrase,
-            #             "event_time": u_info.get('created')
-            #         })
-            #         self.log_info(f"为用户 {uid} 补充注册记录")
-            #     else:
-            #         self.log_err(f"用户 {uid} 未注册，且未找到user表记录")

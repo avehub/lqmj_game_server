@@ -8,9 +8,10 @@ from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_db.main import Mails
 from lucky_game.model_rc.base_mails import MailsRC
+from lucky_game.model_rc.base_award import AwardRC
 from common.public.enum_const import DbKey
 from lucky_game.const import MailSta, PullSta, MailOpType, ReasonCostGold, ReasonCostDiamond
-# # from lucky_game.model_rc.base_skin import UserSkinRC
+from lucky_game.logic.activity import Base
 
 
 class MailsListHandler(GameAuthApi):
@@ -19,8 +20,9 @@ class MailsListHandler(GameAuthApi):
     async def get(self, _, **kwargs):
         user = kwargs.get("u_info")
         uid = user.get("uid")
-
         mail_list = await MailsRC.get_mails_list(uid)
+        if mail_list:
+            mail_list = await MailsRC.get_mail_awards(mail_list)
         return self.answer(data=mail_list)
 
 
@@ -49,57 +51,56 @@ class MailsOperateUser(GameAuthApi):
         }
         opt_func = map_func.get(opt_type)
         if opt_func and callable(opt_func):
-            sta = await opt_func(uid, mail_id, mail_data)
+            sta, msg, up_goods = await opt_func(uid, mail_id, mail_data)
             self.log_info(uid, f'邮件{ot_enum.phrase}操作结果 {sta}')
-            if sta:
-                if opt_type == MailOpType.PULL:
-                    self.answer(data=sta)
-                else:
-                    self.answer(hint='OK!')
-            return self.answer(code=self.sta_code.FAIL)
+            if not sta:
+                return self.answer(code=self.sta_code.FAIL, hint=msg)
+            return self.answer(data=up_goods if opt_type == MailOpType.PULL else [])
 
     async def mails_read(self, _, mail_id, mail_data):
         if mail_data.get('mail_sta') == MailSta.READ:
-            self.answer(code=self.sta_code.ALREADY_DO, hint="不能重复标记已读")
+            return False, "不能重复标记已读", []
 
         new_data = {'mail_sta': MailSta.READ}
         read_sta = await Mails.update_by_pk(mail_id, new_data)
-        (not read_sta) and self.answer(code=self.sta_code.FAIL, hint="已读失败，请稍后再试")
+        if not read_sta:
+            return False, "已读失败，请稍后再试", []
 
-        return True
+        return True, "已读成功", []
 
     async def mails_del(self, _, mail_id, mail_data):
         award_items = mail_data.get('attachment')
         if award_items and mail_data.get('attachment_sta') == PullSta.UN_PULL:
-            self.answer(code=self.sta_code.FAIL, hint="还有奖励未领取，请领取后再尝试")
+            return False, "还有奖励未领取，请领取后再尝试", []
 
         new_data = {'mail_sta': MailSta.DELETED}
         drop_sta = await Mails.update_by_pk(mail_id, new_data)
-        (not drop_sta) and self.answer(code=self.sta_code.FAIL, hint="删除失败，请稍后再试")
+        if not drop_sta:
+            return False, "删除失败，请稍后再试", []
 
-        return True
+        return True, "删除成功", []
 
     async def mails_pull(self, uid, mail_id, mail_data):
+        up_goods = []
         award_items = mail_data.get('attachment')
         if not award_items or mail_data.get('attachment_sta') == PullSta.PULLED:
-            self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="没有需要领取的奖励")
+            return False, "没有需要领取的奖励", up_goods
 
-        # 处理皮肤兑换
-        for i in award_items:
-            pass
-            # await UserSkinRC.deal_hold_skin(uid, i)
-        StatFlow.stat_common_flow(awards=award_items, d_reason=ReasonCostDiamond.MAILS_GIFT, g_reason=ReasonCostGold.MAILS_GIFT)
-
-        new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
+                # 处理邮件附件奖励
+                mail_list = await MailsRC.get_mail_awards([mail_data])
+                award_id = mail_data.get("attachment")["award_ids"][0]
+                new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
+                for i in mail_list:
+                    await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=i.get('attachment').get('awards'))
+                    await Base().give_awards(uid, award_id)
+                    up_goods.extend(i.get('attachment').get('awards'))
                 await Mails.update_by_pk(mail_id, new_data)
-                up_goods = await UpAssets.update_assets(uid, award_items, [], is_pack=True)
         except Exception as e:
             self.log_err(f"mails_pull 事务执行失败，原因：{e}")
-            self.answer(code=self.sta_code.FAIL, hint="邮件奖励领取失败，请联系客服")
-
-        return up_goods
+            return False, "邮件奖励领取失败，请联系客服", up_goods
+        return True, "邮件领取成功", up_goods
 
 
 class MailsOperateOneClick(GameAuthApi):
@@ -110,7 +111,6 @@ class MailsOperateOneClick(GameAuthApi):
         opt_type = self.check_int(req.json.get("opt_type"), require=True, p_name='opt_type')
         ot_enum = MailOpType.find_member_by_val(opt_type)
         (not ot_enum) and self.answer(code=self.sta_code.ERR_ARG, hint="不支持的操作类型")
-
         user = kwargs.get("u_info")
         uid = user.get("uid")
 
@@ -123,15 +123,13 @@ class MailsOperateOneClick(GameAuthApi):
             MailOpType.DEL.val: self.mails_del_auto
         }
         opt_func = map_func.get(opt_type)
+        data = []
         if opt_func and callable(opt_func):
-            sta = await opt_func(uid, mail_data)
+            sta, msg, data = await opt_func(uid, mail_data)
             self.log_info(uid, f'邮件{ot_enum.phrase}一键操作结果 {sta}')
-            if sta:
-                if opt_type == MailOpType.PULL:
-                    self.answer(data=sta)
-                else:
-                    self.answer(hint='邮件操作成功')
-            return self.answer(code=self.sta_code.FAIL)
+            if not sta:
+                return self.answer(code=self.sta_code.FAIL, hint=msg)
+        return self.answer(data=data if opt_type == MailOpType.PULL else [])
 
     async def mails_del_auto(self, _, mail_data):
         update_mail = []
@@ -142,38 +140,55 @@ class MailsOperateOneClick(GameAuthApi):
             if not awards or item.get('attachment_sta') == PullSta.PULLED:
                 update_mail.append(Mails.update_by_pk(mail_id, new_data, item))
 
-        (not update_mail) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="还有奖励未领取，请领取后再尝试")
+        if not update_mail:
+            return False, "没有可删除的邮件", update_mail
         await asyncio.gather(*update_mail)
 
-        return True
+        return True, "一键删除成功", update_mail
 
     async def mails_pull_auto(self, uid, mail_data):
         award_items = []
+        up_goods = []
+        # 1. 收集需要更新的邮件
         for g in mail_data:
             awards = g.get('attachment')
             if awards and g.get('attachment_sta') == PullSta.UN_PULL:
-                award_items.extend(awards)
-        (not award_items) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="没有可领取的奖励")
+                award_items.append(g)
 
-        # 处理皮肤兑换
-        for i in award_items:
-            pass
-#             await UserSkinRC.deal_hold_skin(uid, i)
-        StatFlow.stat_common_flow(awards=award_items, d_reason=ReasonCostDiamond.MAILS_GIFT , g_reason=ReasonCostGold.MAILS_GIFT)
+        if not award_items:
+            return False, "没有可领取的奖励", up_goods
 
-        update_mail = []
+        # 2. 准备更新操作
         new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
-        for item in mail_data:
+        update_operations = []
+
+        for item in award_items:
             mail_id = item.get('mail_id')
-            update_mail.append(Mails.update_by_pk(mail_id, new_data, item))
-        (not update_mail) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="没有可领取的奖励")
+            if mail_id:
+                update_operations.append(
+                    Mails.filter(pk=mail_id).update(**new_data)
+                )
+
+        if not update_operations:
+            return False, "没有可领取的奖励", up_goods
 
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                update_mail and await asyncio.gather(*update_mail)
-                up_goods = await UpAssets.update_assets(uid, award_items, [], is_pack=True)
+                # 3. 处理邮件附件奖励
+                mail_list = await MailsRC.get_mail_awards(award_items)
+                for mail in mail_list:
+                    awards = mail.get('attachment', {}).get('awards', [])
+                    if awards:
+                        award_id = mail.get("attachment")["award_ids"][0]
+                        await Base().gain_awards(uid, awards=awards, award_id=award_id, reward_type=3)
+                        await Base().give_awards(uid, award_id)
+                        up_goods.extend(awards)
+
+                # 4. 执行批量更新
+                if update_operations:
+                    await asyncio.gather(*update_operations)
+
         except Exception as e:
             self.log_err(f"mails_pull_auto 事务执行失败，原因：{e}")
-            self.answer(code=self.sta_code.FAIL, hint="一键领取奖励失败，请联系客服")
-
-        return up_goods
+            return False, "一键领取奖励失败，请联系客服", up_goods
+        return True, "一键领取成功", up_goods

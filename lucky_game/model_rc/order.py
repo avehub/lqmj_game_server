@@ -1,22 +1,26 @@
 """用户参与活动相关"""
+import decimal
 from datetime import datetime
 import random
 from typing import Type, Union, Tuple, List, Dict, Any
 from tortoise.exceptions import OperationalError
+
+from lucky_game.const import OrderStatus
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_db.main import Orders
+
 
 class OrderRC(BaseCommonRC):
     db_model = Orders
     tb_name = db_model.sheet_name()
 
     @classmethod
-    async def add_order(cls, uid: int, good_id: int, sku: str, platform: int, amount: float, currency: int,
-                        pay_mode: int, order_no: str, num: int,
-                        out_order_no: str = None, status: int = None, prepay_id: str = None, explain: str = None):
+    async def add_order(cls, uid: int, good_id: int, sku: str, platform: int, amount: decimal.Decimal, currency: int,
+                        pay_mode: int, order_no: str, num: int, out_order_no: str = '',
+                        status: int = OrderStatus.WAIT_PAY, prepay_id: str = "", explain: str = ""):
         """新增订单"""
         try:
-            new = await cls.db_model.add_one({
+            data = {
                 "uid": uid,
                 "good_id": good_id,
                 "sku": sku,
@@ -30,7 +34,9 @@ class OrderRC(BaseCommonRC):
                 "status": status if status else 0,
                 "prepay_id": prepay_id if prepay_id else "",
                 "explain": explain if explain else "",
-            })
+            }
+            cls.conf.log.info("插入订单表信息: ", data)
+            new = await cls.db_model.add_one(data)
             if not new:
                 return False, "添加失败"
         except OperationalError as e:
@@ -100,4 +106,4 @@ class OrderRC(BaseCommonRC):
             data, msg = await cls.get_order_filter(order_no=order_no)
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return data, msg
+        return data[0], msg

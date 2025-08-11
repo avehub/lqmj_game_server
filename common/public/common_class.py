@@ -11,6 +11,8 @@ from common.utils.utils import UtilsTool
 from datetime import datetime
 import calendar
 from typing import Tuple, Union
+from c_services.const.cs_enum_const import CmdNotice
+from common.proto.py_pb2.common import common_pb2
 
 
 class CommonApi(LogMeta):
@@ -44,6 +46,8 @@ class CommonApi(LogMeta):
         通过rmq推送消息到网关
         该方法默认消息不持久化
         """
+
+        cls.loginfo(f"cs2cs_by_rmq: {cs_type}, {c_code}, {uid}, {msg}, {r_key}, {exp}, {delivery_mode}")
         await cls.conf.rmq.cs2cs_rmp(cs_type, c_code, uid, msg, r_key, exp, delivery_mode)
 
     @classmethod
@@ -107,6 +111,12 @@ class CommonApi(LogMeta):
         pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
         cmd = UtilsTool.packet_command(cs_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+    @classmethod
+    async def send_red_dot(cls, uid, rd_type):
+        """ 红点消息 """
+        model = common_pb2.S2COneFieldWeb()
+        model.red_dot = rd_type
+        await cls.send_msg_to_player(CmdNotice.RED_DOT, uid=uid, msg=model, cs_type=ServiceEnum.C_NOTICE)
 
     @classmethod
     async def req_by_rpc(cls, cs_type: ServiceEnum, c_code, uid, msg, r_key=''):
@@ -184,7 +194,8 @@ class CommonApi(LogMeta):
         return int((now - midnight).total_seconds())
 
     @classmethod
-    async def get_time_range(cls, period: str = 'month') -> Tuple[int, int]:
+    async def get_time_range(cls, period: str = 'month', start_hour: int = 0, end_hour: int = 23, state_minute: int = 0,
+                             end_minute: int = 59, start_second: int = 0, end_second: int = 59) -> Tuple[int, int]:
         """
         获取本月或当天的第一天和最后一天的时间戳
 
@@ -199,18 +210,18 @@ class CommonApi(LogMeta):
 
         if period == 'day':
             # 获取当天的日期时间（00:00:00）
-            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_of_day = now.replace(hour=start_hour, minute=state_minute, second=start_second, microsecond=0)
             # 获取当天的日期时间（23:59:59）
-            end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+            end_of_day = now.replace(hour=end_hour, minute=end_minute, second=end_second, microsecond=999999)
             return int(start_of_day.timestamp()), int(end_of_day.timestamp())
 
         elif period == 'month':
             # 获取本月第一天的日期时间（00:00:00）
-            first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            first_day = now.replace(day=1, hour=start_hour, minute=state_minute, second=start_second, microsecond=0)
             # 获取本月最后一天的日期
             last_day = calendar.monthrange(now.year, now.month)[1]
             # 获取本月最后一天的日期时间（23:59:59）
-            last_day_dt = now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
+            last_day_dt = now.replace(day=last_day, hour=end_hour, minute=end_minute, second=end_second, microsecond=0)
             return int(first_day.timestamp()), int(last_day_dt.timestamp())
 
         else:
@@ -229,5 +240,7 @@ class CommonApi(LogMeta):
             if unordered:
                 return list(result.values())
         except Exception as e:
-            return result
+            return e
+        return result
+
 

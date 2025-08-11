@@ -127,14 +127,23 @@ class AwardRC(BaseRC):
                 query["name__contains"] = name
             if order_field is None:
                 order_field = "-award_id"
-            print("query:", query)
             result = await cls.db_model.filter(**query).order_by(order_field).values()
             if not result:
-                return None, "暂无战绩"
+                return None, "暂无数据"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"
 
+    @classmethod
+    async def get_award_info(cls, award_id: int = None, is_content: bool = True):
+        """按条件获取奖项"""
+        try:
+            result = await cls.db_model.get_by_pk(award_id)
+            if not result:
+                return None, "暂无数据"
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return result["content"] if is_content else result, "成功"
 
 class UserAwardRC(BaseRC):
     """

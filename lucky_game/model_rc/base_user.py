@@ -2,6 +2,7 @@
 用户相关
 """
 import asyncio
+import decimal
 from typing import Union, Iterable
 from datetime import datetime, date
 from nsanic.libs import tool_dt
@@ -149,19 +150,21 @@ class BaseUserRC(BaseCommonRC):
         return {}
 
     @classmethod
-    async def cache_count_buy_limit(cls, uid, trade_item, data):
+    async def cache_count_buy_limit(cls, uid, sku, data):
         """ 缓存短期限购次数（通用） """
         # 从 data 中获取周期类型，例如：{"times": 5, "limit_period": 1}
-        buy_limit = data.get("buy_limit")
-        limit_period = buy_limit.get("limit_period", 0)
-        cur_time = tool_dt.cur_time()
+        sta = False
+        if data:
+            buy_limit = data.get("buy_limit")
+            limit_period = buy_limit.get("limit_period", 0)
+            cur_time = tool_dt.cur_time()
 
-        # 计算周期结束时间
-        time_node = KitDt.cal_period_deadline(limit_period, cur_time)
-        data["time_node"] = time_node
-
-        return await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{trade_item}", json_encode(data),
-                                           ex_time=cls.expired_sec)
+            # 计算周期结束时间
+            time_node = KitDt.cal_period_deadline(limit_period, cur_time)
+            data["time_node"] = time_node
+            sta = await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{sku}", json_encode(data),
+                                               ex_time=cls.expired_sec)
+        return sta
 
     @classmethod
     async def cache_by_pk(cls, pk_val: Union[bytes, int, str], **kwargs):
@@ -411,7 +414,7 @@ class BaseUserRC(BaseCommonRC):
         return await cls.conf.rds.set_item(key, 1, cool_down_time)
 
     @classmethod
-    async def update_user_int_field(cls, uid: int, field_name: str, value: int, operation: str = 'add'):
+    async def update_user_int_field(cls, uid: int, field_name: str, value: [int | decimal.Decimal], operation: str = 'add'):
         try:
             user, e = await cls.update_int_field(uid, field_name, value, operation)
             if not user:
@@ -434,6 +437,7 @@ class BaseUserRC(BaseCommonRC):
         union = kwargs.get(register_type)
         name = kwargs.get("nickname")
         dev_ident = kwargs.get("dev_ident")
+        phone = kwargs.get("phone")
         if register_type == cls.KEY_PHONE_CACHE:
             name = ''.join(list(union)[-4:])
         elif register_type in [cls.KEY_UNION_ID, cls.KEY_OPENID]:
@@ -444,11 +448,11 @@ class BaseUserRC(BaseCommonRC):
         else:
             name = generate_natural_random(4)
         return {
-            "avatar": SERVER_ADDR + "/resource/default/avatar.png",
             "nickname": name,
             "sex": 0,
-            # "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
-            # "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
+            "phone": phone,
+            "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('phone_openid', union, extra_str=phone)),
+            "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('phone_unionid', union, extra_str=phone)),
             # "safe_key": RngMaker.mk_str(18),
             # "valid_key": RngMaker.mk_str(16),
             # "dev_ident": dev_ident,
