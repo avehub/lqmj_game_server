@@ -521,7 +521,7 @@ class Robot(DBModel):
     region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
 
     class Meta:
-        indexes = (("region", "r_score"),)  # 联合索引
+        indexes = ("region",)  # 联合索引
 
 
 class ConfRobot(DBModel):

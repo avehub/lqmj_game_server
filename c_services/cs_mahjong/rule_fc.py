@@ -520,7 +520,7 @@ class RuleFc(Rule):
 
 
     @staticmethod
-    def get_ting_hu_list(table_cards, cards: list, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI):
+    def get_ting_hu_list(table_cards, cards: list, allow_hu_map: dict, lai_zi=CardsType.LAI_ZI,que = 0):
         """ 获取叫哪些牌 """
         all_cards = list(ALL_CARDS_WITHOUT_ZI_HUA)
         hu_card = []
@@ -529,9 +529,10 @@ class RuleFc(Rule):
             all_cards.remove(c)
 
         suits_to_count = {}
-        for c in cards:
+        for c in all_cards:
             c_suit = Rule.get_suit(c)
-            suits_to_count[c_suit] = suits_to_count.get(c_suit, 0) + 1
+            if c_suit != que:
+                suits_to_count[c_suit] = suits_to_count.get(c_suit, 0) + 1
 
         valid_cards = []
         for card in all_cards:
