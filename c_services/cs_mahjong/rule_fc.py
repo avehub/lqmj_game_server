@@ -504,14 +504,15 @@ class RuleFc(Rule):
             flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)
             if flag:
                 return True, hu_path
-        for jiang in three_list:
-            flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)
-            if flag:
-                return True, hu_path
         for jiang in four_list:
             flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)
             if flag:
                 return True, hu_path
+        for jiang in three_list:
+            flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)
+            if flag:
+                return True, hu_path
+
 
         for jiang in set(cards):
             flag, hu_path = RuleFc.can_hu_with_lai_zi_and_jiang(cards, jiang, lai_zi_count, remove_jiang, lai_zi)

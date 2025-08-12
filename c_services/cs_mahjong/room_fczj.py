@@ -442,7 +442,7 @@ class RoomFCZJ(BaseLeisureRoom):
             await self.inner_broadcast(CmdRoom.HU_AFTER_CARDS_INFO, cards_model)
             return self.call_flow(1.0, self.round_over, OverType.OTHERS_GIVE_UP)
         if len(self.__wait_recharge_seats) == 0:
-            self.call_flow(0, self.recharge_continue)
+            self.call_flow(0.5, self.recharge_continue)
 
     def player_zhuo_ji_call(self, p: PlayerFCZJ):
         """统计捉鸡数"""
@@ -1720,7 +1720,6 @@ class RoomFCZJ(BaseLeisureRoom):
         if len(p.ting_list) == 0:
             table_cards = deepcopy(p.table_cards)
             ting_list = RuleFc.get_ting_hu_list(table_cards, p.cards, allow_hu_map, self.__lai_zi,p.que)
-            print("闷", ting_list)
             p.ting_list = ting_list
 
         if self.__recharge_wait == 0:
@@ -2088,7 +2087,6 @@ class RoomFCZJ(BaseLeisureRoom):
         if can_hu:
             hu_type = hu_info["hu_type"]
             if p.is_robot:
-                print("机器人calc_operates_after_mo_pai", p.uid)
                 if self.poker.left_count <= 30:
                     result.append(ActionType.ACTION_TYPE_MEN)
                 else:

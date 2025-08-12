@@ -2181,8 +2181,9 @@ class Room(BaseCardRoom):
                 return StaCode.RULE_ERR, '尾三必开'
 
             self.set_tui_zhang_ke_kai(player)
-            self.log_info(self.tid, player.uid, "玩家出牌漏胡, 闷牌后不能改牌", len(player.men_cards), player.operates)
-            self.record_lou_hu(player, "出牌")
+            if len(player.men_cards) > 0 or player.tian_ting == 1:
+                self.log_info(self.tid, player.uid, "玩家出牌漏胡, 闷牌后不能改牌", len(player.men_cards), player.operates)
+                self.record_lou_hu(player, "出牌")
 
         player.chu_pai(card)
         print("玩家出牌", card, "座位号", player.seat_id)
