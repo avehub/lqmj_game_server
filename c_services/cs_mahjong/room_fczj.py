@@ -846,7 +846,8 @@ class RoomFCZJ(BaseLeisureRoom):
             win_from.append(p_loser.seat_id)
             p_loser.record_account(lose_data)
             p_loser.update_gold(- lose_gold)
-            update_task.append(self.update_user_gold(p_loser, - lose_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
+            if not p_loser.is_robot:
+                update_task.append(self.update_user_gold(p_loser, - lose_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
             lose_list.append({
                 "lose_seat_id": p_loser.seat_id,
                 "lose_gold": - lose_gold,
@@ -861,7 +862,8 @@ class RoomFCZJ(BaseLeisureRoom):
         win_data["win_from"] = win_from
         self.multi_user_record_account(p, win_data)
         p.update_gold(win_total_gold)
-        update_task.append(self.update_user_gold(p, win_total_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
+        if not p.is_robot:
+            update_task.append(self.update_user_gold(p, win_total_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
         if update_task:
             await asyncio.gather(*update_task)
         kf_data = {

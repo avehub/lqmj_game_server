@@ -2682,8 +2682,6 @@ class Room(BaseCardRoom):
         info, can_hu, hu_path = self.get_hu_type(player, only_calc_hu=True)
         if not can_hu:
             return False, [], {}
-        if self.play_type in(PlayType.JIAN_LOU_XUE_LIU,PlayType.AN_LONG_XUE_ZHAN):
-            self.__record_operates.setdefault(player.seat_id, []).append(ActionType.ACTION_TYPE_PASS)
         return self.check_can_hu(player, can_hu, info, hu_path)
 
     def check_can_hu(self, player, can_hu, info, hu_path=None):

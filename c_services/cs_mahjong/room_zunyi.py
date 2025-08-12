@@ -48,7 +48,16 @@ class RoomZY(RoomBJ):
         return accounts, zhuo_ji
 
     def get_per_score(self, ji, score, count, default_ji, liu_ju):
-        pass
+
+        bei_lv = 1
+        if ji in default_ji and ji in self.fan_jin_ji_cards:  # 金鸡必须是9转1
+            bei_lv = 3
+
+        if ji == CardsType.WU_GU_JI and ji not in self.default_ji:
+            per_score = count
+        else:
+            per_score = self.ji_pai_score.get(ji, 1) * count * bei_lv
+        return per_score
 
     def get_hu_type(self, p: Player, dian_pao=False, only_calc_hu=False, lou=False):
         extra_fan = []
@@ -425,14 +434,7 @@ class RoomZY(RoomBJ):
                 # 流局包鸡没有金鸡一说
                 win_total = 0
                 win_from = []
-                bei_lv = 1
-                if ji in default_ji and ji in self.fan_jin_ji_cards:  # 金鸡必须是9转1
-                    bei_lv = 3
-
-                if ji == CardsType.WU_GU_JI and ji not in self.default_ji:
-                    per_score = count
-                else:
-                    per_score = self.ji_pai_score.get(ji, 1) * count * bei_lv
+                per_score = self.get_per_score(ji, 0, count, default_ji, liu_ju)
 
                 for other_p in self.seats:
                     if other_p.seat_id == p.seat_id:
