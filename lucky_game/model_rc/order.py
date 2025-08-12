@@ -59,7 +59,7 @@ class OrderRC(BaseCommonRC):
     @classmethod
     async def get_order_filter(cls, uid: any = None, sku: any = None, good_id: any = None, status: int = None,
                                platform: any = None, start_time: int = None, end_time: int = None,
-                               order_no: str = False, count: bool = False):
+                               order_no: str = None, count: bool = False):
         """获取订单记录"""
         try:
             query = {}
@@ -91,6 +91,7 @@ class OrderRC(BaseCommonRC):
                 query["created__lte"] = end_time
             if order_no is not None:
                 query["order_no"] = order_no
+            print(f"查询订单表信息: {query}")
             if count:
                 data = await cls.db_model.filter(**query).count()
             else:

@@ -1,5 +1,6 @@
 """ 支付相关逻辑处理 """
 import decimal
+import random
 
 from nsanic.libs.mk_random import RngMaker
 from sanic import Request
@@ -78,6 +79,7 @@ class PaymentLogic:
         """
         currency = express.get("currency")
         price = express.get("price")
+        uid = u_info.get("uid")
         # 确保 price 是 Decimal 类型
         if isinstance(price, (int, float)):
             price = decimal.Decimal(price)
@@ -106,6 +108,21 @@ class PaymentLogic:
             amount = u_info.get(field)
             if amount < price:
                 return False, f'{field_name}不足', {}
+        else:
+            # 校验今日领取次数
+            start_time, end_time = await CommonApi.get_time_range("day")
+            NLogger.info(f"校验今日领取次数 uid: {uid} start_time: {start_time} end_time: {end_time}")
+            count, e = await OrderRC.get_order_filter(uid=uid, sku=express["sku"], status=OrderStatus.PAID, start_time=start_time, end_time=end_time, count=True)
+            NLogger.info(f"今日领取次数 count: {count} e: {e}", express)
+            if count > 0:
+                return False, "已领取", {}
+            field_name = "免费领取"
+            field = "gold"
+            # 随机今日领取金币
+            if "content" in express and isinstance(express["content"], list) and express["content"]:
+                express["content"] = express["content"][random.randint(0, len(express["content"]) - 1)]
+            else:
+                express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
         express["price"] = price
         order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
@@ -175,8 +192,6 @@ class PaymentLogic:
         else:
             # 支付成功校验
             order, msg = await OrderRC.get_order_info(order_no)
-            if not order or order.get("status") != OrderStatus.PAID:
-                return False, "订单不存在或支付超时"
             # 当为兑换商品时，直接修改订单状态
             if order.get("currency") != CurrencyType.BY_RMB:
                 order_sta, e = await OrderRC.up_order(
@@ -186,8 +201,10 @@ class PaymentLogic:
                     order_no
                 )
                 NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
-            if order.get("status") != OrderStatus.PAID:
-                return False, "订单状态异常"
+                if not order_sta:
+                    return False, e
+            else:
+                pass
 
             # 更新用户资源
             add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
@@ -215,7 +232,7 @@ class PaymentLogic:
             pay_mode=pay_mode,
             num=num,
             order_no=order_no,
-            status=OrderStatus.WAIT_PAY if express.get("price") > 0 else OrderStatus.PAID,
+            status=OrderStatus.WAIT_PAY,
             explain=explain,
         )
         NLogger.info("create_order 订单插入状态: new_order", new, msg)
@@ -554,3 +571,16 @@ class PaymentLogic:
         #     }
         # )
         pass
+
+    async def __2_pay(self, open_id, order_id, trade_amount, trade_name, trade_desc):
+        """支付宝支付(H5)"""
+        pass
+
+        # (not all([open_id, order_id, trade_amount, trade_name, trade_desc])) and self.answer(code=self.sta_code.ERR_ARG)
+        #
+        result, req_data = await Alipay.ali_mini_game_coin_pay(open_id, order_id, trade_amount, trade_name, trade_desc)
+        # self.log_info("AliPay 扣减游戏币结果", req_data)
+        # if not result:
+        #     data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
+        #     return self.answer(self.sta_code.EXTERNAL_ERR, data)
+        # return True

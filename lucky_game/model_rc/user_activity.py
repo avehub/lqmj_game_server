@@ -47,6 +47,7 @@ class LogUserActivityRC(BaseCommonRC):
                 query["join_time__gte"] = start_time
             if end_time is not None:
                 query["join_time__lte"] = end_time
+            print("query", query)
             if count:
                 data = await cls.db_model.filter(**query).count()
             else:

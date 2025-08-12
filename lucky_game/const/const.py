@@ -56,7 +56,7 @@ class AliGrantType(StrEnum):
 
 class PayMode(BaseEnum):
     """支付方式"""
-    DEFAULT_MODE = 0, "默认"
+    DEFAULT_MODE = 0, "默认(免费、兑换)"
     HUI_FU_PAY = 1, "汇付天下(App_Android、H5、微信小程序_IOS)"
     ALIPAY = 2, "支付宝支付(H5)"
     WECHAT_PAY = 3, "微信(微信小程序_Android)"
