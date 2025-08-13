@@ -38,7 +38,7 @@ class CallbackAli(SpecialApi):
     """支付宝订单回调"""
     async def post(self, req: Request):
         form = req.get_form()
-        json = req.json()
+        json = req.json
         self.loginfo(f"支付宝回调参数form: {form}")
         self.loginfo(f"支付宝回调参数json: {json}")
         sta, data = AlipayPayment().verify_callback(form)
