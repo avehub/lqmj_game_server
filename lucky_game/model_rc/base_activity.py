@@ -19,8 +19,7 @@ class ConfActivityRC(BaseRC):
     db_model = ConfActivity
     tb_name = db_model.sheet_name()
     expired_mode = 0
-    # 救济金领取门槛 gold < 50000
-    RELIEF_THRESHOLD = 50000
+
 
     @classmethod
     async def get_activity_item_by_id(cls, act_id, platform='', os=''):

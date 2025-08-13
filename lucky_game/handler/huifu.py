@@ -3,7 +3,10 @@ import adapay
 import dg_sdk
 from functools import partial
 
+from dg_sdk import DGTools
 from nsanic.libs.mk_random import RngMaker
+from nsanic.libs.mult_log import NLogger
+from nsanic.libs.tool import json_parse
 
 from common.utils.kit_dt import KitDt
 from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
@@ -154,6 +157,26 @@ class DouGongPay:
         response = await loop.run_in_executor(None, lambda: request.post(extend_infos))
         return response
 
+    @classmethod
+    async def check_signature(cls, form):
+        """ 检查签名 """
+        resp_code = form.get('resp_code')
+        resp_desc = form.get('resp_desc')
+        resp_data_str = form.get('resp_data')
+        sign = form.get('sign')
+        NLogger.info("汇付天下支付回调通知", resp_code, resp_desc)
+
+        if resp_code != '00000000':
+            return False, 'Invalid resp_code.'
+
+        # 使用斗拱平台公钥进行验签
+        resp_data = json_parse(resp_data_str)
+        result = DGTools.verify_sign(resp_data, sign, pub_key=HuiFuConf.DOUGONG_APP_PUBLIC_KEY)
+        if not result:
+            NLogger.error(f"HuiFu 汇付天下支付回调通知{result}验签失败")
+            return False, "验签失败"
+        return True, resp_data
+
 
 class Adapay:
     """汇付天下支付相关（Adapay SDK）"""
@@ -204,3 +227,5 @@ class Adapay:
         # 更简洁的方式
         # response = await loop.run_in_executor(None, lambda: adapay.Payment.create(**payment_params))
         return response
+
+

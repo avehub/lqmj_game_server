@@ -39,6 +39,7 @@ from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
 class WorkersServer(JsonBaseServer):
@@ -258,7 +259,8 @@ class WorkersServer(JsonBaseServer):
     async def __notice_by_relief(self, uid):
         """救济红点"""
         u_info = await BaseUserRC.cache_by_uid(uid)
-        if u_info.get("gold", 0) < ConfActivityRC.RELIEF_THRESHOLD:
+        conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
+        if u_info.get("gold", 0) < conf_data.get("min_gold"):
             act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.INFINITE_PLAY)
             sta, msg, progress = await Base().act_progress(uid, act.get("act_id", 0), ActivityType.INFINITE_PLAY)
             num = 0

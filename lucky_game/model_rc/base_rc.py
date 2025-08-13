@@ -310,8 +310,6 @@ class BaseCommonRC(RCModel, CommonApi):
 
             # 获取当前字段值
             current_value = data[field_name]
-            if not isinstance(current_value, (int, Decimal)):
-                return False, f"字段{field_name}不是数值类型"
             # 计算新值
             if operation == 'add':
                 new_value = current_value + value
