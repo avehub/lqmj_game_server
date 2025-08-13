@@ -72,16 +72,17 @@ class PayByGood(GameAuthApi):
         (not isinstance(pt_enum, PayType)) and self.answer(self.sta_code.ERR_ARG, hint='没有此兑换方式')
 
         self.loginfo(f"商店购物：user={u_info}，good={express}")
+        # 支付前校验
+        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
+        self.loginfo(f"支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
+        # 支付前校验失败
+        if not sta_before:
+            return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
         # 购买商品事务处理
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                # 支付前校验
-                sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
-                self.loginfo(f"支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
-                if not sta_before:
-                    return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
                 # 支付中
-                sta_pay, msg = await payment.pay(u_info, data_before, express)
+                sta_pay, msg = await payment.pay(uid, data_before, express)
                 self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
                 # 支付后（如果为兑换商品则直接处理）
                 if pay_type != PayType.BY_RMB:
@@ -95,8 +96,10 @@ class PayByGood(GameAuthApi):
                 self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             self.logerr(f'{pt_enum.phrase}事务执行失败，原因：{e}')
             self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
-
-        return self.answer(data=data_before.get("order"))
+        data = data_before.get("order")
+        data["buy_good"] = express["content"]
+        data["buy_good"]["img"] = express.get("img")
+        return self.answer(data=data)
 
 
 

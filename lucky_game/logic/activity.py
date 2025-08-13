@@ -1,10 +1,11 @@
 """ 活动、奖品相关逻辑处理 """
 import random
 import ast
+import traceback
 from typing import Union, Tuple
 
 from nsanic.libs import tool_dt
-from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold
+from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_award import AwardRC
@@ -13,6 +14,9 @@ from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceCha
 from nsanic.libs.mult_log import NLogger
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
+from lucky_game.logic.payment import PaymentLogic
+from lucky_game.model_rc.base_store import GoodRC
+from lucky_game.model_rc.order import OrderRC
 
 
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
@@ -38,25 +42,35 @@ async def act_count(uid: int, act_id: int, period: str):
 class Base:
     conf: ConfSrv = conf_srv
 
-    async def act_handler(self, activity: dict, uid: int, award_type: int):
+    async def act_handler(self, activity: dict, u_info: dict, award_type: int, pay_mode: int=None, platform: int=None):
         """ 根据活动类型获取活动操作 """
+        uid = u_info.get("uid")
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
-        start_time, end_time = await CommonApi.get_time_range("day")
-        sta, act_total = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
-                                                                    end_time=end_time, count=True)
+        if act_type == ActivityType.FIRST_CHARGE:
+            act_total, msg = await OrderRC.get_order_filter(uid=uid, status=OrderStatus.PAID, currency=PayType.BY_RMB, count=True)
+        else:
+            start_time, end_time = await CommonApi.get_time_range("day")
+            sta, act_total = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
+                                                                        end_time=end_time, count=True)
         NLogger.info(f"act_count:{act_total}")
         join_limit_day = activity.get("join_limit_day") - 1
-        if act_total > join_limit_day:
+        if act_total > 0 and act_total > join_limit_day:
             return False, "已达最大参与次数", {}
         if act_type == ActivityType.LUCK_SIGN_IN:
             return await SignIn().handler(activity, uid, award_type)
         elif act_type == ActivityType.PACKAGE:
             return await Package().handler(activity, uid, award_type)
         elif act_type == ActivityType.SHARE:
-            return await Share().handler(activity, uid, award_type)
+            return await Common().handler(activity, uid, award_type)
         elif act_type == ActivityType.INFINITE_PLAY:
-            return await Share().handler(activity, uid, award_type)
+            conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
+            NLogger.info(f"conf_data:{conf_data} u_info {u_info}")
+            if u_info.get("gold") > conf_data.get("min_gold"):
+                return False, "暂不符合领取条件", {}
+            return await Common().handler(activity, uid, award_type)
+        elif act_type == ActivityType.FIRST_CHARGE:
+            return await FirstCharge().handler(uid, activity, award_type, pay_mode, platform)
 
     async def act_gain(self, activity: dict, uid: int, award_id: int):
         """ 领取活动奖励 """
@@ -177,42 +191,48 @@ class Base:
                     NLogger.info(f"领取奖励：sta={sta}, e={e}")
         return sta, e
 
-    async def act_progress(self, uid: int, act_id: int, act_type: int):
-        result = {}
-        if act_type == ActivityType.LUCK_SIGN_IN:
-            start_time, end_time = await CommonApi.get_time_range()
-        elif act_type == ActivityType.PACKAGE:
-            start_time, end_time = await CommonApi.get_time_range("day")
-        else:
-            start_time = end_time = None
-        progres_sta, progress = await UserActivityProgressRC.get_activity_progress_once(
-            uid=uid,
-            act_id=act_id,
-            start_time=start_time,
-            end_time=end_time,
-        )
-        gain_sta, gains = await AwardGainsRC.get_award_gains(
-            uid=uid,
-            act_id=act_id,
-            start_time=start_time,
-            end_time=end_time,
-        )
-        if not progres_sta:
-            return False, "活动进度异常", result
-        if not gain_sta:
-            return False, "获取领取奖励内容异常", result
-        if act_type in [ActivityType.LUCK_SIGN_IN, ActivityType.INFINITE_PLAY]:
-            if not progress:
-                progress = {}
-            progress["today_total"] = 0
-            sta, signed = await act_count(uid, act_id, "day")
-            if sta and signed:
-                progress["today_total"] = signed
-            if gains:
-                gains = [i for i in gains if i.get("type_id") > 6]
-        result["progress"] = progress
-        result["gains"] = gains
-        return True, "成功", result
+    async def act_progress(self, ac: dict, u_info: dict):
+        try:
+            act_type = ac.get("act_type")
+            act_id = ac.get("act_id")
+            uid = u_info.get("uid")
+            progress = {}
+            gains = []
+            query_progress = query_gains = True
+            if act_type == ActivityType.LUCK_SIGN_IN:
+                start_time, end_time = await CommonApi.get_time_range()
+            elif act_type in [ActivityType.PACKAGE, ActivityType.INFINITE_PLAY]:
+                start_time, end_time = await CommonApi.get_time_range("day")
+            else:
+                start_time = end_time = None
+                query_progress = query_gains = False
+            if query_progress:
+                progres_sta, progress = await UserActivityProgressRC.get_activity_progress_once(
+                    uid=uid,
+                    act_id=act_id,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                if not progres_sta:
+                    return False, "活动进度异常", progress, {}
+
+            if query_gains:
+                gain_sta, gains = await AwardGainsRC.get_award_gains(
+                    uid=uid,
+                    act_id=act_id,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                if not gain_sta:
+                    return False, "获取领取奖励内容异常", {}, gains
+
+            return True, "成功", progress, gains
+        except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                NLogger.error(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            NLogger.error(f"获取活动进度异常：e={e}")
+
 
 
     async def up_act_progress(self, uid: int, act_id: int, act_type: int):
@@ -393,6 +413,41 @@ class SignIn(Base):
 
         return True, current_value
 
+    async def progress_data(self, uid: int, ac: dict, progress: dict, award_gains: list) -> dict:
+        if not progress:
+            progress = {}
+        progress["today_total"] = 0
+        sta, signed = await act_count(uid, ac.get("act_id"), "day")
+        if sta and signed:
+            progress["today_total"] = signed
+        progress["is_free_signed"] = progress["today_total"] <= 0
+        progress["today_surplus"] = ac["join_limit_day"] - progress["today_total"]
+        award_ids = ac.get("condition_awards").get("award_ids")
+        gain = []
+        if award_gains:
+            gains = {}
+            for i in award_gains:
+                # 只获取累计签到奖励
+                if i.get("type_id") > 6:
+                    continue
+                if gains.get(i["type_id"]):
+                    gains[i["type_id"]].append(i)
+                else:
+                    gains[i["type_id"]] = [i]
+            for award_id in award_ids:
+                if gains.get(award_id):
+                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
+                else:
+                    gain.append({"award_id": award_id, "status": -1})
+        else:
+            for award_id in award_ids:
+                gain.append({"award_id": award_id, "status": -1})
+        data = {
+            "progress": progress,
+            "gains": gain
+        }
+        return data
+
 class Package(Base):
     """ 限时登录 """
     async def handler(self, activity: dict, uid: int, award_type: int):
@@ -443,51 +498,125 @@ class Package(Base):
                 time_status = 1
         return {"award_id": award_id, "status": status, "time_status": time_status}
 
-class Share(Base):
-    """ 分享活动 """
+    async def progress_data(self, ac: dict, award_gains: list) -> dict:
+        award_ids = ac.get("condition_awards").get("award_ids")
+        gain = []
+        if award_gains:
+            gains = {}
+            for i in award_gains:
+                if gains.get(i["type_id"]):
+                    gains[i["type_id"]].append(i)
+                else:
+                    gains[i["type_id"]] = [i]
+            for award_id in award_ids:
+                if gains.get(award_id):
+                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
+                else:
+                    package_gain = await self.get_progress(award_id)
+                    gain.append(package_gain)
+        else:
+            for award_id in award_ids:
+                package_gain = await Package().get_progress(award_id)
+                gain.append(package_gain)
+
+        return {"gains": gain}
+
+
+class Common(Base):
+    """ 参与可直接领取奖励的活动(分享、救济金) """
     async def handler(self, activity: dict, uid: int, award_type: int):
         """ 处理分享活动 """
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
-        join_limit_day = activity.get("join_limit_day")
         pay_type = PayType.BY_FREE
-        now = tool_dt.cur_time()
-        range_start, range_end = await CommonApi.get_time_range(period="day")
-        # 检查今日是否已领取
-        sta, count = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, pay_type=pay_type,
-                                                          start_time=range_start, end_time=range_end, count=True)
-        awards = []
-        if sta and count < join_limit_day:
-            _, condition_awards = await self.act_by_awards(uid, activity)
-            NLogger.info(f"rewards={condition_awards}")
-            rewards = condition_awards[0].get("content") or {}
-            if not rewards:
-                return False, "奖励配置错误", {}
-            awards = rewards["rewards"]
-            NLogger.info(f"awards={awards}")
-            # 发放奖励
-            gain_sta = await self.gain_awards(uid, awards=awards, act_id=act_id, award_id=condition_awards[0].get("award_id"), explain=activity.get("act_name"))
-            if not gain_sta:
-                return False, "奖励发放失败", {}
-            # 自动领取
-            award_id = condition_awards[0].get("award_id")
-            await self.give_awards(uid, award_id, act_id)
-            # 更新记录
-            await self.up_act_progress(uid, act_id, act_type)
-            await atc_behavior(uid, act_id, act_type, award_type, pay_type)
-            awards = condition_awards[0]["content"]["rewards"]
+        _, condition_awards = await self.act_by_awards(uid, activity)
+        NLogger.info(f"rewards={condition_awards}")
+        rewards = condition_awards[0].get("content") or {}
+        if not rewards:
+            return False, "奖励配置错误", {}
+        awards = rewards["rewards"]
+        NLogger.info(f"awards={awards}")
+        # 发放奖励
+        gain_sta = await self.gain_awards(uid, awards=awards, act_id=act_id, award_id=condition_awards[0].get("award_id"), explain=activity.get("act_name"))
+        if not gain_sta:
+            return False, "奖励发放失败", {}
+        # 自动领取
+        award_id = condition_awards[0].get("award_id")
+        await self.give_awards(uid, award_id, act_id)
+        # 更新记录
+        await self.up_act_progress(uid, act_id, act_type)
+        await atc_behavior(uid, act_id, act_type, award_type, pay_type)
+        awards = condition_awards[0]["content"]["rewards"]
         return True, "成功", {"gain_awards": awards}
 
 
 class InfinitePlay(Base):
     """ 救济金 """
-    async def handler(self, activity: dict, uid: int, award_type: int):
-        """ 处理救济金活动 """
-        act_type = activity.get("act_type")
-        act_id = activity.get("act_id")
-        pay_type = PayType.BY_FREE
+    async def progress_data(self, ac: dict, progress: dict, award_gains: list, u_info: dict) -> dict:
+        if not progress:
+            progress = {}
+        progress["today_total"] = 0
+        sta, count = await act_count(u_info.get("uid"), ac.get("act_id"), "day")
+        if sta and count:
+            progress["today_total"] = count
+        progress["is_free_signed"] = progress["today_total"] <= 0
+        progress["today_surplus"] = ac["join_limit_day"] - progress["today_total"]
+        award_ids = ac.get("condition_awards").get("award_ids")
+        gain = []
+        if award_gains:
+            gains = {}
+            for i in award_gains:
+                if gains.get(i["type_id"]):
+                    gains[i["type_id"]].append(i)
+                else:
+                    gains[i["type_id"]] = [i]
+            for award_id in award_ids:
+                if gains.get(award_id):
+                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
+                else:
+                    gain.append({"award_id": award_id, "status": -1})
+        else:
+            conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
+            for award_id in award_ids:
+                status = 0 if u_info.get("gold", 0) < conf_data.get("min_gold") else -1
+                gain.append({"award_id": award_id, "status": status})
+        data = {
+            "gains": gain,
+            "progress": progress,
+        }
+        return data
 
-        return True, "成功", {"gain_awards": []}
+class FirstCharge(Base):
+    """ 首充 """
+    async def handler(self, uid: int, activity: dict, award_type: int, pay_mode: int, platform: int=None):
+        if award_type != AwardType.TOP_UP:
+            return False, "活动参与类型错误", {}
+        _, condition_awards = await self.act_by_awards(uid, activity)
+        NLogger.info(f"rewards={condition_awards}")
+        rewards = condition_awards[0].get("content") or {}
+        if not rewards:
+            return False, "奖励配置错误", {}
+        awards = rewards["rewards"]
+        NLogger.info(f"awards={awards}")
+        # 生成订单
+        good_sku = rewards.get("good_suk")
+        if not good_sku:
+            return False, "首充商品SKU配置错误", {}
+        payment = PaymentLogic()
+        good = await GoodRC.get_good_info(good_sku)
+        if not good:
+            return False, "首充商品信息配置错误", {}
+        express = {
+            "price": good["price"],
+            "good_id": good["good_id"],
+            "currency": good["currency"],
+            "sku": good_sku,
+        }
+        act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动")
+        NLogger.info(f"首充活动订单信息：{act_order}")
+        return True, msg, act_order
+
+
 
 
 
