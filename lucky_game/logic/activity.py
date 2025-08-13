@@ -614,6 +614,8 @@ class FirstCharge(Base):
         }
         act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动")
         NLogger.info(f"首充活动订单信息：{act_order}")
+        if not act_order:
+            return False, msg, act_order
         return True, msg, act_order
 
 

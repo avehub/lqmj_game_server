@@ -79,10 +79,10 @@ class AlipayPayment:
             model.subject = subject
             model.out_trade_no = out_trade_no
             model.total_amount = str(total_amount)
-            model.notify_url = self.notify_url
 
             # 创建支付请求
             request = AlipayTradeWapPayRequest(biz_model=model)
+            request.notify_url = self.notify_url
             # 获取支付页面URL
             NLogger.info(f"支付宝H5支付订单请求参数: request {request} ")
             response = self.client.page_execute(request, http_method="GET")
@@ -111,9 +111,9 @@ class AlipayPayment:
             model.out_trade_no = out_trade_no
             model.total_amount = str(total_amount)
             model.product_code = product_code
-            model.notify_url = self.notify_url
             # 创建支付请求
             request = AlipayTradeAppPayRequest(biz_model=model)
+            request.notify_url = self.notify_url
             # 获取支付参数
             NLogger.info(f"支付宝APP支付订单请求参数: request {request} ")
             response_content = self.client.sdk_execute(request)

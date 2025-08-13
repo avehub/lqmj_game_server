@@ -36,7 +36,7 @@ class UserInfo(GameAuthApi):
             # r_user_model["ranking_id"] = ur_data.get("ranking_id") or 0
         else:
             data = await BaseRobotRC.cache_by_pk(uid) or {}
-            data["avatar"] = ROBOT_AVATAR + data.get("avatar")
+            data["avatar"] = ROBOT_AVATAR + data.get("avatar", "/male/462.jpg")
 
         return self.answer(data=data)
 
