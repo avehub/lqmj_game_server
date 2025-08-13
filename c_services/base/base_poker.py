@@ -135,14 +135,14 @@ class BasePoker:
                 dui_zi_index = random.randrange(1, 5)
             while combo_count < count:
                 combo = self.get_better_cards_combo(result_dict,combo_count,1,dui_zi_index,kz_ctrl,kz_index,suit_list)
-                if self.has_cards(combo):
+                if self.has_cards(combo,result_dict):
                     for card in combo:
                         if result_dict.get(card, 0):
                             result_dict[card] -= 1
                     hands.extend(combo)
                 combo_count += 1
             valid_items = [key for key, value in result_dict.items() if value > 0]
-
+            random.shuffle(valid_items)
             for i in range(13 - len(hands)):
                 if valid_items:  # 确保非空
                     card = valid_items.pop()
@@ -376,14 +376,15 @@ class BasePoker:
             if first_match is None:
                 first_match = next((num for num in dz_cards if (num // 10) % 10 == combo_suit and num % 10 >= dui_zi), None)
             result.extend([first_match]*2)
-
+        # print("result",result)
         return result
 
-    def has_cards(self, cards):
+    @staticmethod
+    def has_cards(cards, result_dict):
         if cards[0] == cards[1]:
-            return self.__cards.count(cards[0]) >= len(cards)
+            return result_dict.get(cards[0], 0) >= len(cards)
         for card in cards:
-            if card not in self.__cards:
+            if result_dict.get(card, 0) == 0:
                 return False
 
         return True
