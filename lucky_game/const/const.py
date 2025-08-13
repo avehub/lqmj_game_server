@@ -216,6 +216,7 @@ class AwardType(BaseEnum):
     ACTIVE = 5, "活跃"
     OPEN_TREASURE_BOX = 6, "开启宝盒"
     MONOPOLY_RAND_AWARD = 7, "大富翁随机奖励"
+    TOP_UP = 8, "充值"
 
 
 @unique

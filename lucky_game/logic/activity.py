@@ -5,7 +5,7 @@ import traceback
 from typing import Union, Tuple
 
 from nsanic.libs import tool_dt
-from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold
+from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_award import AwardRC
@@ -14,6 +14,9 @@ from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceCha
 from nsanic.libs.mult_log import NLogger
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
+from lucky_game.logic.payment import PaymentLogic
+from lucky_game.model_rc.base_store import GoodRC
+from lucky_game.model_rc.order import OrderRC
 
 
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
@@ -39,17 +42,20 @@ async def act_count(uid: int, act_id: int, period: str):
 class Base:
     conf: ConfSrv = conf_srv
 
-    async def act_handler(self, activity: dict, u_info: dict, award_type: int):
+    async def act_handler(self, activity: dict, u_info: dict, award_type: int, pay_mode: int=None, platform: int=None):
         """ 根据活动类型获取活动操作 """
         uid = u_info.get("uid")
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
-        start_time, end_time = await CommonApi.get_time_range("day")
-        sta, act_total = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
-                                                                    end_time=end_time, count=True)
+        if act_type == ActivityType.FIRST_CHARGE:
+            act_total, msg = await OrderRC.get_order_filter(uid=uid, status=OrderStatus.PAID, currency=PayType.BY_RMB, count=True)
+        else:
+            start_time, end_time = await CommonApi.get_time_range("day")
+            sta, act_total = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id, start_time=start_time,
+                                                                        end_time=end_time, count=True)
         NLogger.info(f"act_count:{act_total}")
         join_limit_day = activity.get("join_limit_day") - 1
-        if act_total > join_limit_day:
+        if act_total > 0 and act_total > join_limit_day:
             return False, "已达最大参与次数", {}
         if act_type == ActivityType.LUCK_SIGN_IN:
             return await SignIn().handler(activity, uid, award_type)
@@ -58,12 +64,13 @@ class Base:
         elif act_type == ActivityType.SHARE:
             return await Common().handler(activity, uid, award_type)
         elif act_type == ActivityType.INFINITE_PLAY:
-            # 金币校验
             conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
             NLogger.info(f"conf_data:{conf_data} u_info {u_info}")
             if u_info.get("gold") > conf_data.get("min_gold"):
                 return False, "暂不符合领取条件", {}
             return await Common().handler(activity, uid, award_type)
+        elif act_type == ActivityType.FIRST_CHARGE:
+            return await FirstCharge().handler(uid, activity, award_type, pay_mode, platform)
 
     async def act_gain(self, activity: dict, uid: int, award_id: int):
         """ 领取活动奖励 """
@@ -578,6 +585,36 @@ class InfinitePlay(Base):
             "progress": progress,
         }
         return data
+
+class FirstCharge(Base):
+    """ 首充 """
+    async def handler(self, uid: int, activity: dict, award_type: int, pay_mode: int, platform: int=None):
+        if award_type != AwardType.TOP_UP:
+            return False, "活动参与类型错误", {}
+        _, condition_awards = await self.act_by_awards(uid, activity)
+        NLogger.info(f"rewards={condition_awards}")
+        rewards = condition_awards[0].get("content") or {}
+        if not rewards:
+            return False, "奖励配置错误", {}
+        awards = rewards["rewards"]
+        NLogger.info(f"awards={awards}")
+        # 生成订单
+        good_sku = rewards.get("good_suk")
+        if not good_sku:
+            return False, "首充商品SKU配置错误", {}
+        payment = PaymentLogic()
+        good = await GoodRC.get_good_info(good_sku)
+        if not good:
+            return False, "首充商品信息配置错误", {}
+        express = {
+            "price": good["price"],
+            "good_id": good["good_id"],
+            "currency": good["currency"],
+            "sku": good_sku,
+        }
+        act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动")
+        NLogger.info(f"首充活动订单信息：{act_order}")
+        return True, msg, act_order
 
 
 

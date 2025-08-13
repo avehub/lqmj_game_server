@@ -1,6 +1,7 @@
 """ 支付相关逻辑处理 """
 import decimal
 import random
+import time
 
 from nsanic.libs.mk_random import RngMaker
 from sanic import Request
@@ -27,6 +28,7 @@ from lucky_game.handler.wechat import WeChat
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.handler.ios_pay import ios_payment_service
+from common.aliyun.pay_service import AlipayPayment
 
 
 class PaymentLogic:
@@ -157,24 +159,62 @@ class PaymentLogic:
 
         return True, "ok"
 
-    async def __pay_type(self, pay_mode: int, c_os: str, platform: int,):
-        if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP, PlatForm.WECHAT_MINI_GAME]:
-            # 汇付天下
-            pass
-        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.IOS:
-            # 苹果
-            pass
-        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.Android:
-            # 微信
-            pass
-        elif platform == PlatForm.NATIVE_APP and c_os == OperatingSystem.VIVO:
-            # VIVO
-            pass
-        # elif platform == PlatForm.WEBPAGE and pay_mode == OperatingSystem.PC:
+    async def pay_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
+        """支付方法"""
+        # 查询本地订单
+        order_info = await OrderRC.get_order_info(order_no=order_no) or {}
+        if not order_info:
+            NLogger.error("WeChatGetPayInfo 无此订单", order_no)
+            return False, '无此订单'
+
+        # 检查订单状态是否可拉取支付
+        if order_info.get("status") != OrderStatus.WAIT_PAY:
+            return False, '已经支付了或重复支付'
+        func = self.pay_platform(pay_mode)
+        # 动态方法
+        method = getattr(self, func)
+        if method is not None:
+            return await method(order_id, code)
+        return None
+
+    async def order_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
+        """支付方法"""
+        # 1.查询本地订单
+        order_info = await OrderRC.get_order_info(order_no=order_no)
+        if not order_info:
+            NLogger.error("HuiFuPayQueryOrder 无此订单", order_no)
+            return False, '无此订单'
+
+        func = self.pay_platform(pay_mode)
+        # 动态方法
+        method = getattr(self, func)
+        if method is not None:
+            return await method(order_id, code)
+        return None
+
+    async def callback_method(self, order_no: str, out_trade_no: str, out_trade_status: int, express: dict):
+        """支付方法"""
+        # 1.查询本地订单
+        order_info = await OrderRC.get_order_info(order_no=order_no)
+        if not order_info:
+            NLogger.error("HuiFuPayQueryOrder 无此订单", order_no)
+            return False, '无此订单'
+
+        func = self.pay_platform(pay_mode)
+        # 动态方法
+        method = getattr(self, func)
+        if method is not None:
+            return await method(order_id, code)
+        return None
+
+    async def pay_platform(self, pay_mode: int):
+        """获取支付平台方法"""
+        if pay_mode == PayMode.DEFAULT_MODE:
+            # 免费
+            func = ""
         else:
-            # 支付宝
-            pass
-        return True, {}
+            func = f"pay_{pay_mode}"
+        return func
 
     async def pay_after(self, u_info: dict, express: dict, order_no: str):
         """
@@ -243,47 +283,40 @@ class PaymentLogic:
         map_func = {
             PayMode.DEFAULT_MODE.val: self.deal_order_general,
             PayMode.HUI_FU_PAY.val: self.deal_order_general,
-            PayMode.ALIPAY.val: self.deal_order_general,
+            PayMode.ALIPAY.val: self.pay_2,
             PayMode.WECHAT_PAY.val: self.deal_order_general,
             PayMode.VIVO_PAY.val: self.deal_order_general,
             PayMode.APPLE_PAY.val: self.deal_order_general
         }
         deal_func = map_func.get(pay_mode)
+        NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
         if deal_func and callable(deal_func):
-            order_info = await deal_func(uid, new.order_no, new.created, new.amount)
+            order_info = await deal_func(new)
             NLogger.info(f"create_order uid: {uid} 订单创建结果", order_info)
             return order_info, "ok"
         return {}, "无此交易方式"
 
 
-    async def deal_order_general(self, _, order_no, trade_time, trade_amount):
+    async def deal_order_general(self, order: dict):
         """通用订单处理"""
         return_data = {
-            "order_no": order_no,
-            "trade_time": trade_time,
-            "trade_amount": trade_amount
+            "order_no": order.order_no,
+            "trade_time": order.created,
+            "trade_amount": order.amount
         }
         return return_data
 
 
-    async def pay_huifu(self, order_id: str, code: str):
+    async def pay_1(self, order_info: dict, code: str):
         """
                 获取汇付支付信息（实际上是后端请求汇付天下之后斗拱的聚合正扫）
                 1.用code换取gzh_openid，监测实时订单价变化；
                 2.通过DouGongPay获取，并返回pay_info信息返回给前端；
-                3.用order_id缓存pay_info，可以匹配上每一个H5链接；
+                3.用order_no缓存pay_info，可以匹配上每一个H5链接；
                 """
-        # 查询本地订单
-        order_info = await OrderRC.get_order_info(order_no=order_id) or {}
-        if not order_info:
-            NLogger.error("WeChatGetPayInfo 无此订单", order_id)
-            return False, '无此订单'
-
-        # 检查订单状态是否可拉取支付
-        if order_info.get("status") != OrderStatus.WAIT_PAY:
-            return False, '已经支付了或重复支付'
+        order_no = order_info.get('order_no')
         uid = order_info.get('uid')
-        req_res = await BaseUserRC.get_user_pay_info(uid, order_id)
+        req_res = await BaseUserRC.get_user_pay_info(uid, order_no)
         # 生成支付信息
         if not req_res:
             gzh_openid = await WeChat.update_gzh_openid(uid, code)
@@ -297,7 +330,7 @@ class PaymentLogic:
             resp_code = req_res.get('resp_code')
             if resp_code != '00000100':  # 下单成功
                 return {"resp_cog": req_res}
-            await BaseUserRC.cache_user_pay_info(uid, order_id, req_res)
+            await BaseUserRC.cache_user_pay_info(uid, order_no, req_res)
 
         pay_info = req_res.get('pay_info')
         if not pay_info:
@@ -305,30 +338,25 @@ class PaymentLogic:
         return {"pay_info": pay_info}
 
 
-    async def HuiFuPayQueryOrder(self, order_id: str):
+    async def order_1(self, order_info: dict):
         """
         汇付天下交易查询
         即时更新支付状态，缓存待发货快递
         """
-
-        # 1.查询本地订单
-        order_info = await OrderRC.get_order_info(order_no=order_id)
-        if not order_info:
-            NLogger.error("HuiFuPayQueryOrder 无此订单", order_id)
-            return False, '无此订单'
+        order_no = order_info.get("order_no")
         uid = order_info.get("uid")
         trade_amount = order_info.get("trade_amount") or 0
         trade_item = order_info.get("trade_item")
 
         # 2.汇付天下交易查询
-        req_res = await DouGongPay.dou_gong_query(order_id)
+        req_res = await DouGongPay.dou_gong_query(order_no)
         # NLogger.error("HuiFuPayQueryOrder 解析查询数据：", req_res)
         resp_code = req_res.get('resp_code')
         if resp_code != '00000000':
             return {"resp_cog": req_res}
 
         if req_res.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
-            NLogger.error("HuiFuPayQueryOrder 支付失败或支付成功未发币到账", order_id)
+            NLogger.error("HuiFuPayQueryOrder 支付失败或支付成功未发币到账", order_no)
             return False, '支付失败或支付成功未发币到账'
 
         # 3.查询货物 goods立得货物 / gifts赠物
@@ -344,46 +372,28 @@ class PaymentLogic:
             update_paid = {"order_status": order_status}
             try:
                 async with in_transaction(connection_name=DbKey.DEFAULT):
-                    await OrderRC.up_order(order_id, update_paid, order_info)
-                    await BaseUserRC.cache_user_paid_order(uid, order_id, goods, gifts)  # 预发货
+                    await OrderRC.up_order(order_no, update_paid, order_info)
+                    await BaseUserRC.cache_user_paid_order(uid, order_no, goods, gifts)  # 预发货
             except Exception as e:
                 NLogger.error(f"HuiFuPayQueryOrder 事务执行失败，原因：{e}")
                 return False, '快递打包失败'
         else:
-            NLogger.error("HuiFuPayQueryOrder 快递已经发出", order_id)
+            NLogger.error("HuiFuPayQueryOrder 快递已经发出", order_no)
 
-        NLogger.error("HuiFuPayQueryOrder 快递入站成功", order_id)
-        return {"order_id": order_id, "order_status": order_status}
+        NLogger.error("HuiFuPayQueryOrder 快递入站成功", order_no)
+        return {"order_no": order_no, "order_status": order_status}
 
-    def __check_signature(self, req: Request):
-        """ 检查签名 """
-        form = req.get_form()
 
-        resp_code = form.get('resp_code')
-        resp_desc = form.get('resp_desc')
-        resp_data_str = form.get('resp_data')
-        sign = form.get('sign')
-        NLogger.info("汇付天下支付回调通知", resp_code, resp_desc)
 
-        if resp_code != '00000000':
-            return False, 'Invalid resp_code.'
-
-        # 使用斗拱平台公钥进行验签
-        resp_data = json_parse(resp_data_str)
-        result = DGTools.verify_sign(resp_data, sign, pub_key=HuiFuConf.DOUGONG_APP_PUBLIC_KEY)
-        if not result:
-            NLogger.error(f"HuiFu 汇付天下支付回调通知{result}验签失败")
-            return False, "验签失败"
-        return True, resp_data
-
-    async def notify_huifu(self, req: Request):
+    async def notify_1(self, req: Request):
         """
                汇付天下支付回调通知
                参考文档：https://paas.huifu.com/open/doc/api/#/smzf/api_jhzs?id=%e5%bc%82%e6%ad%a5%e8%bf%94%e5%9b%9e%e5%8f%82%e6%95%b0
                即时更新支付状态，缓存待发货快递
                """
         """默认格式为 application/x-www-form-urlencode，form表单格式"""
-        res, res_dict = self.__check_signature(req)
+        form = req.get_form()
+        res, res_dict = DouGongPay.check_signature(form)
         if not res:
             return res_dict
 
@@ -431,62 +441,65 @@ class PaymentLogic:
         NLogger.error("HuiFuPayNotify 快递入站成功", order_id)
         return False, "Success"
 
+    async def pay_2(self, order):
+        """支付宝支付(H5)"""
+        good = await GoodRC.get_good_info(order.sku)
+        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
+        return_data = {
+            "order_no": order.order_no,
+            "trade_time": order.created,
+            "trade_amount": order.amount,
+            "pay_url": url
+        }
+        return True, return_data
 
-    async def CompletePaidOrder(self, _, **kwargs):
+    async def order_2(self, order_no: str):
+        pass
+
+    async def notify_2(self, order_no: str):
+        pass
+
+    async def completed_order(self, **kwargs):
         """
                 完成已支付订单
                 即时更新发货状态、购买数据（可批量）
                 """
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
+        order_no = kwargs.get("order_no")
+        explain = kwargs.get("explain")
 
         # 1.注意物品和赠品以预发货的为主
         paid_orders = await BaseUserRC.get_user_paid_order(uid)
         if not paid_orders:
-            return False,  '没有待领取订单'
-        all_goods = []
-        all_gifts = []
+            return False, '没有待领取订单'
+        order_info = await OrderRC.get_order_info(order_no=order_no)
+        if not order_info:
+            NLogger.error("completed_order 无此待领取订单", order_no)
+            return False, '无此待领取订单'
+        good_info = await GoodRC.get_good_info(order_info.get("sku"))
+        goods = good_info["content"]
+        up_data = {
+            "status": OrderStatus.PAID,
+            "explain": explain,
+        }
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                await OrderRC.up_order(up_data, order_no)
+                # 更新用户资产
+                if isinstance(goods, list):
+                    for good in goods:
+                        await ExtraUserResourceChangesRC.change_user_resource(uid, good["type"], good["amount"],
+                                                                              explain="充值获得")
+                else:
+                    await ExtraUserResourceChangesRC.change_user_resource(uid, goods["type"], goods["amount"],
+                                                                              explain="充值获得")
+        except Exception as e:
+            NLogger.error(f"completed_order 事务执行失败，原因：{e}")
+            return False, '查询发货失败'
+        return goods
 
-        for order in paid_orders:
-            order_id = order.get("order_id")
-            goods = order.get("goods")
-            gifts = order.get("gifts")
-
-            # 2.查询多个本地订单
-            order_info = await OrderRC.get_order_info(order_no=order_id)
-            if not order_info:
-                NLogger.error("CompletePaidOrder 无此待领取订单", order_id)
-                return False, '无此待领取订单'
-
-            # 3.发货并准备派送
-            if order_info.get("deliver_status") == DeliverStatus.UNSHIPPED:
-                update_deliver = {
-                    "deliver_status": DeliverStatus.SHIPPED,
-                    "finish_time": tool_dt.cur_time(),
-                }
-                try:
-                    async with in_transaction(connection_name=DbKey.DEFAULT):
-                        await OrderRC.up_order(update_deliver, order_id)
-                        await UpAssets.update_assets(uid, goods, gifts)
-
-                        # 4.查询货物，注意此处主要是查询活动的，物品在缓存取
-                        express, item_num, _, __, ___ = await self.verify_goods(uid, order_info.get("trade_item"))
-                        if express and item_num == 3:
-                            await UserActivityRC.update_user_charge_records(uid, express)
-                except Exception as e:
-                    NLogger.error(f"CompletePaidOrder 事务执行失败，原因：{e}")
-                    return False, '查询发货失败'
-
-                # 4.将当前订单的货物和奖励加入总结果
-                all_goods.extend(goods)
-                all_gifts.extend(gifts)
-            else:
-                NLogger.error("CompletePaidOrder 已经取件了", order_id)
-
-        NLogger.error("CompletePaidOrder 订单交易成功")
-        return all_goods, all_gifts
-
-    async def IOSPaymentHandler(self, request: Request, **kwargs):
+    async def pay_ios(self, request: Request, **kwargs):
         """
         处理iOS应用内购买
         """
@@ -496,34 +509,22 @@ class PaymentLogic:
             receipt_data = request.json.get("receipt_data")
 
             if not all([order_id, receipt_data]):
-                return self.answer(
-                    code=400,
-                    message="Missing required parameters"
-                )
+                return False, "Missing required parameters"
 
             # 查询订单
             order = await OrderRC.get_order_info(order_no=order_id)
             if not order:
-                return self.answer(
-                    code=404,
-                    message="Order not found"
-                )
+                return False, "Order not found"
 
             # 验证订单状态
             if order.get("status") != OrderStatus.WAIT_PAY:
-                return self.answer(
-                    code=400,
-                    message="Invalid order status"
-                )
+                return False, "Invalid order status"
 
             # 处理支付
             result = await ios_payment_service.process_payment(order_id, receipt_data)
 
             if not result.get("success"):
-                return self.answer(
-                    code=result.get("code", 400),
-                    message=result.get("message", "Payment verification failed")
-                )
+                return False, "Payment verification failed"
 
             # 更新订单状态
             async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -540,20 +541,15 @@ class PaymentLogic:
                 # 发放游戏内物品
                 # 这里根据你的业务逻辑实现
                 # 例如：await self._deliver_items(order, result["data"])
-
-            return self.answer(
-                data={
-                    "order_id": order_id,
-                    "status": OrderStatus.PAID
-                }
-            )
+            data = {
+                "order_id": order_id,
+                "status": OrderStatus.PAID
+            }
+            return True, "OK", data
 
         except Exception as e:
             NLogger.error(f"iOS payment processing failed: {str(e)}")
-            return self.answer(
-                code=500,
-                message="Internal server error"
-            )
+            return False, "Internal server error"
 
     async def _deliver_items(self, order: dict, receipt_data: dict):
         """发放游戏内物品"""
@@ -572,15 +568,3 @@ class PaymentLogic:
         # )
         pass
 
-    async def __2_pay(self, open_id, order_id, trade_amount, trade_name, trade_desc):
-        """支付宝支付(H5)"""
-        pass
-
-        # (not all([open_id, order_id, trade_amount, trade_name, trade_desc])) and self.answer(code=self.sta_code.ERR_ARG)
-        #
-        result, req_data = await Alipay.ali_mini_game_coin_pay(open_id, order_id, trade_amount, trade_name, trade_desc)
-        # self.log_info("AliPay 扣减游戏币结果", req_data)
-        # if not result:
-        #     data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
-        #     return self.answer(self.sta_code.EXTERNAL_ERR, data)
-        # return True

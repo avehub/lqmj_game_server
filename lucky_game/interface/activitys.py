@@ -15,8 +15,8 @@ from lucky_game.model_rc.base_award import AwardRC
 # from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import ActivityType, ActivitySta, ConditionType, ReasonCostDiamond, ActivityStatus
-from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay
+from lucky_game.const import ActivityType, ActivitySta, ConditionType, ReasonCostDiamond, ActivityStatus, PayMode
+from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 
 
 class ActivityDetail(GameAuthApi):
@@ -59,11 +59,17 @@ class JoinActivity(GameAuthApi):
         u_info = kwargs.get("u_info")
         act_id = self.check_int(req.json.get("act_id"), require=True, p_name="活动ID")
         award_type = self.check_int(req.json.get("award_type"), require=True, p_name="参与活动方式")
+        pay_mode = self.check_int(req.json.get("pay_mode"), require=False, p_name="支付方式")
+        platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
+        pay_enum = PayMode.find_member_by_val(pay_mode)
+        if pay_mode and not isinstance(pay_enum, PayMode):
+            self.answer(self.sta_code.ERR_ARG, hint="支付方式错误")
         ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
-        sta, msg, result = await Base().act_handler(ac, u_info, award_type)
+
+        sta, msg, result = await Base().act_handler(ac, u_info, award_type, pay_mode, platform)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
         return self.answer(data={"status": sta, "result": result})
