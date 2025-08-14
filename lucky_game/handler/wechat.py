@@ -67,7 +67,8 @@ class WeChat(LogMeta):
         gzh_id = WeChatConf.WE_CHAT_GZH_APP_ID
         gzh_secret = WeChatConf.WE_CHAT_GZH_APP_SECRET
 
-        url = f"https://api.weixin.qq.com/cgi-bin/token?appid={gzh_id}&secret={gzh_secret}&grant_type=client_credential"
+        url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={}&secret={}&code={}&grant_type=authorization_code&connect_redirect=1"
+        url = url.format(gzh_id, gzh_secret, code)
         req_data = await http_get(url)
         return cls.__return_req_data(req_data)
 
