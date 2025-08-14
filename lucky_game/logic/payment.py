@@ -129,11 +129,12 @@ class PaymentLogic:
         order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
-    async def pay(self, uid: int, data_before: dict, express: dict):
+    async def pay(self, u_info: dict, data_before: dict, express: dict):
         """
         支付处理
         :return:
         """
+        uid = u_info.get("uid")
         currency = express.get("currency")
         sku = express.get("sku")
         price = express.get("price") or 0
@@ -149,27 +150,23 @@ class PaymentLogic:
                     explain=f"消费{data_before.get('field_name')}"
                 )
                 if not sub_sta:
-                    return False, e
+                    return False, e, {}
+            sta, msg, result = True, "OK", {}
         else:
             # 充值处理
-            pass
+            sta, msg, result = await self.pay_method(data_before, u_info, express)
         # 扣除商品数量
         if express.get("total") > 0:
             await GoodRC.update_int_field(sku, "total", 1, "sub")
 
-        return True, "ok"
+        return sta, "ok"
 
-    async def pay_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
+    async def pay_method(self, order_info: dict, u_info: dict, express: dict):
         """支付方法"""
-        # 查询本地订单
-        order_info = await OrderRC.get_order_info(order_no=order_no) or {}
-        if not order_info:
-            NLogger.error("WeChatGetPayInfo 无此订单", order_no)
-            return False, '无此订单'
-
         # 检查订单状态是否可拉取支付
+        pay_mode = order_info.get("pay_mode")
         if order_info.get("status") != OrderStatus.WAIT_PAY:
-            return False, '已支付或订单已关闭'
+            return False, '已支付或订单已关闭', {}
         map_func = {
             PayMode.HUI_FU_PAY.val: self.pay_1,
             PayMode.ALIPAY.val: self.pay_2,
@@ -182,14 +179,7 @@ class PaymentLogic:
         if deal_func and callable(deal_func):
             order_info = await deal_func(order_info)
             NLogger.info(f"pay_method 去支付订单", order_info)
-            return order_info, "ok"
-        return {}, "无此交易方式"
-        func = self.pay_platform(pay_mode)
-        # 动态方法
-        method = getattr(self, func)
-        if method is not None:
-            return await method(order_id, code)
-        return None
+        return True, "无此交易方式", {}
 
     async def order_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
         """查询订单"""

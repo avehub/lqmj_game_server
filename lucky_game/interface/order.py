@@ -45,7 +45,7 @@ class PayOrder(GameAuthApi):
         order, msg = await OrderRC.get_order_info(order_no=order_no)
         if not order:
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
-        sta, msg = PaymentLogic().pay(uid=uid, data_before=order, express=order.get("express"))
+        sta, msg = PaymentLogic().pay(u_info=u_info, data_before=order, express=order.get("express"))
         return self.answer(data=order)
 
 class CallbackAli(SpecialApi):

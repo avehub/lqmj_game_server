@@ -60,6 +60,8 @@ class MainBp(BaseBlue):
         Urls("/TestCreatGameRecords", TestCreatGameRecords),
         Urls("/FileUpload", FileUploadHandler),
         Urls("/FileDelete", FileDeleteHandler),
+        # 配置相关
+        Urls("/QueryConf/", GetConf),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -137,13 +139,30 @@ class MainBp(BaseBlue):
         Urls("/GiveAward/", GainActivity),  # 领取活动奖励
         Urls("/ProgressActivity/", ProgressActivity),  # 活动进度
 
+        # # 邮件相关
+        Urls("/MailsListHandler/", MailsListHandler),  # 获取邮件列表
+        Urls("/MailsOperateUser/", MailsOperateUser),  # 指定操作邮件
+        Urls("/MailsOperateOneClick/", MailsOperateOneClick),  # 一键操作邮件
+        #
+        # # 任务/活跃系统
+        # Urls("/GameTaskHandler/", GameTaskHandler),  # 加载任务配置
+        # Urls("/GameTaskUpdate/", GameTaskUpdate),  # 更新任务状态
+        # Urls("/GameTaskComplete/", GameTaskComplete),  # 任务完成领奖
+        # Urls("/GameActiveComplete/", GameActiveComplete),  # 活跃值达成领奖
+        # Urls("/GameTaskUpdateForRookie/", GameTaskUpdateForRookie),  # 新手引导中更新任务（西行路新手引导中专用）
+        #
+        # # 充值/消费相关
+        Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
+        Urls("/PayByGood/", PayByGood),  # 商店购物
+        # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
+        # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
+        # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
 
-        # 配置相关
-        Urls("/QueryConf/", GetConf),
+
 
         # # 支付相关
         Urls("/QueryOrder/", OrderDetail),  # 查询订单详情
-        Urls("/PayOrder/", PayOrder),  # 支付宝订单回调
+        Urls("/PayOrder/", PayOrder),  # 支付订单
         Urls("/CallbackAli/", CallbackAli),  # 支付宝订单回调
         # Urls("/MiniGameQueryOrder/", MiniGameQueryOrder),  # 微信MG订单查询
         # Urls("/ReduceBalanceByWechatMiniProgram/", ReduceBalanceByWechatMiniProgram),  # 微信扣除游戏币
@@ -186,24 +205,7 @@ class MainBp(BaseBlue):
         # Urls("/PullCommonAwards/", PullCommonAwards),  # 通用奖励领取
         # Urls("/OpenTreasureBox/", OpenTreasureBox),  # 开启宝盒
         #
-        # # 邮件相关
-        Urls("/MailsListHandler/", MailsListHandler),  # 获取邮件列表
-        Urls("/MailsOperateUser/", MailsOperateUser),  # 指定操作邮件
-        Urls("/MailsOperateOneClick/", MailsOperateOneClick),  # 一键操作邮件
-        #
-        # # 任务/活跃系统
-        # Urls("/GameTaskHandler/", GameTaskHandler),  # 加载任务配置
-        # Urls("/GameTaskUpdate/", GameTaskUpdate),  # 更新任务状态
-        # Urls("/GameTaskComplete/", GameTaskComplete),  # 任务完成领奖
-        # Urls("/GameActiveComplete/", GameActiveComplete),  # 活跃值达成领奖
-        # Urls("/GameTaskUpdateForRookie/", GameTaskUpdateForRookie),  # 新手引导中更新任务（西行路新手引导中专用）
-        #
-        # # 充值/消费相关
-        Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
-        Urls("/PayByGood/", PayByGood),  # 商店购物
-        # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
-        # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
-        # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
+
         #
         # # VIP相关
         # Urls("/VipLevelHandler/", VipLevelHandler),  # 获取VIP等级配置

@@ -37,7 +37,10 @@ class BaseApi(BaseHttpApi, CommonApi):
         通常情况下第一个IP地址是最接近用户的，但这并不总是绝对安全或准确的，因为X-Forwarded-For头可以被伪造。
         因此，在处理涉及安全性的事务时，不能仅依赖于X-Forwarded-For来判断用户的真实性。
         """
-        ip_list = req.headers.get("x-forwarded-for")
+        if "x-forwarded-for" in req.headers:
+            ip_list = req.headers.get("x-forwarded-for")
+        else:
+            ip_list = req.remote_addr
         # cls.log_info("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
         if ip_list:
             return ip_list.split(',')[0]
