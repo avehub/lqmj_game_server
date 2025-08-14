@@ -169,7 +169,21 @@ class PaymentLogic:
 
         # 检查订单状态是否可拉取支付
         if order_info.get("status") != OrderStatus.WAIT_PAY:
-            return False, '已经支付了或重复支付'
+            return False, '已支付或订单已关闭'
+        map_func = {
+            PayMode.HUI_FU_PAY.val: self.pay_1,
+            PayMode.ALIPAY.val: self.pay_2,
+            PayMode.WECHAT_PAY.val: self.pay_3,
+            PayMode.VIVO_PAY.val: self.pay_4,
+            PayMode.APPLE_PAY.val: self.pay_5
+        }
+        deal_func = map_func.get(pay_mode)
+        NLogger.info(f"pay_method 去支付订单：{deal_func}")
+        if deal_func and callable(deal_func):
+            order_info = await deal_func(order_info)
+            NLogger.info(f"pay_method 去支付订单", order_info)
+            return order_info, "ok"
+        return {}, "无此交易方式"
         func = self.pay_platform(pay_mode)
         # 动态方法
         method = getattr(self, func)
@@ -178,7 +192,7 @@ class PaymentLogic:
         return None
 
     async def order_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
-        """支付方法"""
+        """查询订单"""
         # 1.查询本地订单
         order_info = await OrderRC.get_order_info(order_no=order_no)
         if not order_info:
@@ -192,20 +206,19 @@ class PaymentLogic:
             return await method(order_id, code)
         return None
 
-    async def callback_method(self, order_no: str, out_trade_no: str, out_trade_status: int, express: dict):
+    async def callback_method(self, order_no: str, out_trade_no: str, out_trade_status: int, express: str):
         """支付方法"""
-        # 1.查询本地订单
-        order_info = await OrderRC.get_order_info(order_no=order_no)
-        if not order_info:
-            NLogger.error("HuiFuPayQueryOrder 无此订单", order_no)
-            return False, '无此订单'
+        # 将不同的支付平台处理
+        if pay_mode == PayMode.ALIPAY:
+            express = "支付宝"
+        elif pay_mode == PayMode.WECHAT_PAY:
+            express = "微信"
+        else:
+            pexpress = "汇付天下"
 
-        func = self.pay_platform(pay_mode)
-        # 动态方法
-        method = getattr(self, func)
-        if method is not None:
-            return await method(order_id, code)
-        return None
+        sta, msg = self.completed_order(order_no=order_no, trade_no=out_trade_no, out_trade_status=out_trade_status, explain=express)
+
+        return sta, msg
 
     async def pay_platform(self, pay_mode: int):
         """获取支付平台方法"""
@@ -284,9 +297,9 @@ class PaymentLogic:
             PayMode.DEFAULT_MODE.val: self.deal_order_general,
             PayMode.HUI_FU_PAY.val: self.deal_order_general,
             PayMode.ALIPAY.val: self.pay_2,
-            PayMode.WECHAT_PAY.val: self.deal_order_general,
-            PayMode.VIVO_PAY.val: self.deal_order_general,
-            PayMode.APPLE_PAY.val: self.deal_order_general
+            PayMode.WECHAT_PAY.val: self.pay_3,
+            PayMode.VIVO_PAY.val: self.pay_4,
+            PayMode.APPLE_PAY.val: self.pay_5
         }
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
@@ -307,20 +320,22 @@ class PaymentLogic:
         return return_data
 
 
-    async def pay_1(self, order_info: dict, code: str):
+    async def pay_1(self, order_info: dict):
         """
-                获取汇付支付信息（实际上是后端请求汇付天下之后斗拱的聚合正扫）
-                1.用code换取gzh_openid，监测实时订单价变化；
-                2.通过DouGongPay获取，并返回pay_info信息返回给前端；
-                3.用order_no缓存pay_info，可以匹配上每一个H5链接；
-                """
+        获取汇付支付信息（实际上是后端请求汇付天下之后斗拱的聚合正扫）
+        1.用code换取gzh_openid，监测实时订单价变化；
+        2.通过DouGongPay获取，并返回pay_info信息返回给前端；
+        3.用order_no缓存pay_info，可以匹配上每一个H5链接；
+        """
         order_no = order_info.get('order_no')
         uid = order_info.get('uid')
         req_res = await BaseUserRC.get_user_pay_info(uid, order_no)
         # 生成支付信息
         if not req_res:
-            gzh_openid = await WeChat.update_gzh_openid(uid, code)
+            u_info = await BaseUserRC.cache_by_pk(uid)
+            gzh_openid = u_info.get("openid") or ""
             if not gzh_openid:
+                # gzh_openid = await WeChat.update_gzh_openid(uid, code)
                 return False, 'Invalid gzh_openid or code.'
 
             order_info["gzh_openid"] = gzh_openid
@@ -456,8 +471,55 @@ class PaymentLogic:
     async def order_2(self, order_no: str):
         pass
 
-    async def notify_2(self, order_no: str):
+
+    async def pay_3(self, order):
+        """微信支付"""
+        good = await GoodRC.get_good_info(order.sku)
+        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
+        return_data = {
+            "order_no": order.order_no,
+            "trade_time": order.created,
+            "trade_amount": order.amount,
+            "pay_url": url
+        }
+        return True, return_data
+
+    async def order_3(self, order_no: str):
         pass
+
+
+    async def pay_4(self, order):
+        """VIVO支付"""
+        good = await GoodRC.get_good_info(order.sku)
+        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
+        return_data = {
+            "order_no": order.order_no,
+            "trade_time": order.created,
+            "trade_amount": order.amount,
+            "pay_url": url
+        }
+        return True, return_data
+
+    async def order_4(self, order_no: str):
+        pass
+
+
+    async def pay_5(self, order):
+        """苹果支付"""
+        good = await GoodRC.get_good_info(order.sku)
+        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
+        return_data = {
+            "order_no": order.order_no,
+            "trade_time": order.created,
+            "trade_amount": order.amount,
+            "pay_url": url
+        }
+        return True, return_data
+
+    async def order_5(self, order_no: str):
+        pass
+
+
 
     async def completed_order(self, **kwargs):
         """
@@ -467,12 +529,9 @@ class PaymentLogic:
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         order_no = kwargs.get("order_no")
+        trade_no = kwargs.get("trade_no")
+        out_trade_status = kwargs.get("out_trade_status")
         explain = kwargs.get("explain")
-
-        # 1.注意物品和赠品以预发货的为主
-        paid_orders = await BaseUserRC.get_user_paid_order(uid)
-        if not paid_orders:
-            return False, '没有待领取订单'
         order_info = await OrderRC.get_order_info(order_no=order_no)
         if not order_info:
             NLogger.error("completed_order 无此待领取订单", order_no)
@@ -480,9 +539,11 @@ class PaymentLogic:
         good_info = await GoodRC.get_good_info(order_info.get("sku"))
         goods = good_info["content"]
         up_data = {
-            "status": OrderStatus.PAID,
+            "status": out_trade_status,
+            "out_order_no": trade_no,
             "explain": explain,
         }
+
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await OrderRC.up_order(up_data, order_no)
@@ -497,7 +558,7 @@ class PaymentLogic:
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败'
-        return goods
+        return True, "OK", goods
 
     async def pay_ios(self, request: Request, **kwargs):
         """

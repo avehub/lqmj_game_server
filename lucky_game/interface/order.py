@@ -34,6 +34,20 @@ class OrderDetail(GameAuthApi):
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
         return self.answer(data=order)
 
+class PayOrder(GameAuthApi):
+    """支付订单"""
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        order_no = self.check_str(req.args.get("order_no"), require=True, p_name="订单号")
+        if not order_no:
+            return self.answer(code=self.sta_code.FAIL, hint="订单号不能为空")
+        order, msg = await OrderRC.get_order_info(order_no=order_no)
+        if not order:
+            return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
+        sta, msg = PaymentLogic().pay(uid=uid, data_before=order, express=order.get("express"))
+        return self.answer(data=order)
+
 class CallbackAli(SpecialApi):
     """支付宝订单回调"""
     async def post(self, req: Request):
@@ -47,7 +61,28 @@ class CallbackAli(SpecialApi):
         order_no = data.get("out_trade_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg = PaymentLogic().callback_method(order_no, trade_no, trade_status, "支付回调")
+        sta, msg = PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, out_trade_status=trade_status,
+                                        explain="支付宝回调")
+        if not sta:
+            return self.answer(code=self.sta_code.FAIL, hint=msg)
+        return self.answer()
+
+
+class CallbackHf(SpecialApi):
+    """汇付天下订单回调"""
+    async def post(self, req: Request):
+        form = req.get_form()
+        json = req.json
+        self.loginfo(f"汇付天下回调参数form: {form}")
+        self.loginfo(f"汇付天下回调参数json: {json}")
+        sta, data = PaymentLogic().verify_callback(form)
+        if not sta:
+            return self.answer(code=self.sta_code.FAIL, hint="回调失败")
+        order_no = data.get("out_trade_no")
+        trade_no = data.get("trade_no")
+        trade_status = data.get("trade_status")
+        sta, msg = PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, out_trade_status=trade_status,
+                                        explain="汇付天下回调")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
         return self.answer()
