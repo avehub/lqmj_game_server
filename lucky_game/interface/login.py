@@ -256,7 +256,7 @@ class LoginByWechat(BaseLogin):
         dev_ident = req.json.get('device_id') or req.headers.get('device_id')
         (not code or not dev_ident) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
 
-        errcode, req_data = await WeChat.wechat_app_login(code)
+        errcode, req_data = await WeChat.wechat_gzh_login(code)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
