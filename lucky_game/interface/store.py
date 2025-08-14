@@ -82,7 +82,7 @@ class PayByGood(GameAuthApi):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 # 支付中
-                sta_pay, msg = await payment.pay(uid, data_before, express)
+                sta_pay, msg = await payment.pay(u_info, data_before, express)
                 self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
                 # 支付后（如果为兑换商品则直接处理）
                 if pay_type != PayType.BY_RMB:
