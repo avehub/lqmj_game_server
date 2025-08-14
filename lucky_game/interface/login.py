@@ -281,19 +281,20 @@ class LoginByWechat(BaseLogin):
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         # 通过union_id查询数据库用户信息
-        union_id = req_data.get('unionid')
+        openid = req_data.get('openid')
         platform = PlatForm.WECHAT_MINI_GAME
         q_params = {
-            "unionid": union_id,
+            "openid": openid,
             "platform": platform
         }
-        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_UNION_ID)
-        login_info = await self.get_login_info(req_get, LoginWay.WECHAT)
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
+        login_info = await self.get_login_info(req, LoginWay.WECHAT)
 
         # 新用户 注册
         if not u_info:
+            req_data["avatar"] = req_data.get('headimgurl')
             u_info = await self.create_new_user(
-                req, 'unionid', login_info, req_data, BaseUserRC.KEY_UNION_ID, platform=platform)
+                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
             self.log_info('Wechat Reg u_info:', u_info)
         # 老用户 登录
         else:
