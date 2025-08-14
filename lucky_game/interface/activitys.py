@@ -15,7 +15,7 @@ from lucky_game.model_rc.base_award import AwardRC
 # from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import ActivityType, ActivitySta, ConditionType, ReasonCostDiamond, ActivityStatus, PayMode
+from lucky_game.const import ActivityType, ActivitySta, ConditionType, AwardType, ActivityStatus, PayMode
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 
 
@@ -62,8 +62,11 @@ class JoinActivity(GameAuthApi):
         pay_mode = self.check_int(req.json.get("pay_mode"), require=False, p_name="支付方式")
         platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         pay_enum = PayMode.find_member_by_val(pay_mode)
+        award_enum = AwardType.find_member_by_val(award_type)
         if pay_mode and not isinstance(pay_enum, PayMode):
             self.answer(self.sta_code.ERR_ARG, hint="支付方式错误")
+        if award_type and not isinstance(award_enum, PayMode):
+            self.answer(self.sta_code.ERR_ARG, hint="参与活动方式错误")
         ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
