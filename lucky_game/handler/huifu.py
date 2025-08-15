@@ -9,7 +9,8 @@ from nsanic.libs.mult_log import NLogger
 from nsanic.libs.tool import json_parse
 
 from common.utils.kit_dt import KitDt
-from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
+from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER
+from lucky_game.const import OrderStatus, GainStatus
 
 RESPONSE_CODE = {
     "00000000": "交易受理成功；注：交易状态以trans_stat为准",
@@ -97,15 +98,15 @@ class DouGongPay:
         request = DG_SDK.V2TradePaymentJspayRequest()
         request.huifu_id = HuiFuConf.DOUGONG_SYS_ID
         request.req_date = KitDt.get_date_str()
-        request.req_seq_id = order_info.get('order_id')
-        request.goods_desc = str(order_info.get('name')) or '未知商品'
+        request.req_seq_id = order_info.get('order_no')
+        request.goods_desc = str(order_info.get('sku')) or '未知商品'
         request.trade_type = 'T_JSAPI'  # T_JSAPI: 微信公众号
         request.trans_amt = f"{float(order_info.get('amount')):.2f}"  # 交易金额，必须大于0，保留两位小数点，如0.10、100.05等
 
         # 准备extend_infos，包括所有需要额外传递的参数
-        server_addr = PROD_SERVER_ADDR if LIVE_SERVER else TEST_SERVER_ADDR
+        server_addr = PROD_SERVER_ADDR
         extend_infos = {
-            "notify_url": f'{server_addr}/luckyGame/HuiFuPayNotify',  # 交易异步通知地址
+            "notify_url": f'{server_addr}/luckyGame/CallbackHf',  # 交易异步通知地址
             "wx_data": {
                 "sub_appid": WeChatConf.WE_CHAT_GZH_APP_ID,  # 微信子应用ID
                 "sub_openid": str(order_info.get('gzh_openid')) or '',  # 用户在子商户下唯一标识
@@ -113,7 +114,10 @@ class DouGongPay:
         }
         # 异步请求
         loop = asyncio.get_running_loop()
+
+        NLogger.info("汇付天下js_pay支付请求参数：", extend_infos)
         response = await loop.run_in_executor(None, lambda: request.post(extend_infos))
+        NLogger.info("汇付天下js_pay支付响应结果：", response)
         return response
 
     @classmethod
@@ -176,6 +180,33 @@ class DouGongPay:
             NLogger.error(f"HuiFu 汇付天下支付回调通知{result}验签失败")
             return False, "验签失败"
         return True, resp_data
+
+    @classmethod
+    async def dou_gong_notify(cls, req):
+        """
+        汇付天下支付回调通知
+        参考文档：https://paas.huifu.com/open/doc/api/#/smzf/api_jhzs?id=%e5%bc%82%e6%ad%a5%e8%bf%94%e5%9b%9e%e5%8f%82%e6%95%b0
+        即时更新支付状态，缓存待发货快递
+        """
+        form = req.get_form()
+        res, res_dict = cls.check_signature(form)
+        NLogger.info("汇付天下支付回调通知 解析回调数据", res, res_dict)
+        if not res:
+            return False, res_dict
+
+        # 验签成功后，处理业务逻辑
+        data = {
+            "order_no": res_dict.get('req_seq_id'),
+            "out_trans_id": res_dict.get('out_trans_id'),
+            "trade_no": res_dict.get('hf_seq_id'),
+        }
+        order_status = OrderStatus.FAIL
+        if res_dict.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
+            NLogger.info("汇付天下支付回调通知:", RESPONSE_CODE[res_dict["resp_code"]])
+            NLogger.info("汇付天下支付回调重要信息数据", data)
+            order_status = OrderStatus.PAID
+        data["trade_status"] = order_status
+        return True, data
 
 
 class Adapay:

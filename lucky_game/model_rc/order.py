@@ -49,9 +49,10 @@ class OrderRC(BaseCommonRC):
         """更新订单"""
         try:
             query = {"order_no": order_no}
-            valid_fields = {"out_order_no", "prepay_id", "status", "explain", "updated"}
+            valid_fields = {"out_order_no", "prepay_id", "status", "explain", "updated", "gain_status"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
+                cls.conf.log.info("更新订单表信息: ", update_data)
                 await cls.db_model.filter(**query).update(**update_data)
         except OperationalError as e:
             return None, f"失败:{e}"

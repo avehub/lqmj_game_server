@@ -1,3 +1,5 @@
+import time
+
 from alipay.aop.api.AlipayClientConfig import AlipayClientConfig
 from alipay.aop.api.DefaultAlipayClient import DefaultAlipayClient
 from alipay.aop.api.domain.AlipayTradeCreateModel import AlipayTradeCreateModel
@@ -17,10 +19,21 @@ from alipay.aop.api.response.AlipayTradeRefundResponse import AlipayTradeRefundR
 from alipay.aop.api.response.AlipayTradeCloseResponse import AlipayTradeCloseResponse
 from alipay.aop.api.exception.Exception import AopException
 from alipay.aop.api.util.SignatureUtils import get_sign_content, verify_with_rsa
+
+from common.public.common_class import CommonApi
 from common.public.conf import AliPayConf
 from datetime import datetime
 from nsanic.libs.mult_log import NLogger
 from alipay.aop.api.util import EncryptUtils
+
+from lucky_game.const import OrderStatus
+
+RESPONSE_CODE = {
+    "WAIT_BUYER_PAY": "交易创建，等待买家付款。",
+    "TRADE_CLOSED": "未付款交易超时关闭，或支付完成后全额退款。",
+    "TRADE_SUCCESS": "交易支付成功。",
+    "TRADE_FINISHED": "交易结束，不可退款。",
+}
 
 
 class AlipayPayment:
@@ -60,7 +73,7 @@ class AlipayPayment:
         # 保存支付类型
         self.payment_type = payment_type
 
-    def create_h5_payment(self, subject, out_trade_no, total_amount, return_url=None):
+    async def create_h5_payment(self, subject, out_trade_no, total_amount, return_url=None):
         """
         创建H5支付订单
         :param subject: 商品标题
@@ -84,8 +97,9 @@ class AlipayPayment:
             request = AlipayTradeWapPayRequest(biz_model=model)
             request.notify_url = self.notify_url
             if return_url:
-                request.return_url = return_url + f"&order_no={out_trade_no}"
+                request.return_url = await CommonApi.append_query_params(return_url, {"order_no": out_trade_no, "t": time.time()})
             # 获取支付页面URL
+
             NLogger.info(f"支付宝H5支付订单请求参数: request {request} ")
             response = self.client.page_execute(request, http_method="GET")
             NLogger.info(f"支付宝H5支付订单响应参数: response {response} ")
@@ -269,20 +283,19 @@ class AlipayPayment:
             out_trade_no = params.get('out_trade_no')
             trade_no = params.get('trade_no')
             total_amount = params.get('total_amount')
-            
+            data = {
+                "order_no": params.get('out_trade_no'),
+                "trade_no": params.get('trade_no'),
+            }
             # 验证支付状态
+            order_status = OrderStatus.FAIL
             if trade_status == 'TRADE_SUCCESS':
                 NLogger.info(f"支付成功: out_trade_no={out_trade_no}, trade_no={trade_no}")
-                return True, {
-                    'trade_status': trade_status,
-                    'out_trade_no': out_trade_no,
-                    'trade_no': trade_no,
-                    'total_amount': total_amount
-                }
+                order_status = OrderStatus.PAID
             else:
                 NLogger.warning(f"支付状态异常: {trade_status}")
-                return False, None
-                
+            data["trade_status"] = order_status
+            return True, data
         except Exception as e:
             NLogger.error(f"处理支付宝回调失败: {str(e)}")
             raise
