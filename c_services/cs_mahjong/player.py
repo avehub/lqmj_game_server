@@ -579,7 +579,7 @@ class Player(BaseLeisurePlayer):
         self.__dian_pao_count = 0
         self.__jie_pao_count = 0
 
-    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True):
+    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """
         计算玩家自己所有鸡牌
         fan_ji_list: 桌子中所有鸡牌的集合(默认鸡 + 翻鸡 + 乌骨鸡，后两种可选)
@@ -591,6 +591,9 @@ class Player(BaseLeisurePlayer):
         fan_ji_list = fan_ji_list or set()
 
         all_bird = default_ji | set(fan_ji_list)  # 并集
+
+        if week_ji:
+            all_bird = all_bird | week_ji
 
         if include_hand_card:
             # 手牌

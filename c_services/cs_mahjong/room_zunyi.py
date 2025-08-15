@@ -24,6 +24,8 @@ class RoomZY(RoomBJ):
         self.__cf_yi_wan_seat_id = 0  # 冲锋一万玩家
         self.__ying_hu_score = self.extra_score_map.get(ExtraHuPai.YING_HU)
 
+        if self.__yi_wan_ji:
+            self.add_default_ji(CardsType.YI_WAN)
 
 
     def clear_room_round_start(self):

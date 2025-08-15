@@ -1,5 +1,6 @@
 from collections import Counter
 from copy import deepcopy
+from datetime import datetime
 
 from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model
 from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, \
@@ -88,6 +89,10 @@ class Room(BaseCardRoom):
         self.__double_bao = self.rule_detail.get("double_bao", 0)  # 牌型和鸡杠都双倍包
         self.__bao_ji = self.rule_detail.get("bao_ji", 1)  # 包鸡
         self.__bao_gang = self.rule_detail.get("bao_gang", 1)  # 包杠
+        self.__ruan_ying_ji = self.rule_detail.get("ruan_ying_ji", 0)  # 软硬鸡
+        self.__ruan_ying_dou = self.rule_detail.get("ruan_ying_dou", 0)  # 软硬豆
+        self.__week_ji = self.rule_detail.get("week_ji", 0)  # 星期鸡
+        self.__wind_ji = self.rule_detail.get("wind_ji", 0)  # 吹风机
         self.__limit_lose = self.rule_detail.get("limit_lose", 0)  # 限制输分
         self.__decision_sec = self.rule_detail.get("decision_sec", 0)
         self.__chao_shi_time = self.rule_detail.get("chao_shi_time", 0)  # 多少时间进入超时
@@ -102,6 +107,7 @@ class Room(BaseCardRoom):
             # 起手牌满足听牌条件才能报听。摸第一张牌后不可再报听，庄家除外。
             self.__yuan_bao = self.rule_detail.get("yuan_bao", 0)
         self.__yin_ji = self.rule_detail.get("yin_ji", 0)
+        self.__jin_yin_wu = self.rule_detail.get("jin_yin_wu", 0)
         self.__fan_jin_ji_cards = set()  # 记录翻金鸡cards
         self.__fan_yin_ji_cards = set()  # 记录翻银鸡cards
         self.__exchange_first = 0
@@ -110,6 +116,10 @@ class Room(BaseCardRoom):
         if self.__fan_ji_pai:  # 有翻鸡才有摇摆鸡和本鸡
             self.__yao_bai_ji = self.rule_detail.get("shang_xia_ji", 0)  # 摇摆鸡(上下鸡)
             self.__ben_ji = self.rule_detail.get("ben_ji", 0)  # 本鸡
+            self.__san_ji = self.rule_detail.get("san_ji", 0)  # 三鸡
+            if self.__san_ji:
+                self.__yao_bai_ji = 1
+                self.__ben_ji = 1
 
         self.__wu_gu_ji = self.rule_detail.get("wu_gu_ji", 0)  # 乌骨鸡（也算默认鸡）
         self.__default_ji = {CardsType.YAO_JI}
@@ -131,6 +141,13 @@ class Room(BaseCardRoom):
         if self.__have_men_jian_hu:
             self.__decision_sec = 0
             self.__tui_zhang_can_hu = self.rule_detail.get("tui_zhang_can_hu", 0)
+
+        self.__zhuo_ji_card = 0
+        self.__week_ji_num = {}
+        if self.__week_ji:
+            today = datetime.today()
+            num = today.isoweekday()
+            self.__week_ji_num = {num + 10, num + 20, num + 30}
 
     @property
     def liang_men_pai(self):
@@ -171,6 +188,9 @@ class Room(BaseCardRoom):
     @property
     def default_ji(self):
         return self.__default_ji
+
+    def add_default_ji(self, value):
+        self.__default_ji.add(value)
 
     @property
     def lai_zi(self):
@@ -227,6 +247,13 @@ class Room(BaseCardRoom):
     @property
     def win_seat_list(self):
         return self.__win_seat_list
+
+    @property
+    def zhuo_ji_card(self):
+        return self.__zhuo_ji_card
+
+    def week_ji(self):
+        return self.__week_ji
 
     def serialize_room_info(self):
         room_info = self.room_info()
@@ -416,6 +443,7 @@ class Room(BaseCardRoom):
         self.__dice_num = None
         self.__fan_jin_ji_cards = set()
         self.__fan_yin_ji_cards = set()
+        self.__zhuo_ji_card = 0
 
     def is_exchange_three(self):
         """ 判断是否换三张 """
@@ -747,7 +775,7 @@ class Room(BaseCardRoom):
                         result.remove(ActionType.ACTION_TYPE_HU)
             else:
                 if self.__left_three_bi_hu:
-                    print("进入尾三必胡,摸牌")
+                    self.log_info("进入尾三必胡,摸牌")
                     result.remove(ActionType.ACTION_TYPE_MEN)
                     return result, can_gang_list
         # 闲家补牌报听
@@ -755,7 +783,8 @@ class Room(BaseCardRoom):
             if self.can_select_tian_ting(p, self.deal_cards_count + 1):
                 result.append(ActionType.ACTION_TYPE_TIAN_TING)
 
-    def can_operates_gang(self, p: Player):
+    @staticmethod
+    def can_operates_gang(p: Player):
         """判断是否有人能杠"""
         if p.is_action_in_operates(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG):
             return True
@@ -836,7 +865,7 @@ class Room(BaseCardRoom):
                 player.table_cards, cards + [card], curr_card, allow_hu_map)
             if hu_type:
                 return False
-        print("是绝张")
+        self.log_info("是绝张", curr_card, "玩家", player.seat_id)
         return True
 
     def zhuan_wan_gang_de_qi(self, p: Player):
@@ -1624,6 +1653,7 @@ class Room(BaseCardRoom):
             curr_p = self.curr_player()
             curr_p.ze_ren_ji = 1
             self.__round_first_ji = 1
+            self.log_info("玩家", curr_p.seat_id, "责任幺鸡")
             return 1
 
         if self.__wu_gu_ji and self.__curr_card == CardsType.WU_GU_JI and self.__round_first_wgj == 0:
@@ -1636,6 +1666,7 @@ class Room(BaseCardRoom):
 
             curr_p = self.curr_player()
             curr_p.ze_ren_wgj = 1
+            self.log_info("玩家", curr_p.seat_id, "责任乌骨鸡")
             self.__round_first_wgj = 1
             return 2
         return 0
@@ -2739,6 +2770,12 @@ class Room(BaseCardRoom):
         print("hu_path", hu_path)
         if not hu_type:
             return {}, False, []
+        if hu_type == HuType.PING_HU and self.play_type == PlayType.REN_HUAI_MJ:
+            hand_cards.remove(self.__curr_card)
+            ting_list = Rule.get_ting_hu_list([], hand_cards, allow_hu_map, self.__lai_zi)
+            if len(ting_list) == 3:
+                if Rule.check_ting_list(ting_list):
+                    hu_type = HuType.DA_KUAN_ZHANG
 
         # 地胡：第一轮接庄炮/自摸
         # 杀报(天听玩家未胡之前都可被杀报，只算一次，自己胡过或者被别人杀报过 后续则没有杀报)
@@ -2811,7 +2848,8 @@ class Room(BaseCardRoom):
             HuType.LONG_QI_DUI: HuType.QING_LONG_BEI,
             HuType.DA_DUI_ZI: HuType.QING_DA_DUI,
             HuType.DI_LONG_QI: HuType.QING_DI_LONG,
-            HuType.JIN_GOU_DIAO: HuType.QING_JIN_GOU
+            HuType.JIN_GOU_DIAO: HuType.QING_JIN_GOU,
+            HuType.DA_KUAN_ZHANG: HuType.QING_DA_KUAN_ZHANG
         }
         is_qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(p.table_cards), deepcopy(p.cards), self.__curr_card, self.__lai_zi)
 
@@ -3154,12 +3192,14 @@ class Room(BaseCardRoom):
         double_bao = self.__double_bao and is_bao
         fan_bird_list = self.__ji_cards.copy() if not self.__ji_cards else self.__ji_cards
         type_ = CheckType.CHECK_JI
+        if self.__wind_ji and self.__zhuo_ji_card == 35:
+            type_ = CheckType.WIND_JI
         for p in self.seats:
             if p.jiao_pai <= 0 or p.is_zha_hu:
                 continue
             if p.seat_id in self.__shao_ji_gang_seats:
                 continue
-            p.calc_all_ji_pai(self.__default_ji, fan_bird_list, self.__man_tang_ji)  # 计算玩家有几个鸡牌
+            p.calc_all_ji_pai(self.__default_ji, fan_bird_list, self.__man_tang_ji,self.__week_ji_num)  # 计算玩家有几个鸡牌
             p_ji_cards = p.ji_pai[:]  # list
             p_stand_ji = p.calc_stand_ji(self.__default_ji)
             p_pg_ji = p.calc_peng_gang_ji(self.__default_ji)  # 除暗杠外的碰杠鸡
@@ -3196,6 +3236,10 @@ class Room(BaseCardRoom):
                             count -= stand_ji_count
                             # x2是站鸡翻倍
                             score += self.__ji_pai_score.get(ji, 1) * stand_ji_count * bei_lv * 2
+                    if self.__week_ji_num and ji in self.__week_ji_num:
+                        score *= 2
+                    if self.__ruan_ying_ji:
+                        score *= 2
                 if bearer:
                     # x2是炸胡者承担2份
                     if ji == CardsType.WU_GU_JI and ji not in self.__default_ji:
@@ -3218,11 +3262,14 @@ class Room(BaseCardRoom):
                             continue
                         if double_bao:
                             per_score *= 2
+
                         other_data = self.other_ming_xi_data(type_, p.seat_id, -per_score, ji)
                         self.update_result_score(accounts, other_p.seat_id, 0, other_data)
                         win_total += per_score
                         win_from.append(other_p.seat_id)
 
+                    if self.__ruan_ying_ji:
+                        win_total *= 2
                     self_data = self.self_ming_xi_data(type_, win_from, win_total, ji)
                     self.update_result_score(accounts, p.seat_id, 1, self_data)
 
@@ -3286,6 +3333,8 @@ class Room(BaseCardRoom):
                         pei_p = self.get_player_by_seat_id(pei_seat)
                         if liu_ju and pei_p and pei_p.jiao_pai > 0 and not self.__huang_zhuang_bu_huang_ji:
                             continue
+                        if self.__ruan_ying_dou:
+                            per_score *= 2
                         self.update_score(type_, p.seat_id, pei_seat, -per_score, card, accounts)
 
             if ag_count > 0 or zwg_count > 0:
@@ -3323,6 +3372,9 @@ class Room(BaseCardRoom):
                             if double_bao:
                                 per_score *= 2
 
+                            if self.__ruan_ying_dou:
+                                per_score *= 2
+
                             other_data = self.other_ming_xi_data(type_, p.seat_id, -per_score, card)
                             self.update_result_score(accounts, other_p.seat_id, 0, other_data)
                             win_total += per_score
@@ -3339,6 +3391,8 @@ class Room(BaseCardRoom):
         正常胡牌时，若冲锋鸡玩家炸胡，仍然要赔未听牌玩家
         """
         type_ = CheckType.CHECK_CHONG_FENG_JI
+        if self.__wind_ji and self.__zhuo_ji_card == 35:
+            type_ = CheckType.WIND_JI
         p = self.get_player_by_seat_id(cfj_seat_id)
         if p.seat_id in self.__shao_ji_gang_seats:
             return
@@ -3377,6 +3431,8 @@ class Room(BaseCardRoom):
                 else:
                     win_from = []
                     total_score = 0
+                    if self.__ruan_ying_ji:
+                        score *= 2
                     for other_p in self.seats:
                         if other_p.seat_id == p.seat_id:
                             continue
@@ -3387,7 +3443,6 @@ class Room(BaseCardRoom):
                     self_data = self.self_ming_xi_data(type_, win_from, total_score, card)
                     self.update_result_score(accounts, cfj_seat_id, 1, self_data)
             else:
-                # type_ = CheckType.CHECK_ZE_REN_JI  # 炸胡或未叫牌变成责任鸡计算
                 # 冲锋鸡玩家未炸胡+未听牌包鸡，炸胡者承担冲锋鸡玩家
                 if bearer and get_bearer.jiao_pai > 0:
                     self.update_score(type_, get_bearer.seat_id, bearer.seat_id, -score, card, accounts, get_bearer.seat_id)
@@ -3416,6 +3471,8 @@ class Room(BaseCardRoom):
         流局，A炸胡，B未听牌，则都不赔付
         """
         type_ = CheckType.CHECK_ZE_REN_JI
+        if self.__wind_ji and self.__zhuo_ji_card == 35:
+            type_ = CheckType.WIND_JI
         get_zrj_p = self.get_player_by_seat_id(ze_ren_win)
         if get_zrj_p.seat_id in self.__shao_ji_gang_seats:
             return
@@ -3560,7 +3617,6 @@ class Room(BaseCardRoom):
         if self.play_type == PlayType.AN_LONG_XUE_ZHAN:
             self.kai_hu_cha_jiao(accounts)
         # 1.开牌牌型结算
-        print("self.__kai_pai_hu_info", self.__kai_pai_hu_info)
         for hu_info in self.__kai_pai_hu_info:
             self.check_by_num_3(accounts, hu_info)
         # 2.结算闷捡
@@ -3593,6 +3649,7 @@ class Room(BaseCardRoom):
         if not self.__fan_ji_pai:
             return fan_ji_set, 0
         bird_list = self.zhong_bird()
+
         for ji in bird_list:
             # 本鸡
             if self.__ben_ji:
@@ -3601,11 +3658,16 @@ class Room(BaseCardRoom):
             if ji % 10 == 9:
                 fan_ji_set.add(ji - 8)
                 if ji // 10 == 2:
-                    self.__fan_jin_ji_cards.add(ji - 8)
+                    if self.play_type != PlayType.REN_HUAI_MJ or self.__jin_yin_wu:
+                        self.__fan_jin_ji_cards.add(ji - 8)
                     self.log_info(self.tid, "翻到金鸡幺鸡")
                 else:
                     if self.__yin_ji:
-                        self.__fan_yin_ji_cards.add(ji - 8)
+                        if self.play_type == PlayType.BI_JIE_MJ or self.__jin_yin_wu:
+                            if ji // 10 == 3:
+                                self.__fan_yin_ji_cards.add(ji - 8)
+                        elif self.play_type != PlayType.REN_HUAI_MJ:
+                            self.__fan_yin_ji_cards.add(ji - 8)
                         self.log_info(self.tid, "翻到银鸡", ji - 8)
             else:
                 fan_ji_set.add(ji + 1)
@@ -3620,6 +3682,7 @@ class Room(BaseCardRoom):
                 else:
                     fan_ji_set.add(ji - 1)
 
+        self.__zhuo_ji_card = bird_list[0] if bird_list else 0
         return fan_ji_set, bird_list[0] if bird_list else 0
 
     def kai_hu_cha_jiao(self, accounts: dict):
@@ -4069,7 +4132,8 @@ class Room(BaseCardRoom):
                     self.__check_both_zha_hu_or_not(winner, accounts, extra_hu_lst, hu_info, _type=check_type)
 
     def update_score(self, check_type_, seat_id, pei_seat, score, card, accounts, get_bearer=-1, hu_type=None, extra_hu_type=None):
-
+        if check_type_ == CheckType.WIND_JI:
+            score = 0
         other_data = self.other_ming_xi_data(check_type_, seat_id, score, card, hu_type, extra_hu_type, get_bearer)
         self_data = self.self_ming_xi_data(check_type_, [pei_seat], -score, card, hu_type, extra_hu_type)
         self.update_result_score(accounts, pei_seat, 0, other_data)
@@ -4185,6 +4249,8 @@ class Room(BaseCardRoom):
 
     @staticmethod
     def other_ming_xi_data(type_, lose_to=-1, score=0, card=0, hu_type=None, extra_hu_type=None, get_bearer=-1):
+        if type_ == CheckType.WIND_JI:
+            score = 0
         data = {
             "check_type": type_,
             "lose_to": [lose_to],
@@ -4220,6 +4286,8 @@ class Room(BaseCardRoom):
 
     @staticmethod
     def self_ming_xi_data(type_, win_from=None, score=0, card=0, hu_type=None, extra_hu_type=None, get_bearer=-1):
+        if type_ == CheckType.WIND_JI:
+            score = 0
         data = {
             "check_type": type_,
             "win_from": [] if not win_from else win_from,

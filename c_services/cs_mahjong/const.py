@@ -20,6 +20,7 @@ class PlayType(BaseEnum):
     BI_JIE_MJ = 6, "毕节麻将"
     ZUN_YI_LAI_ZI = 7, "遵义麻将(一筒赖子)"
     LEISURE_FCZJ = 8, "休闲场发财捉鸡"
+    REN_HUAI_MJ = 9,"仁怀麻将"
 
 
 class ActionType(BaseEnum):
@@ -110,6 +111,9 @@ class HuType(BaseEnum):
     QYS_RUAN_WU_DUI = 134, "清一色软五对"
     QYS_YING_WU_DUI = 135, "清一色硬五对"
 
+    #仁怀麻将
+    DA_KUAN_ZHANG = 141, "大宽张"
+    QING_DA_KUAN_ZHANG = 142, "清大宽张"
 
 @unique
 class SuitType(BaseEnum):
@@ -264,6 +268,7 @@ class JiType(IntEnum):
     YI_WAN_ZRJ = 220  # 一万责任鸡
     JIN_CF_YI_WAN = 221  # 一万冲锋金鸡
     FAN_PAI_JI = 222  # 翻牌鸡
+    WEEK_JI = 223  # 星期鸡（欢乐鸡）
 
     AN_GANG = 301  # 暗杠
     MING_GANG = 302  # 明杠
@@ -327,6 +332,8 @@ class CheckType(IntEnum):
     CHECK_CHONG_GUAN_JING = 1035  # 冲关
     CHECK_SHANG_JING = 1036  # 上精
     CHECK_JING_GANG = 1037  # 精杠
+    CHECK_DEALER_DOUBLE = 1038 #庄上乘
+    WIND_JI = 1039 #吹风机
 
 
 # 鸡牌分
