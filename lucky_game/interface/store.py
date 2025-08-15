@@ -58,6 +58,12 @@ class PayByGood(GameAuthApi):
         (not isinstance(plat_enum, PlatForm) or not isinstance(pay_enum, PayMode)) and self.answer(self.sta_code.ERR_ARG, hint='无效参数')
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
+        return self.answer(data={"good": [], "pay_info": {
+                "order_no": "00012025081412253715194064285397",
+                "trade_time": 1755174337,
+                "trade_amount": 6.0,
+                "pay_url": "https://openapi-sandbox.dl.alipaydev.com/gateway.do?timestamp=2025-08-14+20%3A25%3A37&app_id=9021000140665835&method=alipay.trade.wap.pay&charset=utf-8&format=json&version=1.0&sign_type=RSA2&notify_url=https%3A%2F%2Fjadzzweb.0858sy.com%2FluckyGame%2FCallbackAli&sign=hwUgABhJ0ekboohjYThszM0S597xtgvdTT1GgrxD%2FEKbePZmyztDNPBvTJ5OKGa51jdFcUirImlo4IgAtISS6kiCJ1Z665TEMkVb6xZSJcy39bp4zEvepqrAT%2BBAC6dic3KtxW5ApWGbLDAidelB95MzbfSk7r5vgpv5J5b1kHkVryWy191HW%2BggDCcyYF5FVzxjXy8OQt1AVH2fOMnocOCs9qS%2BnYMagGTKCMa0flhnniitTiLPZUSUs7eH1qZN3QYvSgUhKekeZaqnAftLtF70ios6MlAGx%2BS1C6ck7TMUpq2AGxVrwfUeDfo%2FyBO1UXwQqcIUlzSqeN6xY%2Bo0kA%3D%3D&biz_content=%7B%22out_trade_no%22%3A%2200012025081412253715194064285397%22%2C%22subject%22%3A%22%E9%A6%96%E5%85%85%E7%A4%BC%E5%8C%85%22%2C%22total_amount%22%3A%226%22%7D"
+            }})
 
         # 查询商品、校验
         express = await GoodRC.get_good_info(sku)
@@ -82,7 +88,7 @@ class PayByGood(GameAuthApi):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 # 支付中
-                sta_pay, msg = await payment.pay(u_info, data_before, express)
+                sta_pay, msg, _ = await payment.pay(u_info, data_before, express)
                 self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
                 # 支付后（如果为兑换商品则直接处理）
                 if pay_type != PayType.BY_RMB:

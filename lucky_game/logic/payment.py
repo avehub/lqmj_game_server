@@ -18,7 +18,7 @@ from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import StoreRC, GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
-    BossType, HeldSta, PlatForm, CurrencyType, PayMode, OrderStatus, DeliverStatus, RandType, OperatingSystem
+    BossType, HeldSta, PlatForm, CurrencyType, PayMode, OrderStatus, GainStatus, RandType, OperatingSystem
 from nsanic.libs.mult_log import NLogger
 from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
 from lucky_game.handler.douyin import DouYin
@@ -90,26 +90,28 @@ class PaymentLogic:
         price *= num
         field = field_name = ""
         if price > 0:
-            match currency:
-                case CurrencyType.BY_GOLD:
-                    field = "gold"
-                    field_name = "金币"
-                case CurrencyType.BY_DIAMOND:
-                    field = "diamond"
-                    field_name = "钻石"
-                case CurrencyType.BY_YELLOW_DIAMOND:
-                    field = "yellow_diamond"
-                    field_name = "黄钻"
-                case CurrencyType.BY_ROOM_CARD:
-                    field = "room_card"
-                    field_name = "房卡"
-                case CurrencyType.BY_RMB:
-                    # 充值
-
+            if currency == CurrencyType.BY_RMB:
+                match currency:
+                    case CurrencyType.BY_GOLD:
+                        field = "gold"
+                        field_name = "金币"
+                    case CurrencyType.BY_DIAMOND:
+                        field = "diamond"
+                        field_name = "钻石"
+                    case CurrencyType.BY_YELLOW_DIAMOND:
+                        field = "yellow_diamond"
+                        field_name = "黄钻"
+                    case CurrencyType.BY_ROOM_CARD:
+                        field = "room_card"
+                        field_name = "房卡"
+                amount = u_info.get(field)
+                if amount < price:
+                    return False, f'{field_name}不足', {}
+            else:
+                # 校验支付方式
+                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALI_PAY, PayMode.HUIFU_PAY, PayMode.IOS_PAY]:
                     pass
-            amount = u_info.get(field)
-            if amount < price:
-                return False, f'{field_name}不足', {}
+
         else:
             # 校验今日领取次数
             start_time, end_time = await CommonApi.get_time_range("day")
@@ -159,7 +161,7 @@ class PaymentLogic:
         if express.get("total") > 0:
             await GoodRC.update_int_field(sku, "total", 1, "sub")
 
-        return sta, "ok"
+        return sta, msg, result
 
     async def pay_method(self, order_info: dict, u_info: dict, express: dict):
         """支付方法"""
@@ -239,7 +241,8 @@ class PaymentLogic:
             if order.get("currency") != CurrencyType.BY_RMB:
                 order_sta, e = await OrderRC.up_order(
                     {
-                        "status": OrderStatus.PAID
+                        "status": OrderStatus.PAID,
+                        "gain_status": GainStatus.RECEIVED
                     },
                     order_no
                 )
@@ -250,19 +253,32 @@ class PaymentLogic:
                 pass
 
             # 更新用户资源
-            add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
-                uid,
-                content.get("type"),
-                content.get("amount"),
-                "add",
-                explain=f"获得{content.get('type')}"
-            )
+            add_sta = False
+            NLogger.info("领取资源：content:", content)
+            if isinstance(content, list):
+                for item in content:
+                    add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+                        uid,
+                        item.get("type"),
+                        item.get("amount"),
+                        "add",
+                        explain=f"获得{item.get('type')}"
+                    )
+                    NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
+            else:
+                add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+                    uid,
+                    content.get("type"),
+                    content.get("amount"),
+                    "add",
+                    explain=f"获得{content.get('type')}"
+                )
             if not add_sta:
                 return False, e
 
             return True, "ok"
 
-    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = ""):
+    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None):
         # 创建订单
         order_no = await RngMaker.gen_num(str_len=32)
         new, msg = await OrderRC.add_order(
@@ -294,8 +310,11 @@ class PaymentLogic:
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
         if deal_func and callable(deal_func):
-            order_info = await deal_func(new)
-            NLogger.info(f"create_order uid: {uid} 订单创建结果", order_info)
+            return_url = return_url + f"&order_no={order_no}"
+            sta, order_info = await deal_func(new, return_url=return_url)
+            NLogger.info(f"create_order uid: {uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
+            if not sta:
+                return {}, "订单创建失败"
             return order_info, "ok"
         return {}, "无此交易方式"
 
@@ -305,9 +324,10 @@ class PaymentLogic:
         return_data = {
             "order_no": order.order_no,
             "trade_time": order.created,
-            "trade_amount": order.amount
+            "trade_amount": order.amount,
+            "pay_mode": order.pay_mode
         }
-        return return_data
+        return True, return_data
 
 
     async def pay_1(self, order_info: dict):
@@ -446,10 +466,10 @@ class PaymentLogic:
         NLogger.error("HuiFuPayNotify 快递入站成功", order_id)
         return False, "Success"
 
-    async def pay_2(self, order):
+    async def pay_2(self, order, return_url: str = None):
         """支付宝支付(H5)"""
         good = await GoodRC.get_good_info(order.sku)
-        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
+        url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount, return_url)
         return_data = {
             "order_no": order.order_no,
             "trade_time": order.created,

@@ -94,6 +94,13 @@ class OrderStatus(BaseEnum):
     PAID = 99, "支付成功"
 
 
+class GainStatus(BaseEnum):
+    """领取状态"""
+    DEFAULT = 0, "未发放"
+    GAINED = 1, "已发放"
+    RECEIVED = 99, "已领取"
+
+
 @unique
 class DeliverStatus(BaseEnum):
     """发货状态"""
@@ -207,7 +214,7 @@ class GotType(BaseEnum):
 
 @unique
 class AwardType(BaseEnum):
-    """获奖类型（和动作有关）"""
+    """参与类型（和动作有关）"""
     DEFAULT = 0, "默认"
     LOGIN = 1, "登录"
     SIGN_IN_RF = 2, "抽奖签到"

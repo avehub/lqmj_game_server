@@ -16,7 +16,7 @@ class OrderRC(BaseCommonRC):
 
     @classmethod
     async def add_order(cls, uid: int, good_id: int, sku: str, platform: int, amount: decimal.Decimal, currency: int,
-                        pay_mode: int, order_no: str, num: int, out_order_no: str = '',
+                        pay_mode: int, order_no: str, num: int, out_order_no: str = '', gain_status: int = 0,
                         status: int = OrderStatus.WAIT_PAY, prepay_id: str = "", explain: str = ""):
         """新增订单"""
         try:
@@ -32,6 +32,7 @@ class OrderRC(BaseCommonRC):
                 "num": num,
                 "out_order_no": out_order_no if out_order_no else "",
                 "status": status if status else 0,
+                "gain_status": gain_status if gain_status else 0,
                 "prepay_id": prepay_id if prepay_id else "",
                 "explain": explain if explain else "",
             }
@@ -59,7 +60,7 @@ class OrderRC(BaseCommonRC):
     @classmethod
     async def get_order_filter(cls, uid: any = None, sku: any = None, good_id: any = None, status: int = None,
                                platform: any = None, start_time: int = None, end_time: int = None,
-                               order_no: str = None, currency: int = None, count: bool = False):
+                               order_no: str = None, currency: int = None, gain_status: int = None, count: bool = False):
         """获取订单记录"""
         try:
             query = {}
@@ -85,6 +86,8 @@ class OrderRC(BaseCommonRC):
                     query["platform"] = platform
             if status is not None:
                 query["status"] = status
+            if gain_status is not None:
+                query["gain_status"] = gain_status
             if currency is not None:
                 query["currency"] = currency
             if start_time is not None:
