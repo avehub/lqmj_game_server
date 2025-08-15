@@ -310,7 +310,6 @@ class PaymentLogic:
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
         if deal_func and callable(deal_func):
-            return_url = return_url + f"&order_no={order_no}"
             sta, order_info = await deal_func(new, return_url=return_url)
             NLogger.info(f"create_order uid: {uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
             if not sta:
@@ -319,7 +318,7 @@ class PaymentLogic:
         return {}, "无此交易方式"
 
 
-    async def deal_order_general(self, order: dict):
+    async def deal_order_general(self, order: dict, return_url: str = None):
         """通用订单处理"""
         return_data = {
             "order_no": order.order_no,
@@ -482,7 +481,7 @@ class PaymentLogic:
         pass
 
 
-    async def pay_3(self, order):
+    async def pay_3(self, order, _):
         """微信支付"""
         good = await GoodRC.get_good_info(order.sku)
         url = AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)

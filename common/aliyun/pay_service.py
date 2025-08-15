@@ -83,7 +83,8 @@ class AlipayPayment:
             # 创建支付请求
             request = AlipayTradeWapPayRequest(biz_model=model)
             request.notify_url = self.notify_url
-            request.return_url = return_url
+            if return_url:
+                request.return_url = return_url + f"&order_no={out_trade_no}"
             # 获取支付页面URL
             NLogger.info(f"支付宝H5支付订单请求参数: request {request} ")
             response = self.client.page_execute(request, http_method="GET")
