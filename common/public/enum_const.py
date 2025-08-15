@@ -127,6 +127,7 @@ class ServiceEnum(BaseEnum):
     C_MAHJONG_GY = 23, "mahjong_gy", GameType.ROOM_CARD
     C_MAHJONG_ZY = 24, "mahjong_zy", GameType.ROOM_CARD
     C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
+    C_MAHJONG_RH = 26, "mahjong_rh", GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
