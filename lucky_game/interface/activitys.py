@@ -61,18 +61,19 @@ class JoinActivity(GameAuthApi):
         award_type = self.check_int(req.json.get("award_type"), require=True, p_name="参与活动方式")
         pay_mode = self.check_int(req.json.get("pay_mode"), require=False, p_name="支付方式")
         platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
+        return_url = self.check_str(req.json.get("return_url"), require=False, p_name="返回地址")
         pay_enum = PayMode.find_member_by_val(pay_mode)
         award_enum = AwardType.find_member_by_val(award_type)
         if pay_mode and not isinstance(pay_enum, PayMode):
             self.answer(self.sta_code.ERR_ARG, hint="支付方式错误")
-        if award_type and not isinstance(award_enum, PayMode):
+        if award_type and not isinstance(award_enum, AwardType):
             self.answer(self.sta_code.ERR_ARG, hint="参与活动方式错误")
         ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
 
-        sta, msg, result = await Base().act_handler(ac, u_info, award_type, pay_mode, platform)
+        sta, msg, result = await Base().act_handler(ac, u_info, award_type, pay_mode, platform, return_url=return_url)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
         return self.answer(data={"status": sta, "result": result})

@@ -380,6 +380,7 @@ class Orders(DBModel):
     out_order_no = fields.CharField(max_length=64, index=True, default='', description="外部订单编号")
     prepay_id = fields.CharField(max_length=64, null=True, default='', description="外部支付标识")
     status = fields.SmallIntField(max_length=2, null=True, description='订单状态：0待支付 1支付失败 2订单关闭 99支付成功')
+    gain_status = fields.SmallIntField(max_length=2, null=True, description='领取状态：0未发放 1已发放 99已领取')
     explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 

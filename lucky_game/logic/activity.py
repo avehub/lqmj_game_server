@@ -39,10 +39,13 @@ async def act_count(uid: int, act_id: int, period: str):
     return sta, signed
 
 
+
+
+
 class Base:
     conf: ConfSrv = conf_srv
 
-    async def act_handler(self, activity: dict, u_info: dict, award_type: int, pay_mode: int=None, platform: int=None):
+    async def act_handler(self, activity: dict, u_info: dict, award_type: int, pay_mode: int=None, platform: int=None, return_url: str=None):
         """ 根据活动类型获取活动操作 """
         uid = u_info.get("uid")
         act_type = activity.get("act_type")
@@ -58,19 +61,24 @@ class Base:
         if act_total > 0 and act_total > join_limit_day:
             return False, "已达最大参与次数", {}
         if act_type == ActivityType.LUCK_SIGN_IN:
-            return await SignIn().handler(activity, uid, award_type)
+            sta, msg, data = await SignIn().handler(activity, uid, award_type)
+            return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.PACKAGE:
-            return await Package().handler(activity, uid, award_type)
+            sta, msg, data = await Package().handler(activity, uid, award_type)
+            return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.SHARE:
-            return await Common().handler(activity, uid, award_type)
+            sta, msg, data = await Common().handler(activity, uid, award_type)
+            return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.INFINITE_PLAY:
             conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
             NLogger.info(f"conf_data:{conf_data} u_info {u_info}")
             if u_info.get("gold") > conf_data.get("min_gold"):
                 return False, "暂不符合领取条件", {}
-            return await Common().handler(activity, uid, award_type)
+            sta, msg, data = await Common().handler(activity, uid, award_type)
+            return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.FIRST_CHARGE:
-            return await FirstCharge().handler(uid, activity, award_type, pay_mode, platform)
+            sta, msg, data = await FirstCharge().handler(uid, activity, award_type, pay_mode, platform, return_url)
+            return sta, msg, {"award": [], "pay_info": data}
 
     async def act_gain(self, activity: dict, uid: int, award_id: int):
         """ 领取活动奖励 """
@@ -588,7 +596,7 @@ class InfinitePlay(Base):
 
 class FirstCharge(Base):
     """ 首充 """
-    async def handler(self, uid: int, activity: dict, award_type: int, pay_mode: int, platform: int=None):
+    async def handler(self, uid: int, activity: dict, award_type: int, pay_mode: int, platform: int=None, return_url: str=None):
         if award_type != AwardType.TOP_UP:
             return False, "活动参与类型错误", {}
         _, condition_awards = await self.act_by_awards(uid, activity)
@@ -612,7 +620,7 @@ class FirstCharge(Base):
             "currency": good["currency"],
             "sku": good_sku,
         }
-        act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动")
+        act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动", return_url=return_url)
         NLogger.info(f"首充活动订单信息：{act_order}")
         if not act_order:
             return False, msg, act_order
