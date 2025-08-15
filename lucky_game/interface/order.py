@@ -12,10 +12,11 @@ from lucky_game.base_api import GameAuthApi, SpecialApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.base_award import AwardRC
+from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import ActivityType, ActivitySta, ConditionType, ReasonCostDiamond, ActivityStatus, PayMode
+from lucky_game.const import OrderStatus,  PayMode, GainStatus
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 from common.aliyun.pay_service import AlipayPayment
 from lucky_game.logic.payment import PaymentLogic
@@ -33,6 +34,33 @@ class OrderDetail(GameAuthApi):
         if not order:
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
         return self.answer(data=order)
+
+class UnclaimedOrder(GameAuthApi):
+    """未领取的订单"""
+    async def get(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        gain_status = self.check_int(req.args.get("gain_status"), require=False, default=GainStatus.GAINED, p_name="领取状态")
+        order, msg = await OrderRC.get_order_filter(uid=uid, gain_status=gain_status, status=OrderStatus.PAID)
+        return self.answer(data=order, hint=msg)
+
+class GainOrder(GameAuthApi):
+    """领取订单"""
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        order_no = self.check_str(req.json.get("order_no"), require=True, p_name="订单号")
+        if not order_no:
+            return self.answer(code=self.sta_code.FAIL, hint="订单号不能为空")
+        order, msg = await OrderRC.get_order_info(order_no=order_no)
+        if not order:
+            return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
+        good = await GoodRC.get_good_info(order.get("sku"))
+        sta, msg = await PaymentLogic().pay_after(u_info, good, order_no)
+        if not sta:
+            return self.answer(code=self.sta_code.FAIL, hint=msg)
+        return self.answer(data={"good": good["content"]}, hint=msg)
+
 
 class PayOrder(GameAuthApi):
     """支付订单"""
