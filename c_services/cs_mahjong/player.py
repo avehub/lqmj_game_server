@@ -550,6 +550,22 @@ class Player(BaseLeisurePlayer):
         self.__chong_feng_wgj = value
 
     @property
+    def chong_feng_yi_tong(self):
+        return self.__chong_feng_yi_tong
+
+    @chong_feng_yi_tong.setter
+    def chong_feng_yi_tong(self,value):
+        self.__chong_feng_yi_tong = value
+
+    @property
+    def chong_feng_yi_wan(self):
+        return self.__chong_feng_yi_wan
+
+    @chong_feng_yi_wan.setter
+    def chong_feng_yi_wan(self,value):
+        self.__chong_feng_yi_wan = value
+
+    @property
     def ze_ren_ji(self):
         return self.__ze_ren_ji
 
@@ -564,6 +580,22 @@ class Player(BaseLeisurePlayer):
     @ze_ren_wgj.setter
     def ze_ren_wgj(self, value):
         self.__ze_ren_wgj = value
+
+    @property
+    def ze_ren_yi_wan(self):
+        return self.__ze_ren_yi_wan
+
+    @ze_ren_yi_wan.setter
+    def ze_ren_yi_wan(self,value):
+        self.__ze_ren_yi_wan = value
+
+    @property
+    def ze_ren_yi_tong(self):
+        return self.__ze_ren_yi_tong
+
+    @ze_ren_yi_tong.setter
+    def ze_ren_yi_tong(self,value):
+        self.__ze_ren_yi_tong = value
 
     def on_game_start_clear_data(self):
         """ 房间开始前的清理 """

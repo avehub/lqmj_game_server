@@ -22,6 +22,11 @@ class RoomZY(RoomBJ):
         self.__round_first_yi_wan = 0
         self.__cf_yi_tong_seat_id = 0  # 冲锋一筒玩家
         self.__cf_yi_wan_seat_id = 0  # 冲锋一万玩家
+        self.__ze_ren_yi_tong_seat_id = 0  # 责任一筒玩家
+        self.__ze_ren_yi_tong_win_seat_id = 0
+
+        self.__ze_ren_yi_wan_seat_id = 0  # 责任一万玩家
+        self.__ze_ren_yi_wan_win_seat_id = 0
         self.__ying_hu_score = self.extra_score_map.get(ExtraHuPai.YING_HU)
 
         if self.__yi_wan_ji:
@@ -30,6 +35,15 @@ class RoomZY(RoomBJ):
 
     def clear_room_round_start(self):
         super().clear_room_round_start()
+        self.__round_first_yi_tong = 0
+        self.__round_first_yi_wan = 0
+        self.__cf_yi_tong_seat_id = 0  # 冲锋一筒玩家
+        self.__cf_yi_wan_seat_id = 0  # 冲锋一万玩家
+        self.__ze_ren_yi_tong_seat_id = 0  # 责任一筒玩家
+        self.__ze_ren_yi_tong_win_seat_id = 0
+
+        self.__ze_ren_yi_wan_seat_id = 0  # 责任一万玩家
+        self.__ze_ren_yi_wan_win_seat_id = 0
         self.__fan_ji_score = {}
 
     def kai_pai_check_out(self, accounts: dict):
@@ -69,7 +83,6 @@ class RoomZY(RoomBJ):
             hu_type = Rule.only_can_hu(table_cards, p.cards, self.curr_card, self.lai_zi)
             hu_path = []
         else:
-            print("算胡")
             flag = self.is_must_qing_yi_se(p, table_cards, is_zi_mo)
             hu_type, hu_path = Rule.get_hu_type_by_score(
                 table_cards, p.cards, self.curr_card, self.__fan_ji_score, is_zi_mo, lai_zi=self.lai_zi, must_qys=flag,
@@ -570,6 +583,61 @@ class RoomZY(RoomBJ):
                 p.table_cards, p.cards,0, self.lai_zi, self.__fan_ji_score,self.pai_xing_score_map,self.extra_score_map)
 
 
+    def check_ze_ren_ji(self, accounts, liu_ju=False, is_bao=False):
+        """ 结算责任鸡 """
+        if not self.ze_ren_ji:
+            return
+        super().check_ze_ren_ji(accounts,liu_ju,is_bao)
+
+        if self.__ze_ren_yi_tong_seat_id != 0 and self.__ze_ren_yi_tong_win_seat_id != 0:
+            ji_card = CardsType.YI_TONG
+            key = JiType.CF_YI_TONG
+            if ji_card in self.fan_jin_ji_cards:  # 翻到为金鸡
+                key = JiType.JIN_CF_YI_TONG
+            score = self.ji_pai_score.get(key, 0)
+            self.concreteness_check_ze_ren_ji(
+                accounts, self.__ze_ren_yi_tong_win_seat_id, self.__ze_ren_yi_tong_seat_id, ji_card, score, liu_ju,is_bao)
+
+        if self.__ze_ren_yi_wan_seat_id != 0 and self.__ze_ren_yi_wan_win_seat_id != 0:
+            ji_card = CardsType.YI_WAN
+            key = JiType.CF_YI_WAN
+            if ji_card in self.fan_jin_ji_cards:  # 翻到为金鸡
+                key = JiType.JIN_CF_YI_WAN
+            score = self.ji_pai_score.get(key, 0)
+            self.concreteness_check_ze_ren_ji(
+                accounts, self.__ze_ren_yi_wan_win_seat_id, self.__ze_ren_yi_wan_seat_id, ji_card, score, liu_ju,is_bao)
+
+
+    def deal_ze_ren_ji(self, p):
+        """
+        处理责任鸡handle
+        """
+        super().deal_ze_ren_ji(p)
+        if self.curr_card == CardsType.YI_TONG and self.__round_first_yi_tong == 0:
+            self.__ze_ren_yi_tong_seat_id = self.curr_seat_id
+            self.__ze_ren_yi_tong_win_seat_id = p.seat_id
+            if self.__cf_yi_tong_seat_id > 0:
+                cf_yi_tong_player = self.get_player_by_seat_id(self.__cf_yi_tong_seat_id)
+                cf_yi_tong_player.chong_feng_yi_tong = 0
+                self.__cf_yi_tong_seat_id = 0
+
+            curr_p = self.curr_player()
+            curr_p.ze_ren_yi_tong = 1
+            self.__round_first_yi_tong = 1
+            return 1,self.__ze_ren_yi_tong_seat_id
+
+        if self.__yi_wan_ji and self.curr_card == CardsType.YI_WAN and self.__round_first_yi_wan == 0:
+            self.__ze_ren_yi_wan_seat_id = self.curr_seat_id
+            self.__ze_ren_yi_wan_win_seat_id = p.seat_id
+            if self.__cf_yi_wan_seat_id > 0:
+                cf_yi_tong_player = self.get_player_by_seat_id(self.__cf_yi_wan_seat_id)
+                cf_yi_tong_player.chong_feng_yi_wan = 0
+                self.__cf_yi_wan_seat_id = 0
+            curr_p = self.curr_player()
+            curr_p.ze_ren_yi_wan = 1
+            self.__round_first_yi_wan = 1
+            return 1,self.__ze_ren_yi_wan_seat_id
+        return 0,0
 
 
 

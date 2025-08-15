@@ -252,6 +252,11 @@ class Room(BaseCardRoom):
     def zhuo_ji_card(self):
         return self.__zhuo_ji_card
 
+    @property
+    def ze_ren_ji(self):
+        return self.__ze_ren_ji
+
+    @property
     def week_ji(self):
         return self.__week_ji
 
@@ -1219,12 +1224,9 @@ class Room(BaseCardRoom):
         if flag:
             self.__curr_card_exist = 0
             self.__gang_hou_chu_pai = []  # 有人碰则连续杠被打断(因为碰牌不需要补牌，所以清除gang_hou_chu_pai)
-            res = self.__ze_ren_ji and self.deal_ze_ren_ji(p)
+            res,seat_id = self.__ze_ren_ji and self.deal_ze_ren_ji(p)
             if res:
-                if res == 1:
-                    data["ze_ren_ji"] = self.__ze_ren_ji_seat_id
-                else:
-                    data["ze_ren_ji"] = self.__ze_ren_wgj_seat_id  # 责任乌骨鸡
+                data["ze_ren_ji"] = seat_id
 
             data_model = S2CGangInfo.pb_model(**data)
             await self.inner_broadcast(CmdRoom.PLAYER_PENG, data_model)
@@ -1636,7 +1638,7 @@ class Room(BaseCardRoom):
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
         return operates, gang_card_list
 
-    def deal_ze_ren_ji(self, p) -> int:
+    def deal_ze_ren_ji(self, p):
         """
         处理责任鸡handle
         责任幺鸡
@@ -1654,7 +1656,7 @@ class Room(BaseCardRoom):
             curr_p.ze_ren_ji = 1
             self.__round_first_ji = 1
             self.log_info("玩家", curr_p.seat_id, "责任幺鸡")
-            return 1
+            return 1,self.__ze_ren_ji_seat_id
 
         if self.__wu_gu_ji and self.__curr_card == CardsType.WU_GU_JI and self.__round_first_wgj == 0:
             self.__ze_ren_wgj_seat_id = self.curr_seat_id
@@ -1668,8 +1670,8 @@ class Room(BaseCardRoom):
             curr_p.ze_ren_wgj = 1
             self.log_info("玩家", curr_p.seat_id, "责任乌骨鸡")
             self.__round_first_wgj = 1
-            return 2
-        return 0
+            return 1,self.__ze_ren_wgj_seat_id
+        return 0,0
 
     def operate_after_men_in_tian_ting(self, player):
         player.operates = []
@@ -3199,7 +3201,7 @@ class Room(BaseCardRoom):
                 continue
             if p.seat_id in self.__shao_ji_gang_seats:
                 continue
-            p.calc_all_ji_pai(self.__default_ji, fan_bird_list, self.__man_tang_ji,self.__week_ji_num)  # 计算玩家有几个鸡牌
+            p.calc_all_ji_pai(self.__default_ji, fan_bird_list, self.__man_tang_ji,week_ji =self.__week_ji_num)  # 计算玩家有几个鸡牌
             p_ji_cards = p.ji_pai[:]  # list
             p_stand_ji = p.calc_stand_ji(self.__default_ji)
             p_pg_ji = p.calc_peng_gang_ji(self.__default_ji)  # 除暗杠外的碰杠鸡
