@@ -76,6 +76,8 @@ class RoomBJ(Room):
         if self.bao_gang:
             self.bao_gang_check(accounts)
 
+        self.check_out_lian_zhuang(accounts)
+
         return accounts, zhuo_ji
 
     def get_per_score(self, ji, score, count, default_ji, liu_ju):

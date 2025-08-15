@@ -1992,3 +1992,14 @@ class Rule(metaclass=NoInstances):
 
         return all_hu_path
 
+    @staticmethod
+    def check_ting_list(ting_list):
+        """判断是否是大宽张"""
+        tens = [num // 10 for num in ting_list]
+        units = [num % 10 for num in ting_list]
+
+        same_tens = all(t == tens[0] for t in tens)
+        is_units_valid = all(units[i] - units[i - 1] == 3 for i in range(1, len(units)))
+
+        return same_tens and is_units_valid
+

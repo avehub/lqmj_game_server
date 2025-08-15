@@ -280,7 +280,7 @@ class BaseCardRoom(BaseRoom):
             new_data.append(record_data)
             p.clear_data_round_over()
 
-        self.log_info( "round_index:", self.round_idx, "结算：", data)
+        self.log_info("round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
             self.log_info("一轮结束战绩插入", result_data)
@@ -481,6 +481,15 @@ class BaseCardRoom(BaseRoom):
                 CheckType.CHECK_LAI_ZI_CHONG_XI: 25,
             })
             return map_copy
+        elif self.play_type == PlayType.REN_HUAI_MJ:
+            qys_score = self.__rule_details.get("qing_yi_se_score", 1)
+            gao_wa_dan = self.__rule_details.get("gao_wa_dan", 0)
+            if gao_wa_dan:
+                qys_score = qys_score * 50
+            map_copy.update({
+                ExtraHuPai.GANG_SHANG_HUA: qys_score,
+            })
+            return map_copy
         else:
             return map_copy
 
@@ -551,6 +560,20 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_JIN_GOU: base_score + 40
             })
             return map_copy
+        elif self.play_type == PlayType.REN_HUAI_MJ:
+            qys_score = self.__rule_details.get("qing_yi_se_score", 10)
+            jgd_score = self.__rule_details.get("jin_gou_diao_score", 10)
+            da_kuan_zhang_score = self.__rule_details.get("da_kuan_zhang_score", 4)
+            ddz_score = self.__rule_details.get("da_dui_zi_score", 5)
+            map_copy.update({
+                HuType.QING_YI_SE: qys_score,
+                HuType.JIN_GOU_DIAO: jgd_score,
+                HuType.DA_KUAN_ZHANG: da_kuan_zhang_score,
+                HuType.QING_DA_DUI: ddz_score + qys_score,
+                HuType.QING_QI_DUI: 10 + + qys_score,
+                HuType.QING_LONG_BEI: 20 + + qys_score,
+            })
+            return map_copy
         else:
             return map_copy
 
@@ -571,7 +594,7 @@ class BaseCardRoom(BaseRoom):
             default_score = 1 if wgj_score == 3 else 2
             map_copy.update({
                 CardsType.YAO_JI: 2,
-                CardsType.YI_WAN: 1,
+                CardsType.YI_WAN: 2,
                 CardsType.YI_TONG: 15,
                 JiType.DEFAULT: default_score,
                 JiType.CHONG_FENG_JI: 4,
@@ -593,6 +616,11 @@ class BaseCardRoom(BaseRoom):
                 JiType.AN_GANG: 5,
                 JiType.MING_GANG: 5,
                 JiType.ZHUAN_WAN_GANG: 5,
+            })
+            return map_copy
+        if self.play_type == PlayType.REN_HUAI_MJ:
+            map_copy.update({
+                JiType.WEEK_JI: 1,
             })
             return map_copy
         else:
