@@ -20,6 +20,7 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
     BossType, HeldSta, PlatForm, CurrencyType, PayMode, OrderStatus, GainStatus, RandType, OperatingSystem
 from nsanic.libs.mult_log import NLogger
+from common.public.conf import ENV
 from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER
 from lucky_game.handler.douyin import DouYin
 from lucky_game.handler.huifu import DouGongPay
@@ -286,7 +287,9 @@ class PaymentLogic:
             good_id=express.get("good_id"),
             sku=express.get("sku"),
             platform=platform,
-            amount=express.get("price"),
+            # amount=express.get("price"),
+            # TODO 测试用
+            amount=express.get("price") if ENV == "prod" else decimal.Decimal(0.01),
             currency=express.get("currency"),
             pay_mode=pay_mode,
             num=num,
