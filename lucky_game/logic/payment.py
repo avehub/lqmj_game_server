@@ -109,7 +109,7 @@ class PaymentLogic:
                     return False, f'{field_name}不足', {}
             else:
                 # 校验支付方式
-                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALI_PAY, PayMode.HUIFU_PAY, PayMode.IOS_PAY]:
+                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY]:
                     pass
 
         else:
@@ -314,10 +314,9 @@ class PaymentLogic:
             NLogger.info(f"create_order uid: {uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
             if not sta:
                 return {}, order_info
-            if pay_mode != PayMode.DEFAULT_MODE.val:
-                order_info += self.deal_order_general(new)
             if pay_mode == PayMode.APPLE_PAY.val:
-                order_info += {"ios_product_id": express.get("desc")}
+                pay_dict = {"apple_product_id": express.get("desc")}
+                order_info.update({"pay_5": pay_dict})
             return order_info, "ok"
         return {}, "无此交易方式"
 
@@ -368,7 +367,12 @@ class PaymentLogic:
         pay_info = req_res.get('pay_info')
         if not pay_info:
             return False, 'Not Found pay_info.'
-        return True, json_parse(pay_info)
+        suc, general_data = await self.deal_order_general(order_info)
+        data = {
+            "order": general_data,
+            "pay_1": json_parse(pay_info)
+        }
+        return True, data
 
 
     async def order_1(self, order_info: dict):
@@ -421,13 +425,12 @@ class PaymentLogic:
         """支付宝支付(H5)"""
         good = await GoodRC.get_good_info(order.sku)
         url = await AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount, return_url)
-        return_data = {
-            "order_no": order.order_no,
-            "trade_time": order.created,
-            "trade_amount": order.amount,
-            "pay_url": url
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_2": {"pay_url": url}
         }
-        return True, return_data
+        return True, data
 
     async def order_2(self, order_no: str):
         pass
@@ -436,14 +439,12 @@ class PaymentLogic:
     async def pay_3(self, order, return_url: str = None):
         """微信支付"""
         good = await GoodRC.get_good_info(order.sku)
-        url = await AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount, return_url)
-        return_data = {
-            "order_no": order.order_no,
-            "trade_time": order.created,
-            "trade_amount": order.amount,
-            "pay_url": url
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_2": {}
         }
-        return True, return_data
+        return True, data
 
     async def order_3(self, order_no: str):
         pass
@@ -452,14 +453,12 @@ class PaymentLogic:
     async def pay_4(self, order, return_url: str = None):
         """VIVO支付"""
         good = await GoodRC.get_good_info(order.sku)
-        url = await AlipayPayment().create_h5_payment(good["name"], order.order_no, order.amount)
-        return_data = {
-            "order_no": order.order_no,
-            "trade_time": order.created,
-            "trade_amount": order.amount,
-            "pay_url": url
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_2": {}
         }
-        return True, return_data
+        return True, data
 
     async def order_4(self, order_no: str):
         pass
@@ -468,14 +467,12 @@ class PaymentLogic:
     async def pay_5(self, order, return_url: str = None):
         """苹果支付"""
         good = await GoodRC.get_good_info(order.sku)
-        url = await ios_payment_service.create_h5_payment(good["name"], order.order_no, order.amount)
-        return_data = {
-            "order_no": order.order_no,
-            "trade_time": order.created,
-            "trade_amount": order.amount,
-            "pay_url": url
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_2": {}
         }
-        return True, return_data
+        return True, data
 
     async def order_5(self, order_no: str):
         pass
