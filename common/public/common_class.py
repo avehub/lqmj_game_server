@@ -243,4 +243,20 @@ class CommonApi(LogMeta):
             return e
         return result
 
+    @classmethod
+    async def append_query_params(cls, url, params):
+        """
+        追加查询参数到URL
+        :param url: 基础URL
+        :param params: 查询参数字典
+        :return: 追加查询参数后的URL
+        """
+        if not params:
+            return url
+        query_string = '&'.join(f"{key}={value}" for key, value in params.items())
+        if '?' in url:
+            return f"{url}&{query_string}"
+        else:
+            return f"{url}?{query_string}"
+
 

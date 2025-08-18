@@ -11,7 +11,7 @@ from common.public.conf import IOSConfig, ENV
 from lucky_game.const import OrderStatus, CurrencyType
 
 
-class IOSPayService:
+class IOSpayPayment:
     """iOS 应用内购服务"""
 
     def __init__(self):
@@ -100,46 +100,35 @@ class IOSPayService:
             NLogger.error(f"iOS receipt verification failed: {str(e)}")
             return {"status": -1, "message": str(e)}
 
-    async def process_payment(self, order_id: str, receipt_data: str) -> Dict[str, Any]:
+    async def process_payment(self, order_id: str, receipt_data: str):
         """
         处理iOS支付
         :param order_id: 订单ID
         :param receipt_data: 收据数据
         :return: 处理结果
         """
-        # 1. 验证收据
+        # 验证收据
         receipt_info = await self.verify_receipt(receipt_data)
-
-        if receipt_info.get("status") != 0:
-            return {
-                "success": False,
-                "code": receipt_info.get("status", -1),
-                "message": self._get_error_message(receipt_info.get("status"))
-            }
-
-        # 2. 解析收据信息
-        latest_receipt_info = receipt_info.get("latest_receipt_info", [{}])[-1]
-
-        # 3. 验证订单状态
-        if not self._validate_order(latest_receipt_info, order_id):
-            return {
-                "success": False,
-                "code": 400,
-                "message": "Invalid order information"
-            }
-
-        # 4. 返回处理结果
-        return {
-            "success": True,
-            "code": 0,
-            "data": {
-                "product_id": latest_receipt_info.get("product_id"),
-                "transaction_id": latest_receipt_info.get("transaction_id"),
-                "purchase_date": latest_receipt_info.get("purchase_date_ms"),
-                "expires_date": latest_receipt_info.get("expires_date_ms"),
-                "original_transaction_id": latest_receipt_info.get("original_transaction_id")
-            }
+        NLogger.info("IOS支付回调通知 解析回调数据", receipt_info)
+        if not receipt_info or "status" not in receipt_info:
+            NLogger.error("IOS支付回调通知 解析回调数据 失败", receipt_info)
+            return False, "收据验证失败"
+        NLogger.info("IOS支付回调Msg", self._get_error_message(receipt_info.get("status")))
+        order_status = OrderStatus.FAIL
+        if receipt_info.get("status") == 0:
+            order_status = OrderStatus.PAID
+        # IOS7版本以上才会存在in_app
+        if "in_app" in receipt_info:
+            data = receipt_info.get("in_app")
+            order_id = data.get('hf_seq_id')
+        else:
+            data = receipt_info.get("receipt")
+            order_id = data.get('hf_seq_id')
+        result = {
+            "order_no": order_id,
+            "order_status": order_status,
         }
+        return True, result
 
     def _validate_order(self, receipt_info: Dict[str, Any], order_id: str) -> bool:
         """验证订单信息是否匹配"""
@@ -167,4 +156,4 @@ class IOSPayService:
 
 
 # 创建全局实例
-ios_payment_service = IOSPayService()
+ios_payment_service = IOSpayPayment()
