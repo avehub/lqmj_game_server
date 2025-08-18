@@ -2,7 +2,7 @@ from nsanic.libs.component import LogMeta
 
 from common.public.base_enum import BaseEnum
 from enum import unique
-from common.public.conf import WeChatConf, H5_SERVER_ADDR, PROD_SERVER_ADDR, LIVE_SERVER, TEST_SERVER_ADDR
+from common.public.conf import WeChatConf, H5_SERVER_ADDR, PROD_SERVER_ADDR, LIVE_SERVER
 from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.tool import http_get, http_post, json_parse, json_encode
 from nsanic.libs import tool_dt
@@ -244,7 +244,7 @@ class WeChat(LogMeta):
         order_id = order_info.get("order_id")
         trade_amount = order_info.get("trade_amount")
         # 重定向跳转目标地址，简单说就是支付页面，环境：测试
-        server_addr = PROD_SERVER_ADDR if LIVE_SERVER else TEST_SERVER_ADDR
+        server_addr = PROD_SERVER_ADDR
         params = {
             "touser": open_id,  # 用户的 OpenID
             "msgtype": 'link',  # text表示文本消息；image表示图片消息；link表示图文链接；miniprogrampage表示小程序卡片。
