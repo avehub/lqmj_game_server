@@ -504,7 +504,7 @@ class RoomZY(RoomBJ):
                 continue
             self.log_info("结算硬胡", ying_hu_score, winner.cards, winner.hu_path)
             if is_zi_mo:
-                self.inner_check(ying_hu_score, seat_id, accounts)
+                self.inner_check(ying_hu_score, seat_id, accounts,CheckType.CHECK_YING_HU)
             else:
                 pei_seat = hu_info.get("fang_pao_seat_id")
                 other_data = self.other_ming_xi_data(
@@ -539,24 +539,24 @@ class RoomZY(RoomBJ):
             if hand_lz_count + out_lz_count == 4:
                 cx_score = self.__xi_pai_score
                 self.log_info(p.uid, "结算冲喜，手里 + 打出去", cx_score, hand_lz_count, out_lz_count)
-                self.inner_check(cx_score, p.seat_id, accounts)
+                self.inner_check(cx_score, p.seat_id, accounts,CheckType.CHECK_LAI_ZI_CHONG_XI)
                 break
             elif hand_lz_count == 1 or out_lz_count == 1:
                 for table_card in p.table_cards:
                     if table_card[0] == ActionType.ACTION_TYPE_PENG and table_card[1] == self.lai_zi:
                         cx_score = self.__xi_pai_score
                         self.log_info(p.uid, "结算冲喜，碰", hand_lz_count, out_lz_count, cx_score)
-                        self.inner_check(cx_score, p.seat_id, accounts)
+                        self.inner_check(cx_score, p.seat_id, accounts,CheckType.CHECK_LAI_ZI_CHONG_XI)
                         break
             elif hand_lz_count == 0:
                 for table_card in p.table_cards:
                     if table_card[0] != ActionType.ACTION_TYPE_PENG and table_card[1] == self.lai_zi:
                         cx_score = self.__xi_pai_score
                         self.log_info(p.uid, "结算冲喜，杠", cx_score)
-                        self.inner_check(cx_score, p.seat_id, accounts)
+                        self.inner_check(cx_score, p.seat_id, accounts,CheckType.CHECK_LAI_ZI_CHONG_XI)
                         break
 
-    def inner_check(self, score, seat_id, accounts):
+    def inner_check(self, score, seat_id, accounts,c_type):
         win_total = 0
         win_from = []
         for other_p in self.seats:
@@ -565,10 +565,10 @@ class RoomZY(RoomBJ):
             win_total += score
             win_from.append(other_p.seat_id)
             other_data = self.other_ming_xi_data(
-                CheckType.CHECK_LAI_ZI_CHONG_XI, seat_id, -score, self.lai_zi)
+                c_type, seat_id, -score, self.lai_zi)
             self.update_result_score(accounts, other_p.seat_id, 0, other_data)
 
-        self_data = self.self_ming_xi_data(CheckType.CHECK_LAI_ZI_CHONG_XI, win_from, win_total, self.lai_zi)
+        self_data = self.self_ming_xi_data(c_type, win_from, win_total, self.lai_zi)
         self.update_result_score(accounts, seat_id, 1, self_data)
 
     def get_player_jiao_pai(self):

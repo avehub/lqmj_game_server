@@ -884,7 +884,14 @@ class Room(BaseCardRoom):
         return p.can_ming_gang(Rule, card)
 
     async def turn_to_player_chu_pai(self, p: Player, after_peng=False):
-        self.clear_table_actions()
+        contains_tian_ting = any(
+            action[0] == p.seat_id and action[1] == ActionType.ACTION_TYPE_TIAN_TING
+            for action in self.__player_actions
+        )
+        if contains_tian_ting and ActionType.ACTION_TYPE_MEN in p.operates:
+            self.log_info("天听后可以闷")
+        else:
+            self.clear_table_actions()
         self.__curr_card = p.mo_pai  # 因为存在炸胡，在玩家出牌阶段玩家也可点击胡，所以保存当前牌
 
         if after_peng:
@@ -3192,7 +3199,7 @@ class Room(BaseCardRoom):
         if liu_ju and self.play_type > 2:
             return
         double_bao = self.__double_bao and is_bao
-        fan_bird_list = self.__ji_cards.copy() if not self.__ji_cards else self.__ji_cards
+        fan_bird_list = self.__ji_cards.copy() if self.__ji_cards else self.__ji_cards
         type_ = CheckType.CHECK_JI
         if self.__wind_ji and self.__zhuo_ji_card == 35:
             type_ = CheckType.WIND_JI
