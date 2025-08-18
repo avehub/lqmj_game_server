@@ -3199,7 +3199,7 @@ class Room(BaseCardRoom):
         if liu_ju and self.play_type > 2:
             return
         double_bao = self.__double_bao and is_bao
-        fan_bird_list = self.__ji_cards.copy() if self.__ji_cards else self.__ji_cards
+        fan_bird_list = self.__ji_cards.copy() if self.__ji_cards else set()
         type_ = CheckType.CHECK_JI
         if self.__wind_ji and self.__zhuo_ji_card == 35:
             type_ = CheckType.WIND_JI
