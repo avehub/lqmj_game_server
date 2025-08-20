@@ -200,14 +200,13 @@ class DouGongPay:
         return True, resp_data
 
     @classmethod
-    async def dou_gong_notify(cls, req):
+    async def dou_gong_notify(cls, form):
         """
         汇付天下支付回调通知
         参考文档：https://paas.huifu.com/open/doc/api/#/smzf/api_jhzs?id=%e5%bc%82%e6%ad%a5%e8%bf%94%e5%9b%9e%e5%8f%82%e6%95%b0
         即时更新支付状态，缓存待发货快递
         """
-        form = req.get_form()
-        res, res_dict = cls.check_signature(form)
+        res, res_dict = await cls.check_signature(form)
         NLogger.info("汇付天下支付回调通知 解析回调数据", res, res_dict)
         if not res:
             return False, res_dict
@@ -219,10 +218,9 @@ class DouGongPay:
             "trade_no": res_dict.get('hf_seq_id'),
         }
         order_status = OrderStatus.FAIL
-        if res_dict.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
-            NLogger.info("汇付天下支付回调通知:", RESPONSE_CODE[res_dict["resp_code"]])
-            NLogger.info("汇付天下支付回调重要信息数据", data)
+        if res_dict.get("trans_stat") == "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
             order_status = OrderStatus.PAID
+
         data["trade_status"] = order_status
         return True, data
 
