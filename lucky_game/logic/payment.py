@@ -28,8 +28,9 @@ from dg_sdk import DGTools
 from lucky_game.handler.wechat import WeChat
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
-from lucky_game.handler.ios_pay import ios_payment_service
+from lucky_game.handler.ios_pay import ios_service
 from common.aliyun.pay_service import AlipayPayment
+from lucky_game.model_rc.vip_level import UserVipRC
 
 
 class PaymentLogic:
@@ -179,48 +180,31 @@ class PaymentLogic:
         }
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"pay_method 去支付订单：{deal_func}")
+        rec_sta = False
         if deal_func and callable(deal_func):
-            order_info = await deal_func(order_info)
-            NLogger.info(f"pay_method 去支付订单", order_info)
-        return True, "无此交易方式", {}
+            sta, order_info = await deal_func(order_info)
+            NLogger.info(f"pay_method 去支付订单", sta, order_info)
+            if sta:
+                rec_sta = True
+        return rec_sta, "无此交易方式", order_info
 
-    async def order_method(self, pay_mode: int, order_no: str, code: str, u_info: dict, express: dict):
-        """查询订单"""
-        # 1.查询本地订单
-        order_info = await OrderRC.get_order_info(order_no=order_no)
-        if not order_info:
-            NLogger.error("HuiFuPayQueryOrder 无此订单", order_no)
-            return False, '无此订单'
-
-        func = self.pay_platform(pay_mode)
-        # 动态方法
-        method = getattr(self, func)
-        if method is not None:
-            return await method(order_id, code)
-        return None
-
-    async def callback_method(self, order_no: str, out_trade_no: str, out_trade_status: int, express: str):
-        """支付方法"""
-        # 将不同的支付平台处理
-        if pay_mode == PayMode.ALIPAY:
-            express = "支付宝"
-        elif pay_mode == PayMode.WECHAT_PAY:
-            express = "微信"
+    async def order_method(self, pay_mode: int, order_no: str, out_order_no: str = None):
+        """去平台查询订单状态并更新订单"""
+        map_func = {
+            PayMode.HUI_FU_PAY.val: self.order_1,
+            PayMode.ALIPAY.val: self.order_2,
+            PayMode.WECHAT_PAY.val: self.order_3,
+            PayMode.VIVO_PAY.val: self.order_4,
+            PayMode.APPLE_PAY.val: self.order_5,
+            PayMode.ALIPAY_APP.val: self.order_2,
+        }
+        func = map_func.get(pay_mode)
+        NLogger.info(f"order_method 查询平台订单状态", func)
+        if func and callable(func):
+            return await func(order_no)
         else:
-            pexpress = "汇付天下"
+            return False, "不支持的支付方式", None
 
-        sta, msg = self.completed_order(order_no=order_no, trade_no=out_trade_no, out_trade_status=out_trade_status, explain=express)
-
-        return sta, msg
-
-    async def pay_platform(self, pay_mode: int):
-        """获取支付平台方法"""
-        if pay_mode == PayMode.DEFAULT_MODE:
-            # 免费
-            func = ""
-        else:
-            func = f"pay_{pay_mode}"
-        return func
 
     async def pay_after(self, u_info: dict, express: dict, order_no: str):
         """
@@ -233,12 +217,11 @@ class PaymentLogic:
         uid = u_info.get("uid")
         content = json_parse(express.get("content"))
         bag_type = express.get("bag_type")
+        order, msg = await OrderRC.get_order_info(order_no)
         async with in_transaction(connection_name=DbKey.DEFAULT):
             if bag_type:
                 pass
             else:
-                # 支付成功校验
-                order, msg = await OrderRC.get_order_info(order_no)
                 # 当为兑换商品时，直接修改订单状态
                 up_data = {
                     "gain_status": GainStatus.RECEIVED
@@ -266,6 +249,7 @@ class PaymentLogic:
                         NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
                         if not add_sta:
                             return False, e
+
                 else:
                     add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                         uid,
@@ -276,11 +260,14 @@ class PaymentLogic:
                     )
                     if not add_sta:
                         return False, e
-
+                # 更新用户VIP经验
+                if order["amount"] > 1:
+                    await UserVipRC.update_user_vip_level(uid, order["amount"])
             return True, "ok"
 
     async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None):
         # 创建订单
+        NLogger.info("create_order 商品信息: good", express)
         order_no = await RngMaker.gen_num(str_len=32)
         new, msg = await OrderRC.add_order(
             uid=uid,
@@ -308,7 +295,8 @@ class PaymentLogic:
             PayMode.ALIPAY.val: self.pay_2,
             PayMode.WECHAT_PAY.val: self.pay_3,
             PayMode.VIVO_PAY.val: self.pay_4,
-            PayMode.APPLE_PAY.val: self.deal_order_general
+            PayMode.APPLE_PAY.val: self.pay_5,
+            PayMode.ALIPAY_APP.val: self.pay_6
         }
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
@@ -378,50 +366,19 @@ class PaymentLogic:
         return True, data
 
 
-    async def order_1(self, order_info: dict):
+    async def order_1(self, order_no):
         """
         汇付天下交易查询
         即时更新支付状态，缓存待发货快递
         """
-        order_no = order_info.get("order_no")
-        uid = order_info.get("uid")
-        trade_amount = order_info.get("trade_amount") or 0
-        trade_item = order_info.get("trade_item")
-
-        # 2.汇付天下交易查询
-        req_res = await DouGongPay.dou_gong_query(order_no)
-        # NLogger.error("HuiFuPayQueryOrder 解析查询数据：", req_res)
-        resp_code = req_res.get('resp_code')
-        if resp_code != '00000000':
-            return {"resp_cog": req_res}
-
-        if req_res.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
-            NLogger.error("HuiFuPayQueryOrder 支付失败或支付成功未发币到账", order_no)
-            return False, '支付失败或支付成功未发币到账'
-
-        # 3.查询货物 goods立得货物 / gifts赠物
-        express, _, buy_record, __, desc = await self.verify_goods(uid, trade_item)
-        if not express:
-            return False, desc
-        goods, gifts = await UpAssets.stat_express(uid, express, trade_item)
-
-        # 4.更新支付状态，缓存待领取订单
-        order_status = order_info.get("order_status")
-        if order_status != OrderStatus.PAID:
-            order_status = OrderStatus.PAID
-            update_paid = {"order_status": order_status}
-            try:
-                async with in_transaction(connection_name=DbKey.DEFAULT):
-                    await OrderRC.up_order(order_no, update_paid, order_info)
-                    await BaseUserRC.cache_user_paid_order(uid, order_no, goods, gifts)  # 预发货
-            except Exception as e:
-                NLogger.error(f"HuiFuPayQueryOrder 事务执行失败，原因：{e}")
-                return False, '快递打包失败'
-        else:
-            NLogger.error("HuiFuPayQueryOrder 快递已经发出", order_no)
-
-        NLogger.error("HuiFuPayQueryOrder 快递入站成功", order_no)
-        return {"order_no": order_no, "order_status": order_status}
+        # 汇付天下交易查询
+        sta, msg, req_res = await DouGongPay.dou_gong_query(order_no)
+        res = False
+        if sta and req_res:
+            order_status = req_res.get("order_status")
+            if order_status == OrderStatus.PAID:
+                res = True
+        return res, msg, req_res
 
 
     async def pay_2(self, order, return_url: str = None):
@@ -434,9 +391,22 @@ class PaymentLogic:
             "pay_2": {"pay_url": url}
         }
         return True, data
+    async def pay_6(self, order, return_url: str = None):
+        """支付宝支付(APP)"""
+        good = await GoodRC.get_good_info(order.sku)
+        url = AlipayPayment("APP").create_app_payment(good["name"], order.order_no, order.amount)
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_6": {"pay_url": url}
+        }
+        return True, data
 
     async def order_2(self, order_no: str):
-        pass
+        """支付宝订单查询"""
+        sta, msg, req_res = AlipayPayment().query_trade_status(out_trade_no=order_no)
+        NLogger.info(f"支付宝平台订单查询: order_no {order_no} 状态: {sta} 结果: {msg} {req_res}")
+        return sta, msg, req_res
 
 
     async def pay_3(self, order, return_url: str = None):
@@ -455,13 +425,44 @@ class PaymentLogic:
 
     async def pay_4(self, order, return_url: str = None):
         """VIVO支付"""
-        good = await GoodRC.get_good_info(order.sku)
-        suc, general_data = await self.deal_order_general(order)
-        data = {
-            "order": general_data,
-            "pay_2": {}
-        }
-        return True, data
+        try:
+            good = await GoodRC.get_good_info(order.sku)
+            product_name = good.get("name", "游戏充值")
+            product_desc = good.get("desc", "游戏充值")
+
+            # 获取回调地址
+            notify_url = f"{LIVE_SERVER}/api/payment/callback/vivo"
+
+            # 创建VIVO支付订单
+            success, result = await vivo_payment.create_order(
+                order_no=order.order_no,
+                amount=float(order.amount),
+                product_name=product_name,
+                product_desc=product_desc,
+                notify_url=notify_url
+            )
+
+            if not success:
+                NLogger.error(f"VIVO支付创建订单失败: {result}")
+                return False, "创建支付订单失败"
+
+            # 获取通用订单信息
+            success, general_data = await self.deal_order_general(order)
+            if not success:
+                return False, "获取订单信息失败"
+
+            data = {
+                "order": general_data,
+                "pay_4": {
+                    "pay_info": result.get("pay_info", ""),
+                    "trade_no": result.get("trade_no", "")
+                }
+            }
+            return True, data
+
+        except Exception as e:
+            NLogger.error(f"VIVO支付异常: {str(e)}")
+            return False, f"VIVO支付异常: {str(e)}"
 
     async def order_4(self, order_no: str):
         pass
@@ -473,7 +474,7 @@ class PaymentLogic:
         suc, general_data = await self.deal_order_general(order)
         data = {
             "order": general_data,
-            "pay_2": {}
+            "pay_5": {}
         }
         return True, data
 
@@ -487,8 +488,6 @@ class PaymentLogic:
         完成已支付订单
         即时更新发货状态、购买数据（可批量）
         """
-        u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
         order_no = kwargs.get("order_no")
         trade_no = kwargs.get("trade_no")
         order_status = kwargs.get("order_status")
@@ -496,101 +495,24 @@ class PaymentLogic:
         if order_status == OrderStatus.PAID:
             gain_status = GainStatus.GAINED
         explain = kwargs.get("explain")
-        order_info = await OrderRC.get_order_info(order_no=order_no)
+        order_info, e = await OrderRC.get_order_info(order_no=order_no)
         if not order_info:
             NLogger.error("completed_order 无此待领取订单", order_no)
-            return False, '无此待领取订单'
-        good_info = await GoodRC.get_good_info(order_info.get("sku"))
-        goods = good_info["content"]
+            return False, e, {}
         up_data = {
             "status": order_status,
             "gain_status": gain_status,
             "out_order_no": trade_no,
             "explain": explain,
         }
-
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await OrderRC.up_order(up_data, order_no)
-                # 更新用户资产
-                if isinstance(goods, list):
-                    for good in goods:
-                        await ExtraUserResourceChangesRC.change_user_resource(uid, good["type"], good["amount"],
-                                                                              explain="充值获得")
-                else:
-                    await ExtraUserResourceChangesRC.change_user_resource(uid, goods["type"], goods["amount"],
-                                                                              explain="充值获得")
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
-            return False, '查询发货失败'
-        return True, "OK", goods
+            return False, '查询发货失败', {}
+        return True, "OK", {}
 
-    async def pay_ios(self, request: Request, **kwargs):
-        """
-        处理iOS应用内购买
-        """
-        try:
-            # 获取请求参数
-            order_id = request.json.get("order_id")
-            receipt_data = request.json.get("receipt_data")
 
-            if not all([order_id, receipt_data]):
-                return False, "Missing required parameters"
 
-            # 查询订单
-            order = await OrderRC.get_order_info(order_no=order_id)
-            if not order:
-                return False, "Order not found"
-
-            # 验证订单状态
-            if order.get("status") != OrderStatus.WAIT_PAY:
-                return False, "Invalid order status"
-
-            # 处理支付
-            result = await ios_payment_service.process_payment(order_id, receipt_data)
-
-            if not result.get("success"):
-                return False, "Payment verification failed"
-
-            # 更新订单状态
-            async with in_transaction(connection_name=DbKey.DEFAULT):
-                # 更新订单状态为已支付
-                await OrderRC.up_order(
-                    {
-                        "status": OrderStatus.PAID,
-                        "out_order_no": result["data"]["transaction_id"],
-                        "updated": int(time.time())
-                    },
-                    order_id
-                )
-
-                # 发放游戏内物品
-                # 这里根据你的业务逻辑实现
-                # 例如：await self._deliver_items(order, result["data"])
-            data = {
-                "order_id": order_id,
-                "status": OrderStatus.PAID
-            }
-            return True, "OK", data
-
-        except Exception as e:
-            NLogger.error(f"iOS payment processing failed: {str(e)}")
-            return False, "Internal server error"
-
-    async def _deliver_items(self, order: dict, receipt_data: dict):
-        """发放游戏内物品"""
-        # 根据订单信息发放对应的游戏内物品
-        # 例如：
-        # await ExtraUserResourceChangesRC.change_user_resource(
-        #     uid=order["uid"],
-        #     resource_type="diamond",
-        #     amount=100,
-        #     operation="add",
-        #     reason="ios_payment",
-        #     extra_data={
-        #         "order_id": order["order_no"],
-        #         "product_id": receipt_data.get("product_id")
-        #     }
-        # )
-        pass
 

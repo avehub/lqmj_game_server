@@ -60,6 +60,7 @@ class JoinActivity(GameAuthApi):
         act_id = self.check_int(req.json.get("act_id"), require=True, p_name="活动ID")
         award_type = self.check_int(req.json.get("award_type"), require=True, p_name="参与活动方式")
         pay_mode = self.check_int(req.json.get("pay_mode"), require=False, p_name="支付方式")
+        pay_platform = self.check_int(req.json.get("pay_platform"), require=False, p_name="支付平台")
         platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         return_url = self.check_str(req.json.get("return_url"), require=False, default="", p_name="返回地址")
         pay_enum = PayMode.find_member_by_val(pay_mode)

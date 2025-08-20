@@ -618,6 +618,7 @@ class FirstCharge(Base):
             "price": good["price"],
             "good_id": good["good_id"],
             "currency": good["currency"],
+            "desc": good["desc"],
             "sku": good_sku,
         }
         act_order, msg = await payment.create_order(uid, express, pay_mode, platform, explain="首充活动", return_url=return_url)

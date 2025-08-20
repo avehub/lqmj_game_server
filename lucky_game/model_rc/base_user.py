@@ -34,6 +34,7 @@ class BaseUserRC(BaseCommonRC):
     KEY_UNION_ID = 'union_id'
     KEY_OPENID = 'open_id'
     KEY_SESSION = "session_key"
+    KEY_APPLE_ID = 'apple_id'
     KEY_USER_PAY_INFO = "user_pay_info"  # 已下单的支付信息
     KEY_USER_PAID_ORDER = "user_paid_order"  # 已支付订单
 
@@ -459,6 +460,13 @@ class BaseUserRC(BaseCommonRC):
             # "country": "CN",
             # "tst_mark": False,
         }
+
+    @classmethod
+    async def get_user_by_apple(cls, apple_id: str):
+        """通过 Apple ID 获取用户信息"""
+        sql = f"SELECT * FROM {cls.tb_name} WHERE apple_id = {apple_id} AND status = 1 LIMIT 1"
+        result = await cls.db_model.exec_query(sql)
+        return dict(result) if result else None
 
 
 class BaseBanRC(BaseCommonRC):

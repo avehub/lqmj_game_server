@@ -100,7 +100,7 @@ class DouGongPay:
         request.req_date = KitDt.get_date_str()
         request.req_seq_id = order_info.get('order_no')
         request.goods_desc = str(order_info.get('sku')) or '未知商品'
-        request.trade_type = 'T_JSAPI'  # T_JSAPI: 微信公众号
+        request.trade_type = 'T_JSAPI'  # T_JSAPI: 微信公众号, JS-A_JSAPI:支付宝, T_APP：微信APP支付, 微信小程序-T_MINIAPP,
         request.trans_amt = f"{float(order_info.get('amount')):.2f}"  # 交易金额，必须大于0，保留两位小数点，如0.10、100.05等
 
         # 准备extend_infos，包括所有需要额外传递的参数
@@ -136,8 +136,26 @@ class DouGongPay:
         extend_infos = {}
         # 异步请求
         loop = asyncio.get_running_loop()
+        NLogger.info("汇付天下查询订单请求参数：", extend_infos)
         response = await loop.run_in_executor(None, lambda: request.post(extend_infos))
-        return response
+        NLogger.info("汇付天下查询订单响应结果：", response)
+        if not response:
+            return False, "查询失败", {}
+        # res, res_dict = cls.check_signature(response)
+        # NLogger.info("汇付天下支付回调通知 解析回调数据", res, res_dict)
+        data = {
+            "order_no": response.get('req_seq_id'),
+            "order_status": OrderStatus.FAIL,
+        }
+
+        resp_code = response.get('resp_code')
+        # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
+        if resp_code == '00000000':
+            if response.get("trans_stat") == "S":
+                data["order_status"] = OrderStatus.PAID
+            elif response.get("trans_stat") == "F":
+                data["order_status"] = OrderStatus.FAIL
+        return True, response.get("resp_desc"), data
 
     @classmethod
     async def dou_gong_busi_config(cls):

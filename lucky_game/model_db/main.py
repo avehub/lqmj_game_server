@@ -303,7 +303,7 @@ class ExtraUserResourceChanges(DBModel):
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='方式：1充值 0消耗')
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币')
-    num = fields.IntField(max_length=10, null=True, default=0, description='变动数量')
+    num = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="变动数量")
     explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
 
     class Meta:
@@ -327,7 +327,7 @@ class ExtraUserReports(DBModel):
 class Stores(DBModel):
     """商店信息表"""
     sid = fields.IntField(max_length=10, pk=True, description='商店ID')
-    platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+    platform = fields.CharField(max_length=32, null=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     type = fields.SmallIntField(max_length=2, null=True, default=0, description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡')
     currency = fields.SmallIntField(max_length=2, null=True, default=0, description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
