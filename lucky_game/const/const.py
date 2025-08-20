@@ -62,6 +62,7 @@ class PayMode(BaseEnum):
     WECHAT_PAY = 3, "微信(微信小程序_Android)"
     VIVO_PAY = 4, "VIVO支付"
     APPLE_PAY = 5, "苹果支付"
+    ALIPAY_APP = 6, "支付宝支付(App)"
 
 class PayType(BaseEnum):
     """ 支付类型 """

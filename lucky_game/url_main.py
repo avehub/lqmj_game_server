@@ -17,7 +17,7 @@ from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 #     SafeBoxOperateUser, GetCosmeticUsedItems, UseCosmeticItem, GetCosmeticHandler, \
 #     ClickNewGoodsItem, GetGamePropHandler, GetDetailShardInfo, GetGoodsJumpChance
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechatMiniProgram, LoginByWechat, \
-    LoginByAlipayGame, SendCode, LoginByPhone
+    LoginByApple, SendCode, LoginByPhone
 # from lucky_game.interface.up_u_info import ModifyGeneralUserInfo, TestAddGold, GetSessionKey, \
 #     GetWeChatGzhOpenid
 # from lucky_game.interface.some_pay import AliPayNotify, MiniGameRecvPush, MakeOrder, MiniGameQueryOrder, \
@@ -37,7 +37,8 @@ from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply,
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
-from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity
+from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
+    WriteOff
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -69,7 +70,7 @@ class MainBp(BaseBlue):
         Urls("/SendCode/", SendCode),  # 发送验证码
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录
-        Urls("/LoginByApple/", LoginByAlipayGame),  # AppleID登录
+        Urls("/LoginByApple/", LoginByApple),  # AppleID登录
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
@@ -113,6 +114,7 @@ class MainBp(BaseBlue):
         # Urls("/RefreshAssets/", RefreshAssets),  # 刷新玩家资产
         Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         # Urls("/GetWeChatGzhOpenid/", GetWeChatGzhOpenid),  # 获取微信公众号的Openid
+        Urls("/WriteOff/", WriteOff),  # 注销账号
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则

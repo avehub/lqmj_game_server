@@ -10,6 +10,7 @@ from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
 from lucky_game.model_rc.base_user import BaseUserRC
+from nsanic.libs.mult_log import NLogger
 
 
 class BaseApi(BaseHttpApi, CommonApi):
@@ -67,6 +68,7 @@ class BaseApi(BaseHttpApi, CommonApi):
 
 
 class GameAuthApi(BaseApi):
+
     decorators = [GameChecker]
 
 

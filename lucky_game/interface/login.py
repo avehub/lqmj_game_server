@@ -1,6 +1,7 @@
 """
 登录相关接口
 """
+import jwt
 from nsanic.libs import tool_jwt, tool_dt
 from sanic import Request
 from typing import List, Dict
@@ -8,6 +9,7 @@ from c_services.const.cs_enum_const import CmdWorkers
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.decorator import LimitTestCall
 from lucky_game.handler.douyin import DouYin
+from lucky_game.handler.ios_pay import ios_service
 from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
@@ -74,15 +76,17 @@ class BaseLogin(GameAuthApi):
         safe_key = self.rng.mk_str(18)
         valid_key = self.rng.mk_str(16)
         dev_ident = login_info.get("dev_id")
-
+        platform = user_info.get("platform")
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
         avatar = user_info.get("avatar", f"avatar/avatar_{random.randint(1, 7)}.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
             name = f"游客{self.rng.mk_str(4, True)}"
-            user_info['openid'] = UtilsTool.get_hash_secrets('guest_openid', dev_ident)
-            user_info['unionid'] = UtilsTool.get_hash_secrets('guest_unionid', dev_ident)
+
+        unique = dev_ident
+        if platform == PlatForm.NATIVE_APP:
+            unique = dev_ident + user_info.get("apple_id", "")
 
         print("login_info", login_info)
         print("user_info", user_info)
@@ -96,11 +100,12 @@ class BaseLogin(GameAuthApi):
             'country': login_info.get("country") or "CN",
             'tst_mark': login_info.get("tst_mark") or False,
             "dev_ident": dev_ident,
-            "platform": user_info.get("platform"),
-            "unionid": user_info.get("unionid"),
-            "openid": user_info.get("openid"),
+            "platform": platform,
+            "unionid": user_info.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', unique)),
+            "openid": user_info.get("openid", UtilsTool.get_hash_secrets('guest_openid', unique)),
             "avatar": avatar,
             "phone": user_info.get("phone", ""),
+            "apple_id": user_info.get("apple_id", ""),
         }
         return info
 
@@ -180,9 +185,10 @@ class LoginByGuest(BaseLogin):
 
     async def post(self, req: Request):
         server_info = await self.whether_through()
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台ID")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        platform = PlatForm.WEBPAGE
+        # platform = PlatForm.WEBPAGE
         q_params = {
             "dev_ident": dev_ident,
             "platform": platform,
@@ -474,3 +480,67 @@ class LoginByPhone(BaseLogin):
         server_info = await self.whether_through()
         self.log_info('LoginByPhone suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
+
+
+class LoginByApple(BaseLogin):
+    """Apple 登录"""
+    decorators = []
+
+    async def post(self, req: Request):
+        # 1. 获取请求参数
+        name = self.check_str(req.json.get('name'), require=False,  p_name="昵称")
+        email = self.check_str(req.json.get('email'), require=False,  p_name="邮箱")
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
+        device_id = self.check_str(req.json.get('device_id'), require=True, maxlen=18, p_name="设备ID")
+        apple_id = self.check_str(req.json.get('apple_id'), require=True, p_name="苹果用户ID")
+        if not apple_id:
+            return self.answer(self.sta_code.ERR_ARG, hint="缺少必要参数")
+        u_info = await BaseUserRC.cache_by_unique({'apple_id': apple_id, "platform": platform}, BaseUserRC.KEY_APPLE_ID)
+        # 2. 获取服务器信息
+        server_info = await self.whether_through()
+
+        # 3. 使用 code 获取 token 和用户信息
+        # success, user_info = await ios_service.get_apple_user_info(code)
+        # if not success:
+        #     return self.answer(self.sta_code.TOKEN_INVALID, hint=user_info)
+
+        # 查询用户是否已存在
+        # u_info = await BaseUserRC.get_user_by_apple(apple_id)
+        login_info = await self.get_login_info(req, LoginWay.APPLE, device_id)
+
+        # 5. 新用户注册或老用户登录
+        if not u_info:
+            # 新用户注册
+            nickname = f"Ios{apple_id[:3]}" if not name else name  # 默认昵称
+
+            # 创建用户
+            u_info = await self.create_new_user(
+                req,
+                'apple_id',
+                login_info,
+                {
+                    'apple_id': apple_id,
+                    "device_id": device_id,
+                    'email': email,
+                    'nickname': nickname,
+                },
+                'apple_id',
+                platform=PlatForm.NATIVE_APP
+            )
+            self.log_info('Apple Reg u_info:', u_info)
+        else:
+            # 老用户登录
+            u_info = await self.update_user_login_info(req, u_info, login_info)
+            self.log_info('Apple Login u_info:', u_info)
+
+        if not u_info:
+            return self.answer(self.sta_code.USER_CREATE_FAIL, hint="用户登录失败")
+
+        self.log_info('LoginByApple success:', u_info.get("uid"))
+        return await self.format_login_info(u_info, server_info, JWType.USER)
+
+
+
+
+
+

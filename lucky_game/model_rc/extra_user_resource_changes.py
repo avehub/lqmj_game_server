@@ -49,7 +49,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         return val in await cls.change_operation()
 
     @classmethod
-    async def create_change_record(cls, uid: int, operation: str, currency: int, num: int, explain: str = ""):
+    async def create_change_record(cls, uid: int, operation: str, currency: int, num: [int, decimal.Decimal], explain: str = ""):
         """创建资源变动记录"""
         try:
             record_data = {
@@ -60,7 +60,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 "explain": explain
             }
             new_record = await cls.db_model.add_one(record_data)
-            return new_record, None
+            cls.conf.log.info(f"创建资源变动记录{new_record}")
+            return new_record, "成功"
         except OperationalError as e:
             return None, f"记录创建失败: {str(e)}"
 
