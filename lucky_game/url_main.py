@@ -49,7 +49,7 @@ from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelatio
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
-from lucky_game.interface.order import OrderDetail, CallbackAli, PayOrder, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
+from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
 
 
 
@@ -164,7 +164,6 @@ class MainBp(BaseBlue):
 
         # # 支付相关
         Urls("/QueryOrder/", OrderDetail),  # 查询订单详情
-        Urls("/PayOrder/", PayOrder),  # 支付订单
         Urls("/CallbackAli/", CallbackAli),  # 支付宝订单回调
         Urls("/CallbackHf/", CallbackHf),  # 汇付天下订单回调
         Urls("/CallbackIos/", CallbackIos),  # 苹果订单校验
