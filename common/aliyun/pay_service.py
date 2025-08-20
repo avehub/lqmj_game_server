@@ -19,6 +19,7 @@ from alipay.aop.api.response.AlipayTradeRefundResponse import AlipayTradeRefundR
 from alipay.aop.api.response.AlipayTradeCloseResponse import AlipayTradeCloseResponse
 from alipay.aop.api.exception.Exception import AopException
 from alipay.aop.api.util.SignatureUtils import get_sign_content, verify_with_rsa
+from nsanic.libs.tool import json_parse
 
 from common.public.common_class import CommonApi
 from common.public.conf import AliPayConf
@@ -34,6 +35,8 @@ RESPONSE_CODE = {
     "TRADE_SUCCESS": "交易支付成功。",
     "TRADE_FINISHED": "交易结束，不可退款。",
 }
+# 接口调用成功码
+SUCCESS_CODE = "10000"
 
 
 class AlipayPayment:
@@ -132,16 +135,9 @@ class AlipayPayment:
             request.notify_url = self.notify_url
             # 获取支付参数
             NLogger.info(f"支付宝APP支付订单请求参数: request {request} ")
-            response_content = self.client.sdk_execute(request)
-            NLogger.info(f"支付宝APP支付订单响应参数: response {response_content} ")
-            response = AlipayTradeAppPayResponse()
-            # 解析响应结果
-            response.parse_response_content(response_content)
-            NLogger.info(f"支付宝APP支付订单响应参数解析: response {response} ")
-            if response.is_success():
-                return True, "OK", response.body
-            else:
-                return False, response.msg, response
+            response = self.client.sdk_execute(request)
+            NLogger.info(f"支付宝APP支付订单响应参数: response {response} ")
+            return response
         except Exception as e:
             NLogger.error(f"创建APP支付订单失败: {str(e)}")
             return False, str(e), {}
@@ -156,7 +152,7 @@ class AlipayPayment:
         try:
             # 获取签名内容
             sign_content = get_sign_content(data)
-            NLogger.error(f"验证支付通知: sign_content {str(sign_content)}")
+            NLogger.info(f"验证支付通知: sign_content {str(sign_content)}")
             # 使用支付宝公钥验证签名
             if sign_content:
                 return verify_with_rsa(self.client_config.alipay_public_key, sign_content, signature)
@@ -203,11 +199,20 @@ class AlipayPayment:
             request = AlipayTradeQueryRequest(biz_model=model)
 
             # 执行查询
-            response = self.client.execute(request)
-            return response
+            NLogger.info(f"查询订单状态请求参数: request {request} ")
+            response = json_parse(self.client.execute(request))
+            NLogger.info(f"查询订单状态响应参数: response {response} ")
+            if response.get("code") == SUCCESS_CODE:
+                order_status = OrderStatus.WAIT_PAY
+                if response.get("trade_status") in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
+                    order_status = OrderStatus.PAID
+                elif response.get("trade_status") == "TRADE_CLOSED":
+                    order_status = OrderStatus.CLOSED
+                return True, "OK", {"trade_status": order_status, "trade_no": response.get("trade_no"), "order_no": response.get("out_trade_no")}
+            else:
+                return False, response.get("msg"), response
         except AopException as e:
             NLogger.error(f"查询订单状态失败: {str(e)}")
-            raise
 
     def refund(self, out_trade_no, refund_amount, refund_reason=None):
         """

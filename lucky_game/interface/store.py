@@ -25,7 +25,7 @@ class StoreHandler(GameAuthApi):
     """ 获取商店商品 """
 
     async def get(self, req: Request, **kwargs):
-        platform = self.check_int(req.args.get("platform"), require=False, p_name="平台ID")
+        platform = self.check_str(req.args.get("platform"), require=False, p_name="平台ID")
         type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
         status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
         u_info = kwargs.get("u_info")

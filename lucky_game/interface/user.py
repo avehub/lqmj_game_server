@@ -69,7 +69,7 @@ class UpdateUserInfo(GameAuthApi):
             new_data["address"] = address
         if album:
             new_data["album"] = album
-        data = await BaseUserRC.update_info(uid, new_data)
+        data = await BaseUserRC.update_info(u_info, new_data)
         return self.answer(data=data)
 
 class Certification(BaseUserInfo):
@@ -176,4 +176,13 @@ class UpdateUserResource(BaseUserInfo):
         p_info = await BaseUserRC.cache_by_pk(uid)
         return self.format_response_info(p_info)
 
-
+class WriteOff(GameAuthApi):
+    """ 注销账号 """
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        status = self.check_int(req.json.get("status"), require=True, minval=0, maxval=2, p_name="status")
+        new_data = {"ban_time": status}
+        data = await BaseUserRC.update_info(u_info, new_data)
+        if not data:
+            return self.answer(code=self.sta_code.FAIL)
+        return self.answer()

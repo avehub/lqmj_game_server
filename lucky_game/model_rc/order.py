@@ -113,4 +113,7 @@ class OrderRC(BaseCommonRC):
             data, msg = await cls.get_order_filter(order_no=order_no)
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return data[0], msg
+        result = {}
+        if data:
+            result = data[0]
+        return result, msg

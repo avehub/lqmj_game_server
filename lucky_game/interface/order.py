@@ -21,7 +21,7 @@ from lucky_game.const import OrderStatus,  PayMode, GainStatus
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 from common.aliyun.pay_service import AlipayPayment
 from lucky_game.logic.payment import PaymentLogic
-from lucky_game.handler.ios_pay import IOSpayPayment
+from lucky_game.handler.ios_pay import ios_service
 
 
 class OrderDetail(GameAuthApi):
@@ -30,11 +30,21 @@ class OrderDetail(GameAuthApi):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         order_no = self.check_str(req.args.get("order_no"), require=True, p_name="订单号")
+        query_platform = self.check_int(req.args.get("query_platform"), require=False, default=1, p_name="查询平台")
         if not order_no:
             return self.answer(code=self.sta_code.FAIL, hint="订单号不能为空")
         order, msg = await OrderRC.get_order_info(order_no=order_no)
         if not order:
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
+        if query_platform != 0:
+            # 为待支付订单主动查询支付平台订单状态
+            payment = PaymentLogic()
+            sta, msg, up_data = await payment.order_method(order.get("pay_mode"), order_no, order.get("out_order_no"))
+            trade_status = up_data.get("trade_status")
+            if sta and trade_status != order.get("status"):
+                if trade_status == OrderStatus.PAID and order.get("status") != OrderStatus.PAID:
+                    await payment.completed_order(order_no=order_no, trade_no=up_data.get("trade_no"), order_status=trade_status)
+                    order, _ = await OrderRC.get_order_info(order_no)
         return self.answer(data=order)
 
 class UnclaimedOrder(GameAuthApi):
@@ -50,7 +60,6 @@ class GainOrder(GameAuthApi):
     """领取订单"""
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
-        uid = u_info.get("uid")
         order_no = self.check_str(req.json.get("order_no"), require=True, p_name="订单号")
         if not order_no:
             return self.answer(code=self.sta_code.FAIL, hint="订单号不能为空")
@@ -86,7 +95,7 @@ class PayOrder(GameAuthApi):
 
 class CallbackAli(SpecialApi):
     """支付宝订单回调"""
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         form = req.get_form()
         json = req.json
         self.loginfo(f"支付宝回调参数form: {form}")
@@ -106,7 +115,7 @@ class CallbackAli(SpecialApi):
 
 class CallbackHf(SpecialApi):
     """汇付天下订单回调"""
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         form = req.get_form()
         json = req.json
         self.loginfo(f"汇付天下回调参数form: {form}")
@@ -123,23 +132,23 @@ class CallbackHf(SpecialApi):
             return self.answer(code=self.sta_code.FAIL, hint=msg)
         return self.answer()
 
-class CallbackIos(SpecialApi):
+class CallbackIos(GameAuthApi):
     """苹果订单校验"""
-    async def post(self, req: Request):
-        receipt = req.json.get("")
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
         order_no = self.check_str(req.json.get("order_no"), require=True, p_name="订单号")
         receipt_data = self.check_str(req.json.get("receipt_data"), require=True, p_name="购买凭据")
-        sta, data = await IOSpayPayment().process_payment(order_no, receipt_data)
+        sta, data = await ios_service.process_payment(order_no, receipt_data)
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint="订单校验失败")
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg = PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
+        sta, msg, good = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
                                         explain="苹果订单校验")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer()
+        return self.answer(data=good)
 
 
 

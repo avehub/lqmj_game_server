@@ -141,7 +141,7 @@ class StoreRC(BaseCommonRC):
                 if isinstance(platform, list):
                     query["platform__in"] = platform
                 else:
-                    query["platform"] = platform
+                    query["platform__contains"] = platform
             if sid is not None:
                 if isinstance(sid, list):
                     query["sid__in"] = sid
@@ -230,7 +230,7 @@ class GoodRC(BaseCommonRC):
         data, msg = await cls.get_good_filter(sku=sku)
         if not data:
             return {}
-        return data[0]
+        return data[0] if data else {}
 
 
     @classmethod
