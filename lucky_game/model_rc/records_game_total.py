@@ -57,7 +57,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                     if not up_room_sta:
                         return new_record, "创建失败"
         except OperationalError as e:
-            return None, f"创建失败: {str(e)}"
+            return False, f"总战绩入库失败, 原数据: {record_data}, 失败原因:{str(e)}"
         return new_record, "成功"
 
     @classmethod
