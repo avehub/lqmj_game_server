@@ -657,6 +657,11 @@ class Player(BaseLeisurePlayer):
                 if card in fan_ji_list:
                     self.__ji_pai.append(card)
 
+    def calc_lai_zi_ji(self,lai_zi):
+        for card in self.__chu_cards:
+            if card == lai_zi:
+                self.__ji_pai.append(card)
+
     def calc_stand_ji(self, default_ji) -> list:
         """
         计算站鸡，站鸡仅限默认鸡，冲锋鸡是打出去的鸡没有站鸡
@@ -964,12 +969,14 @@ class Player(BaseLeisurePlayer):
 
         return hand_ji_list
 
-    def lai_zi_in_played(self, lai_zi):
+    def lai_zi_in_played(self, lai_zi ,just_chu_cards = False):
         """ 打出去的癞子 + 碰杠的癞子 """
         count = 0
         for card in self.__chu_cards:
             if card == lai_zi:
                 count += 1
+        if just_chu_cards:
+            return count
         for combo in self.__table_cards:
             if combo[1] != lai_zi:
                 continue

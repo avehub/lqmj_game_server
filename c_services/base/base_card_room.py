@@ -50,6 +50,8 @@ class BaseCardRoom(BaseRoom):
         else:
             self.__deal_cards_count = 13
 
+        DelayCall(120, self.close_room_time_out).loop_start()
+
     @property
     def extra_score_map(self):
         return self.__extra_score_map
@@ -79,20 +81,21 @@ class BaseCardRoom(BaseRoom):
         self.__not_playing_dismiss = value
 
     async def back_room_status(self):
-        print("返回房间状态", self.__not_playing_dismiss, self.__not_playing_room_status)
         if self.__not_playing_dismiss:
             await self.async_set_room_status(self.__not_playing_room_status)
             self.__not_playing_dismiss = False
             self.__not_playing_room_status = RoomStatus.T_IDLE
 
     async def close_room_time_out(self):
-        if self.game_began:
+        if self.game_began():
             return
         if tool_dt.cur_time() - self.__create_time < self.__timeout_idle_time:
+            print(tool_dt.cur_time() - self.__create_time,self.__timeout_idle_time)
             return
         if self.in_room_count > 0:
             self.__timeout_idle_time += 300
             return
+        self.log_info("超时关闭房间",self.in_room_count)
         await self.force_dismiss()
 
     @property
@@ -178,7 +181,7 @@ class BaseCardRoom(BaseRoom):
     def __add_round_log(self, cmd, data, code, hint):
         """ 对局日志 """
         # 首局并且空闲不记录
-        if not self.game_began:
+        if not self.game_began():
             return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
@@ -593,6 +596,7 @@ class BaseCardRoom(BaseRoom):
             wgj_score = self.__rule_details.get("wu_gu_ji_score", 2)
             default_score = 1 if wgj_score == 3 else 2
             map_copy.update({
+                CardsType.WU_GU_JI: wgj_score,
                 CardsType.YAO_JI: 2,
                 CardsType.YI_WAN: 2,
                 CardsType.YI_TONG: 15,

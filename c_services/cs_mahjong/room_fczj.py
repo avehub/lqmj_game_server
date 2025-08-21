@@ -1283,7 +1283,6 @@ class RoomFCZJ(BaseLeisureRoom):
 
         # 下面主要是处理有操作且操作过的玩家
         action_map = {
-            # ActionType.ACTION_TYPE_HU: self.somebody_hu,
             ActionType.ACTION_TYPE_MEN: self.somebody_men,
             ActionType.ACTION_TYPE_JIAN: self.somebody_jian,
             ActionType.ACTION_TYPE_PENG: self.somebody_peng,
@@ -1816,8 +1815,11 @@ class RoomFCZJ(BaseLeisureRoom):
         """
         摸牌
         """
+        if self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
+            self.log_info( "桌子在充值中，不摸牌")
+            return
         if self.flow_status_is_equal(FlowStatus.T_IN_CHECK_OUT):
-            self.log_info(self.tid, "桌子已结算，不再摸牌")
+            self.log_info( "桌子已结算，不再摸牌")
             return
         self.clear_table_actions()
         if choice_seat:
@@ -2157,7 +2159,6 @@ class RoomFCZJ(BaseLeisureRoom):
     def check_can_hu(self, player: PlayerFCZJ, can_hu, info, hu_path=None):
         if hu_path is None:
             hu_path = []
-        print("player.cards", player.cards)
         if player.que > 0:
             if self.__curr_card // 10 == player.que:
                 return False, [], False
