@@ -2,7 +2,7 @@
 订单相关
 """
 import traceback
-from sanic import Request
+from sanic import Request, response
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
@@ -80,20 +80,21 @@ class CallbackAli(SpecialApi):
     """支付宝订单回调"""
     async def post(self, req: Request, **kwargs):
         form = req.get_form()
-        json = req.json
+        signature = req.json.get("sign", "")
+        self.loginfo(f"支付宝回调参数signature: {signature}")
         self.loginfo(f"支付宝回调参数form: {form}")
-        self.loginfo(f"支付宝回调参数json: {json}")
         sta, data = AlipayPayment().verify_callback(form)
+        err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
         if not sta:
-            return self.answer(code=self.sta_code.FAIL, hint="回调失败")
+            return err_result
         order_no = data.get("out_trade_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, good = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
                                         explain="支付宝回调")
         if not sta:
-            return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer()
+            return err_result
+        return response.json({"response": {"code": '10000', "msg": 'Success'}, "sign": signature})
 
 
 class CallbackHf(SpecialApi):
@@ -107,11 +108,12 @@ class CallbackHf(SpecialApi):
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, good = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
                                         explain="汇付天下回调")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer()
+
+        return self.answer_json(data={"ErrCode": self.sta_code.PASS, "ErrMsg": "Success"})
 
 class CallbackIos(GameAuthApi):
     """苹果订单校验"""
@@ -125,7 +127,7 @@ class CallbackIos(GameAuthApi):
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, good = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
                                         explain="苹果订单校验")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)

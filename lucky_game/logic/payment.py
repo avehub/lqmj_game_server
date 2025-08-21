@@ -499,6 +499,9 @@ class PaymentLogic:
         if not order_info:
             NLogger.error("completed_order 无此待领取订单", order_no)
             return False, e, {}
+        if order_info.get("status") == OrderStatus.PAID:
+            NLogger.error("completed_order 订单已处理", order_no)
+            return True, "订单已处理", {}
         up_data = {
             "status": order_status,
             "gain_status": gain_status,
