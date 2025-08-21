@@ -712,10 +712,10 @@ class Room(BaseCardRoom):
         operates, can_gang_list = self.calc_operates_after_mo_pai(curr_player)
         curr_player.operates = deepcopy(operates)
 
-        if not self.__have_men_jian_hu:
-            self.remove_jmh_from_operates(operates)
         if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
+        if not self.__have_men_jian_hu:
+            self.remove_jmh_from_operates(operates)
         data["operates"] = operates
         data["gang_hou_mo_pai"] = 1 if len(self.__gang_hou_mo_pai) > 0 else 0
         data["is_show_bao_ting"] = 0 if curr_player.all_chu_cards else 1
@@ -988,7 +988,6 @@ class Room(BaseCardRoom):
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
             if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
-                data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
                 if can_hu_or_jian and can_peng_or_gang:
                     data["operates"].append(ActionType.ACTION_TYPE_PASS)
                     p.add_operates(ActionType.ACTION_TYPE_PASS)
