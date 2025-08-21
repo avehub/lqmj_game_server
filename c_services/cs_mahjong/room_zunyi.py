@@ -579,7 +579,7 @@ class RoomZY(RoomBJ):
             else:
                 p.lian_zhuang = 0
 
-            p.jiao_pai = Rule.get_round_over_jiao_pai_by_zun_yi(
+            p.jiao_pai,p.hu_path = Rule.get_round_over_jiao_pai_by_zun_yi(
                 p.table_cards, p.cards,0, self.lai_zi, self.__fan_ji_score,self.pai_xing_score_map,self.extra_score_map)
 
 
