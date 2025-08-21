@@ -50,7 +50,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
                 instances = [cls.db_model(**data) for data in new_data]
                 await cls.db_model.bulk_create(instances)
         except OperationalError as e:
-            return False, f"失败：{str(e)}"
+            return False, f"子战绩入库失败, 原数据: {new_data}, 失败原因:{str(e)}"
         return True, "成功"
 
     @classmethod

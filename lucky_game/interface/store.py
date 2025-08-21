@@ -81,6 +81,7 @@ class PayByGood(GameAuthApi):
         if not sta_before:
             return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
         # 购买商品事务处理
+        order = data_before.get("order")
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 # 支付中
@@ -88,7 +89,7 @@ class PayByGood(GameAuthApi):
                 self.loginfo(f"支付处理：sta_pay={sta_pay}，msg={msg}")
                 # 支付后（如果为兑换商品则直接处理）
                 if pay_type != PayType.BY_RMB:
-                    sta_after, msg = await payment.pay_after(u_info, express, data_before.get("order")["order_no"])
+                    sta_after, msg = await payment.pay_after(u_info, express, order["order"]["order_no"])
                     self.loginfo(f"支付成功后资源变更：sta_after={sta_after}，msg={msg}")
 
                 await BaseUserRC.cache_count_buy_limit(uid, sku, buy_record)
@@ -96,9 +97,9 @@ class PayByGood(GameAuthApi):
             tb = traceback.extract_tb(e.__traceback__)
             for frame in tb:
                 self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
-            self.logerr(f'{pt_enum.phrase}事务执行失败，原因：{e}')
-            self.answer(self.sta_code.FAIL, hint=f'{pt_enum.phrase}兑换错误，请稍后再试')
-        data = data_before.get("order")
+            self.logerr(f'{pay_enum.phrase}事务执行失败，原因：{e}')
+            self.answer(self.sta_code.FAIL, hint=f'{pay_enum.phrase}支付失败，请稍后再试')
+        data = order
         data["buy_good"] = express["content"]
         data["buy_good"]["img"] = express.get("img")
         return self.answer(data=data)

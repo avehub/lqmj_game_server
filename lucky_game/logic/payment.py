@@ -75,10 +75,10 @@ class PaymentLogic:
     async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1):
         """
         支付前校验及生成订单
-        :param u_info:
-        :param express:
-        :param pay_mode:
-        :param platform:
+        :param u_info: 用户信息
+        :param express: 商品信息
+        :param pay_mode: 支付方式
+        :param platform: 平台
         :return:
         """
         currency = express.get("currency")
@@ -92,7 +92,7 @@ class PaymentLogic:
         price *= num
         field = field_name = ""
         if price > 0:
-            if currency == CurrencyType.BY_RMB:
+            if currency != CurrencyType.BY_RMB:
                 match currency:
                     case CurrencyType.BY_GOLD:
                         field = "gold"
@@ -111,9 +111,8 @@ class PaymentLogic:
                     return False, f'{field_name}不足', {}
             else:
                 # 校验支付方式
-                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY]:
-                    pass
-
+                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP]:
+                    return False, "支付方式错误", {}
         else:
             # 校验今日领取次数
             start_time, end_time = await CommonApi.get_time_range("day")
@@ -135,9 +134,10 @@ class PaymentLogic:
 
     async def pay(self, u_info: dict, data_before: dict, express: dict):
         """
-        支付处理
+        支付处理(资源扣减)
         :return:
         """
+        sta, msg, result = True, "OK", {}
         uid = u_info.get("uid")
         currency = express.get("currency")
         sku = express.get("sku")
@@ -155,38 +155,40 @@ class PaymentLogic:
                 )
                 if not sub_sta:
                     return False, e, {}
-            sta, msg, result = True, "OK", {}
+
         else:
             # 充值处理
-            sta, msg, result = await self.pay_method(data_before, u_info, express)
+            pass
         # 扣除商品数量
         if express.get("total") > 0:
             await GoodRC.update_int_field(sku, "total", 1, "sub")
 
         return sta, msg, result
 
-    async def pay_method(self, order_info: dict, u_info: dict, express: dict):
+    async def pay_method(self, new_order, express: dict, return_url: str = None):
         """支付方法"""
-        # 检查订单状态是否可拉取支付
-        pay_mode = order_info.get("pay_mode")
-        if order_info.get("status") != OrderStatus.WAIT_PAY:
-            return False, '已支付或订单已关闭', {}
+        pay_mode = new_order.pay_mode
         map_func = {
+            PayMode.DEFAULT_MODE.val: self.deal_order_general,
             PayMode.HUI_FU_PAY.val: self.pay_1,
             PayMode.ALIPAY.val: self.pay_2,
             PayMode.WECHAT_PAY.val: self.pay_3,
             PayMode.VIVO_PAY.val: self.pay_4,
-            PayMode.APPLE_PAY.val: self.pay_5
+            PayMode.APPLE_PAY.val: self.pay_5,
+            PayMode.ALIPAY_APP.val: self.pay_6
         }
         deal_func = map_func.get(pay_mode)
-        NLogger.info(f"pay_method 去支付订单：{deal_func}")
-        rec_sta = False
+        NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
         if deal_func and callable(deal_func):
-            sta, order_info = await deal_func(order_info)
-            NLogger.info(f"pay_method 去支付订单", sta, order_info)
-            if sta:
-                rec_sta = True
-        return rec_sta, "无此交易方式", order_info
+            sta, order_info = await deal_func(new_order, return_url=return_url)
+            NLogger.info(f"create_order uid: {new_order.uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
+            if not sta:
+                return {}, order_info
+            if pay_mode == PayMode.APPLE_PAY.val:
+                pay_dict = {"apple_product_id": express.get("desc")}
+                order_info.update({"pay_5": pay_dict})
+            return order_info, "ok"
+        return {}, "无此交易方式"
 
     async def order_method(self, pay_mode: int, order_no: str, out_order_no: str = None):
         """去平台查询订单状态并更新订单"""
@@ -288,28 +290,9 @@ class PaymentLogic:
         if not new:
             return {}, "订单创建失败"
 
-        # 订单创建完成，按下单平台返回数据
-        map_func = {
-            PayMode.DEFAULT_MODE.val: self.deal_order_general,
-            PayMode.HUI_FU_PAY.val: self.pay_1,
-            PayMode.ALIPAY.val: self.pay_2,
-            PayMode.WECHAT_PAY.val: self.pay_3,
-            PayMode.VIVO_PAY.val: self.pay_4,
-            PayMode.APPLE_PAY.val: self.pay_5,
-            PayMode.ALIPAY_APP.val: self.pay_6
-        }
-        deal_func = map_func.get(pay_mode)
-        NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
-        if deal_func and callable(deal_func):
-            sta, order_info = await deal_func(new, return_url=return_url)
-            NLogger.info(f"create_order uid: {uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
-            if not sta:
-                return {}, order_info
-            if pay_mode == PayMode.APPLE_PAY.val:
-                pay_dict = {"apple_product_id": express.get("desc")}
-                order_info.update({"pay_5": pay_dict})
-            return order_info, "ok"
-        return {}, "无此交易方式"
+        # 按下单平台返回数据
+        return await self.pay_method(new, express, return_url)
+
 
 
     async def deal_order_general(self, order: dict, return_url: str = None):
