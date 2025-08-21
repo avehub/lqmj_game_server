@@ -674,6 +674,8 @@ class Room(BaseCardRoom):
 
     def check_is_bi_hu(self, operates: list):
         """ 最后三张必胡，有其它操作时 """
+        if self.play_type == PlayType.JIAN_LOU_XUE_LIU:
+            return False
         if self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in operates:
             return True
         if not self.__have_men_jian_hu:
@@ -2158,8 +2160,9 @@ class Room(BaseCardRoom):
         can_operates = p.can_operates()
         if can_operates and not has_do_action:
             # 2025/6/9 最后三张必开 重连后客户端会显示过 这里限制不允许过
-            if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
-                return StaCode.RULE_ERR, "尾三必胡"
+            if self.play_type != PlayType.JIAN_LOU_XUE_LIU:
+                if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
+                    return StaCode.RULE_ERR, "尾三必胡"
 
         if self.flow_status_is_equal(
                 FlowStatus.T_IN_TIAN_TING) and self.dealer_id == p.seat_id and p.cards_len == self.deal_cards_count + 1:
