@@ -304,9 +304,9 @@ class RuleFc(Rule):
         if flag:
             if cards.count(lai_zi) == 0:
                 return flag, path_list[0]
-            flag, path = RuleFc.is_18_luo_han(table_cards, cards, lai_zi)
-            if flag:
-                return flag, path
+            flag3, path = RuleFc.is_18_luo_han(table_cards, cards, lai_zi)
+            if flag3:
+                return flag3, path
             for path in path_list:
 
                 result, an_ke, an_ke_path =  RuleFc.get_ke_zi_count(path,table_cards,lai_zi)

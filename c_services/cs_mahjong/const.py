@@ -21,6 +21,7 @@ class PlayType(BaseEnum):
     ZUN_YI_LAI_ZI = 7, "遵义麻将(一筒赖子)"
     LEISURE_FCZJ = 8, "休闲场发财捉鸡"
     REN_HUAI_MJ = 9,"仁怀麻将"
+    AN_SHUN_MJ = 10,"安顺麻将"
 
 
 class ActionType(BaseEnum):

@@ -98,7 +98,8 @@ class Room(BaseCardRoom):
         self.__chao_shi_time = self.rule_detail.get("chao_shi_time", 0)  # 多少时间进入超时
         self.__lian_zhuang = 0
         self.__lai_zi = 0
-        if self.play_type == PlayType.ZUN_YI_LAI_ZI:
+        self.__lai_zi_ji = self.rule_detail.get("lai_zi_ji", 0)
+        if self.play_type == PlayType.ZUN_YI_LAI_ZI or (self.play_type == PlayType.AN_SHUN_MJ and self.__lai_zi_ji):
             self.__lai_zi = self.rule_detail.get("lai_zi", CardsType.YI_TONG)
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.BI_JIE_MJ):
             self.__lian_zhuang = self.rule_detail.get("lian_zhuang", 0)
@@ -251,6 +252,10 @@ class Room(BaseCardRoom):
     @property
     def zhuo_ji_card(self):
         return self.__zhuo_ji_card
+
+    @zhuo_ji_card.setter
+    def zhuo_ji_card(self,value):
+        self.__zhuo_ji_card = value
 
     @property
     def ze_ren_ji(self):
@@ -2947,6 +2952,10 @@ class Room(BaseCardRoom):
         self.clear_room_round_start()
         self.__dice_num = Rule.random_dice(2)
         data = {"round_idx": self.round_idx, "dealer": self.dealer_id, "dice_num": self.__dice_num}
+        if self.play_type == PlayType.AN_SHUN_MJ and self.__lai_zi_ji:
+            self.__lai_zi = random.choice(const.ALL_CARDS_WITHOUT_ZI_HUA)
+            data["lai_zi_ji"] = self.__lai_zi
+
         data_model = S2CRoundStartMahjong.pb_model(**data)
         await self.inner_broadcast(CmdRoom.ROUND_START, data_model)
         self.log_info(self.tid, "round_start", self.__shang_ga, self.__default_ji)
@@ -3199,7 +3208,7 @@ class Room(BaseCardRoom):
         if liu_ju and self.play_type > 2:
             return
         double_bao = self.__double_bao and is_bao
-        fan_bird_list = self.__ji_cards.copy() if self.__ji_cards else self.__ji_cards
+        fan_bird_list = self.__ji_cards.copy() if self.__ji_cards else set()
         type_ = CheckType.CHECK_JI
         if self.__wind_ji and self.__zhuo_ji_card == 35:
             type_ = CheckType.WIND_JI
@@ -3622,7 +3631,10 @@ class Room(BaseCardRoom):
         统一数据结构
         """
         # 翻鸡
-        self.__ji_cards, zhuo_ji = self.calc_fan_ji_cards()
+        if self.play_type != PlayType.ZUN_YI_LAI_ZI:
+            self.__ji_cards, zhuo_ji = self.calc_fan_ji_cards()
+        else:
+            zhuo_ji = self.__zhuo_ji_card
         if self.play_type == PlayType.AN_LONG_XUE_ZHAN:
             self.kai_hu_cha_jiao(accounts)
         # 1.开牌牌型结算
@@ -3658,7 +3670,7 @@ class Room(BaseCardRoom):
         if not self.__fan_ji_pai:
             return fan_ji_set, 0
         bird_list = self.zhong_bird()
-
+        self.log_info("翻鸡牌",bird_list)
         for ji in bird_list:
             # 本鸡
             if self.__ben_ji:
@@ -3682,7 +3694,7 @@ class Room(BaseCardRoom):
                 fan_ji_set.add(ji + 1)
                 if ji + 1 == CardsType.WU_GU_JI:
                     self.__fan_jin_ji_cards.add(ji + 1)
-                    self.log_info(self.tid, "翻到金鸡乌骨鸡")
+                    self.log_info("翻到金鸡乌骨鸡")
 
             # 下鸡
             if self.__yao_bai_ji:

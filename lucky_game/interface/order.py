@@ -131,7 +131,7 @@ class CallbackIos(GameAuthApi):
                                         explain="苹果订单校验")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer()
+        return self.answer(data=good)
 
 
 

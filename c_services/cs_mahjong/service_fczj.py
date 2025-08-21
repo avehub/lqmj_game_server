@@ -58,7 +58,6 @@ class MahjongServerFc(BaseLeisureService):
 
     async def __on_robot_cal_peng(self, uid, data):
         print("收到机器人碰",data)
-        card = data.get("card")
         tid = data.get("tid")
         card = data.get("card")
         room, p = self.check_room_and_player(tid, uid)

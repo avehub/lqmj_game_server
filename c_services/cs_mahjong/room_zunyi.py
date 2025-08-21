@@ -199,7 +199,7 @@ class RoomZY(RoomBJ):
         return False
 
     def deal_fan_ji(self):
-        self.ji_cards, zhuo_ji = self.calc_fan_ji_cards()
+        self.ji_cards, self.zhuo_ji_card = self.calc_fan_ji_cards()
         # 该map主要用于胡牌类型的选取
         ji_score = {
             CardsType.YAO_JI: self.ji_pai_score.get(CardsType.YAO_JI),
