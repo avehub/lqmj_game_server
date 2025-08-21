@@ -253,6 +253,10 @@ class Room(BaseCardRoom):
     def zhuo_ji_card(self):
         return self.__zhuo_ji_card
 
+    @zhuo_ji_card.setter
+    def zhuo_ji_card(self,value):
+        self.__zhuo_ji_card = value
+
     @property
     def ze_ren_ji(self):
         return self.__ze_ren_ji
@@ -3629,6 +3633,8 @@ class Room(BaseCardRoom):
         # 翻鸡
         if self.play_type != PlayType.ZUN_YI_LAI_ZI:
             self.__ji_cards, zhuo_ji = self.calc_fan_ji_cards()
+        else:
+            zhuo_ji = self.__zhuo_ji_card
         if self.play_type == PlayType.AN_LONG_XUE_ZHAN:
             self.kai_hu_cha_jiao(accounts)
         # 1.开牌牌型结算
