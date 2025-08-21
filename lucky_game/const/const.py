@@ -67,12 +67,13 @@ class PayMode(BaseEnum):
 class PayType(BaseEnum):
     """ 支付类型 """
     BY_FREE = 0, "免费领取"
-    BY_RMB = 1, "充值兑换"
+    BY_GOLD = 1, "金币兑换"
     BY_DIAMOND = 2, "钻石兑换"
-    BY_GOLD = 3, "金币兑换"
-    BY_DY_DIAMOND = 4, "抖音钻石兑换"
-    BY_FIVE_AGGREGATES = 5, "五蕴丹兑换"
+    BY_ROOM_CARD = 3, "房卡兑换"
+    BY_YELLOW_DIAMOND = 4, "黄钻兑换"
+    BY_RMB = 5, "人民币"
     BY_WATCH_AD = 6, "看广告领取"
+    BY_DY_DIAMOND = 7, "抖音钻石"
 
 
 class CurrencyType(BaseEnum):
