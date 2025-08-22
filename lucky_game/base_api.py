@@ -1,4 +1,6 @@
 # coding=utf-8
+from nsanic.exception import JsonFinish
+from nsanic.libs.consts import Code
 from nsanic.orm.rc_model import RCModel
 from sanic.request import Request
 from nsanic.handler_http import BaseHttpApi
@@ -11,11 +13,20 @@ from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
 from lucky_game.model_rc.base_user import BaseUserRC
 from nsanic.libs.mult_log import NLogger
+import json
+from cgitb import handler
+from typing import Callable, Awaitable, Dict, Any
+from sanic import Request, HTTPResponse
+from sanic.response import json as sanic_json
+from nsanic.libs.component import ConfMeta
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
     RCModel.set_conf(conf)
+
+    async def __call__(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]):
+        await BaseHttpApi.__call__(self, request, handler)
 
     async def check_solid_params(self, req: Request):
         """ 检查固有参数 """
@@ -66,15 +77,35 @@ class BaseApi(BaseHttpApi, CommonApi):
             code = self.sta_code.PASS
         raise RealJsonFinish(code, data, total, hint, headers)
 
+    def answer(
+            self, code: Code = None,
+            data: (dict, object, list) = None,
+            total: int = 0,
+            hint: str = '',
+            headers: dict = None):
+        """
+        公共JSON响应函数
+
+        :param code: 响应码,请参照StaCode中取值, 默认响应成功状态
+        :param data: 响应数据, 可以是任意符合JSON规范类型的数据模型
+        :param total: 针对于分页响应的总数量
+        :param hint: 响应消息, 字符串, 设置值后会采取设置的值，否则会使用响应码映射的默认值
+        :param headers: 附加响应头
+        """
+        if not code:
+            code = self.sta_code.PASS
+
+        NLogger.info(f"Response : code={code} data={data} total={total} hint={hint} headers={headers}")
+        raise JsonFinish(code, data, total, hint, headers)
 
 class GameAuthApi(BaseApi):
-
     decorators = [GameChecker]
 
 
 class BaseWS(BaseWebsocket):
     conf = conf_srv
     conn_manager = WsConnector
+
 
 class SpecialApi(BaseApi):
     decorators = []
