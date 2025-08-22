@@ -3,7 +3,7 @@ from copy import deepcopy
 from common.proto.py_pb2.ws_leisure import S2CFirstJiMahjong
 from common.public.enum_const import StaCode
 from .player import Player
-from .const import (FlowStatus, ActionType, CheckType, JiType, CardsType, HuType, ExtraHuPai)
+from .const import (FlowStatus, ActionType, CheckType, JiType, CardsType, HuType, ExtraHuPai, PlayType)
 from .room_bijie import RoomBJ
 from .rule import Rule
 from ..const.cs_enum_const import CmdRoom
@@ -262,7 +262,7 @@ class RoomZY(RoomBJ):
 
     async def deal_first_ji(self, curr_p: Player):
         await super().deal_first_ji(curr_p)
-        if self.curr_card == self.lai_zi and self.__round_first_yi_tong == 0:
+        if self.play_type == PlayType.ZUN_YI_LAI_ZI and self.curr_card == self.lai_zi and self.__round_first_yi_tong == 0:
             self.__round_first_yi_tong = 1
             self.__cf_yi_tong_seat_id = self.curr_seat_id
             curr_p.chong_feng_yi_tong = 1

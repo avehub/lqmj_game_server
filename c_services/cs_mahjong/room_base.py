@@ -4024,7 +4024,9 @@ class Room(BaseCardRoom):
             base_score = self.get_base_score(hu_info, extra_hu_lst)
             extra_score = self.cal_extra_hu_score(hu_info, extra_hu_lst, pei_seat)
             if winner.is_zha_hu:
-                if fang_pao_p.is_zha_hu or (liu_ju and fang_pao_p.jiao_pai <= 0):
+                # if fang_pao_p.is_zha_hu or (liu_ju and fang_pao_p.jiao_pai <= 0):
+                #     return
+                if fang_pao_p.is_zha_hu:
                     return
                 # 捡者炸胡
                 pai_xing_score = base_score
