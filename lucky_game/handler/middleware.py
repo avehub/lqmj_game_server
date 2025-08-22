@@ -1,8 +1,7 @@
 import json
 from cgitb import handler
-from typing import Callable, Awaitable, Dict, Any
+from typing import Callable, Awaitable, Any
 from sanic import Request, HTTPResponse
-from sanic.response import json as sanic_json
 from nsanic.libs.mult_log import NLogger
 from nsanic.libs.component import ConfMeta
 
@@ -10,25 +9,9 @@ from nsanic.libs.component import ConfMeta
 class LoggingMiddleware(ConfMeta):
     """请求日志中间件"""
 
-    def __init__(self):
-        # Make it callable as a function
-        self._is_old_style = False
-
-    async def main(self, request: Request):
+    def main(self, request: Request):
         # 记录请求信息
         self._log_request(request)
-
-        try:
-            # 处理请求
-            response = await handler(request)
-
-            # 记录响应信息
-            self._log_response(request, response)
-            return response
-
-        except Exception as e:
-            NLogger.error(f"Request processing failed: {str(e)}")
-            raise
 
 
     def _log_request(self, request: Request) -> None:
@@ -95,42 +78,6 @@ class LoggingMiddleware(ConfMeta):
             return None
 
 
-class CorsMiddleware(ConfMeta):
-    """CORS 中间件"""
-    def __init__(self):
-        # Make it callable as a function
-        self._is_old_style = False
-    async def main(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]) -> HTTPResponse:
-        # 处理预检请求
-        if request.method == "OPTIONS":
-            return self._options_response()
-
-        # 添加 CORS 头
-        response = await handler(request)
-        self._add_cors_headers(response)
-        return response
-
-    def _options_response(self) -> HTTPResponse:
-        """处理 OPTIONS 请求"""
-        response = sanic_json({}, status=204)
-        self._add_cors_headers(response)
-        return response
-
-    def _add_cors_headers(self, response: HTTPResponse) -> None:
-        """添加 CORS 头"""
-        response.headers.update({
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": (
-                "Content-Type, Authorization, X-Requested-With, "
-                "X-CSRF-Token, X-Request-ID, X-Requested-With, "
-                "X-Forwarded-For, X-Forwarded-Host, X-Forwarded-Proto"
-            ),
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "3600",
-        })
-
 
 # 创建中间件实例
 logging_middleware = LoggingMiddleware()
-cors_middleware = CorsMiddleware()
