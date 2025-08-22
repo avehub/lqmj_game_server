@@ -640,23 +640,6 @@ class ConfActivity(DBModel):
         table = "conf_activity"
 
 
-class UserActivity(DBModel):
-    """充值活动记录"""
-    act_id = fields.IntField(max_length=10, index=True, null=False, description='充值活动ID')
-    uid = fields.IntField(max_length=28, index=True, null=False, description='玩家ID')
-    join_time = fields.BigIntField(max_length=28, null=True, default=0, description='参与时间')
-    awards_achieved = fields.JSONField(null=True, description="奖励发放状态")
-    activity_sta = fields.IntEnumField(enum_type=ActivitySta, default=0, description='活动参与状态')
-    times = fields.IntField(max_length=10, null=True, default=0, description='活动已参与次数')
-    times_day = fields.IntField(max_length=10, null=True, default=0, description='日奖领取次数')
-    deadline = fields.BigIntField(max_length=20, null=True, default=0, description='截止时间')
-    time_node = fields.BigIntField(max_length=28, null=True, default=0, description='最新发奖时间')
-    level = fields.IntEnumField(enum_type=LevelType, description="等级")
-
-    class Meta:
-        table = "user_activity"
-        unique_together = (("act_id", "uid"),)
-
 class ConfVip(DBModel):
     """ VIP配置 """
     level = fields.IntEnumField(enum_type=LevelType, description="等级")
@@ -741,6 +724,7 @@ class UserCosmetic(DBModel):
 
 
 class UserActivityProgress(DBModel):
+    """ 用户参与活动进度表 """
     progress_id = fields.IntField(max_length=28, pk=True, description='进度ID', )
     act_id = fields.IntField(max_length=28, index=True, description='活动ID', )
     current_value = fields.SmallIntField(max_length=6, description='当前进度值：如完成数量，积分等', )
@@ -756,6 +740,7 @@ class UserActivityProgress(DBModel):
 
 
 class LogUserActivity(DBModel):
+    """ 用户参与活动记录表 """
     act_id = fields.IntField(max_length=28, index=True, description='活动ID', )
     join_time = fields.BigIntField(index=True, default=0, description='参与时间', )
     uid = fields.IntField(max_length=28, index=True, description='玩家ID', )

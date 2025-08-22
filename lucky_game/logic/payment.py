@@ -13,12 +13,13 @@ from common.public.enum_const import DbKey, ServiceEnum
 from common.public.common_class import CommonApi
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
+from lucky_game.logic.activity import Base
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import StoreRC, GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import PayType, GoodsItem, ReasonCostDiamond, ReasonCostGold, GoodsType, StoreType, \
-    BossType, HeldSta, PlatForm, CurrencyType, PayMode, OrderStatus, GainStatus, RandType, OperatingSystem
+    BossType, HeldSta, PlatForm, CurrencyType, PayMode, OrderStatus, GainStatus, ActivityType, GoodsSku
 from nsanic.libs.mult_log import NLogger
 from common.public.conf import ENV
 from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER
@@ -30,17 +31,25 @@ from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.handler.ios_pay import ios_service
 from common.aliyun.pay_service import AlipayPayment
+from lucky_game.model_rc.user_activity import UserActivityProgressRC
 from lucky_game.model_rc.vip_level import UserVipRC
 
 
 class PaymentLogic:
     def __init__(self):
         pass
+    async def buy_count(self, uid: int, sku: str, period: str = "day"):
+        start_time, end_time = await CommonApi.get_time_range(period)
+        NLogger.info(f"校验今日领取次数 uid: {uid} start_time: {start_time} end_time: {end_time}")
+        count, e = await OrderRC.get_order_filter(uid=uid, sku=sku, status=OrderStatus.PAID,
+                                                  start_time=start_time, end_time=end_time, count=True)
+        NLogger.info(f"今日领取次数 count: {count} e: {e} sku: {sku}")
+        return count
 
     async def check_good_validity(self, u_info, express: dict):
         """检查商品有效性，包括限购次数以及销售时间范围"""
-        (not express.get("status") or express.get("total") == 0) and self.answer(code=self.sta_code.GOODS_NOT_FOUND,
-                                                                                 hint="该商品暂时缺货")
+        if not express.get("status") or express.get("total") == 0:
+            return False, "该商品暂时缺货", {}
         # 检查销售时间
         cur_time = tool_dt.cur_time()
         start_sale_time = express.get("up_time") or 0
@@ -54,22 +63,17 @@ class PaymentLogic:
         purchase_limit = express.get("purchase_limit")
         sku = express.get("sku")
         # 限购条件校验
+        if sku == GoodsSku.SKU_FREE and 0 < await self.buy_count(uid, sku):
+            return False, "已领取", {}
         buy_record = {}
         if purchase_limit:
             buy_limit = json_parse(purchase_limit).get("buy_limit")
             if buy_limit:
-                buy_record = await BaseUserRC.get_count_buy_limit(uid, sku)
-                # 如果没有购买记录，则初始化一个新的记录
-                if not buy_record:
-                    buy_record = {"buy_times": 0, "buy_limit": buy_limit}
-                buy_times = buy_record.get("buy_times") or 0
-                need_count = buy_times + 1
+                buy_count = await self.buy_count(uid, sku, "perpetual")
+                need_count = buy_count + 1
                 # 检查限购次数是否超出
                 if need_count > buy_limit:
                     return False, '已达到限购次数，请下次再来', {}
-
-                # 更新限购次数
-                buy_record["buy_times"] = need_count
         return True, 'OK', buy_record
 
     async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1):
@@ -114,13 +118,6 @@ class PaymentLogic:
                 if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP]:
                     return False, "支付方式错误", {}
         else:
-            # 校验今日领取次数
-            start_time, end_time = await CommonApi.get_time_range("day")
-            NLogger.info(f"校验今日领取次数 uid: {uid} start_time: {start_time} end_time: {end_time}")
-            count, e = await OrderRC.get_order_filter(uid=uid, sku=express["sku"], status=OrderStatus.PAID, start_time=start_time, end_time=end_time, count=True)
-            NLogger.info(f"今日领取次数 count: {count} e: {e}", express)
-            if count > 0:
-                return False, "已领取", {}
             field_name = "免费领取"
             field = "gold"
             # 随机今日领取金币
@@ -494,6 +491,10 @@ class PaymentLogic:
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await OrderRC.up_order(up_data, order_no)
+                # 如果订单为活动订单需要更新活动进度
+                if order_info["sku"] == GoodsSku.SKU_FIRST:
+                    activity, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.FIRST_CHARGE)
+                    await Base().up_act_progress(order_info["uid"], activity["act_id"], activity["act_type"], UserActivityProgressRC.STATUS_FINISH)
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}

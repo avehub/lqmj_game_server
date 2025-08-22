@@ -118,7 +118,6 @@ class CallbackHf(SpecialApi):
 class CallbackIos(GameAuthApi):
     """苹果订单校验"""
     async def post(self, req: Request, **kwargs):
-        u_info = kwargs.get("u_info")
         order_no = self.check_str(req.json.get("order_no"), require=True, p_name="订单号")
         receipt_data = self.check_str(req.json.get("receipt_data"), require=True, p_name="购买凭据")
         sta, data = await ios_service.process_payment(order_no, receipt_data)
@@ -131,7 +130,7 @@ class CallbackIos(GameAuthApi):
                                         explain="苹果订单校验")
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer(data=good)
+        return self.answer()
 
 
 

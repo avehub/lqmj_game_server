@@ -61,6 +61,7 @@ class LogUserActivityRC(BaseCommonRC):
 class UserActivityProgressRC(BaseCommonRC):
     db_model = UserActivityProgress
     tb_name = db_model.sheet_name()
+    STATUS_FINISH = 99
 
     @classmethod
     async def add_progress(cls, uid: int, act_id: int, current_value: int, deadline: int, status: int = None,

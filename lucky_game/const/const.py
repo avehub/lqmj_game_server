@@ -56,13 +56,14 @@ class AliGrantType(StrEnum):
 
 class PayMode(BaseEnum):
     """支付方式"""
-    DEFAULT_MODE = 0, "默认(免费、兑换)"
+    DEFAULT_MODE = 0, "免费领取"
     HUI_FU_PAY = 1, "汇付天下(App_Android、H5、微信小程序_IOS)"
     ALIPAY = 2, "支付宝支付(H5)"
     WECHAT_PAY = 3, "微信(微信小程序_Android)"
     VIVO_PAY = 4, "VIVO支付"
     APPLE_PAY = 5, "苹果支付"
     ALIPAY_APP = 6, "支付宝支付(App)"
+
 
 class PayType(BaseEnum):
     """ 支付类型 """
@@ -85,6 +86,7 @@ class CurrencyType(BaseEnum):
     BY_YELLOW_DIAMOND = 4, "黄钻"
     BY_RMB = 5, "人民币"
     BY_WATCH_AD = 6, "看广告"
+
 
 @unique
 class OrderStatus(BaseEnum):
@@ -244,13 +246,13 @@ class ActivityType(BaseEnum):
     AUTHENTICATION = 10, "实名认证"
 
 
-
 @unique
 class ActivitySta(BaseEnum):
     """活动参与状态"""
     ACT_NOT_JOIN = 0, "未参与"
     ACT_INCOMPLETE = 1, "未完结"
     ACT_COMPLETED = 99, "已完结"
+
 
 @unique
 class ActivityStatus(BaseEnum):
@@ -484,6 +486,12 @@ class GoodsItem(BaseEnum):
     RAND_MAGIC = 1019, "随机法宝", ''
 
 
+class GoodsSku(StrEnum):
+    """特定商品SKU"""
+    SKU_FIRST = "NOMYLPAA"  #首充
+    SKU_FREE = "XXOLQQTL"   #免费
+
+
 @unique
 class StoreItem(BaseEnum):
     """商品统计key"""
@@ -576,7 +584,7 @@ class ReasonCostGold(BaseEnum):
     MONOPOLY_AWARDS = 34, "玩大富翁奖励"
     CONVERT_AWARDS = 35, "兑换/折现奖励"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
-    CHECK_OUT_MAHJONG = 37,"麻将结算"
+    CHECK_OUT_MAHJONG = 37, "麻将结算"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""

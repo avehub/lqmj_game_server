@@ -119,7 +119,7 @@ class ProgressActivity(GameAuthApi):
             if act_type == ActivityType.LUCK_SIGN_IN:
                 result = await SignIn().progress_data(uid, ac, progress, gains)
             elif act_type == ActivityType.PACKAGE:
-                result = await Package().progress_data(ac, gains)
+                result = await Package().progress_data(uid, ac, gains)
             elif act_type == ActivityType.INFINITE_PLAY:
                 result = await InfinitePlay().progress_data(ac, progress, gains, u_info)
             else:
