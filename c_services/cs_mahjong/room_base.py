@@ -96,6 +96,13 @@ class Room(BaseCardRoom):
         self.__limit_lose = self.rule_detail.get("limit_lose", 0)  # 限制输分
         self.__decision_sec = self.rule_detail.get("decision_sec", 0)
         self.__chao_shi_time = self.rule_detail.get("chao_shi_time", 0)  # 多少时间进入超时
+
+        self.__qiang_gang_shao_ji = self.rule_detail.get("qiang_gang_shao_ji", 0)
+        self.__qiang_gang_shao_dou = self.rule_detail.get("qiang_gang_shao_dou", 0)
+        self.__gan_kou = self.rule_detail.get("gan_kou", 0)
+        self.__sea_moon = self.rule_detail.get("sea_moon", 0)
+
+
         self.__lian_zhuang = 0
         self.__lai_zi = 0
         self.__lai_zi_ji = self.rule_detail.get("lai_zi_ji", 0)
@@ -674,6 +681,8 @@ class Room(BaseCardRoom):
 
     def check_is_bi_hu(self, operates: list):
         """ 最后三张必胡，有其它操作时 """
+        if self.play_type == PlayType.JIAN_LOU_XUE_LIU:
+            return False
         if self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in operates:
             return True
         if not self.__have_men_jian_hu:
@@ -712,10 +721,10 @@ class Room(BaseCardRoom):
         operates, can_gang_list = self.calc_operates_after_mo_pai(curr_player)
         curr_player.operates = deepcopy(operates)
 
-        if not self.__have_men_jian_hu:
-            self.remove_jmh_from_operates(operates)
         if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
+        if not self.__have_men_jian_hu:
+            self.remove_jmh_from_operates(operates)
         data["operates"] = operates
         data["gang_hou_mo_pai"] = 1 if len(self.__gang_hou_mo_pai) > 0 else 0
         data["is_show_bao_ting"] = 0 if curr_player.all_chu_cards else 1
@@ -988,7 +997,6 @@ class Room(BaseCardRoom):
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
             if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
-                data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
                 if can_hu_or_jian and can_peng_or_gang:
                     data["operates"].append(ActionType.ACTION_TYPE_PASS)
                     p.add_operates(ActionType.ACTION_TYPE_PASS)
@@ -1754,7 +1762,7 @@ class Room(BaseCardRoom):
             if ExtraHuPai.QIANG_GANG_HU in extra_hu_lst:
                 curr_p = self.curr_player()
                 if self.__curr_card in curr_p.cards:
-                    curr_p.remove_card(self.__curr_card)
+                    curr_p.rm_cards([self.__curr_card])
                     self.log_info(self.tid, p.uid, "抢杠胡玩家捡", curr_p.cards, self.__curr_card)
             other_model = S2CMenInfoMahjong.pb_model(**other_data)
             await self.inner_broadcast(CmdRoom.PLAYER_JIAN_SUC, other_model)
@@ -2159,8 +2167,9 @@ class Room(BaseCardRoom):
         can_operates = p.can_operates()
         if can_operates and not has_do_action:
             # 2025/6/9 最后三张必开 重连后客户端会显示过 这里限制不允许过
-            if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
-                return StaCode.RULE_ERR, "尾三必胡"
+            if self.play_type != PlayType.JIAN_LOU_XUE_LIU:
+                if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
+                    return StaCode.RULE_ERR, "尾三必胡"
 
         if self.flow_status_is_equal(
                 FlowStatus.T_IN_TIAN_TING) and self.dealer_id == p.seat_id and p.cards_len == self.deal_cards_count + 1:
@@ -4022,7 +4031,9 @@ class Room(BaseCardRoom):
             base_score = self.get_base_score(hu_info, extra_hu_lst)
             extra_score = self.cal_extra_hu_score(hu_info, extra_hu_lst, pei_seat)
             if winner.is_zha_hu:
-                if fang_pao_p.is_zha_hu or (liu_ju and fang_pao_p.jiao_pai <= 0):
+                # if fang_pao_p.is_zha_hu or (liu_ju and fang_pao_p.jiao_pai <= 0):
+                #     return
+                if fang_pao_p.is_zha_hu:
                     return
                 # 捡者炸胡
                 pai_xing_score = base_score

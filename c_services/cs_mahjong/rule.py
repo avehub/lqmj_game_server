@@ -1104,12 +1104,12 @@ class Rule(metaclass=NoInstances):
                 can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, tian_ting_hand_cards, 0, ji_to_score,
                                                               lai_zi, pai_xing_score_map, extra_score_map)
                 if can_hu:
-                    return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
+                    return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card), hu_path
         else:
             can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, 0, ji_to_score, lai_zi, pai_xing_score_map, extra_score_map)
             if can_hu:
-                return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card)
-        return 0
+                return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card), hu_path
+        return 0, []
 
 
     @staticmethod
