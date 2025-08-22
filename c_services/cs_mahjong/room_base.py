@@ -588,7 +588,7 @@ class Room(BaseCardRoom):
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
         if self.is_exchange_three():
-            return self.start_exchange_three()
+            return await self.start_exchange_three()
         await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
     async def start_exchange_three(self):
