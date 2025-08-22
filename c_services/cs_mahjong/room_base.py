@@ -96,6 +96,13 @@ class Room(BaseCardRoom):
         self.__limit_lose = self.rule_detail.get("limit_lose", 0)  # 限制输分
         self.__decision_sec = self.rule_detail.get("decision_sec", 0)
         self.__chao_shi_time = self.rule_detail.get("chao_shi_time", 0)  # 多少时间进入超时
+
+        self.__qiang_gang_shao_ji = self.rule_detail.get("qiang_gang_shao_ji", 0)
+        self.__qiang_gang_shao_dou = self.rule_detail.get("qiang_gang_shao_dou", 0)
+        self.__gan_kou = self.rule_detail.get("gan_kou", 0)
+        self.__sea_moon = self.rule_detail.get("sea_moon", 0)
+
+
         self.__lian_zhuang = 0
         self.__lai_zi = 0
         self.__lai_zi_ji = self.rule_detail.get("lai_zi_ji", 0)
@@ -1755,7 +1762,7 @@ class Room(BaseCardRoom):
             if ExtraHuPai.QIANG_GANG_HU in extra_hu_lst:
                 curr_p = self.curr_player()
                 if self.__curr_card in curr_p.cards:
-                    curr_p.remove_card(self.__curr_card)
+                    curr_p.rm_cards([self.__curr_card])
                     self.log_info(self.tid, p.uid, "抢杠胡玩家捡", curr_p.cards, self.__curr_card)
             other_model = S2CMenInfoMahjong.pb_model(**other_data)
             await self.inner_broadcast(CmdRoom.PLAYER_JIAN_SUC, other_model)
