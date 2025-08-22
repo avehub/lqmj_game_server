@@ -288,7 +288,7 @@ class WorkersServer(JsonBaseServer):
         package = Package()
         now_award_id = await package.now_award_id()
         if now_award_id:
-            progress = await package.get_progress(now_award_id)
+            progress = await package.get_progress(now_award_id, uid)
             sta = progress["status"] == 0
             self.log_info(uid, "限时登录红点查询", sta)
             if sta:
