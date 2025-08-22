@@ -255,8 +255,8 @@ class WorkersServer(JsonBaseServer):
     async def __notice_by_first_charge(self, uid):
         """首充红点"""
         sta = await FirstCharge().pay_count(uid)
-        self.red_dot_log(uid, "首充红点查询", sta)
-        if sta:
+        self.red_dot_log(uid, "首充红点查询", not sta)
+        if not sta:
             await self.__notify_red_dot(uid, RedDotType.RD_FIRST_CHARGE)
 
     async def __notice_by_relief(self, uid):
