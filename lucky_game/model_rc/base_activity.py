@@ -9,7 +9,7 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.model_rc.base_user import BaseUserRC
 # from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_rc import BaseRC
-from lucky_game.model_db.main import ConfActivity, UserActivity
+from lucky_game.model_db.main import ConfActivity, UserActivityProgress
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.const import ActivitySta, ConditionType, ActivityItem, ActivityType, RandType
 from tortoise.exceptions import OperationalError
@@ -67,7 +67,7 @@ class ConfActivityRC(BaseRC):
 
 
 class UserActivityRC(BaseRC):
-    db_model = UserActivity
+    db_model = UserActivityProgress
     tb_name = db_model.sheet_name()
 
     expired_mode = 1

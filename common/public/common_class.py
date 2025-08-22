@@ -195,7 +195,7 @@ class CommonApi(LogMeta):
 
     @classmethod
     async def get_time_range(cls, period: str = 'month', start_hour: int = 0, end_hour: int = 23, state_minute: int = 0,
-                             end_minute: int = 59, start_second: int = 0, end_second: int = 59) -> Tuple[int, int]:
+                             end_minute: int = 59, start_second: int = 0, end_second: int = 59) -> Tuple:
         """
         获取本月或当天的第一天和最后一天的时间戳
 
@@ -225,7 +225,7 @@ class CommonApi(LogMeta):
             return int(first_day.timestamp()), int(last_day_dt.timestamp())
 
         else:
-            raise ValueError("Invalid period specified. Use 'month' or 'day'.")
+            return None, None
 
     @classmethod
     async def list_by_group(cls, arr: list[dict[str, any]], key: str, unordered: bool = True):

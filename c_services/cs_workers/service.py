@@ -33,13 +33,16 @@ from lucky_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatemen
 # from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
 from lucky_game.model_db.main import Mails, Orders
 from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
-    CompleteSta, EventTracking, OrderStatus
-from lucky_game.logic.activity import act_count, Base, Package
+    CompleteSta, EventTracking, OrderStatus, GoodsSku
+from lucky_game.logic.activity import act_count, Base, Package, FirstCharge
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.logic.payment import PaymentLogic
+
+
 
 
 class WorkersServer(JsonBaseServer):
@@ -194,7 +197,7 @@ class WorkersServer(JsonBaseServer):
         """每月累计签到奖励红点"""
         act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
         sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, count=True)
-        self.red_dot_log(uid, "每月累计签到奖励红点查询", sta)
+        self.red_dot_log(uid, "每月累计签到奖励红点查询", sta and gains > 0)
         if sta and gains > 0:
             await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN)
 
@@ -207,9 +210,9 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_store(self, uid):
         """游戏商店红点"""
-        sta = await StoreRC.get_store_free_chance(uid, StoreItem.FREE_GOLD)
-        self.red_dot_log(uid, "游戏商店红点查询", sta)
-        if sta:
+        count = await PaymentLogic().buy_count(uid, GoodsSku.SKU_FREE, period="day")
+        self.red_dot_log(uid, "游戏商店红点查询", not count)
+        if not count:
             await self.__notify_red_dot(uid, RedDotType.RD_STORE)
 
     async def __notice_by_mails(self, uid):
@@ -251,7 +254,7 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_first_charge(self, uid):
         """首充红点"""
-        sta = await UserActivityRC.get_first_charge_chance(uid, ActivityItem.FIRST_CHARGE.val)
+        sta = await FirstCharge().pay_count(uid)
         self.red_dot_log(uid, "首充红点查询", sta)
         if sta:
             await self.__notify_red_dot(uid, RedDotType.RD_FIRST_CHARGE)
@@ -282,10 +285,14 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_limit_login(self, uid):
         """ 限时登录红点 """
-        progress = await Package().get_progress(14)
-        self.log_info(uid, "限时登录", progress)
-        if progress["status"] == 0:
-            await self.__notify_red_dot(uid, RedDotType.RD_LIMIT_LOGIN)
+        package = Package()
+        now_award_id = await package.now_award_id()
+        if now_award_id:
+            progress = await package.get_progress(now_award_id, uid)
+            sta = progress["status"] == 0
+            self.log_info(uid, "限时登录红点查询", sta)
+            if sta:
+                await self.__notify_red_dot(uid, RedDotType.RD_LIMIT_LOGIN)
 
     async def __notice_by_club_user_list(self, uid):
         """ 茶馆用户变动红点 """
