@@ -161,7 +161,7 @@ class WorkersServer(JsonBaseServer):
             # 未读邮件
             RedDotType.RD_MAILS.val: self.__notice_by_mails,
             # 首次充值
-            # RedDotType.RD_FIRST_CHARGE.val: self.__notice_by_first_charge,
+            RedDotType.RD_FIRST_CHARGE.val: self.__notice_by_first_charge,
             # 救济金
             RedDotType.RD_RELIEF.val: self.__notice_by_relief,
             # 分享

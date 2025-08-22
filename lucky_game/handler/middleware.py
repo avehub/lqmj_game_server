@@ -1,4 +1,5 @@
 import json
+from cgitb import handler
 from typing import Callable, Awaitable, Dict, Any
 from sanic import Request, HTTPResponse
 from sanic.response import json as sanic_json
@@ -17,21 +18,6 @@ class LoggingMiddleware(ConfMeta):
         # 记录请求信息
         self._log_request(request)
 
-        # try:
-        #     # 处理请求
-        #     response = await handler(request)
-        #
-        #     # 记录响应信息
-        #     self._log_response(request, response)
-        #     return response
-        #
-        # except Exception as e:
-        #     NLogger.error(f"Request processing failed: {str(e)}")
-        #     raise
-    async def __call__(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]) -> HTTPResponse:
-        # 记录请求信息
-        self._log_request(request)
-
         try:
             # 处理请求
             response = await handler(request)
@@ -43,6 +29,7 @@ class LoggingMiddleware(ConfMeta):
         except Exception as e:
             NLogger.error(f"Request processing failed: {str(e)}")
             raise
+
 
     def _log_request(self, request: Request) -> None:
         """记录请求日志"""
@@ -74,10 +61,16 @@ class LoggingMiddleware(ConfMeta):
             }
 
             NLogger.info(
-                "Response",response_data
+                "Response", response_data
             )
         except Exception as e:
             NLogger.error(f"Error logging response: {str(e)}")
+
+    async def after_response(self, request, response):
+        """在所有响应返回后执行的钩子"""
+        # 获取响应数据
+        response_data = getattr(response, 'data', None)
+        return request, response_data
 
     def _get_request_body(self, request: Request) -> Any:
         """获取请求体"""
@@ -108,16 +101,6 @@ class CorsMiddleware(ConfMeta):
         # Make it callable as a function
         self._is_old_style = False
     async def main(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]) -> HTTPResponse:
-        # 处理预检请求
-        if request.method == "OPTIONS":
-            return self._options_response()
-
-        # 添加 CORS 头
-        response = await handler(request)
-        self._add_cors_headers(response)
-        return response
-
-    async def __call__(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]) -> HTTPResponse:
         # 处理预检请求
         if request.method == "OPTIONS":
             return self._options_response()
