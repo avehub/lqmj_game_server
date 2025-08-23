@@ -148,7 +148,7 @@ class PaymentLogic:
                     change_field,
                     price,
                     "sub",
-                    explain=f"消费{data_before.get('field_name')}"
+                    reason=ReasonCostGold.DIAMOND_EX_GOLD
                 )
                 if not sub_sta:
                     return False, e, {}
@@ -243,7 +243,7 @@ class PaymentLogic:
                             item.get("type"),
                             item.get("amount"),
                             "add",
-                            explain=f"获得{item.get('type')}"
+                            reason=ReasonCostGold.CONVERT_AWARDS
                         )
                         NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
                         if not add_sta:
@@ -255,7 +255,7 @@ class PaymentLogic:
                         content.get("type"),
                         content.get("amount"),
                         "add",
-                        explain=f"获得{content.get('type')}"
+                        reason=ReasonCostGold.CONVERT_AWARDS
                     )
                     if not add_sta:
                         return False, e

@@ -1,4 +1,5 @@
 """ 活动、奖品相关逻辑处理 """
+import decimal
 import random
 import ast
 import traceback
@@ -163,7 +164,7 @@ class Base:
             )
         return sta
 
-    async def give_awards(self, uid: int, award_id: int, act_id: int = None) -> Tuple[bool, str]:
+    async def give_awards(self, uid: int, award_id: int, act_id: int = None, reason: int = None) -> Tuple[bool, str]:
         """ 领取奖励 """
         sta, await_gain = await AwardGainsRC.get_award_gains(uid=uid, act_id=act_id, type_id=award_id, status=0)
         if not sta:
@@ -187,18 +188,22 @@ class Base:
                     NLogger.info(f"自动领取奖励remark转化后：remark={type(remark)} {remark}")
                     reward_type = remark.get("type")
                     reward_amount = remark.get("amount")
+                    if reason is None:
+                        reason = ReasonCostGold.ACTIVITY_GIFT
                     sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
-                                                                                   explain="领取奖励")
+                                                                                   reason=reason)
                     NLogger.info(f"领取奖励：sta={sta}, e={e}")
         return sta, e
 
     async def act_progress(self, ac: dict, u_info: dict):
+        """ 查询当前用户参与活动进度 """
         try:
             act_type = ac.get("act_type")
             act_id = ac.get("act_id")
             uid = u_info.get("uid")
             progress = {}
             gains = []
+            # 根据活动类型判断是否需要查询进度或奖励
             query_progress = query_gains = True
             if act_type == ActivityType.LUCK_SIGN_IN:
                 start_time, end_time = await CommonApi.get_time_range()
@@ -207,6 +212,7 @@ class Base:
             else:
                 start_time = end_time = None
                 query_progress = query_gains = False
+            # 查询进度
             if query_progress:
                 progres_sta, progress = await UserActivityProgressRC.get_activity_progress_once(
                     uid=uid,
@@ -216,7 +222,7 @@ class Base:
                 )
                 if not progres_sta:
                     return False, "活动进度异常", progress, {}
-
+            # 查询奖励
             if query_gains:
                 gain_sta, gains = await AwardGainsRC.get_award_gains(
                     uid=uid,
@@ -239,16 +245,14 @@ class Base:
     async def up_act_progress(self, uid: int, act_id: int, act_type: int, status: int = 0):
         result = {}
         current_value = 1
+        # 活动类型时间维度（默认）：永久、单次
+        period = "perpetual"
         if act_type == ActivityType.LUCK_SIGN_IN:
             # 活动类型时间维度：月度
             period = "month"
         elif act_type in [ActivityType.PACKAGE, ActivityType.SHARE, ActivityType.INFINITE_PLAY]:
             # 活动类型时间维度：每天
             period = "day"
-        else:
-            # 活动类型时间维度：永久、单次
-            period = "perpetual"
-
         start_time, end_time = await CommonApi.get_time_range(period)
         progres_sta, progress = await UserActivityProgressRC.get_activity_progress_once(
             uid=uid,
@@ -256,6 +260,7 @@ class Base:
             start_time=start_time,
             end_time=end_time,
         )
+        NLogger.info(f"参与活动进度查询：uid {uid} act_id {act_id} progres_sta {progres_sta} progress {progress}")
         if progres_sta and progress:
             if act_type in [ActivityType.PACKAGE, ActivityType.SHARE, ActivityType.INFINITE_PLAY, ActivityType.LUCK_SIGN_IN]:
                 current_value += progress.get("current_value", 0)
@@ -277,9 +282,9 @@ class Base:
             )
         return True, "成功", result
 
-    async def __user_box(self, uid: int, amount: int, field="gold", explain: str = "参加活动"):
+    async def __user_box(self, uid: int, amount: [int, decimal.Decimal], field="gold", explain: str = ""):
         """背包性资源奖励发放"""
-        sta, e = ExtraUserResourceChangesRC.change_user_resource(uid, field, amount, explain=explain)
+        sta, e = ExtraUserResourceChangesRC.change_user_resource(uid, field, amount, reason=ReasonCostGold.OPEN_TREASURE_BOX)
         return sta, e
 
 
@@ -314,7 +319,7 @@ class SignIn(Base):
         if not gain_sta:
             return False, "奖励发放失败", {}
         # 自动领取
-        await self.give_awards(uid, awards["award_id"], act_id)
+        await self.give_awards(uid, awards["award_id"], act_id, reason=ReasonCostGold.RAFFLE_LUCK)
         # 累计签到检查并发放奖励
         if award_type == AwardType.SIGN_IN_RF:
             sta, current_value = await self.sign_progress(pay_type, uid, act_id)
@@ -480,7 +485,7 @@ class Package(Base):
         if not gain_sta:
             return False, "奖励发放失败", {}
         # 自动领取
-        await self.give_awards(uid, award_id, act_id)
+        await self.give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_PACKAGE)
         # 更新记录
         await self.up_act_progress(uid, act_id, act_type, UserActivityProgressRC.STATUS_FINISH)
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)
@@ -490,7 +495,7 @@ class Package(Base):
         """返回当前时间下的奖励ID"""
         award_id = 0
         now = tool_dt.cur_time()
-        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=18, end_hour=20)
+        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=17, end_hour=20)
         am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=13)
         if pm_range_start <= now <= pm_range_end:
             award_id = self.PM_AWARD_ID
@@ -502,7 +507,7 @@ class Package(Base):
         status = -1
         time_status = -1
         am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=13)
-        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=18, end_hour=20)
+        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=17, end_hour=20)
         now = tool_dt.cur_time()
         start_time = end_time = None
         if award_id == self.AM_AWARD_ID:
@@ -558,7 +563,6 @@ class Package(Base):
 class Common(Base):
     """ 参与可直接领取奖励的活动(分享、救济金) """
     async def handler(self, activity: dict, uid: int, award_type: int):
-        """ 处理分享活动 """
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
         pay_type = PayType.BY_FREE
@@ -575,7 +579,12 @@ class Common(Base):
             return False, "奖励发放失败", {}
         # 自动领取
         award_id = condition_awards[0].get("award_id")
-        await self.give_awards(uid, award_id, act_id)
+        reason = None
+        if act_type == ActivityType.SHARE:
+            reason = ReasonCostGold.ACTIVITY_SHARE
+        if act_type == ActivityType.INFINITE_PLAY:
+            reason = ReasonCostGold.RELIEF_GET
+        await self.give_awards(uid, award_id, act_id, reason=reason)
         # 更新记录
         await self.up_act_progress(uid, act_id, act_type, UserActivityProgressRC.STATUS_FINISH)
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)

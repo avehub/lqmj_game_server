@@ -111,7 +111,7 @@ class ProgressActivity(GameAuthApi):
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
-        sta, msg, progress, gains = await Base().act_progress(u_info, ac)
+        sta, msg, progress, gains = await Base().act_progress(ac, u_info)
         self.loginfo(f"活动进度数据：progress {progress} gains {gains}")
         if not sta:
             return self.answer(self.sta_code.FAIL, hint=msg)

@@ -244,6 +244,9 @@ class ActivityType(BaseEnum):
     INFINITE_PLAY = 8, "救济金"
     LUCK_SIGN_IN = 9, "抽奖签到"
     AUTHENTICATION = 10, "实名认证"
+    REPLENISH_GIFT = 11, "金币补足礼包"
+    REVIVE_GIFT = 12, "复活礼包"
+    RETURN_GIFT = 13, "返还礼包"
 
 
 @unique
@@ -585,6 +588,13 @@ class ReasonCostGold(BaseEnum):
     CONVERT_AWARDS = 35, "兑换/折现奖励"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
     CHECK_OUT_MAHJONG = 37, "麻将结算"
+    ACTIVITY_GIFT = 38, "活动礼包"
+    ACTIVITY_PACKAGE = 39, "限时登录"
+    ACTIVITY_SHARE = 40, "分享奖励"
+    CLUB_ROOM_CARD = 41, "茶馆房卡变更"
+    CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
+    CLUB_ROOM_CARD_TICKETS = 43, "茶馆场内房卡门票"
+    CLUB_YELLOW_DIAMOND_TICKETS = 44, "茶馆场内黄钻门票"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""
