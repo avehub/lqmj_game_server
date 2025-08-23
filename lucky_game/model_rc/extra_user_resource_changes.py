@@ -4,6 +4,8 @@
 import decimal
 
 from tortoise.exceptions import OperationalError
+
+from lucky_game.const import ReasonCostGold
 from lucky_game.model_db.main import ExtraUserResourceChanges
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -49,7 +51,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         return val in await cls.change_operation()
 
     @classmethod
-    async def create_change_record(cls, uid: int, operation: str, currency: int, num: [int, decimal.Decimal], explain: str = ""):
+    async def create_change_record(cls, uid: int, operation: str, currency: int, num: [int, decimal.Decimal], explain: str = "", reason: int = None):
         """创建资源变动记录"""
         try:
             record_data = {
@@ -57,7 +59,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 "status": cls.OPERATION_MAP.get(operation),
                 "currency": currency,
                 "num": abs(num),
-                "explain": explain
+                "explain": explain,
+                "reason": reason if reason else 0,
             }
             new_record = await cls.db_model.add_one(record_data)
             cls.conf.log.info(f"创建资源变动记录{new_record}")
@@ -103,10 +106,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
             return None, f"查询失败: {str(e)}"
 
     @classmethod
-    async def change_user_resource(cls, uid: int, change_field: str, change_value: decimal.Decimal, operation: str = 'add', explain: str = ""):
+    async def change_user_resource(cls, uid: int, change_field: str, change_value: [int, decimal.Decimal], operation: str = 'add', explain: str = "", reason: int = None):
         """用户资源变更"""
-        print("change_field", change_field)
-        print("values", cls.CURRENCY_MAP.values())
         if change_field not in cls.CURRENCY_MAP.values():
             return False, "无效的资源类型"
         try:
@@ -115,9 +116,13 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 if not u_sta:
                     return False, "资源变更失败"
                 currency = next((k for k, v in cls.CURRENCY_MAP.items() if v == change_field), 0)
-                c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain)
+                if not explain and reason is not None:
+                    reason_enum = ReasonCostGold.find_member_by_val(reason)
+                    explain = reason_enum.phrase
+                c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)
                 if not c_sta:
                     return False, "资源变更生成失败"
+            cls.conf.log.info(f"资源变更：uid {uid} uid {uid} change_field {change_field} operation {operation} change_value {change_value}")
         except OperationalError as e:
             return False, f"操作失败: {str(e)}"
         return True, "成功"
