@@ -466,6 +466,12 @@ class Package(Base):
     """ 限时登录 """
     AM_AWARD_ID = 14
     PM_AWARD_ID = 15
+    # 上午领取时间12：00-13:59
+    GAIN_AM_START = 12
+    GAIN_AM_END = 13
+    # 下午领取时间18：00-20:59
+    GAIN_PM_START = 18
+    GAIN_PM_END = 20
     async def handler(self, activity: dict, uid: int, award_type: int):
         """ 处理限时登录活动 """
         act_type = activity.get("act_type")
@@ -495,8 +501,8 @@ class Package(Base):
         """返回当前时间下的奖励ID"""
         award_id = 0
         now = tool_dt.cur_time()
-        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=17, end_hour=20)
-        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=13)
+        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_AM_START, end_hour=self.GAIN_AM_END)
+        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_PM_START, end_hour=self.GAIN_PM_END)
         if pm_range_start <= now <= pm_range_end:
             award_id = self.PM_AWARD_ID
         if am_range_start <= now <= am_range_end:
@@ -506,8 +512,8 @@ class Package(Base):
     async def get_progress(self, award_id: int, uid: int = None):
         status = -1
         time_status = -1
-        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=12, end_hour=13)
-        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=17, end_hour=20)
+        am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_AM_START, end_hour=self.GAIN_AM_END)
+        pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_PM_START, end_hour=self.GAIN_PM_END)
         now = tool_dt.cur_time()
         start_time = end_time = None
         if award_id == self.AM_AWARD_ID:
