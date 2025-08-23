@@ -5,7 +5,7 @@ from lucky_game.handler.decorator import GameChecker, CurrentLimiting, LimitTest
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
-from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem
+from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem, ReasonCostGold
 from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
@@ -169,7 +169,7 @@ class UpdateUserResource(BaseUserInfo):
             change_field,
             change_val,
             operation,
-            explain
+            reason=ReasonCostGold.TEST_ADD
         )
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=e)

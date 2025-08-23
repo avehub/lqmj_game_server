@@ -12,7 +12,7 @@ from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
-from lucky_game.const.const import PlatForm
+from lucky_game.const.const import PlatForm, ReasonCostGold
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from nsanic.libs import tool_dt
@@ -208,7 +208,8 @@ class GameRoomsRC(BaseCommonRC):
                     room_data["creator"],
                     key,
                     room_data['price'],
-                    "sub"
+                    "sub",
+                    reason=ReasonCostGold.CLUB_ROOM_CARD_TICKETS
                 )
             # 记录茶馆事件
             event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
@@ -233,7 +234,8 @@ class GameRoomsRC(BaseCommonRC):
                 room_data["creator"],
                 key,
                 room_data['price'],
-                "sub"
+                "sub",
+                reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
             )
         if not up_room_card:
             return False, "房卡结算失败"
@@ -262,7 +264,8 @@ class GameRoomsRC(BaseCommonRC):
                             room_data["creator"],
                             key,
                             room_data['price'],
-                            "add"
+                            "add",
+                            reason=ReasonCostGold.CLUB_ROOM_CARD
                         )
                     # 删除茶馆事件记录
                     event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
@@ -279,7 +282,8 @@ class GameRoomsRC(BaseCommonRC):
                         room_data["creator"],
                         key,
                         room_data['price'],
-                        "add"
+                        "add",
+                        reason=ReasonCostGold.CLUB_YELLOW_DIAMOND
                     )
                 if not up_room_card:
                     return False, "房卡回退失败"

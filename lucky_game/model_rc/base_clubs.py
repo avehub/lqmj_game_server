@@ -2,6 +2,8 @@
 茶馆相关
 """
 from tortoise.exceptions import OperationalError
+
+from lucky_game.const import ReasonCostGold
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -205,7 +207,7 @@ class BaseClubRC(BaseCommonRC):
                 if not up_sta:
                     return False, e
                 # 更新用户房卡
-                user_sta, e = await ExtraUserResourceChangesRC.change_user_resource(u_info.get("uid"), field_name, num, u_operation)
+                user_sta, e = await ExtraUserResourceChangesRC.change_user_resource(u_info.get("uid"), field_name, num, u_operation, reason=ReasonCostGold.CLUB_ROOM_CARD)
                 if not user_sta:
                     return False, "更新用户房卡失败"
                 # 写入茶馆事件记录
