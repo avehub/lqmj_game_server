@@ -230,6 +230,7 @@ class ExtraHuPai(IntEnum):
     COMMON_TIAN_TING = 212  # 普通报听
     COMMON_SHA_BAO = 213  # 普通杀报
     SEA_MOON = 214  # todo:海底捞月
+    GAN_KOU = 215 # 干扣
 
     # 4.返分key
     AN_GANG = 301  # 暗杠
@@ -334,7 +335,9 @@ class CheckType(IntEnum):
     CHECK_SHANG_JING = 1036  # 上精
     CHECK_JING_GANG = 1037  # 精杠
     CHECK_DEALER_DOUBLE = 1038 #庄上乘
-    WIND_JI = 1039 #吹风机
+    WIND_JI = 1039 #吹风鸡
+    WEEK_JI = 1040 #星期鸡（欢乐鸡）
+    GAN_KOU = 1041 #干扣
 
 
 # 鸡牌分

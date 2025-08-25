@@ -148,6 +148,7 @@ class Channel(StrEnum):
 class CacheKey(StrEnum):
     IN_SERVICE = "IN_SERVICE"  # 在子服务（在哪个子服务）
     WS_ONLINE_INFO = "WS_ONLINE_INFO"  # ws在线信息
+    PLAYER_GOLD = "PLAYER_GOLD" #休闲场玩家起始金币
 
 
 class DbKey(StrEnum):

@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from common.proto.py_pb2.ws_leisure import S2CFirstJiMahjong
 from common.public.enum_const import StaCode
+from . import const
 from .player import Player
 from .const import (FlowStatus, ActionType, CheckType, JiType, CardsType, HuType, ExtraHuPai, PlayType)
 from .room_bijie import RoomBJ
@@ -149,6 +150,9 @@ class RoomZY(RoomBJ):
 
         if is_sha_bao:
             extra_fan.append(ExtraHuPai.SHA_BAO)
+
+        if self.poker.left_count <= const.LIU_JU_COUNT:
+            extra_fan.append(ExtraHuPai.SEA_MOON)
 
         qing_upgrade_map = {
             HuType.QI_DUI: HuType.QING_QI_DUI,

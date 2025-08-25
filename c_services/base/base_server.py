@@ -193,6 +193,20 @@ class BaseServer(BasePubService, CommonApi):
 
     async def del_player_in_service(self, uid):
         await self.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+        await self.del_play_gold(uid)
+
+    async def save_play_gold(self,uid ,gold):
+        info = {
+            "cs_type": self.service_type,
+            "gold":gold
+        }
+        await self.conf.rds.set_hash(CacheKey.PLAYER_GOLD, uid, info)
+
+    async def get_play_gold(self, uid):
+        return await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+
+    async def del_play_gold(self, uid):
+        await self.conf.rds.drop_hash(CacheKey.PLAYER_GOLD, uid)
 
     async def on_signal_stop(self, *args):
         """ 服务关闭时触发 """

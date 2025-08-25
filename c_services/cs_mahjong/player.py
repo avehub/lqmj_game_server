@@ -742,8 +742,12 @@ class Player(BaseLeisurePlayer):
         p_info["mo_pai"] = self.__mo_pai
         p_info["first_ji"] = self.__chong_feng_ji
         p_info["first_wu_gu_ji"] = self.__chong_feng_wgj
+        p_info["first_yi_tong_ji"] = self.__chong_feng_yi_tong
+        p_info["first_yi_wan_ji"] = self.__chong_feng_yi_wan
         p_info["ze_ren_ji"] = self.__ze_ren_ji
         p_info["ze_ren_wu_gu_ji"] = self.__ze_ren_wgj
+        p_info["ze_ren_yi_tong_ji"] = self.__ze_ren_yi_tong
+        p_info["ze_ren_yi_wan_ji"] = self.__ze_ren_yi_wan
         p_info["is_lock_cards"] = self.__tian_ting or bool(public_men_cards)
         p_info["table_cards"] = self.get_table_cards()
         p_info["out_cards"] = deepcopy(self.__chu_cards)
