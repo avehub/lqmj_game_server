@@ -493,6 +493,12 @@ class BaseCardRoom(BaseRoom):
                 ExtraHuPai.GANG_SHANG_HUA: qys_score,
             })
             return map_copy
+        elif self.play_type == PlayType.AN_SHUN_MJ:
+            map_copy.update({
+                ExtraHuPai.SEA_MOON: 2,
+                ExtraHuPai.GAN_KOU: 5,
+            })
+            return map_copy
         else:
             return map_copy
 

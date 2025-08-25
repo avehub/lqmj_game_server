@@ -856,7 +856,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
             if p_loser.gold <= 0:
                 self.__recharge_wait = wait_type
-                self.__wait_recharge_seats.append(p_loser.seat_id)
+                if p_loser.seat_id not in self.__wait_recharge_seats:
+                    self.__wait_recharge_seats.append(p_loser.seat_id)
 
         win_data["gold"] = win_total_gold
         win_data["win_from"] = win_from
@@ -1364,6 +1365,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
             self.update_player_max_score(p,total_score,base_score,extra_score,hu_type,extra_hu_list)
             data = self.deal_men_jian_data(p, total_score, hu_info, CheckType.CHECK_JIAN)
+            if many_hu:
+                data["is_yi_pao_duo_xiang"] = 1
             data_model = S2CMenInfoMahjong.pb_model(**data)
             p.add_jian_cards(data)
             if not many_hu:

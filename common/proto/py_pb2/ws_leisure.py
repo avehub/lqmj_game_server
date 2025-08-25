@@ -616,8 +616,12 @@ class S2CPlayerInfo05Mahjong:
             p_info.mo_pai = one_data.get("mo_pai") or 0
             p_info.first_ji = one_data.get("first_ji") or 0
             p_info.first_wu_gu_ji = one_data.get("first_wu_gu_ji") or 0
+            p_info.first_yi_tong_ji = one_data.get("first_yi_tong_ji") or 0
+            p_info.first_yi_wan_ji = one_data.get("first_yi_wan_ji") or 0
             p_info.ze_ren_ji = one_data.get("ze_ren_ji") or 0
             p_info.ze_ren_wu_gu_ji = one_data.get("ze_ren_wu_gu_ji") or 0
+            p_info.ze_ren_yi_tong_ji = one_data.get("ze_ren_yi_tong_ji") or 0
+            p_info.ze_ren_yi_wan_ji = one_data.get("ze_ren_yi_wan_ji") or 0
             p_info.is_lock_cards = one_data.get("is_lock_cards") or False
             p_info.operates.extend(one_data.get("operates") or [])
             p_info.is_bi_hu = one_data.get("is_bi_hu") or False

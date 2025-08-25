@@ -15,6 +15,9 @@ from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
 # from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+
+
 # from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
@@ -201,7 +204,11 @@ class BaseService(BaseServer, SessionManager):
 
     @staticmethod
     async def update_user_gold(player, gold, reason):
-        return await BaseUserRC.update_user_asset(player.uid, {"gold": gold}, reason)
+        operation = "add" if gold > 0 else "sub"
+        if operation == "sub":
+            gold = abs(gold)
+        return await ExtraUserResourceChangesRC.change_user_resource(player.uid, "gold", gold,operation,reason =reason)
+        # return await BaseUserRC.update_user_asset(player.uid, {"gold": gold}, reason)
 
     async def check_in_room(self, uid, cmd, with_notify=True):
         player = self.get_player(uid)

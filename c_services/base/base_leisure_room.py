@@ -12,7 +12,6 @@ from common.public.enum_const import TaskId, StaCode
 from common.utils.utils import UtilsTool
 from lucky_admin.const import WeightEnum
 from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
-# from lucky_game.model_rc.base_activity import ConfActivityRC
 
 
 class BaseLeisureRoom(BaseRoom):
@@ -141,6 +140,7 @@ class BaseLeisureRoom(BaseRoom):
         if not price:
             return
         update_task = []
+        gold_task = []
         gold_info = []
         for player in self.seats:
             if not player.is_robot:
@@ -149,11 +149,14 @@ class BaseLeisureRoom(BaseRoom):
                 update_task.append(self.update_user_gold(player, -price, ReasonCostGold.TICKETS_LEISURE))
 
             player.update_gold(-price, accumulate=False)
+            if not player.is_robot:
+                gold_task.append(self.service.save_play_gold(player.uid, player.gold))
             gold_info.append({"seat_id": player.seat_id, "gold": player.gold})
 
         tickets_model = s2c_tickets_model(gold_info)
         update_task.append(self.inner_broadcast(CmdRoom.DEDUCT_TICKETS, tickets_model))
         update_task and await asyncio.gather(*update_task)
+        gold_task and await asyncio.gather(*gold_task)
 
     async def player_join_room(self, players):
         """ 玩家加入房间 """
@@ -222,7 +225,9 @@ class BaseLeisureRoom(BaseRoom):
         player.gold = gold
 
     async def update_user_gold(self, player, win_score, reason: ReasonCostGold):
-        await self.service.update_user_gold(player, win_score, reason)
+        sta, e = await self.service.update_user_gold(player, win_score, reason)
+        if not sta:
+            self.log_info("更新金币失败",e)
         # todo: 保险箱补足
         # await self.safe_box_auto_complement(player)
 

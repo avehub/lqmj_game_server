@@ -102,6 +102,7 @@ class Room(BaseCardRoom):
         self.__gan_kou = self.rule_detail.get("gan_kou", 0)
         self.__sea_moon = self.rule_detail.get("sea_moon", 0)
 
+        self.__ji_and_gang_score = 0
 
         self.__lian_zhuang = 0
         self.__lai_zi = 0
@@ -494,7 +495,6 @@ class Room(BaseCardRoom):
         for i, p in enumerate(self.seats):
             p.cards = all_cards[i]
             cards = p.cards
-            print("seat_id", p.seat_id, "cards", cards)
             operates = []
             if not (cards[0] == cards[1] == cards[2] == cards[3]):
                 operates = []
@@ -843,7 +843,6 @@ class Room(BaseCardRoom):
         除了所有玩家手上的牌，和牌堆里的牌 其它都是已知的牌
         从已知牌里遍历，不满足已经知道 3张牌 的略过遍历
         """
-        print("判断绝张")
         # 未知牌 = 其余玩家手牌 + 牌堆未摸的牌
         unknown_cards = []
         for p in self.seats:
@@ -867,7 +866,8 @@ class Room(BaseCardRoom):
         # 点炮情况下
         if player.cards_len % 3 == 2:
             try:
-                cards = [c for c in player.cards if c != curr_card]
+                cards = player.cards.copy()
+                cards.remove(curr_card)
             except ValueError:
                 return False
         else:
@@ -1473,7 +1473,7 @@ class Room(BaseCardRoom):
                 "extra_hu_type": data.get("extra_hu_type") or [],
             }
             data_broadcast_model = S2CMenInfoMahjong.pb_model(**data_broadcast)
-            await self.inner_broadcast(CmdRoom.PLAYER_MEN_SUC, data_broadcast_model, p.uid)
+            await self.inner_broadcast(CmdRoom.PLAYER_MEN_SUC, data_broadcast_model, exclude_uid = p.uid)
 
         self.log_info(self.tid, "zha_men_notify end", hu_list)
 
@@ -1831,7 +1831,7 @@ class Room(BaseCardRoom):
 
         result = {
             "is_zha_hu": 1,
-            "curr_card": p.mo_pai,
+            "card": p.mo_pai,
             "seat_id": p.seat_id,
             "is_zi_mo": is_zi_mo,
             "hu_type": hu_type,
@@ -2866,6 +2866,9 @@ class Room(BaseCardRoom):
             if ExtraHuPai.TIAN_HU not in extra_fan or p.cards_len != self.deal_cards_count + 1:  # 庄起手的14张天胡，闲家报听无效则无杀报
                 extra_fan.append(ExtraHuPai.SHA_BAO)
 
+        if self.play_type == PlayType.AN_SHUN_MJ and self.poker.left_count <= const.LIU_JU_COUNT:
+            extra_fan.append(ExtraHuPai.SEA_MOON)
+
         qing_upgrade_map = {
             HuType.QI_DUI: HuType.QING_QI_DUI,
             HuType.LONG_QI_DUI: HuType.QING_LONG_BEI,
@@ -3168,6 +3171,7 @@ class Room(BaseCardRoom):
             if CardsType.YAO_JI in self.__fan_jin_ji_cards and self.play_type > 2:
                 key = JiType.CHONG_FENG_JIN_JI
             score = self.__ji_pai_score.get(key, 0)
+            self.__ji_and_gang_score += score
             self.concreteness_check_chong_feng_ji(accounts, score, ji_card, self.__chong_feng_ji_seat_id, liu_ju,
                                                   is_bao)
 
@@ -3177,6 +3181,7 @@ class Room(BaseCardRoom):
             if CardsType.WU_GU_JI in self.__fan_jin_ji_cards and self.play_type > 2:
                 key = JiType.WU_GU_CF_JIN_JI
             score = self.__ji_pai_score.get(key, 0)
+            self.__ji_and_gang_score += score
             self.concreteness_check_chong_feng_ji(accounts, score, ji_card, self.__cfwgj_seat_id, liu_ju, is_bao)
 
     def check_ze_ren_ji(self, accounts, liu_ju=False, is_bao=False):
@@ -3280,6 +3285,10 @@ class Room(BaseCardRoom):
                     self.update_score(type_, p.seat_id, bearer.seat_id, -score, ji, accounts, get_bearer.seat_id)
                 else:
                     per_score = self.check_extra_ji(ji, score, count)
+                    if self.week_ji and ji in self.fan_yin_ji_cards:
+                        ji_type = CheckType.WEEK_JI
+                    else:
+                        ji_type = type_
                     win_total = 0
                     win_from = []
                     for other_p in self.seats:
@@ -3290,7 +3299,7 @@ class Room(BaseCardRoom):
                         if double_bao:
                             per_score *= 2
 
-                        other_data = self.other_ming_xi_data(type_, p.seat_id, -per_score, ji)
+                        other_data = self.other_ming_xi_data(ji_type, p.seat_id, -per_score, ji)
                         self.update_result_score(accounts, other_p.seat_id, 0, other_data)
                         win_total += per_score
                         win_from.append(other_p.seat_id)
