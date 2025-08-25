@@ -1831,7 +1831,7 @@ class Room(BaseCardRoom):
 
         result = {
             "is_zha_hu": 1,
-            "curr_card": p.mo_pai,
+            "card": p.mo_pai,
             "seat_id": p.seat_id,
             "is_zi_mo": is_zi_mo,
             "hu_type": hu_type,
