@@ -1473,7 +1473,7 @@ class Room(BaseCardRoom):
                 "extra_hu_type": data.get("extra_hu_type") or [],
             }
             data_broadcast_model = S2CMenInfoMahjong.pb_model(**data_broadcast)
-            await self.inner_broadcast(CmdRoom.PLAYER_MEN_SUC, data_broadcast_model, p.uid)
+            await self.inner_broadcast(CmdRoom.PLAYER_MEN_SUC, data_broadcast_model, exclude_uid = p.uid)
 
         self.log_info(self.tid, "zha_men_notify end", hu_list)
 

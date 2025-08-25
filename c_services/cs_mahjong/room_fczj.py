@@ -856,7 +856,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
             if p_loser.gold <= 0:
                 self.__recharge_wait = wait_type
-                self.__wait_recharge_seats.append(p_loser.seat_id)
+                if p_loser.seat_id not in self.__wait_recharge_seats:
+                    self.__wait_recharge_seats.append(p_loser.seat_id)
 
         win_data["gold"] = win_total_gold
         win_data["win_from"] = win_from
