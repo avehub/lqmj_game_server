@@ -607,6 +607,7 @@ class ReasonCostGold(BaseEnum):
     CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
     CLUB_ROOM_CARD_TICKETS = 43, "茶馆场内房卡门票"
     CLUB_YELLOW_DIAMOND_TICKETS = 44, "茶馆场内黄钻门票"
+    ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""

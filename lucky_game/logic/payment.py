@@ -259,6 +259,9 @@ class PaymentLogic:
                     )
                     if not add_sta:
                         return False, e
+                # 如果为返还礼包订单
+                if order.get("explain"):
+                    await self.return_gold_order(order)
                 # 更新用户VIP经验
                 if order["amount"] > 1:
                     await UserVipRC.update_user_vip_level(uid, order["amount"])
@@ -486,7 +489,6 @@ class PaymentLogic:
             "status": order_status,
             "gain_status": gain_status,
             "out_order_no": trade_no,
-            "explain": explain,
         }
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -498,6 +500,22 @@ class PaymentLogic:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
         return True, "OK", {}
+
+
+    async def return_gold_order(self, order: dict):
+        """返还金币订单"""
+        return_gold = order["explain"].get("return_gold", 0)
+        if return_gold:
+            add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+                order["uid"],
+                "gold",
+                return_gold,
+                "add",
+                reason=ReasonCostGold.ACTIVITY_RETURN_GOLD
+            )
+            if not add_sta:
+                return False, e
+        return True, "OK"
 
 
 

@@ -18,6 +18,7 @@ from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.order import OrderRC
+from c_services.base.base_server import BaseServer
 
 
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
@@ -679,7 +680,12 @@ class FirstCharge(Base):
         }
 
         from lucky_game.logic.payment import PaymentLogic
-        act_order, msg = await PaymentLogic().create_order(uid, express, pay_mode, platform, explain="首充活动",
+        explain = ""
+        if activity.get("act_type") == ActivityType.RETURN_GIFT:
+            # 返还礼包额外金币
+            extra = {'return_gold': BaseServer().get_play_gold(uid)}
+            explain = json_encode(extra)
+        act_order, msg = await PaymentLogic().create_order(uid, express, pay_mode, platform, explain=explain,
                                                            return_url=return_url)
         NLogger.info(f"首充活动订单信息：{act_order}")
         if not act_order:
