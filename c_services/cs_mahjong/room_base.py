@@ -2866,7 +2866,7 @@ class Room(BaseCardRoom):
             if ExtraHuPai.TIAN_HU not in extra_fan or p.cards_len != self.deal_cards_count + 1:  # 庄起手的14张天胡，闲家报听无效则无杀报
                 extra_fan.append(ExtraHuPai.SHA_BAO)
 
-        if self.poker.left_count <= const.LIU_JU_COUNT:
+        if self.play_type == PlayType.AN_SHUN_MJ and self.poker.left_count <= const.LIU_JU_COUNT:
             extra_fan.append(ExtraHuPai.SEA_MOON)
 
         qing_upgrade_map = {
