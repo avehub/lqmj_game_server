@@ -51,6 +51,35 @@ class ActivityDetail(GameAuthApi):
             return self.answer(code=self.sta_code.FAIL, hint="获取活动信息失败")
         return self.answer(data=ac)
 
+class ActivityList(GameAuthApi):
+    """
+    获取活动列表
+    query_param: act_type
+    """
+
+    async def get(self, req: Request, **kwargs):
+        act_type = req.args.get("act_type")
+        uid = kwargs.get("u_info").get("uid")
+        # 1.获取活动配置
+        act_type = self.check_int(act_type, p_name="act_type", default=None, require=True)
+        act_enum = ActivityType.find_member_by_val(act_type)
+        (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
+        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type)
+        (not ac_list) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
+        try:
+            # 2.奖励内容
+            for ac in ac_list:
+                once_awards, condition_awards = await Base().act_by_awards(uid, ac)
+                ac["once_awards"] = once_awards
+                ac["condition_awards"] = condition_awards
+        except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            self.logerr(f"原因：{e}")
+            return self.answer(code=self.sta_code.FAIL, hint="获取活动信息失败")
+        return self.answer(data=ac_list)
+
 class JoinActivity(GameAuthApi):
     """
     参与活动

@@ -493,6 +493,18 @@ class GoodsSku(StrEnum):
     """特定商品SKU"""
     SKU_FIRST = "NOMYLPAA"  #首充
     SKU_FREE = "XXOLQQTL"   #免费
+    SKU_REPLENISH_1 = "OCNMZOAS"    #金币补足初级场礼包
+    SKU_REPLENISH_2 = "AAIAHTGS"    #金币补足中级场礼包
+    SKU_REPLENISH_3 = "IGBEZPJS"    #金币补足高级场礼包
+    SKU_REPLENISH_4 = "YPKOBVLR"    #金币补足王者场礼包
+    SKU_REVIVE_1 = "UJFPSNTT"   #复活初级场礼包
+    SKU_REVIVE_2 = "LUYTHXES"   #复活中级场礼包
+    SKU_REVIVE_3 = "YSYNBZFC"   #复活高级场礼包
+    SKU_REVIVE_4 = "LGYUEJAX"   #复活王者场礼包
+    SKU_RETURN_1 = "DPUWCOBL"   #返还初级场礼包
+    SKU_RETURN_2 = "NSPEJTCZ"   #返还中级场礼包
+    SKU_RETURN_3 = "MWSZUWJK"   #返还高级场礼包
+    SKU_RETURN_4 = "TIAOJRKA"   #返还王者场礼包
 
 
 @unique

@@ -13,7 +13,7 @@ from common.public.enum_const import DbKey, ServiceEnum
 from common.public.common_class import CommonApi
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets
-from lucky_game.logic.activity import Base
+from lucky_game.logic.activity import FirstCharge
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import StoreRC, GoodRC
@@ -492,9 +492,8 @@ class PaymentLogic:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
-                if order_info["sku"] == GoodsSku.SKU_FIRST:
-                    activity, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.FIRST_CHARGE)
-                    await Base().up_act_progress(order_info["uid"], activity["act_id"], activity["act_type"], UserActivityProgressRC.STATUS_FINISH)
+                await FirstCharge().charge_order(order_info)
+
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
