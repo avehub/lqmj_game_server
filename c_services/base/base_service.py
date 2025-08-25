@@ -207,7 +207,7 @@ class BaseService(BaseServer, SessionManager):
         operation = "add" if gold > 0 else "sub"
         if operation == "sub":
             gold = abs(gold)
-        return await ExtraUserResourceChangesRC.change_user_resource(player.uid, "gold", gold,operation,reason.phrase)
+        return await ExtraUserResourceChangesRC.change_user_resource(player.uid, "gold", gold,operation,reason =reason)
         # return await BaseUserRC.update_user_asset(player.uid, {"gold": gold}, reason)
 
     async def check_in_room(self, uid, cmd, with_notify=True):

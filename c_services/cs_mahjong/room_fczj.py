@@ -1364,7 +1364,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
             self.update_player_max_score(p,total_score,base_score,extra_score,hu_type,extra_hu_list)
             data = self.deal_men_jian_data(p, total_score, hu_info, CheckType.CHECK_JIAN)
-            data["is_yi_pao_duo_xiang"] = 1
+            if many_hu:
+                data["is_yi_pao_duo_xiang"] = 1
             data_model = S2CMenInfoMahjong.pb_model(**data)
             p.add_jian_cards(data)
             if not many_hu:
