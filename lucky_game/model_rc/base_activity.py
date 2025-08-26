@@ -50,7 +50,7 @@ class ConfActivityRC(BaseRC):
         return [i for i in info if i.get("act_type") == act_type]
 
     @classmethod
-    async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, status: int = 1):
+    async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, act_level: int = None, status: int = 1):
         """获取单条活动信息"""
         query = {"status": status}
         try:
@@ -58,6 +58,8 @@ class ConfActivityRC(BaseRC):
                 query["act_type"] = act_type
             if act_id:
                 query["act_id"] = act_id
+            if act_level:
+                query["act_level"] = act_level
             info = await cls.db_model.filter(**query).first().values()
             if not info:
                 return None, "暂时没找到这类型的活动哦"
@@ -66,7 +68,7 @@ class ConfActivityRC(BaseRC):
         return info, "成功"
 
     @classmethod
-    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, status: int = 1):
+    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, act_level: any = None, status: int = 1):
         """获取单条活动信息"""
         query = {"status": status}
         try:
@@ -80,6 +82,11 @@ class ConfActivityRC(BaseRC):
                     query["act_id__in"] = act_id
                 elif isinstance(act_id, int):
                     query["act_id"] = act_id
+            if act_level is not None:
+                if isinstance(act_level, list):
+                    query["act_level__in"] = act_level
+                elif isinstance(act_level, int):
+                    query["act_level"] = act_level
             data = await cls.db_model.filter(**query).values()
         except OperationalError as e:
             return None, f"获取活动信息失败: {str(e)}"

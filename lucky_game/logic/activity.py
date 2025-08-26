@@ -726,3 +726,16 @@ class FirstCharge(Base):
                                                           UserActivityProgressRC.STATUS_FINISH)
 
         return sta, msg, result
+
+class ReturnGift(Base):
+    """ 返还礼包 """
+    act_type = ActivityType.RETURN_GIFT
+    async def act_award(self, act_level: int):
+        """ 获取活动奖励 """
+        result = []
+        activity, _ = await ConfActivityRC.get_activity_by_once(self.act_type, act_level=act_level)
+        if not activity:
+            return False, result
+        condition_awards = activity.get("condition_awards")
+        _, result = await self.atc_awards(condition_awards=condition_awards)
+        return True, result
