@@ -683,7 +683,8 @@ class FirstCharge(Base):
         explain = ""
         if activity.get("act_type") == ActivityType.RETURN_GIFT:
             # 返还礼包额外金币
-            extra = {'return_gold': BaseServer().get_play_gold(uid)}
+            return_gold = await BaseServer().get_play_gold(uid)
+            extra = {'return_gold': return_gold.get("gold", 0)}
             explain = json_encode(extra)
         act_order, msg = await PaymentLogic().create_order(uid, express, pay_mode, platform, explain=explain,
                                                            return_url=return_url)

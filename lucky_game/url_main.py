@@ -31,7 +31,8 @@ from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
-from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList
+from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList, \
+ActivityReturnGold
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
@@ -141,6 +142,7 @@ class MainBp(BaseBlue):
         Urls("/JoinActivity/", JoinActivity),  # 参与活动
         Urls("/GiveAward/", GainActivity),  # 领取活动奖励
         Urls("/ProgressActivity/", ProgressActivity),  # 活动进度
+        Urls("/ActivityReturnGold/", ActivityReturnGold),  # 返还活动用户金币
 
         # # 邮件相关
         Urls("/MailsListHandler/", MailsListHandler),  # 获取邮件列表
