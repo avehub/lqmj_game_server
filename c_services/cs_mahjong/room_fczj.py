@@ -2670,6 +2670,7 @@ class RoomFCZJ(BaseLeisureRoom):
             over_check = self.do_check_out(True)
         elif over_type == OverType.OTHERS_GIVE_UP:
             over_check = {}
+            self.not_jiao_pai_player()
         else:
             over_check = self.do_check_out()
 
