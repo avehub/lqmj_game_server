@@ -493,6 +493,18 @@ class GoodsSku(StrEnum):
     """特定商品SKU"""
     SKU_FIRST = "NOMYLPAA"  #首充
     SKU_FREE = "XXOLQQTL"   #免费
+    SKU_REPLENISH_1 = "OCNMZOAS"    #金币补足初级场礼包
+    SKU_REPLENISH_2 = "AAIAHTGS"    #金币补足中级场礼包
+    SKU_REPLENISH_3 = "IGBEZPJS"    #金币补足高级场礼包
+    SKU_REPLENISH_4 = "YPKOBVLR"    #金币补足王者场礼包
+    SKU_REVIVE_1 = "UJFPSNTT"   #复活初级场礼包
+    SKU_REVIVE_2 = "LUYTHXES"   #复活中级场礼包
+    SKU_REVIVE_3 = "YSYNBZFC"   #复活高级场礼包
+    SKU_REVIVE_4 = "LGYUEJAX"   #复活王者场礼包
+    SKU_RETURN_1 = "DPUWCOBL"   #返还初级场礼包
+    SKU_RETURN_2 = "NSPEJTCZ"   #返还中级场礼包
+    SKU_RETURN_3 = "MWSZUWJK"   #返还高级场礼包
+    SKU_RETURN_4 = "TIAOJRKA"   #返还王者场礼包
 
 
 @unique
@@ -595,6 +607,7 @@ class ReasonCostGold(BaseEnum):
     CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
     CLUB_ROOM_CARD_TICKETS = 43, "茶馆场内房卡门票"
     CLUB_YELLOW_DIAMOND_TICKETS = 44, "茶馆场内黄钻门票"
+    ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""

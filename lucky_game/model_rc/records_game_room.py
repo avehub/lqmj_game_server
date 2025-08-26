@@ -17,7 +17,9 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def create_record_game_room(cls, room_id: int, start_time: int, end_time: int = 0):
         """创建房间战绩记录"""
         try:
-            game_room, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            game_room, msg = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            if not game_room:
+                return game_room, msg
             record_data = {
                 "room_id": room_id,
                 "club_id": game_room["club_id"],
