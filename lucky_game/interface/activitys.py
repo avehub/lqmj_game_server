@@ -6,6 +6,8 @@ from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
+
+from c_services.base.base_server import BaseServer
 from common.public.enum_const import DbKey
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi
@@ -50,6 +52,35 @@ class ActivityDetail(GameAuthApi):
             self.logerr(f"原因：{e}")
             return self.answer(code=self.sta_code.FAIL, hint="获取活动信息失败")
         return self.answer(data=ac)
+
+class ActivityList(GameAuthApi):
+    """
+    获取活动列表
+    query_param: act_type
+    """
+
+    async def get(self, req: Request, **kwargs):
+        act_type = req.args.get("act_type")
+        uid = kwargs.get("u_info").get("uid")
+        # 1.获取活动配置
+        act_type = self.check_int(act_type, p_name="act_type", default=None, require=True)
+        act_enum = ActivityType.find_member_by_val(act_type)
+        (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
+        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type)
+        (not ac_list) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
+        try:
+            # 2.奖励内容
+            for ac in ac_list:
+                once_awards, condition_awards = await Base().act_by_awards(uid, ac)
+                ac["once_awards"] = once_awards
+                ac["condition_awards"] = condition_awards
+        except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+            self.logerr(f"原因：{e}")
+            return self.answer(code=self.sta_code.FAIL, hint="获取活动信息失败")
+        return self.answer(data=ac_list)
 
 class JoinActivity(GameAuthApi):
     """
@@ -134,6 +165,18 @@ class ProgressActivity(GameAuthApi):
             self.log_err(f"ProgressActivity 执行失败，原因：{e}")
             return self.answer(code=self.sta_code.FAIL, hint="获取活动进度失败")
         return self.answer(data=result, hint=msg)
+
+
+class ActivityReturnGold(GameAuthApi):
+    """
+    获取活动返金币
+    """
+    async def get(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        uid = u_info.get("uid")
+        return_gold = await BaseServer().get_play_gold(uid)
+        sta = hasattr(return_gold, "gold")
+        return self.answer(data={"return_gold": return_gold.get("gold") if sta and return_gold.get("gold") > 0 else 0})
 
 
 

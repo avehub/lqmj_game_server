@@ -203,7 +203,11 @@ class BaseServer(BasePubService, CommonApi):
         await self.conf.rds.set_hash(CacheKey.PLAYER_GOLD, uid, info)
 
     async def get_play_gold(self, uid):
-        return await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        try:
+            gold = await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            gold = {"gold": 0}
+        return gold
 
     async def del_play_gold(self, uid):
         await self.conf.rds.drop_hash(CacheKey.PLAYER_GOLD, uid)

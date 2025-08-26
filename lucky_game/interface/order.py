@@ -90,8 +90,7 @@ class CallbackAli(SpecialApi):
         order_no = data.get("out_trade_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
-                                        explain="支付宝回调")
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status)
         if not sta:
             return err_result
         return response.json({"response": {"code": '10000', "msg": 'Success'}, "sign": signature})
@@ -108,8 +107,7 @@ class CallbackHf(SpecialApi):
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
-                                        explain="汇付天下回调")
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status)
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
 
@@ -126,8 +124,7 @@ class CallbackIos(GameAuthApi):
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
-        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status,
-                                        explain="苹果订单校验")
+        sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no, order_status=trade_status)
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
         return self.answer()

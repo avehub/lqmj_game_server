@@ -65,6 +65,26 @@ class ConfActivityRC(BaseRC):
             return None, f"获取活动信息失败: {str(e)}"
         return info, "成功"
 
+    @classmethod
+    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, status: int = 1):
+        """获取单条活动信息"""
+        query = {"status": status}
+        try:
+            if act_type is not None:
+                if isinstance(act_type, list):
+                    query["act_type__in"] = act_type
+                elif isinstance(act_type, int):
+                    query["act_type"] = act_type
+            if act_id is not None:
+                if isinstance(act_id, list):
+                    query["act_id__in"] = act_id
+                elif isinstance(act_id, int):
+                    query["act_id"] = act_id
+            data = await cls.db_model.filter(**query).values()
+        except OperationalError as e:
+            return None, f"获取活动信息失败: {str(e)}"
+        return data, "成功"
+
 
 class UserActivityRC(BaseRC):
     db_model = UserActivityProgress
