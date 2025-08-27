@@ -281,3 +281,10 @@ class PastRanks(GameAuthApi):
         )
         return self.answer(data=data, hint=e)
 
+class SegmentRecordsByReplayLabel(GameAuthApi):
+    """根据回放标签查询战绩子局记录"""
+    async def get(self, req: Request, **kwargs):
+        replay_label = self.check_str(req.args.get("replay_label"), default=None, require=True, p_name="回放标签")
+        data, e = await RecordsGameSegmentRC.record_by_replay_label(replay_label=replay_label)
+        return self.answer(data=data, hint=e)
+

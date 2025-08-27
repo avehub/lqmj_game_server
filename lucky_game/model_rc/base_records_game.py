@@ -89,7 +89,7 @@ class BaseRecordsGameRC(BaseCommonRC):
                 uid=uid,
                 order_field="round_num",
                 order_type="ASC",
-                filtration="record_sid, record_tid, record_rid, uid, round_num, round_status, round_score, round_ranking, replay_msg, created"
+                filtration="record_sid, record_tid, record_rid, uid, round_num, round_status, round_score, round_ranking, replay_label, replay_msg, created"
             )
             data = []
             # 根据当前局数进行数据重组

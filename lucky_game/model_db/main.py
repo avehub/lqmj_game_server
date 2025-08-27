@@ -279,6 +279,7 @@ class RecordsGameSegment(DBModel):
     round_score = fields.BigIntField(description='当局分数', )
     round_ranking = fields.IntField(description='当局名次', )
     round_result = fields.JSONField(null=True, description='详细结果：JSON存储', )
+    replay_label = fields.CharField(unique=True, max_length=32, description='回放标签', )
     replay_msg = fields.TextField(null=True, description='回放数据', )
     cs_type = fields.IntField(description='子服务类型', )
 
