@@ -173,9 +173,9 @@ class BaseCardRoom(BaseRoom):
         self.__add_player_info_msg()
 
     def __add_pack_msg_records(self, cmd, data, code=StaCode.PASS, hint=''):
-        cmd = UtilsTool.packet_command(self.service.service_type, cmd)
         data_msg = PbWsBaseRep.encode(code, hint, data)
         message = UtilsTool.pack_msg_by_bytes(self.service.service_type, cmd, data_msg)
+
         self.__round_msg_records.append(message)
 
     def __add_round_log(self, cmd, data, code, hint):
@@ -258,11 +258,11 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
-        replay_label = await RecordsGameSegmentRC.make_replay_label()
         score_rank_map = self.get_player_ranking(account, True)
         for p in self.seats:
             if not p:
                 continue
+            replay_label = await RecordsGameSegmentRC.make_replay_label()
             record_data = {
                 "record_rid": self.__record_id,
                 "record_tid": 0,

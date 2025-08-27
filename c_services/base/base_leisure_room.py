@@ -378,6 +378,8 @@ class BaseLeisureRoom(BaseRoom):
                 return
             self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
             return
+        else:
+            self.log_info("获取配置有误",data)
 
         # for gift in self.__gift_conf:
         #     if gift.get("gift_type") == GiftType.REVENGE:
