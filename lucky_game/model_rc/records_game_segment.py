@@ -23,8 +23,8 @@ class RecordsGameSegmentRC(BaseCommonRC):
         """生成回放标签"""
         while True:
             replay_label = generate_random_string(length)
-            good_info = await cls.count_record_segment(replay_label=replay_label)
-            if not good_info:
+            count, _ = await cls.count_record_segment(replay_label=replay_label)
+            if not count:
                 return replay_label
 
     @classmethod
