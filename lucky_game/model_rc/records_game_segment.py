@@ -7,6 +7,7 @@ from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from lucky_game.handler.random_utils import generate_random_string
 
 
 class RecordsGameSegmentRC(BaseCommonRC):
@@ -16,6 +17,15 @@ class RecordsGameSegmentRC(BaseCommonRC):
     KEY_GAME_ROOM_ID = 'record_rid'
     KEY_GAME_TOTAL_ID = 'record_sid'
     KEY_GAME_SEGMENT_ID = 'record_sid'
+
+    @classmethod
+    async def make_replay_label(cls, length: int = 6) -> str:
+        """生成回放标签"""
+        while True:
+            replay_label = generate_random_string(length)
+            good_info = await cls.count_record_segment(replay_label=replay_label)
+            if not good_info:
+                return replay_label
 
     @classmethod
     async def create_record_game_segment(cls, record_rid: int, uid: int, round_num: int, round_status: int,
@@ -33,6 +43,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
                 "round_score": round_score,
                 "round_ranking": round_ranking,
                 "round_result": round_result,
+                "replay_label": await cls.make_replay_label(),
                 "replay_msg": replay_msg,
             }
             new_record = await cls.db_model.add_one(record_data)
@@ -235,3 +246,16 @@ class RecordsGameSegmentRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"
+
+    @classmethod
+    async def record_by_replay_label(cls, replay_label: str = None, record_sid: str = None):
+        """根据回放标签查询战绩子局记录"""
+        try:
+            record = None
+            if record_sid:
+                record = await cls.db_model.del_by_pk(record_sid)
+            if replay_label:
+                record = await cls.db_model.filter(**{"replay_label": replay_label}).first().values()
+        except OperationalError as e:
+            return False, f"查询失败: {str(e)}"
+        return record, "成功"

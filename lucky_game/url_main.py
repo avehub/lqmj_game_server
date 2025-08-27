@@ -43,7 +43,7 @@ from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResour
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
-    UserAggregateRanks, ClubAggregateRanks
+    UserAggregateRanks, ClubAggregateRanks, SegmentRecordsByReplayLabel
 from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
 from lucky_game.interface.club_behavior import GetBehaviorExtra
 from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelation, KickRelation, GetClubUser
@@ -125,6 +125,7 @@ class MainBp(BaseBlue):
         # Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩
         # Urls("/QueryTotalRecords/", TotalRecords),  # 获取总局游戏战绩
         Urls("/QuerySegmentRecords/", SegmentRecords),  # 获取子局游戏战绩
+        Urls("/QuerySegmentRecordsByReplayLabel/", SegmentRecordsByReplayLabel),  # 获取游戏回放记录
         Urls("/QueryClubRanks/", ClubRanks),  # 获取茶馆战绩排行榜
         Urls("/QueryPastRanks/", PastRanks),  # 获取茶馆、我的历史战绩
         Urls("/QueryUserAggregateRanks/", UserAggregateRanks),  # 获取用户战绩总计
