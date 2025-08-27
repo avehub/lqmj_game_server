@@ -1765,6 +1765,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
+        self.log_info(player.uid, player.seat_id, "玩家复活")
+        player.cancel_timer()
         rm = s2c_recharge_model(player.seat_id, str(player.gold))
         self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.RECHARGE, rm)
