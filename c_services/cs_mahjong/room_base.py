@@ -589,7 +589,7 @@ class Room(BaseCardRoom):
 
         if self.is_exchange_three():
             return await self.start_exchange_three()
-        await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
+        await self.ding_que_or_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
     async def start_exchange_three(self):
         if not self.flow_status_is_equal(FlowStatus.T_IN_DEAL_CARDS):

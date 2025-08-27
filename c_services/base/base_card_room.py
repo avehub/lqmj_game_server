@@ -287,10 +287,11 @@ class BaseCardRoom(BaseRoom):
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
-            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-            self.log_info("一轮结束战绩插入", result_data)
             data_model = S2CRoundOverInfo.pb_model(**data)
             await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+            self.log_info("一轮结束战绩插入", result_data)
+
 
         if not self.has_next_round() or over_type == OverType.FORCE:
             return await self.game_over(over_type)
