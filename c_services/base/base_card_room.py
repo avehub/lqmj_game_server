@@ -258,6 +258,7 @@ class BaseCardRoom(BaseRoom):
         data = kwargs
 
         new_data = []
+        replay_label = await RecordsGameSegmentRC.make_replay_label()
         score_rank_map = self.get_player_ranking(account, True)
         for p in self.seats:
             if not p:
@@ -268,6 +269,7 @@ class BaseCardRoom(BaseRoom):
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": self.__round_msg_records,
+                "replay_label":replay_label
             }
             player_account = account.get(p.seat_id, {})
             score = player_account.get("total_score", 0)
@@ -285,7 +287,6 @@ class BaseCardRoom(BaseRoom):
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
-            await RecordsGameSegmentRC.make_replay_label()
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
             self.log_info("一轮结束战绩插入", result_data)
             data_model = S2CRoundOverInfo.pb_model(**data)
