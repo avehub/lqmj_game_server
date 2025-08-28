@@ -90,7 +90,6 @@ class BaseCardRoom(BaseRoom):
         if self.game_began():
             return
         if tool_dt.cur_time() - self.__create_time < self.__timeout_idle_time:
-            print(tool_dt.cur_time() - self.__create_time,self.__timeout_idle_time)
             return
         if self.in_room_count > 0:
             self.__timeout_idle_time += 300
@@ -259,11 +258,13 @@ class BaseCardRoom(BaseRoom):
 
         new_data = []
         score_rank_map = self.get_player_ranking(account, True)
+        round_over_time = tool_dt.cur_time()
         for p in self.seats:
             if not p:
                 continue
             replay_label = await RecordsGameSegmentRC.make_replay_label()
             record_data = {
+                "created": round_over_time,
                 "record_rid": self.__record_id,
                 "record_tid": 0,
                 "cs_type": self.service.service_type,
