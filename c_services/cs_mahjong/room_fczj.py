@@ -11,7 +11,7 @@ from common.proto.py_pb2.ws_leisure import S2CDealCardsMahjong, S2CStartDingQueI
     S2CPublicOperatesMahjong, S2CTurnToMahjong, S2CHuBaseInfo, s2c_one_of_model, S2CMenInfoMahjong, s2c_recharge_model, S2CAfterGangMoCard, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CGangInfo, S2CKouFen, S2CStartFanJi, S2CFanJi, S2CFanJiInfo, S2CRecordAccountInfo, \
     S2CFanJiScore, S2CRoundOverInfoByLeisure, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, S2CHuAfterCards, \
-    S2CManyHuInfo
+    S2CManyHuInfo, S2CBrokeBroad
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
@@ -1776,6 +1776,25 @@ class RoomFCZJ(BaseLeisureRoom):
         if len(self.__wait_recharge_seats) == 0:
             await self.recharge_continue()
 
+    async def player_recharge_ing(self, player):
+        """ 充值中回调 """
+        if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
+            return
+        if player.seat_id != self.curr_seat_id:
+            return
+        if player.is_robot:
+            return
+        # left_sec = player.left_seconds()
+        left_sec = 60
+
+        result = {
+            "seconds": left_sec,
+            "seat_id": player.seat_id,
+        }
+        data_model = S2CBrokeBroad.pb_model(**result)
+        await self.inner_broadcast(CmdRoom.RECHARGE_ING, data_model)
+        player.call_flow(left_sec, self.player_give_up, player)
+
     async def recharge_continue(self):
         action_map = {
             RechargeType.WAIT_RECHARGE_JIAN: self.__mo_pai,
@@ -2699,6 +2718,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": [],
+                "replay_label": p.uid
             }
             p.cancel_timer()  # 清理延时
             if over_check:
