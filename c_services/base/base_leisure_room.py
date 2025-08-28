@@ -9,6 +9,7 @@ from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CB
     s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
+from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_admin.const import WeightEnum
 from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
@@ -362,6 +363,7 @@ class BaseLeisureRoom(BaseRoom):
             await asyncio.gather(*send_list)
 
     async def __do_resurgence(self, player, solid_time=0):
+        print("进入机器人复活")
         sta, data = await ReturnGift().act_award(self.level)
         if sta:
             amount_value = data[0]["content"]["rewards"][0]["amount"]
@@ -412,7 +414,8 @@ class BaseLeisureRoom(BaseRoom):
         flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
         if flag:
             return await self.__do_resurgence(player)
-        return await self.delay_func(random.randint(2, 5), self.player_give_up, player)
+        print("机器人认输")
+        return DelayCall(random.randint(2, 5), self.player_give_up, player).start()
 
     async def notify_resurgence(self, player):
         """ 通知复活 """

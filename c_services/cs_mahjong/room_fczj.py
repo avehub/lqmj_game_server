@@ -879,11 +879,14 @@ class RoomFCZJ(BaseLeisureRoom):
         data_model = S2CKouFen.pb_model(**kf_data)
         await self.inner_broadcast(CmdRoom.TIMELY_KOU_FEN, data_model)
         seats = self.__wait_recharge_seats.copy()
+        revenge_task = []
         for seat_id in seats:
             print("通知是否复活")
             player = self.get_player_by_seat_id(seat_id)
             if not player.is_out:
-                await self.notify_is_revenge(player)
+                revenge_task.append(self.notify_is_revenge(player))
+        if revenge_task:
+            await asyncio.gather(*revenge_task)
 
     def multi_user_record_account(self, p: PlayerFCZJ, record_data):
         """ 多个玩家关系记账 """
@@ -2704,7 +2707,6 @@ class RoomFCZJ(BaseLeisureRoom):
                     over_gold = over_seat_id.get('gold', 0)
                 else:
                     over_gold = 0
-            print("over_gold",over_gold,"p.seat_id",p.seat_id)
             p.update_gold(over_gold)
             if not p.is_robot:
                 update_task.append(self.update_user_gold(p, over_gold, ReasonCostGold.CHECK_OUT_MAHJONG))
