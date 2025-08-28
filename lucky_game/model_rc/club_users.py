@@ -326,3 +326,13 @@ class ClubUsersRC(BaseCommonRC):
         except OperationalError as e:
             return False, e
         return True, "成功"
+
+    @classmethod
+    async def is_club_user_black(cls, uid: int, club_id: int):
+        """判断用户是否在茶馆黑名单中"""
+        club_user, e = await cls.get_club_user_by_one(uid, club_id)
+        if not club_user:
+            return True, e
+        if club_user["status"] == cls.STATUS_BLACK:
+            return True, "用户在黑名单中"
+        return False, "用户不在黑名单中"
