@@ -9,7 +9,7 @@ from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
-from common.public.enum_const import ServiceEnum
+from common.public.enum_const import ServiceEnum, StaCode
 from datetime import datetime, timedelta
 from c_services.cs_mahjong.room_fczj import RoomFCZJ
 from c_services.cs_mahjong.const import HuType
@@ -286,5 +286,7 @@ class SegmentRecordsByReplayLabel(GameAuthApi):
     async def get(self, req: Request, **kwargs):
         replay_label = self.check_str(req.args.get("replay_label"), default=None, require=True, p_name="回放标签")
         data, e = await RecordsGameSegmentRC.record_by_replay_label(replay_label=replay_label)
+        if not data:
+            return self.answer(StaCode.FAIL, hint="回放标签不存在")
         return self.answer(data=data, hint=e)
 

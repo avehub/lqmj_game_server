@@ -107,6 +107,10 @@ class CreateRoom(GameRoomAPI):
         else:
             pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
+        # 创建房间前判断是否在黑名单中
+        is_black, e = await ClubUsersRC.is_club_user_black(creator, club_id)
+        if is_black:
+            return self.answer(StaCode.FAIL, hint=e)
         # 预处理
         rule_details = await verify_rule_detail(rule_details, play_type)
         await self._before_create_room(
@@ -184,6 +188,10 @@ class JoinRoom(GameRoomAPI):
             if u_info.get("room_card") < room_data['price']:
                 return self.answer(StaCode.FAIL, hint="房卡不足")
         uid = u_info.get("uid")
+        # 加入房间前判断是否在黑名单中
+        is_black, e = await ClubUsersRC.is_club_user_black(uid, room_data["club_id"])
+        if is_black:
+            return self.answer(StaCode.FAIL, hint=e)
         sta, e = await GameRoomsRC.join_room(room_data, uid)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)

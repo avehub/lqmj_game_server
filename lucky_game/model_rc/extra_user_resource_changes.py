@@ -116,7 +116,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 if not u_sta:
                     return False, "资源变更失败"
                 currency = next((k for k, v in cls.CURRENCY_MAP.items() if v == change_field), 0)
-                if not explain and reason is not None:
+                if reason is None:
                     reason_enum = ReasonCostGold.find_member_by_val(reason)
                     explain = reason_enum.phrase
                 c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)

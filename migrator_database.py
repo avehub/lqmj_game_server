@@ -208,22 +208,10 @@ class UserMigrator(BaseMigrator):
         """从旧用户表提取数据"""
         sql = """
         SELECT 
-            user_id,
-            username,
-            nickname,
-            email,
-            phone,
-            avatar,
-            level,
-            coins,
-            diamonds,
-            vip_level,
-            vip_expire_time,
-            created_time,
-            updated_time,
-            status
-        FROM users 
-        WHERE status = 1
+            uid, nick_name, avatar, sex,  model, reg_time, diamond, status, appleid
+            gold, room_card, openid, unionid, phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform
+        FROM players
+        WHERE uid >= 1000000
         """
         return self.old_db.execute_query(sql)
 
@@ -234,26 +222,33 @@ class UserMigrator(BaseMigrator):
         for user in old_data:
             # 基础用户信息
             user_data = {
-                'old_user_id': user['user_id'],
-                'username': user['username'],
-                'nickname': user['nickname'],
-                'email': user['email'],
-                'phone': user['phone'],
+                'uid': user['uid'],
                 'avatar': user['avatar'],
-                'coins': user['coins'],
-                'diamonds': user['diamonds'],
-                'created_time': user['created_time'],
-                'updated_time': user['updated_time'],
-                'status': user['status']
+                'name': user['nickname'],
+                'sex': user['sex'],
+                'created': user['reg_time'],
+                'dev_ident': user['model'],
+                'diamond': user['diamond'],
+                'gold': user['gold'],
+                'room_card': user['room_card'],
+                'openid': user['openid'],
+                'unionid': user['unionid'],
+                'phone': user['phone'],
+                'vip_lv': user['vip_lv'],
+                'id_card': user['shen_fen_zheng_no'],
+                'real_name': user['real_name'],
+                'platform': user['platform'],
+                'status': user['status'],
+                'apple_id': user['appleid']
             }
 
             # VIP信息（如果VIP等级 > 0）
             vip_data = None
             if user['vip_level'] > 0:
                 vip_data = {
-                    'vip_level': user['vip_level'],
-                    'expire_time': user['vip_expire_time'],
-                    'created_time': user['created_time']
+                    'uid': user['uid'],
+                    'vip_id': user['vip_lv'],
+                    'cur_exp': user['exp_point'],
                 }
 
             transformed.append({
