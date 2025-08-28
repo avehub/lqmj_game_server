@@ -90,7 +90,6 @@ class BaseCardRoom(BaseRoom):
         if self.game_began():
             return
         if tool_dt.cur_time() - self.__create_time < self.__timeout_idle_time:
-            print(tool_dt.cur_time() - self.__create_time,self.__timeout_idle_time)
             return
         if self.in_room_count > 0:
             self.__timeout_idle_time += 300
@@ -173,9 +172,9 @@ class BaseCardRoom(BaseRoom):
         self.__add_player_info_msg()
 
     def __add_pack_msg_records(self, cmd, data, code=StaCode.PASS, hint=''):
-        cmd = UtilsTool.packet_command(self.service.service_type, cmd)
         data_msg = PbWsBaseRep.encode(code, hint, data)
         message = UtilsTool.pack_msg_by_bytes(self.service.service_type, cmd, data_msg)
+
         self.__round_msg_records.append(message)
 
     def __add_round_log(self, cmd, data, code, hint):
@@ -259,15 +258,19 @@ class BaseCardRoom(BaseRoom):
 
         new_data = []
         score_rank_map = self.get_player_ranking(account, True)
+        round_over_time = tool_dt.cur_time()
         for p in self.seats:
             if not p:
                 continue
+            replay_label = await RecordsGameSegmentRC.make_replay_label()
             record_data = {
+                "created": round_over_time,
                 "record_rid": self.__record_id,
                 "record_tid": 0,
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": self.__round_msg_records,
+                "replay_label":replay_label
             }
             player_account = account.get(p.seat_id, {})
             score = player_account.get("total_score", 0)
@@ -285,10 +288,11 @@ class BaseCardRoom(BaseRoom):
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         if over_type != OverType.FORCE:
-            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-            self.log_info("一轮结束战绩插入", result_data)
             data_model = S2CRoundOverInfo.pb_model(**data)
             await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+            self.log_info("一轮结束战绩插入", result_data)
+
 
         if not self.has_next_round() or over_type == OverType.FORCE:
             return await self.game_over(over_type)

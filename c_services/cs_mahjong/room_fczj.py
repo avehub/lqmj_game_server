@@ -11,12 +11,13 @@ from common.proto.py_pb2.ws_leisure import S2CDealCardsMahjong, S2CStartDingQueI
     S2CPublicOperatesMahjong, S2CTurnToMahjong, S2CHuBaseInfo, s2c_one_of_model, S2CMenInfoMahjong, s2c_recharge_model, S2CAfterGangMoCard, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CGangInfo, S2CKouFen, S2CStartFanJi, S2CFanJi, S2CFanJiInfo, S2CRecordAccountInfo, \
     S2CFanJiScore, S2CRoundOverInfoByLeisure, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, S2CHuAfterCards, \
-    S2CManyHuInfo
+    S2CManyHuInfo, S2CBrokeBroad
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_game.const import ReasonCostGold
+from lucky_game.logic.activity import ReturnGift
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
@@ -878,11 +879,14 @@ class RoomFCZJ(BaseLeisureRoom):
         data_model = S2CKouFen.pb_model(**kf_data)
         await self.inner_broadcast(CmdRoom.TIMELY_KOU_FEN, data_model)
         seats = self.__wait_recharge_seats.copy()
+        revenge_task = []
         for seat_id in seats:
             print("通知是否复活")
             player = self.get_player_by_seat_id(seat_id)
             if not player.is_out:
-                await self.notify_is_revenge(player)
+                revenge_task.append(self.notify_is_revenge(player))
+        if revenge_task:
+            await asyncio.gather(*revenge_task)
 
     def multi_user_record_account(self, p: PlayerFCZJ, record_data):
         """ 多个玩家关系记账 """
@@ -1764,11 +1768,32 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
+        self.log_info(player.uid, player.seat_id, "玩家复活")
+        player.cancel_timer()
         rm = s2c_recharge_model(player.seat_id, str(player.gold))
         self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.RECHARGE, rm)
         if len(self.__wait_recharge_seats) == 0:
             await self.recharge_continue()
+
+    async def player_recharge_ing(self, player):
+        """ 充值中回调 """
+        if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
+            return
+        if player.seat_id != self.curr_seat_id:
+            return
+        if player.is_robot:
+            return
+        # left_sec = player.left_seconds()
+        left_sec = 60
+
+        result = {
+            "seconds": left_sec,
+            "seat_id": player.seat_id,
+        }
+        data_model = S2CBrokeBroad.pb_model(**result)
+        await self.inner_broadcast(CmdRoom.RECHARGE_ING, data_model)
+        player.call_flow(left_sec, self.player_give_up, player)
 
     async def recharge_continue(self):
         action_map = {
@@ -2669,6 +2694,7 @@ class RoomFCZJ(BaseLeisureRoom):
             over_check = self.do_check_out(True)
         elif over_type == OverType.OTHERS_GIVE_UP:
             over_check = {}
+            self.not_jiao_pai_player()
         else:
             over_check = self.do_check_out()
 
@@ -2692,6 +2718,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": [],
+                "replay_label": p.uid
             }
             p.cancel_timer()  # 清理延时
             if over_check:
@@ -2700,7 +2727,6 @@ class RoomFCZJ(BaseLeisureRoom):
                     over_gold = over_seat_id.get('gold', 0)
                 else:
                     over_gold = 0
-            print("over_gold",over_gold,"p.seat_id",p.seat_id)
             p.update_gold(over_gold)
             if not p.is_robot:
                 update_task.append(self.update_user_gold(p, over_gold, ReasonCostGold.CHECK_OUT_MAHJONG))

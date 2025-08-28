@@ -153,6 +153,7 @@ class CmdRoom(BaseEnum):
     ROBOT_CAL_ACTION = 99, "机器人出牌计算", CallCheck.INNER.val
     ROBOT_CAL_PENG = 100, "机器人碰计算", CallCheck.INNER.val
     ROBOT_CAL_GANG = 101, "机器人杠计算", CallCheck.INNER.val
+    ZHA_JIAN = 102, "炸捡", "麻将"
 
     #休闲玩法
     TIMELY_KOU_FEN = 110, "即时结算", "麻将"

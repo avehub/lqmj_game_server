@@ -193,7 +193,6 @@ class BaseServer(BasePubService, CommonApi):
 
     async def del_player_in_service(self, uid):
         await self.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
-        await self.del_play_gold(uid)
 
     async def save_play_gold(self,uid ,gold):
         info = {
