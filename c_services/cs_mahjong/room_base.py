@@ -3093,7 +3093,7 @@ class Room(BaseCardRoom):
                 deal_cards = True
             p.on_round_over(0)
         bird_info = self.zhong_bird()
-        return {}, 0 if not deal_cards else bird_info
+        return {}, 0 if not deal_cards else bird_info[0]
 
     def zhong_bird(self):
         """ 翻鸡 """
