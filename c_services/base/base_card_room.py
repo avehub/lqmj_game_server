@@ -287,11 +287,11 @@ class BaseCardRoom(BaseRoom):
             p.clear_data_round_over()
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
-        if over_type != OverType.FORCE:
-            data_model = S2CRoundOverInfo.pb_model(**data)
-            await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
-            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-            self.log_info("一轮结束战绩插入", result_data)
+        # if over_type != OverType.FORCE:
+        data_model = S2CRoundOverInfo.pb_model(**data)
+        await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
+        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+        self.log_info("一轮结束战绩插入", result_data)
 
 
         if not self.has_next_round() or over_type == OverType.FORCE:
@@ -372,6 +372,10 @@ class BaseCardRoom(BaseRoom):
                 over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
                                                                                 , final_ranking, final_grade, p.game_over_data, num)
                 self.log_info("总结算战绩插入", over_record)
+                if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
+                    up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,round_num= self.round_idx)
+                    if not up_room_sta:
+                        self.log_info("更新战绩时间失败", up_result)
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)

@@ -277,6 +277,7 @@ class Room(BaseCardRoom):
         room_info = self.room_info()
         if self.room_status_is_equal(RoomStatus.T_PLAYING):
             room_info["last_card"] = self.__curr_card
+            room_info['last_seat_id'] = self.__before_seat_id
             room_info["left_count"] = self.poker.left_count
             room_info["dice_num"] = self.__dice_num
             room_info["ding_que_list"] = self.__que_list
@@ -388,6 +389,7 @@ class Room(BaseCardRoom):
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
+            data["seat_id"] = p.seat_id
             if p.seat_id == self.dealer_id:
                 self.__curr_card = c
                 p.rev_card(c)
@@ -580,6 +582,7 @@ class Room(BaseCardRoom):
                 p.mo_pai = c
                 data["mo_pai"] = c
             data["hand_cards"] = p.cards
+            data["seat_id"] = p.seat_id
             cards_count[p.seat_id] = p.cards_len
             data["left_count"] = self.poker.left_count
             data["cards_count"] = cards_count
@@ -2972,9 +2975,9 @@ class Room(BaseCardRoom):
         await self.inner_broadcast(CmdRoom.ROUND_START, data_model)
         self.log_info(self.tid, "round_start", self.__shang_ga, self.__default_ji)
         if self.__shang_ga:
-            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else await self.start_player_shang_ga()
+            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else await self.call_flow(1.5,self.start_player_shang_ga)
         else:
-            await self.delay_func(2, self.deal_cards)
+            await self.call_flow(2, self.deal_cards)
 
     async def round_over(self, over_type=OverType.DEFAULT, **kwargs):
         is_force = kwargs.get("is_force", False)
@@ -3090,7 +3093,7 @@ class Room(BaseCardRoom):
                 deal_cards = True
             p.on_round_over(0)
         bird_info = self.zhong_bird()
-        return {}, -1 if not deal_cards else bird_info
+        return {}, 0 if not deal_cards else bird_info
 
     def zhong_bird(self):
         """ 翻鸡 """

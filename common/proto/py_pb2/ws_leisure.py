@@ -579,6 +579,7 @@ class S2CRoomInfo04Mahjong:
         obj.owner = kwargs.get("owner") or 0
         obj.left_count = kwargs.get("left_count") or 0
         obj.last_card = kwargs.get("last_card") or 0
+        obj.last_seat_id = kwargs.get("last_seat_id") or 0
         obj.dice_num.extend(kwargs.get("dice_num") or [])
         obj.ding_que_list.extend(kwargs.get("ding_que_list") or [])
         obj.exchange_seats.extend(kwargs.get("exchange_seats") or [])
@@ -671,6 +672,7 @@ class S2CDealCardsMahjong:
         obj.mo_pai = kwargs.get("mo_pai") or 0
         obj.cards_count.update(kwargs.get("cards_count") or {})
         obj.left_count = kwargs.get("left_count") or 0
+        obj.seat_id = kwargs.get("seat_id") or 0
         return obj
 
 class S2CPublicOperatesMahjong:
