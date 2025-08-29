@@ -9,9 +9,11 @@ from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CB
     s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
+from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_admin.const import WeightEnum
 from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
+from lucky_game.logic.activity import ReturnGift
 
 
 class BaseLeisureRoom(BaseRoom):
@@ -361,38 +363,59 @@ class BaseLeisureRoom(BaseRoom):
             await asyncio.gather(*send_list)
 
     async def __do_resurgence(self, player, solid_time=0):
-        for gift in self.__gift_conf:
-            if gift.get("gift_type") == GiftType.REVENGE:
-                activity_id = gift.get("activity_id")
-                # data = await ConfActivityRC.get_activity_item_by_id(activity_id)
-                data = {}
-                conf_items = data.get("conf_items")
-                if conf_items:
-                    gold = conf_items[0].get("goods_count")
-                    self.log_info(player.uid, "机器人复活", activity_id, gold)
-                    sale_limit = data.get("sale_limit")
-                    multiple = sale_limit.get("multiple") or 1
-                    if multiple > 1:
-                        gold *= multiple
+        print("进入机器人复活")
+        sta, data = await ReturnGift().act_award(self.level)
+        if sta:
+            amount_value = data[0]["content"]["rewards"][0]["amount"]
 
-                    if not player.is_robot:
-                        await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+            ori_gold = self.record_ori_gold.get(player.seat_id) or 0
+            gold = amount_value + ori_gold
+            self.log_info(player.uid, "机器人复活", data[0]["name"], gold)
+            if not player.is_robot:
+                await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+                player.gold = gold
+            player.gold = gold
+            if solid_time:
+                self.call_flow_robot(solid_time, self.notify_resurgence, player)
+                return
+            self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
+            return
+        else:
+            self.log_info("获取配置有误",data)
 
-                    player.gold = gold
-                    if solid_time:
-                        self.call_flow_robot(solid_time, self.notify_resurgence, player)
-                        return
-                    self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
-                    return
+        # for gift in self.__gift_conf:
+        #     if gift.get("gift_type") == GiftType.REVENGE:
+        #         activity_id = gift.get("activity_id")
+        #         # data = await ConfActivityRC.get_activity_item_by_id(activity_id)
+        #         data = {}
+        #         conf_items = data.get("conf_items")
+        #         if conf_items:
+        #             gold = conf_items[0].get("goods_count")
+        #             self.log_info(player.uid, "机器人复活", activity_id, gold)
+        #             sale_limit = data.get("sale_limit")
+        #             multiple = sale_limit.get("multiple") or 1
+        #             if multiple > 1:
+        #                 gold *= multiple
+        #
+        #             if not player.is_robot:
+        #                 await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+        #
+        #             player.gold = gold
+        #             if solid_time:
+        #                 self.call_flow_robot(solid_time, self.notify_resurgence, player)
+        #                 return
+        #             self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
+        #             return
 
     async def robot_go_broke(self, player):
         """ 机器人概率复活 """
-        #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
-        flag = 0
-        # flag = UtilsTool.random_choice_num([0, 1], [0, 1])
+        # #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
+        # flag = 0
+        flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
         if flag:
             return await self.__do_resurgence(player)
-        return await self.delay_func(random.randint(2, 5), self.player_give_up, player)
+        print("机器人认输")
+        return DelayCall(random.randint(2, 5), self.player_give_up, player).start()
 
     async def notify_resurgence(self, player):
         """ 通知复活 """

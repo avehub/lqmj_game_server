@@ -58,6 +58,9 @@ class BaseLeisurePlayer(BasePlayer, Player):
     def cancel_timer(self):
         self.__cancel_timer()
 
+    def left_seconds(self) -> int:
+        return self.__timer and self.__timer.left_seconds()
+
     @property
     def is_out(self):
         return self.__is_out

@@ -58,7 +58,7 @@ class Session:
         else:
             self.__players_ranking_pool.setdefault(p.ranking_level, set()).add(p)
 
-        p.max_wait_time = random.randint(3, 12)
+        p.max_wait_time = random.randint(3, 7)
         p.s_key = f"{self.cs_type}_{self.play_type}_{self.level}"
         self.log_info(p.uid, "玩家加入匹配队列", matching_mode, self.cs_type, self.level)
 
@@ -93,6 +93,7 @@ class Session:
             cur_time = tool_dt.cur_time()
             for player in self.__players:
                 if cur_time - player.enter_time >= player.max_wait_time:
+                    print("player.max_wait_time",player.max_wait_time)
                     immediate_match = True
                     break
             if immediate_match:
