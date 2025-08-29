@@ -2977,7 +2977,7 @@ class Room(BaseCardRoom):
         if self.__shang_ga:
             await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else await self.call_flow(1.5,self.start_player_shang_ga)
         else:
-            await self.call_flow(2, self.deal_cards)
+            self.call_flow(2, self.deal_cards)
 
     async def round_over(self, over_type=OverType.DEFAULT, **kwargs):
         is_force = kwargs.get("is_force", False)

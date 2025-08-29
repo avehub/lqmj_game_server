@@ -93,7 +93,7 @@ class RoomGY(RoomBJ):
 
         # 分离原缺玩家和非原缺玩家
         yuan_que_players = [p for p in valid_players if p.yuan_que]
-        non_yuan_que_players = [p for p in valid_players if not p.yuan_que]
+        non_yuan_que_players = [p for p in self.seats if not p.yuan_que]
 
         # 无原缺玩家时提前退出
         if not yuan_que_players:
@@ -126,8 +126,6 @@ class RoomGY(RoomBJ):
         valid_players = []
         player_que_count = {}
         for p in self.seats:
-            if p.jiao_pai <= 0:
-                continue
             que_count = p.que_count()
             player_que_count[p.seat_id] = que_count
             valid_players.append(p)
