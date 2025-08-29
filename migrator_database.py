@@ -6,11 +6,11 @@
 """
 
 import logging
+import time
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, Tuple, Callable
-from datetime import datetime
 import pymysql
 import json
 
@@ -128,10 +128,16 @@ class BaseMigrator(ABC):
         self.new_db = new_db
         self.name = self.__class__.__name__
         self.result = MigrationResult()
+        self.batch_size = 1000  # 默认批次大小
 
     @abstractmethod
     def extract_data(self) -> List[Dict]:
         """从旧数据库提取数据"""
+        pass
+
+    @abstractmethod
+    def extract_batch(self, offset, limit) -> List[Dict]:
+        """提取一批数据"""
         pass
 
     @abstractmethod
@@ -200,6 +206,45 @@ class BaseMigrator(ABC):
 
         return self.result
 
+    # 批量迁移数据
+    def migrate_in_batches(self, batch_size=5000):
+        """批量迁移数据"""
+        self.batch_size = batch_size
+        offset = 0
+
+        try:
+            while True:
+                # 提取一批数据
+                batch = self.extract_batch(offset, batch_size)
+                if not batch:
+                    break
+
+                logger.info(f"Processing batch: offset={offset}, size={len(batch)}")
+
+                # 转换数据
+                transformed = self.transform_data(batch)
+
+                # 验证数据
+                if not self.validate_data(transformed):
+                    raise ValueError("Data validation failed")
+
+                # 加载数据
+                self.load_data(transformed)
+
+                # 提交当前批次
+                self.new_db.connection.commit()
+
+                # 更新偏移量
+                offset += len(batch)
+
+        except Exception as e:
+            self.new_db.connection.rollback()
+            self.result.error_count += 1
+            self.result.errors.append(f"Batch failed at offset {offset}: {str(e)}")
+            logger.error(f"Error in batch migration: {e}")
+            raise
+        return self.result
+
 
 class UserMigrator(BaseMigrator):
     """用户数据迁移器示例"""
@@ -208,12 +253,26 @@ class UserMigrator(BaseMigrator):
         """从旧用户表提取数据"""
         sql = """
         SELECT 
-            uid, nick_name, avatar, sex,  model, reg_time, diamond, status, appleid
-            gold, room_card, openid, unionid, phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform
-        FROM players
-        WHERE uid >= 1000000
+            uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, 
+            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2
+        FROM players LEFT JOIN player_diamond2 ON players.uid = player_diamond2.uid
+        WHERE players.uid >= 1000000 
+	    AND players.real_name <> ""
         """
         return self.old_db.execute_query(sql)
+
+    def extract_batch(self, offset, limit):
+        """提取一批俱乐部数据"""
+        sql = """
+        SELECT 
+            players.uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, 
+            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2
+        FROM players LEFT JOIN player_diamond2 ON players.uid = player_diamond2.uid
+        WHERE players.uid >= 1000000 
+	    AND players.real_name <> ""
+            LIMIT %s OFFSET %s
+        """
+        return self.old_db.execute_query(sql, (limit, offset))
 
     def transform_data(self, old_data: List[Dict]) -> List[Dict]:
         """转换用户数据"""
@@ -221,30 +280,39 @@ class UserMigrator(BaseMigrator):
 
         for user in old_data:
             # 基础用户信息
+            platform = 0
+            if user['platform'] == 0:
+                platform = 1
+            elif user['platform'] == 3:
+                platform = 2
+            elif user['platform'] == 1:
+                platform = 3
             user_data = {
                 'uid': user['uid'],
-                'avatar': user['avatar'],
-                'name': user['nickname'],
+                'avatar': user['avatar'] if len(user['avatar']) > 2 else f"avatar/avatar_{user['avatar']}.png",
+                'name': user['nick_name'],
                 'sex': user['sex'],
                 'created': user['reg_time'],
                 'dev_ident': user['model'],
                 'diamond': user['diamond'],
+                'yellow_diamond': user['diamond2'] if user['diamond2'] else 0,
                 'gold': user['gold'],
                 'room_card': user['room_card'],
                 'openid': user['openid'],
                 'unionid': user['unionid'],
                 'phone': user['phone'],
-                'vip_lv': user['vip_lv'],
+                'vip': user['vip_lv'],
                 'id_card': user['shen_fen_zheng_no'],
                 'real_name': user['real_name'],
-                'platform': user['platform'],
-                'status': user['status'],
+                'platform': platform,
                 'apple_id': user['appleid']
             }
 
+
+
             # VIP信息（如果VIP等级 > 0）
             vip_data = None
-            if user['vip_level'] > 0:
+            if user['vip_lv'] > 0:
                 vip_data = {
                     'uid': user['uid'],
                     'vip_id': user['vip_lv'],
@@ -261,21 +329,21 @@ class UserMigrator(BaseMigrator):
     def load_data(self, transformed_data: List[Dict]) -> None:
         """加载用户数据到新数据库"""
         user_sql = """
-        INSERT INTO users (
-            old_user_id, username, nickname, email, phone, avatar,
-            coins, diamonds, created_time, updated_time, status
+        INSERT INTO user (
+            uid, name, avatar, sex, created, dev_ident, diamond, gold, room_card, openid, unionid, 
+            phone, id_card, real_name, platform, apple_id, yellow_diamond
         ) VALUES (
-            %(old_user_id)s, %(username)s, %(nickname)s, %(email)s, 
-            %(phone)s, %(avatar)s, %(coins)s, %(diamonds)s, 
-            %(created_time)s, %(updated_time)s, %(status)s
+            %(uid)s, %(name)s, %(avatar)s, %(sex)s, %(created)s, %(dev_ident)s, %(diamond)s, %(gold)s, 
+            %(room_card)s, %(openid)s, %(unionid)s, %(phone)s, %(id_card)s, %(real_name)s, %(platform)s, %(apple_id)s,
+            %(yellow_diamond)s
         )
         """
 
         vip_sql = """
         INSERT INTO user_vip (
-            user_id, vip_level, expire_time, created_time
+            uid, vip_id, cur_exp
         ) VALUES (
-            %(user_id)s, %(vip_level)s, %(expire_time)s, %(created_time)s
+            %(uid)s, %(vip_id)s, %(cur_exp)s
         )
         """
 
@@ -287,44 +355,60 @@ class UserMigrator(BaseMigrator):
                 # 插入VIP信息（如果存在）
                 if data['vip']:
                     vip_data = data['vip'].copy()
-                    vip_data['user_id'] = user_id
                     self.new_db.execute_insert(vip_sql, vip_data)
 
                 self.result.success_count += 1
 
             except Exception as e:
                 self.result.error_count += 1
-                error_msg = f"Failed to migrate user {data['user']['username']}: {str(e)}"
+                error_msg = f"Failed to migrate user {data['user']['uid']}: {str(e)}"
                 self.result.errors.append(error_msg)
                 logger.error(error_msg)
 
 
 class GameRecordMigrator(BaseMigrator):
     """游戏战绩迁移器示例"""
+    # 只获取最近7天内的数据
+    end_time = int(time.time())
+    start_time = end_time - 7 * 24 * 60 * 60
+
 
     def extract_data(self) -> List[Dict]:
         """提取房间战绩和详情数据"""
         sql = """
         SELECT 
-            r.record_id,
-            r.room_id,
-            r.room_name,
-            r.game_type,
-            r.total_rounds,
-            r.created_time,
-            r.finished_time,
-            d.detail_id,
-            d.user_id,
-            d.username,
-            d.round_num,
-            d.score,
-            d.final_score
-        FROM room_records r
-        LEFT JOIN record_details d ON r.record_id = d.record_id
-        WHERE r.status = 1
-        ORDER BY r.record_id, d.round_num
+            record_id,
+            game_type,
+            room_id,
+            game_type,
+            end_time,
+            play_setting,
+            player_list,
+            rule_type,
+            round_index
+        FROM game_record 
+        WHERE r.end_time >= %s
         """
-        return self.old_db.execute_query(sql)
+        return self.old_db.execute_query(sql, (self.start_time,))
+
+    def extract_batch(self, offset, limit):
+        """提取一批数据"""
+        sql = """
+        SELECT 
+            record_id,
+            game_type,
+            room_id,
+            game_type,
+            end_time,
+            play_setting,
+            player_list,
+            rule_type,
+            round_index
+        FROM game_record 
+        WHERE r.end_time >= %s
+            LIMIT %s OFFSET %s
+        """
+        return self.old_db.execute_query(sql, (limit, offset))
 
     def transform_data(self, old_data: List[Dict]) -> List[Dict]:
         """转换战绩数据结构"""
@@ -435,6 +519,168 @@ class GameRecordMigrator(BaseMigrator):
                 self.result.errors.append(error_msg)
                 logger.error(error_msg)
 
+class ClubMigrator(BaseMigrator):
+    """俱乐部迁移器"""
+
+    def extract_data(self) -> List[Dict]:
+        """从旧表提取数据"""
+        sql = """
+            SELECT 
+                uid, club_name, time, id, room_card, player_counts
+            FROM club
+            WHERE club_status = 1 
+            """
+        return self.old_db.execute_query(sql)
+
+    def extract_batch(self, offset, limit):
+        """提取一批数据"""
+        sql = """
+        SELECT 
+            uid, club_name, time, id, room_card, player_counts
+        FROM club
+        WHERE club_status = 1 
+        LIMIT %s OFFSET %s
+        """
+        return self.old_db.execute_query(sql, (limit, offset))
+
+
+    def transform_data(self, old_data: List[Dict]) -> List[Dict]:
+        """转换数据"""
+        transformed = []
+
+        for club in old_data:
+            # 基础用户信息
+            data = {
+                'uid': club['uid'],
+                'name': club['club_name'],
+                'num': club['player_counts'],
+                'created': club['time'],
+                'id': club['id'],
+                'room_card': club['room_card'],
+                'other': '{"pay_type": 1, "host_power_room": 3}'
+            }
+
+            club_user = {
+                'uid': club['uid'],
+                'role': 9,  # 3-普通成员 2-管理员  1-创建者，4-小黑屋
+                'club_id': club['id'],
+                'created': club['time'],
+            }
+
+            transformed.append({
+                'club': data,
+                'club_user': club_user,
+            })
+
+        return transformed
+
+    def load_data(self, transformed_data: List[Dict]) -> None:
+        """加载用户数据到新数据库"""
+        club_sql = """
+            INSERT INTO clubs (
+                uid, name, num, created, room_card, id, other
+            ) VALUES (
+                %(uid)s, %(name)s, %(num)s, %(created)s, %(room_card)s, %(id)s, %(other)s
+            )
+            """
+
+        club_user_sql = """
+            INSERT INTO club_users (
+                uid, club_id, role, created
+            ) VALUES (
+                %(uid)s, %(club_id)s, %(role)s, %(created)s
+            )
+            """
+
+        for data in transformed_data:
+            try:
+                # 茶馆基础信息
+                user_id = self.new_db.execute_insert(club_sql, data['club'])
+                # 插入茶馆成员
+                club_users = data['club_user'].copy()
+                self.new_db.execute_insert(club_user_sql, club_users)
+
+                self.result.success_count += 1
+
+            except Exception as e:
+                self.result.error_count += 1
+                error_msg = f"Failed to migrate club_uid {data['club']['uid']} club_id {data['club']['id']}: {str(e)}"
+                self.result.errors.append(error_msg)
+                logger.error(error_msg)
+
+class ClubUserMigrator(BaseMigrator):
+    """俱乐部成员迁移器"""
+
+    def extract_data(self) -> List[Dict]:
+        """从旧表提取数据"""
+        sql = """
+            SELECT 
+                uid, rule, time, club_id
+            FROM club_members
+            """
+        return self.old_db.execute_query(sql)
+
+    def extract_batch(self, offset, limit):
+        """提取一批数据"""
+        sql = """
+        SELECT 
+            uid, rule, time, club_id
+        FROM club_members 
+        LIMIT %s OFFSET %s
+        """
+        return self.old_db.execute_query(sql, (limit, offset))
+
+    def transform_data(self, old_data: List[Dict]) -> List[Dict]:
+        """转换数据"""
+        transformed = []
+
+        for club in old_data:
+            role = 0
+            status = 0
+            # 源数据 3-普通成员 2-管理员  1-创建者，4-小黑屋
+            if club['rule'] == 1:
+                continue
+            if club['rule'] == 2:
+                role = 1
+            if club['rule'] == 4:
+                status = 1
+            club_user = {
+                'uid': club['uid'],
+                'role': role,
+                'club_id': club['club_id'],
+                'created': club['time'],
+                'status': status,
+            }
+
+            transformed.append({
+                'club_user': club_user,
+            })
+
+        return transformed
+
+    def load_data(self, transformed_data: List[Dict]) -> None:
+        """加载用户数据到新数据库"""
+        club_user_sql = """
+            INSERT INTO club_users (
+                uid, club_id, role, created, status
+            ) VALUES (
+                %(uid)s, %(club_id)s, %(role)s, %(created)s, %(status)s
+            )
+            """
+
+        for data in transformed_data:
+            try:
+                # 插入茶馆成员
+                club_users = data['club_user'].copy()
+                self.new_db.execute_insert(club_user_sql, club_users)
+
+                self.result.success_count += 1
+
+            except Exception as e:
+                self.result.error_count += 1
+                error_msg = f"Failed to migrate club_id {data['club_id']} uid {data['uid']} : {str(e)}"
+                self.result.errors.append(error_msg)
+                logger.error(error_msg)
 
 class MigrationOrchestrator:
     """迁移编排器"""
@@ -444,6 +690,9 @@ class MigrationOrchestrator:
         self.new_db = DatabaseManager(new_db_config)
         self.migrators: List[BaseMigrator] = []
         self.overall_result = MigrationResult()
+        self.start_time = None
+        self.end_time = None
+        self.batch_size = 3000
 
     def add_migrator(self, migrator_class) -> None:
         """添加迁移器"""
@@ -464,7 +713,8 @@ class MigrationOrchestrator:
                 logger.info(f"Running migrator: {migrator.name}")
 
                 try:
-                    result = migrator.migrate()
+                    # result = migrator.migrate()
+                    result = migrator.migrate_in_batches(self.batch_size)
                     self.overall_result.success_count += result.success_count
                     self.overall_result.error_count += result.error_count
                     self.overall_result.errors.extend(result.errors)
@@ -518,24 +768,30 @@ def main():
         host='localhost',
         port=3306,
         username='root',
-        password='password',
-        database='old_database'
+        password='1234',
+        database='old'
     )
 
     new_db_config = DatabaseConfig(
         host='localhost',
         port=3306,
         username='root',
-        password='password',
-        database='new_database'
+        password='1234',
+        database='game_server'
     )
 
     # 创建迁移编排器
     orchestrator = MigrationOrchestrator(old_db_config, new_db_config)
 
     # 添加迁移器（按依赖顺序）
+    # 1. 先迁移用户数据
     orchestrator.add_migrator(UserMigrator)
-    orchestrator.add_migrator(GameRecordMigrator)
+    # 2. 再迁移俱乐部数据
+    # orchestrator.add_migrator(ClubMigrator)
+    # 2.1. 迁移俱乐部成员数据
+    # orchestrator.add_migrator(ClubUserMigrator)
+    # 3. 迁移游戏战绩数据
+    # orchestrator.add_migrator(GameRecordMigrator)
 
     # 执行迁移
     result = orchestrator.run_migration()
@@ -551,3 +807,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
