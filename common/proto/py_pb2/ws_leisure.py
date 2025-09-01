@@ -84,7 +84,7 @@ def pack_base_room_info(obj, **kwargs):
     obj.base_room_info.base_score = room_conf.get("base_score") or 0
     obj.base_room_info.desc = room_conf.get("desc") or ""
     obj.base_room_info.level = room_conf.get("level") or 0
-
+    obj.base_room_info.level_desc = room_conf.get("level_desc") or ""
     obj.base_room_info.round_idx = kwargs.get("round_idx") or 0
 
 

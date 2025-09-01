@@ -592,7 +592,7 @@ class Room(BaseCardRoom):
 
         if self.is_exchange_three():
             return await self.start_exchange_three()
-        await self.ding_que_or_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
+        await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
     async def start_exchange_three(self):
         if not self.flow_status_is_equal(FlowStatus.T_IN_DEAL_CARDS):
@@ -979,6 +979,7 @@ class Room(BaseCardRoom):
             "seat_id": self.curr_seat_id,
             "seconds": seconds,
             "left_count": self.poker.left_count,
+            "in_flow": self.flow_status,
         }
         for p in self.seats:
             if p.seat_id == self.curr_seat_id:
@@ -1583,7 +1584,8 @@ class Room(BaseCardRoom):
                 "left_count": self.poker.left_count,
                 "seconds": TimerDelay.CHU_PAI_AFTER_WAIT_TIME,
                 "operates": operates,
-                "is_bi_hu": 1 if self.__have_men_jian_hu and ActionType.ACTION_TYPE_HU in operates else 0
+                "is_bi_hu": 1 if self.__have_men_jian_hu and ActionType.ACTION_TYPE_HU in operates else 0,
+                "in_flow": self.flow_status,
             }
             opt_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:

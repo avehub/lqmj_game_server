@@ -9,7 +9,7 @@ from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from c_services.base.base_player import BasePlayer
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType
+from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType, RoomStatus
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2, enter_room_model, set_cards_model
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
@@ -56,6 +56,8 @@ class BaseService(BaseServer, SessionManager):
         player.offline = True
         self.log_info(room.tid, player.uid, "玩家掉线")
         if room.room_type == RoomType.COMMON:
+            # if room.room_status == RoomStatus.T_RECHARGE_ING:
+            #     return
             await room.player_quit_room(player,player.uid)
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 

@@ -433,7 +433,8 @@ class RoomFCZJ(BaseLeisureRoom):
             player.lian_sheng -= 1
         else:
             player.lian_sheng = -1
-        self.__wait_recharge_seats.remove(player.seat_id)
+        if player.seat_id in self.__wait_recharge_seats:
+            self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.GIVE_UP, m)
         self.log_info(player.uid, player.seat_id, "放弃_fc")
         if self.ren_shu_count == self.max_player_count - 1:

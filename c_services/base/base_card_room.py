@@ -33,7 +33,7 @@ class BaseCardRoom(BaseRoom):
         self.__owner = room_conf.get("creator") or 0
         self.__create_time = room_conf.get("create_time") or tool_dt.cur_time()
         self.__cur_round = room_conf.get("cur_round") or 1
-        self.__timeout_idle_time = 60 * 60 * 30
+        self.__timeout_idle_time = 60 * 60 * 12
         self.__timer_dismiss = None
         self.__round_msg_records = []
         self.__winner_list = []
@@ -50,7 +50,7 @@ class BaseCardRoom(BaseRoom):
         else:
             self.__deal_cards_count = 13
 
-        DelayCall(120, self.close_room_time_out).loop_start()
+        # DelayCall(120, self.close_room_time_out).loop_start()
 
     @property
     def extra_score_map(self):
