@@ -132,7 +132,7 @@ class UserActivityProgressRC(BaseCommonRC):
 
     @classmethod
     async def get_activity_progress_once(cls, uid: int = None, act_id: int = None, status: int = None,
-                                    start_time: int = None, end_time: int = None):
+                                    start_time: int = None, end_time: int = None, deadline: int = None):
         """获取用户参与活动一次"""
         try:
             query = {}
@@ -142,6 +142,8 @@ class UserActivityProgressRC(BaseCommonRC):
                 query["act_id"] = act_id
             if status is not None:
                 query["status"] = status
+            if deadline is not None:
+                query["deadline__lte"] = deadline
             if start_time is not None:
                 query["created__gte"] = start_time
             if end_time is not None:

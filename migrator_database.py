@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, Tuple, Callable
 import pymysql
 import json
+from sshtunnel import SSHTunnelForwarder
 
 # 配置日志
 logging.basicConfig(
@@ -35,6 +36,12 @@ class DatabaseConfig:
     password: str
     database: str
     charset: str = 'utf8mb4'
+    # SSH隧道配置
+    ssh_host: str = None
+    ssh_port: int = 22
+    ssh_username: str = None
+    ssh_private_key_path: str = None  # SSH私钥路径
+    ssh_private_key_password: str = None  # 私钥密码（如果有）
 
 
 @dataclass
@@ -55,19 +62,37 @@ class DatabaseManager:
     def __init__(self, config: DatabaseConfig):
         self.config = config
         self.connection = None
+        self.ssh_tunnel = None
 
     def connect(self):
         """建立数据库连接"""
+        ssl_config = None
+        # 如果配置了SSH，则建立SSH隧道
+        if hasattr(self.config, 'ssh_host'):
+            self.ssh_tunnel = SSHTunnelForwarder(
+                (self.config.ssh_host, self.config.ssh_port or 22),
+                ssh_username=self.config.ssh_username,
+                ssh_pkey=self.config.ssh_private_key_path,
+                ssh_private_key_password=self.config.ssh_private_key_password,
+                remote_bind_address=(self.config.host, self.config.port or 3306)
+            )
+            self.ssh_tunnel.start()
+            # 更新连接信息，连接到本地隧道端口
+            db_host = '127.0.0.1'
+            db_port = self.ssh_tunnel.local_bind_port
+        else:
+            db_host = self.config.host
+            db_port = self.config.port
         try:
             self.connection = pymysql.connect(
-                host=self.config.host,
-                port=self.config.port,
+                host=db_host,
+                port=db_port,
                 user=self.config.username,
                 password=self.config.password,
                 database=self.config.database,
                 charset=self.config.charset,
                 cursorclass=pymysql.cursors.DictCursor,
-                autocommit=False
+                autocommit=False,
             )
             logger.info(f"Connected to database: {self.config.database}")
         except Exception as e:
@@ -78,7 +103,13 @@ class DatabaseManager:
         """关闭数据库连接"""
         if self.connection:
             self.connection.close()
+            self.connection = None
             logger.info("Database connection closed")
+
+        if self.ssh_tunnel:
+            self.ssh_tunnel.stop()
+            self.ssh_tunnel = None
+            logger.info("SSH tunnel closed")
 
     def execute_query(self, sql: str, params: tuple = None) -> List[Dict]:
         """执行查询"""
@@ -769,7 +800,11 @@ def main():
         port=3306,
         username='root',
         password='1234',
-        database='old'
+        database='old',
+        ssh_host='47.98.42.167',  # SSH服务器地址
+        ssh_port=22222,  # SSH端口，默认22
+        ssh_username='root',  # SSH用户名
+        ssh_private_key_path='./alichild.pem',  # SSH私钥路径
     )
 
     new_db_config = DatabaseConfig(
