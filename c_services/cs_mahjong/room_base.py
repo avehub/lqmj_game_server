@@ -3259,7 +3259,7 @@ class Room(BaseCardRoom):
                 if ji in self.__default_ji:
                     # 金鸡 x2
                     bei_lv = 1
-                    if ji in fan_bird_list:
+                    if ji in self.__fan_jin_ji_cards:
                         bei_lv = 2
                         pg_ji_count = pg_ji_card_count.get(ji, 0)  # 碰杠鸡
                         if pg_ji_count > 0:

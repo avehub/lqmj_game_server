@@ -368,8 +368,7 @@ class BaseLeisureRoom(BaseRoom):
         if sta:
             amount_value = data[0]["content"]["rewards"][0]["amount"]
 
-            ori_gold = self.record_ori_gold.get(player.seat_id) or 0
-            gold = amount_value + ori_gold
+            gold = amount_value
             self.log_info(player.uid, "机器人复活", data[0]["name"], gold)
             if not player.is_robot:
                 await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
