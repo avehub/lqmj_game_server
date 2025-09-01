@@ -325,7 +325,7 @@ class SignIn(Base):
         await self.give_awards(uid, awards["award_id"], act_id, reason=ReasonCostGold.RAFFLE_LUCK)
         # 累计签到检查并发放奖励
         if award_type == AwardType.SIGN_IN_RF:
-            sta, current_value = await self.sign_progress(pay_type, uid, act_id)
+            sta, current_value = await self.sign_progress(uid, act_id)
             _, condition_awards = await self.atc_awards(condition_awards=activity["condition_awards"])
             await self.gain_condition_awards(condition_awards, uid, act_id, current_value)
         # 更新记录
@@ -400,19 +400,14 @@ class SignIn(Base):
                 break
         return sta
 
-    async def sign_progress(self, pay_type: int, uid: int, act_id: int):
+    async def sign_progress(self, uid: int, act_id: int):
         """签到进度更新"""
         # 只有每日免费签到才可更新进度
         _, end_date = await CommonApi.get_time_range("month")
-        sta, progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id)
+        sta, progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id, deadline=end_date)
         current_value = 1
         if sta and progress:
             current_value += progress.get("current_value", 0)
-        sta, progress = await UserActivityProgressRC.get_activity_progress_once(
-            uid=uid,
-            act_id=act_id,
-        )
-        if sta and progress:
             await UserActivityProgressRC.up_progress(
                 up_data={
                     "progress_id": progress["progress_id"],
