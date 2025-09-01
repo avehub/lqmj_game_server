@@ -16,7 +16,7 @@ from c_services.cs_mahjong.const import PlayType
 class User(DBModel):
     """用户总表"""
     uid = fields.IntField(max_length=28, pk=True, default=500000, description='玩家ID')
-    name = fields.CharField(max_length=20, null=True, default='', description='玩家昵称')
+    name = fields.CharField(max_length=32, null=True, default='', description='玩家昵称')
     avatar = fields.CharField(max_length=256, null=True, default='', description='头像地址')
     sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
     phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
@@ -32,7 +32,7 @@ class User(DBModel):
     yellow_diamond = fields.IntField(max_digits=20, null=True, default=0, description="黄钻")
     vip = fields.SmallIntField(max_length=2, default=0, null=True, description="VIP等级")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True, description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
-    dev_ident = fields.CharField(max_length=18, null=True, default='', description='设备标识')
+    dev_ident = fields.CharField(max_length=32, null=True, default='', description='设备标识')
     safe_key = fields.CharField(max_length=18, null=True, default='', description='安全密钥')
     valid_key = fields.CharField(max_length=16, null=True, default='', description='验证密钥')
     tst_mark = fields.BooleanField(null=True, default=False, description='测试号标记')
