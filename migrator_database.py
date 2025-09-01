@@ -10,9 +10,10 @@ import time
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Callable
 import pymysql
-import json
+import paramiko
 from sshtunnel import SSHTunnelForwarder
 
 # 配置日志
@@ -799,8 +800,8 @@ def main():
         host='localhost',
         port=3306,
         username='root',
-        password='1234',
-        database='old',
+        password='',
+        database='hjmj_db',
         ssh_host='47.98.42.167',  # SSH服务器地址
         ssh_port=22222,  # SSH端口，默认22
         ssh_username='root',  # SSH用户名

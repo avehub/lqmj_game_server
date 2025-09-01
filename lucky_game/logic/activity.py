@@ -6,6 +6,10 @@ import traceback
 from typing import Union, Tuple
 
 from nsanic.libs import tool_dt
+
+from c_services.const.cs_enum_const import CmdRoom
+from common.public.conf import C_SERVICE_SECRET_KEY
+from common.public.enum_const import ServiceEnum
 from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus, GoodsSku
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
@@ -711,6 +715,17 @@ class FirstCharge(Base):
                                    GoodsSku.SKU_REVIVE_4]:
             # 复仇
             act_type = ActivityType.REVIVE_GIFT
+            # 通知游戏复活成功
+            data = {
+                "secret": C_SERVICE_SECRET_KEY,
+                "uid": order_info["uid"],
+            }
+            await self.cs2cs_by_rmq(
+                ServiceEnum.C_MAHJONG_FC,
+                CmdRoom.RECHARGE,
+                data,
+                order_info["uid"],
+            )
         elif order_info["sku"] in [GoodsSku.SKU_RETURN_1, GoodsSku.SKU_RETURN_2, GoodsSku.SKU_RETURN_3,
                                    GoodsSku.SKU_RETURN_4]:
             # 返还
@@ -721,6 +736,10 @@ class FirstCharge(Base):
                                                           UserActivityProgressRC.STATUS_FINISH)
 
         return sta, msg, result
+
+    async def cs2cs_by_rmq(self, cs_enum, NEW_MATCH, data, creator):
+        pass
+
 
 class ReturnGift(Base):
     """ 返还礼包 """

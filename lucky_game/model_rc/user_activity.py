@@ -143,7 +143,7 @@ class UserActivityProgressRC(BaseCommonRC):
             if status is not None:
                 query["status"] = status
             if deadline is not None:
-                query["deadline__lte"] = deadline
+                query["deadline"] = deadline
             if start_time is not None:
                 query["created__gte"] = start_time
             if end_time is not None:

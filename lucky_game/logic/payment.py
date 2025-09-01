@@ -494,7 +494,8 @@ class PaymentLogic:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
-                await FirstCharge().charge_order(order_info)
+                if order_status == OrderStatus.PAID:
+                    await FirstCharge().charge_order(order_info)
 
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
