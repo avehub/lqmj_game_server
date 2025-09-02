@@ -2519,6 +2519,7 @@ class Room(BaseCardRoom):
                 if p.seat_id == self.dealer_id and p.tian_ting != 1:
                     p.sort_cards()
                     p.mo_pai = p.cards[-1]
+                    self.__curr_card =  p.mo_pai
                     self.log_info(self.tid, "换牌后庄改变摸的牌", p.uid, p.cards[-1])
 
                 result["hand_cards"] = p.cards
@@ -2977,7 +2978,7 @@ class Room(BaseCardRoom):
         await self.inner_broadcast(CmdRoom.ROUND_START, data_model)
         self.log_info(self.tid, "round_start", self.__shang_ga, self.__default_ji)
         if self.__shang_ga:
-            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else await self.call_flow(1.5,self.start_player_shang_ga)
+            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else self.call_flow(1.5,self.start_player_shang_ga)
         else:
             self.call_flow(2, self.deal_cards)
 

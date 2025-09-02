@@ -487,6 +487,7 @@ class BaseLeisureRoom(BaseRoom):
 
     async def player_recharge(self, player):
         """ 玩家充值回调 """
+        self.log_info("收到玩家复活",player.uid,player.seat_id)
         if player.seat_id != self.curr_seat_id:
             return
         await self.service.init_player(player)
