@@ -2,7 +2,7 @@ from collections import Counter
 from copy import deepcopy
 from datetime import datetime
 
-from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model
+from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model, player_position_model
 from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, \
     S2CShangGaMahjong, S2CShangGaBeginMahjong, S2CDealCardsMahjong, s2c_one_of_model, S2CPublicOperatesMahjong, S2CTurnToMahjong, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
@@ -4420,10 +4420,20 @@ class Room(BaseCardRoom):
         return result
 
     async def notify_distance(self):
-
-        data = {"distances": self.get_all_distances()}
+        distances = self.get_all_distances()
+        self.log_info("下发定位信息",distances)
+        data = {"distances": distances}
         data_model = S2CNotifyPosition.pb_model(**data)
         await self.inner_broadcast(CmdRoom.NOTIFY_POSITION, data_model)
+
+    async def set_player_position(self, player: Player,data):
+
+        player_position_model.ParseFromString(data)
+        x = player_position_model.x or 0
+        y = player_position_model.y or 0
+        player.set_position(x,y)
+
+        await self.notify_distance()
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss)

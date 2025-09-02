@@ -25,6 +25,7 @@ class MahjongServer(BaseCardService):
             CmdRoom.PLAYER_EXCHANGE_CARDS.val: self.__on_player_exchange_cards,
             CmdRoom.PLAY_CARDS.val: self.__on_player_chu_pai,
             CmdRoom.PLAYER_TIAN_TING.val: self.__on_player_tian_ting,
+            CmdRoom.NOTIFY_POSITION.val: self.__notify_position,
         })
 
     async def __on_player_pass(self, player, room, _):
@@ -99,3 +100,7 @@ class MahjongServer(BaseCardService):
             await room.check_tian_ting_end()
         else:
             await room.check_action_end()
+
+    async def __notify_position(self, player, room, data):
+        self.log_info("收到定位信息",player.uid)
+        await room.set_player_position(player,data)
