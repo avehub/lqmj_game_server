@@ -48,7 +48,6 @@ class BaseLogin(GameAuthApi):
         """ 更新玩家表登录数据 """
         updated = {'valid_key': self.rng.mk_str(16), 'ip': self.ori_ip(req)}
         u_info = await BaseUserRC.update_info(u_info, updated)
-
         login_info.update({'uid': u_info.get('uid')})
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
         return u_info

@@ -98,7 +98,7 @@ class UserActivityProgressRC(BaseCommonRC):
                 query["status"] = status
             if progress_id is not None:
                 query["progress_id"] = progress_id
-            valid_fields = {"current_value", "deadline", "status", "time_node"}
+            valid_fields = {"current_value", "deadline", "status", "time_node", "join_time", "created"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)
