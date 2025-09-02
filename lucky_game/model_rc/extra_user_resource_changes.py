@@ -54,19 +54,21 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     async def create_change_record(cls, uid: int, operation: str, currency: int, num: [int, decimal.Decimal], explain: str = "", reason: int = None):
         """创建资源变动记录"""
         try:
-            record_data = {
-                "uid": uid,
-                "status": cls.OPERATION_MAP.get(operation),
-                "currency": currency,
-                "num": abs(num),
-                "explain": explain,
-                "reason": reason if reason else 0,
-            }
-            new_record = await cls.db_model.add_one(record_data)
-            cls.conf.log.info(f"创建资源变动记录{new_record}")
-            return new_record, "成功"
+            if num > 0:
+                record_data = {
+                    "uid": uid,
+                    "status": cls.OPERATION_MAP.get(operation),
+                    "currency": currency,
+                    "num": abs(num),
+                    "explain": explain,
+                    "reason": reason if reason else 0,
+                }
+                new_record = await cls.db_model.add_one(record_data)
+                cls.conf.log.info(f"创建资源变动记录{new_record}")
+                return new_record, "成功"
         except OperationalError as e:
             return None, f"记录创建失败: {str(e)}"
+        return {}, "成功"
 
     @classmethod
     async def bulk_register_change_record(cls, uid: int, gifts: dict, register_type: int = 0, explain: str = "注册奖励"):
@@ -108,6 +110,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     @classmethod
     async def change_user_resource(cls, uid: int, change_field: str, change_value: [int, decimal.Decimal], operation: str = 'add', explain: str = "", reason: int = None):
         """用户资源变更"""
+        if change_value <= 0:
+            return False, "无效的资源数量"
         if change_field not in cls.CURRENCY_MAP.values():
             return False, "无效的资源类型"
         try:
@@ -116,7 +120,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 if not u_sta:
                     return False, "资源变更失败"
                 currency = next((k for k, v in cls.CURRENCY_MAP.items() if v == change_field), 0)
-                if reason is None:
+                if not explain and reason is not None:
                     reason_enum = ReasonCostGold.find_member_by_val(reason)
                     explain = reason_enum.phrase
                 c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)

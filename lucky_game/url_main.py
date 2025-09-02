@@ -35,7 +35,7 @@ from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainAct
 ActivityReturnGold
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
-from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom
+from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, RoomDetail
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
@@ -51,6 +51,7 @@ from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandle
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
+from lucky_game.interface.tools import GetWeChatShareData
 
 
 
@@ -64,6 +65,8 @@ class MainBp(BaseBlue):
         Urls("/FileDelete", FileDeleteHandler),
         # 配置相关
         Urls("/QueryConf/", GetConf),
+        # 工具类接口
+        Urls("/GetWeChatShareData/", GetWeChatShareData),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -105,6 +108,7 @@ class MainBp(BaseBlue):
         Urls("/ClubDismiss/", ClubDismiss),  # 解散茶馆
         Urls("/ClubRoomCard/", ClubRoomCard),  # 茶馆基金
         Urls("/ClubRoomCardList/", ClubRoomCardList),  # 茶馆基金记录列表
+        Urls("/RoomDetail/", RoomDetail),  # 茶馆基金记录列表
 
         # 用户数据相关
         Urls("/ModifyGeneralUserInfo/", UpdateUserInfo),  # 更新用户必要信息
