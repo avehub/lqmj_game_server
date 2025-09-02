@@ -251,3 +251,12 @@ class DismissRoom(GameRoomAPI):
         return self.answer(data={"failed_ids": failed_ids})
 
 
+class RoomDetail(GameRoomAPI):
+    """房间详情"""
+    async def get(self, req: Request, **kwargs):
+        room_id = self.check_int(req.args.get("room_id"), require=True, p_name="房间ID")
+        room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
+        if not room_data:
+            return self.answer(StaCode.FAIL, hint=e)
+        return self.answer(data=room_data)
+

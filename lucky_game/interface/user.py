@@ -1,3 +1,4 @@
+from nsanic.libs.tool import json_parse
 from sanic import Request
 from common.utils import tool_certification
 from lucky_game.base_api import GameAuthApi
@@ -113,7 +114,7 @@ class FetchRedDotsByOpportunity(GameAuthApi):
         rd_enum = self.check_int(req.args.get("rd_enum"), require=True, p_name="rd_enum")
         # 1.批量获取红点（前端确定WS已经建立连接之后调用）
         # 该列表只能客户端在某些时机调用
-        rd_type_list = rd_enum or RED_DOTS_OPPORTUNITY_MAP.get(rd_enum)
+        rd_type_list = RED_DOTS_OPPORTUNITY_MAP.get(rd_enum)
         if not rd_type_list:
             self.answer(hint="ok")
 

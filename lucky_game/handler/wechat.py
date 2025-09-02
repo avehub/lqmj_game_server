@@ -14,7 +14,8 @@ from nsanic.libs.mult_log import NLogger
 class WeChat(LogMeta):
     """ 微信相关 """
     conf: ConfSrv = conf_srv
-    WECHAT_ACCESS_TOKEN = "wechat_access_token"  # access_token
+    WECHAT_ACCESS_TOKEN = "wechat_access_token"  # 小程序access_token
+    WECHAT_ACCESS_TOKEN_GZH = "wechat_access_token_gzh"  # 公众号access_token
     WECHAT_COIN_RATE = 100  # 价格（人名币） * 游戏币兑换比例 = 游戏币扣除数量 1:100
 
     @classmethod
@@ -76,37 +77,30 @@ class WeChat(LogMeta):
         return cls.__return_req_data(req_data)
 
     @classmethod
-    async def __return_access_token(cls, result):
+    async def __return_access_token(cls, result, app_id):
         result = json_parse(result)
         errcode = result.get("errcode") or 0
         if errcode != 0:
             return errcode, result.get("errmsg")
         access_token = result.get("access_token")
         expires_in = (result.get("expires_in") or 7200) - 5
-        await cls.conf.rds.set_item(cls.WECHAT_ACCESS_TOKEN, access_token, ex_time=expires_in)
+        await cls.conf.rds.set_item(await cls.__session_key(app_id), access_token, ex_time=expires_in)
         return 0, access_token
 
     @classmethod
-    async def wechat_get_access_token(cls):
-        """ 获取小程序access_token getAccessToken """
-        cache_at = await cls.conf.rds.get_item(cls.WECHAT_ACCESS_TOKEN)
-        if cache_at:
-            return 0, cache_at.decode()
+    async def __session_key(cls, app_id):
+        """ 获取session_key """
+        if app_id == WeChatConf.WE_CHAT_MG_APP_ID:
+            return cls.WECHAT_ACCESS_TOKEN
+        else:
+            return cls.WECHAT_ACCESS_TOKEN_GZH
 
-        app_id = WeChatConf.WE_CHAT_MG_APP_ID
-        app_secret = WeChatConf.WE_CHAT_MG_APP_SECRET
-
-        # 获取接口调用凭证（access_token）
-        url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={0}&secret={1}"
-        url = url.format(app_id, app_secret)
-        req_data = await http_get(url)
-        return await cls.__return_access_token(req_data)
 
     @classmethod
     async def wechat_get_access_token_stable(cls, app_id=WeChatConf.WE_CHAT_MG_APP_ID,
                                              app_secret=WeChatConf.WE_CHAT_MG_APP_SECRET):
-        """ 获取小程序access_token（稳定版） getStableAccessToken """
-        cache_at = await cls.conf.rds.get_item(cls.WECHAT_ACCESS_TOKEN)
+        """ 获取微信access_token（稳定版） getStableAccessToken """
+        cache_at = await cls.conf.rds.get_item(await cls.__session_key(app_id))
         if cache_at:
             return 0, cache_at.decode()
 
@@ -117,7 +111,7 @@ class WeChat(LogMeta):
             "secret": app_secret
         }
         req_data = await http_post(url, param=params)
-        return await cls.__return_access_token(req_data)
+        return await cls.__return_access_token(req_data, app_id)
 
     @classmethod
     async def __request_by_sign(cls, uid, url, path, params, access_token):

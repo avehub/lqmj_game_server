@@ -145,7 +145,7 @@ class WorkersServer(JsonBaseServer):
             self.red_dot_log(uid, f"玩家{uid}ws未连上，无法获取红点")
             return
         rd_type_list = data.get("rd_type_list") or RedDotType.all_values()
-        self.red_dot_log(uid, "批量获取红点>>>", rd_type_list)
+        self.log_info(uid, "批量获取红点>>>", rd_type_list)
         get_red_dots = self.__get_red_dot_tasks(uid, rd_type_list)
         get_red_dots and await asyncio.gather(*get_red_dots)
 
@@ -265,11 +265,11 @@ class WorkersServer(JsonBaseServer):
         conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
         if u_info.get("gold", 0) < conf_data.get("min_gold"):
             act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.INFINITE_PLAY)
-            sta, msg, progress = await Base().act_progress(uid, act.get("act_id", 0), ActivityType.INFINITE_PLAY)
+            sta, msg, progress, _ = await Base().act_progress(act, u_info)
             num = 0
             if sta and progress:
                 num = act.get("join_limit_day") - progress.get("today_total", 0)
-            self.red_dot_log(uid, "救济红点查询", progress)
+            self.red_dot_log(uid, "救济红点查询", num > 0)
             if num > 0:
                 await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
 
