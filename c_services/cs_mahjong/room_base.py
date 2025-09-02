@@ -2621,7 +2621,8 @@ class Room(BaseCardRoom):
             "left_count": self.poker.left_count,
         }
         for p in self.seats:
-
+            if self.curr_seat_id == p.seat_id:
+                self.__curr_card = p.mo_pai
             if self.__four_card_bao_ting and p.cards_len < 13:
                 continue
             data["operates"] = self.get_tian_ting_operates(p)
