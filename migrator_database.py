@@ -74,12 +74,12 @@ class DatabaseManager:
                 (self.config.ssh_host, self.config.ssh_port or 22),
                 ssh_username=self.config.ssh_username,
                 ssh_pkey=self.config.ssh_private_key_path,
-                ssh_private_key_password=self.config.ssh_private_key_password,
+                # ssh_private_key_password=self.config.ssh_private_key_password,
                 remote_bind_address=(self.config.host, self.config.port or 3306)
             )
             self.ssh_tunnel.start()
             # 更新连接信息，连接到本地隧道端口
-            db_host = '127.0.0.1'
+            db_host = self.config.host
             db_port = self.ssh_tunnel.local_bind_port
         else:
             db_host = self.config.host
@@ -797,15 +797,15 @@ def main():
     """主函数示例"""
     # 数据库配置
     old_db_config = DatabaseConfig(
-        host='localhost',
+        host='rm-bp1x90i6i270j3723.mysql.rds.aliyuncs.com',
         port=3306,
-        username='root',
-        password='',
+        username='lqddzadmin',
+        password='leqi#@!51112346',
         database='hjmj_db',
-        ssh_host='47.98.42.167',  # SSH服务器地址
-        ssh_port=22222,  # SSH端口，默认22
-        ssh_username='root',  # SSH用户名
-        ssh_private_key_path='./alichild.pem',  # SSH私钥路径
+        # ssh_host='47.98.42.167',  # SSH服务器地址
+        # ssh_port=22222,  # SSH端口，默认22
+        # ssh_username='root',  # SSH用户名
+        # ssh_private_key_path='./alichild.pem',  # SSH私钥路径
     )
 
     new_db_config = DatabaseConfig(

@@ -3,6 +3,7 @@ import decimal
 import random
 import ast
 import traceback
+from datetime import datetime
 from typing import Union, Tuple
 
 from nsanic.libs import tool_dt
@@ -15,6 +16,7 @@ from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.base_award import AwardRC
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.user_activity import LogUserActivityRC, UserActivityProgressRC, AwardGainsRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from nsanic.libs.mult_log import NLogger
@@ -407,25 +409,38 @@ class SignIn(Base):
     async def sign_progress(self, uid: int, act_id: int):
         """签到进度更新"""
         # 只有每日免费签到才可更新进度
-        _, end_date = await CommonApi.get_time_range("month")
-        sta, progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id, deadline=end_date)
+        start_date, end_date = await CommonApi.get_time_range("month")
+        sta, progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id)
+        NLogger.info(f"更新累计签到进度前 查询当前进度：uid {uid} act_id {act_id} progres_sta {sta} progress {progress}")
         current_value = 1
+        now = datetime.now().timestamp()
         if sta and progress:
-            current_value += progress.get("current_value", 0)
-            await UserActivityProgressRC.up_progress(
-                up_data={
-                    "progress_id": progress["progress_id"],
-                    "current_value": current_value,
-                },
-                progress_id=progress["progress_id"],
-            )
+            if progress["deadline"] != end_date:
+                await UserActivityProgressRC.up_progress(
+                    up_data={
+                        "current_value": current_value,
+                        "deadline": end_date,
+                        "join_time": now,
+                        "created": now,
+                    },
+                    progress_id=progress["progress_id"],
+                )
+            else:
+                current_value += progress.get("current_value", 0)
+                await UserActivityProgressRC.up_progress(
+                    up_data={
+                        "current_value": current_value,
+                    },
+                    progress_id=progress["progress_id"],
+                )
         else:
             await UserActivityProgressRC.add_progress(
                 uid=uid,
                 act_id=act_id,
                 current_value=current_value,
                 deadline=end_date,
-                status=ActivitySta.ACT_COMPLETED
+                status=ActivitySta.ACT_COMPLETED,
+                time_node=now,
             )
 
         return True, current_value
@@ -713,7 +728,7 @@ class FirstCharge(Base):
             act_type = ActivityType.REPLENISH_GIFT
         elif order_info["sku"] in [GoodsSku.SKU_REVIVE_1, GoodsSku.SKU_REVIVE_2, GoodsSku.SKU_REVIVE_3,
                                    GoodsSku.SKU_REVIVE_4]:
-            # 复仇
+            # 复活
             act_type = ActivityType.REVIVE_GIFT
             # 通知游戏复活成功
             data = {
@@ -726,6 +741,12 @@ class FirstCharge(Base):
                 data,
                 order_info["uid"],
             )
+            # 复活礼包直接领取奖励
+            from lucky_game.logic.payment import PaymentLogic
+            good = await GoodRC.get_good_info(order_info["sku"])
+            u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
+            sta, msg = await PaymentLogic().pay_after(u_info, good, order_info["order_no"])
+            NLogger.info(f"复活礼包领取奖励结果：{sta}--{msg}")
         elif order_info["sku"] in [GoodsSku.SKU_RETURN_1, GoodsSku.SKU_RETURN_2, GoodsSku.SKU_RETURN_3,
                                    GoodsSku.SKU_RETURN_4]:
             # 返还
