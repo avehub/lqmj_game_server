@@ -1779,9 +1779,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def player_recharge_ing(self, player):
         """ 充值中回调 """
+        self.log_info(player.uid, player.seat_id, "玩家选择复活，复活中。。。")
         if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
-            return
-        if player.seat_id != self.curr_seat_id:
             return
         if player.is_robot:
             return
