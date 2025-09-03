@@ -298,6 +298,7 @@ class Room(BaseCardRoom):
                 data.pop("operates", None)
             else:
                 self.is_bi_hu(data)
+        print("玩家信息",room_player_info)
         return S2CPlayerInfo05Mahjong.pb_model(room_player_info)
 
     def get_operate_seats(self):
@@ -4431,6 +4432,9 @@ class Room(BaseCardRoom):
         player_position_model.ParseFromString(data)
         x = player_position_model.x or 0
         y = player_position_model.y or 0
+        if x == 0 and y ==0:
+            x = None
+            y = None
         player.set_position(x,y)
 
         await self.notify_distance()
@@ -4451,7 +4455,6 @@ class Room(BaseCardRoom):
                     await self.liu_ju()
                     return
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                print("直接解散 不记录战绩")
                 return await super(BaseCardRoom, self).game_over()
             self.set_room_status(self.not_playing_room_status)
             return await self.game_over()

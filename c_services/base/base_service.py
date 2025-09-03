@@ -139,12 +139,11 @@ class BaseService(BaseServer, SessionManager):
         if player.trustee:
             await room.do_trustee(player)
 
-        self.log_info(player.uid, "enter_room", player.tid, id(player),"最大人数",room.max_player_count)
-
         # 同步房间、玩家信息
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
         reenter = enter_room_model.reenter or False
+        self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
