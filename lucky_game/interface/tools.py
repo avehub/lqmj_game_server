@@ -3,7 +3,7 @@
 """
 import hashlib
 import os
-import time
+from datetime import datetime
 from urllib import parse
 from urllib.parse import urlparse, urlunparse
 
@@ -32,19 +32,19 @@ class GetWeChatShareData(SpecialApi):
         share_url = urlunparse(url_parts)
         if not share_url:
             return self.answer(StaCode.FAIL, hint="分享地址错误")
-        # if url_host not in get_by_key('share_check_urls') and url_host[0:12] != '192.168.111.':
-        #     return self.answer(StaCode.FAIL, hint="分享地址错误")
         num, jsapi_ticket = await WeChat.wechat_get_access_token_stable(WeChatConf.WE_CHAT_GZH_APP_ID, WeChatConf.WE_CHAT_GZH_APP_SECRET)
         if not jsapi_ticket:
             return self.answer(StaCode.FAIL, hint="获取微信access_token失败")
         params = {
             'jsapi_ticket': jsapi_ticket,
             'noncestr': generate_random_string(16),
-            'timestamp':  time.time() * 1000,
+            'timestamp':  datetime.now().timestamp(),
             'url': share_url
         }
         tmp_str = '&'.join([f"{k}={params[k]}" for k in sorted(params.keys())])
+        self.log_info("生成签名参数", tmp_str)
         sign_str = hashlib.sha1(tmp_str.encode('utf-8')).hexdigest()
+        self.log_info("生成签名结果", sign_str)
         js_data = await read_file(os.getcwd() + "/resource/default/wxjs_sdk.js", "utf-8")
         if not js_data:
             return self.answer(StaCode.FAIL, hint="配置文件不存在")
