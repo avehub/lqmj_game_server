@@ -32,13 +32,17 @@ class GetWeChatShareData(SpecialApi):
         share_url = urlunparse(url_parts)
         if not share_url:
             return self.answer(StaCode.FAIL, hint="分享地址错误")
-        num, jsapi_ticket = await WeChat.wechat_get_access_token_stable(WeChatConf.WE_CHAT_GZH_APP_ID, WeChatConf.WE_CHAT_GZH_APP_SECRET)
-        if not jsapi_ticket:
+        access_token_status, access_token = await WeChat.wechat_get_access_token_stable(WeChatConf.WE_CHAT_GZH_APP_ID,
+                                                                                        WeChatConf.WE_CHAT_GZH_APP_SECRET)
+        if access_token_status != 0 or not access_token:
             return self.answer(StaCode.FAIL, hint="获取微信access_token失败")
+        ticket_status, jsapi_ticket = await WeChat.wechat_get_ticket(access_token)
+        if ticket_status != 0 or not jsapi_ticket:
+            return self.answer(StaCode.FAIL, hint="获取微信jsapi_ticket失败")
         params = {
             'jsapi_ticket': jsapi_ticket,
             'noncestr': generate_random_string(16),
-            'timestamp':  datetime.now().timestamp(),
+            'timestamp':  int(datetime.now().timestamp()),
             'url': share_url
         }
         tmp_str = '&'.join([f"{k}={params[k]}" for k in sorted(params.keys())])

@@ -413,7 +413,7 @@ class SignIn(Base):
         sta, progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id)
         NLogger.info(f"更新累计签到进度前 查询当前进度：uid {uid} act_id {act_id} progres_sta {sta} progress {progress}")
         current_value = 1
-        now = datetime.now().timestamp()
+        now = int(datetime.now().timestamp())
         if sta and progress:
             if progress["deadline"] != end_date:
                 await UserActivityProgressRC.up_progress(
