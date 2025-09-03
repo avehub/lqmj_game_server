@@ -16,6 +16,7 @@ class WeChat(LogMeta):
     conf: ConfSrv = conf_srv
     WECHAT_ACCESS_TOKEN = "wechat_access_token"  # 小程序access_token
     WECHAT_ACCESS_TOKEN_GZH = "wechat_access_token_gzh"  # 公众号access_token
+    WECHAT_TICKET = "wechat_ticket"  # jsapi_ticket
     WECHAT_COIN_RATE = 100  # 价格（人名币） * 游戏币兑换比例 = 游戏币扣除数量 1:100
 
     @classmethod
@@ -88,6 +89,17 @@ class WeChat(LogMeta):
         return 0, access_token
 
     @classmethod
+    async def __return_ticket(cls, result):
+        result = json_parse(result)
+        errcode = result.get("errcode") or 0
+        if errcode != 0:
+            return errcode, result.get("errmsg")
+        ticket = result.get("ticket")
+        expires_in = (result.get("expires_in") or 7200) - 5
+        await cls.conf.rds.set_item(cls.WECHAT_TICKET, ticket, ex_time=expires_in)
+        return 0, ticket
+
+    @classmethod
     async def __session_key(cls, app_id):
         """ 获取session_key """
         if app_id == WeChatConf.WE_CHAT_MG_APP_ID:
@@ -112,6 +124,17 @@ class WeChat(LogMeta):
         }
         req_data = await http_post(url, param=params)
         return await cls.__return_access_token(req_data, app_id)
+
+    @classmethod
+    async def wechat_get_ticket(cls, access_token):
+        """ 获得jsapi_ticket """
+        cache_at = await cls.conf.rds.get_item(cls.WECHAT_TICKET)
+        if cache_at:
+            return 0, cache_at.decode()
+
+        url = f"https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token={access_token}&type=jsapi"
+        req_data = await http_get(url)
+        return cls.__return_ticket(req_data)
 
     @classmethod
     async def __request_by_sign(cls, uid, url, path, params, access_token):
