@@ -7,10 +7,11 @@ from datetime import datetime
 from typing import Union, Tuple
 
 from nsanic.libs import tool_dt
+from tortoise.transactions import in_transaction
 
 from c_services.const.cs_enum_const import CmdRoom
 from common.public.conf import C_SERVICE_SECRET_KEY
-from common.public.enum_const import ServiceEnum
+from common.public.enum_const import ServiceEnum, DbKey
 from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus, GoodsSku
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
@@ -85,16 +86,7 @@ class Base:
     async def act_gain(self, activity: dict, uid: int, award_id: int):
         """ 领取活动奖励 """
         act_id = activity.get("act_id")
-        sta, award_gain = await AwardGainsRC.get_award_gains(uid=uid, act_id=act_id, type_id=award_id, status=0)
-        NLogger.info(f"领取活动奖励：award_gain={award_gain}")
-        if not sta or not award_gain:
-            return False, "暂无可领取奖励"
-        gain_id = [item["id"] for item in award_gain]
-        NLogger.info(f"领取活动奖励：gain_id={gain_id}")
-        sta, e = await AwardGainsRC.up_gains(
-            up_data={"status": 99},
-            gain_id=gain_id
-        )
+        sta, e = await self.give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_GIFT)
         return sta, e
 
     async def act_by_awards(self, uid: int, activity: dict):
@@ -177,31 +169,32 @@ class Base:
         """ 领取奖励 """
         sta, await_gain = await AwardGainsRC.get_award_gains(uid=uid, act_id=act_id, type_id=award_id, status=0)
         if not sta:
-            return False, "奖励已领取"
-        gain_sta, e = await AwardGainsRC.up_gains(
-            up_data={"status": 99},
-            uid=uid,
-            act_id=act_id,
-            type_id=award_id,
-            status=0,
-        )
-        if gain_sta:
-            NLogger.info(f"自动领取奖励：await_gain={await_gain}")
-            for award in await_gain:
-                remark = award.get("remark")
-                NLogger.info(f"自动领取奖励：award={remark}")
-                if remark:
+            return False, "暂无可领取奖励"
+        async with in_transaction(connection_name=DbKey.DEFAULT):
+            gain_sta, e = await AwardGainsRC.up_gains(
+                up_data={"status": 99},
+                uid=uid,
+                act_id=act_id,
+                type_id=award_id,
+                status=0,
+            )
+            if gain_sta:
+                NLogger.info(f"自动领取奖励：await_gain={await_gain}")
+                for award in await_gain:
+                    remark = award.get("remark")
+                    NLogger.info(f"自动领取奖励：award={remark}")
+                    if remark:
 
-                    NLogger.info(f"自动领取奖励remark转化前：remark={type(remark)} {remark}")
-                    remark = ast.literal_eval(remark)
-                    NLogger.info(f"自动领取奖励remark转化后：remark={type(remark)} {remark}")
-                    reward_type = remark.get("type")
-                    reward_amount = remark.get("amount")
-                    if reason is None:
-                        reason = ReasonCostGold.ACTIVITY_GIFT
-                    sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
-                                                                                   reason=reason)
-                    NLogger.info(f"领取奖励：sta={sta}, e={e}")
+                        NLogger.info(f"自动领取奖励remark转化前：remark={type(remark)} {remark}")
+                        remark = ast.literal_eval(remark)
+                        NLogger.info(f"自动领取奖励remark转化后：remark={type(remark)} {remark}")
+                        reward_type = remark.get("type")
+                        reward_amount = remark.get("amount")
+                        if reason is None:
+                            reason = ReasonCostGold.ACTIVITY_GIFT
+                        sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
+                                                                                       reason=reason)
+                        NLogger.info(f"领取奖励：sta={sta}, e={e}")
         return sta, e
 
     async def act_progress(self, ac: dict, u_info: dict):

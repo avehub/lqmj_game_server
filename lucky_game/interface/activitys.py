@@ -17,7 +17,8 @@ from lucky_game.model_rc.base_award import AwardRC
 # from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import ActivityType, ActivitySta, ConditionType, AwardType, ActivityStatus, PayMode
+from lucky_game.const import ActivityType, ActivitySta, ConditionType, AwardType, ActivityStatus, PayMode, \
+    ReasonCostGold
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 
 
@@ -123,11 +124,11 @@ class GainActivity(GameAuthApi):
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
-        sta, e = await Base().act_gain(ac, uid, award_id)
+        sta, e = await Base().give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_GIFT)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=e)
         gain_awards, _ = await AwardRC.get_award_by_filter(award_id=award_id)
-        return self.answer(data={"status": sta, "gain_awards": gain_awards}, hint=e)
+        return self.answer(data={"status": sta, "gain_awards": gain_awards}, hint="领取成功")
 
 
 class ProgressActivity(GameAuthApi):
