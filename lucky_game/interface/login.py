@@ -289,6 +289,7 @@ class LoginByWechat(BaseLogin):
         if not u_info:
             req_data["avatar"] = req_data.get('headimgurl')
             req_data["wechat"] = 1
+            req_data["unionid"] = req_data.get('unionid')
             u_info = await self.create_new_user(
                 req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
             self.log_info('Wechat Reg u_info:', u_info)
