@@ -74,7 +74,8 @@ class MainBp(BaseBlue):
         Urls("/LoginByToken/", LoginByToken),  # Token登录
         Urls("/SendCode/", SendCode),  # 发送验证码
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
-        Urls("/LoginByWechat/", LoginByWechat),  # 微信登录
+        Urls("/LoginByWechat/", LoginByWechat),  # 微信公众号登录
+        Urls("/LoginByWechatMiniProgram/", LoginByWechatMiniProgram),  # 微信小程序登录
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
 
@@ -142,7 +143,6 @@ class MainBp(BaseBlue):
         # Urls("/GetReliefConf/", GetReliefConf),  # 救济金配置
         # Urls("/GetQuickChatConf/", GetQuickChatConf),  # 获取快捷聊天配置
 
-
         # 活动相关
         Urls("/QueryActivity/", ActivityDetail),  # 查询活动详情
         Urls("/ActivityList/", ActivityList),  # 查询活动列表
@@ -170,7 +170,7 @@ class MainBp(BaseBlue):
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
 
-
+        # 微信公众H5网页支付
 
         # # 支付相关
         Urls("/QueryOrder/", OrderDetail),  # 查询订单详情

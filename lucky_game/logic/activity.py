@@ -83,11 +83,6 @@ class Base:
             sta, msg, data = await FirstCharge().handler(uid, activity, award_type, pay_mode, platform, return_url)
             return sta, msg, {"award": [], "pay_info": data}
 
-    async def act_gain(self, activity: dict, uid: int, award_id: int):
-        """ 领取活动奖励 """
-        act_id = activity.get("act_id")
-        sta, e = await self.give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_GIFT)
-        return sta, e
 
     async def act_by_awards(self, uid: int, activity: dict):
         """ 按活动配置获取奖励信息 """

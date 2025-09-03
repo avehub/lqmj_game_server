@@ -127,8 +127,12 @@ class GainActivity(GameAuthApi):
         sta, e = await Base().give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_GIFT)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=e)
-        gain_awards, _ = await AwardRC.get_award_by_filter(award_id=award_id)
-        return self.answer(data={"status": sta, "gain_awards": gain_awards}, hint="领取成功")
+        award_content, _ = await AwardRC.get_award_info(award_id=award_id)
+        result = {
+            "award": {"gain_awards": award_content["rewards"]},
+            "pay_info": {}
+        }
+        return self.answer(data={"status": sta, "result": result}, hint="领取成功")
 
 
 class ProgressActivity(GameAuthApi):
