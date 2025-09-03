@@ -4436,7 +4436,7 @@ class Room(BaseCardRoom):
             x = None
             y = None
         player.set_position(x,y)
-
+        self.log_info("收到定位信息",player.uid,player.seat_id,"x",x,"y",y)
         await self.notify_distance()
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
