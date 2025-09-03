@@ -100,6 +100,7 @@ class BaseLogin(GameAuthApi):
             'tst_mark': login_info.get("tst_mark") or False,
             "dev_ident": dev_ident,
             "platform": platform,
+            'wechat': user_info.get("wechat") or 0,
             "unionid": user_info.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', unique)),
             "openid": user_info.get("openid", UtilsTool.get_hash_secrets('guest_openid', unique)),
             "avatar": avatar,
@@ -250,7 +251,7 @@ class LoginByWechatMiniProgram(BaseLogin):
 
 
 class LoginByWechat(BaseLogin):
-    """ 微信登陆 """
+    """ 微信公众号登陆 """
     decorators = []
 
     async def post(self, req: Request):
@@ -271,23 +272,12 @@ class LoginByWechat(BaseLogin):
 
     async def __after_get_token_by_code(self, req, data, server_info, dev_ident):
         # 获取access_token、open_id等信息
-        access_token = data.get('access_token')
-        open_id = data.get('openid')
-        url = "https://api.weixin.qq.com/sns/userinfo?access_token={0}&openid={1}&connect_redirect=1"
-        url = url.format(access_token, open_id)
-
-        # 通过access_token和open_id获取用户个人信息（UnionID机制）
-        req_get = await http_get(url)
-        req_data = json_parse(req_get)
-        self.log_info('Wechat userinfo result:', req_data)
-        errcode = req_data.get("errcode", 0)
-        if errcode > 0:
-            data = {"errcode": errcode, "errmsg": req_data}
+        req_sta, req_data = await WeChat.wechat_gzh_userinfo(data.get('access_token'), data.get('openid'))
+        if not req_sta:
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-
         # 通过union_id查询数据库用户信息
         openid = req_data.get('openid')
-        platform = PlatForm.WECHAT_MINI_GAME
+        platform = PlatForm.WECHAT_MP
         q_params = {
             "openid": openid,
             "platform": platform
@@ -298,6 +288,7 @@ class LoginByWechat(BaseLogin):
         # 新用户 注册
         if not u_info:
             req_data["avatar"] = req_data.get('headimgurl')
+            req_data["wechat"] = 1
             u_info = await self.create_new_user(
                 req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
             self.log_info('Wechat Reg u_info:', u_info)
@@ -537,6 +528,38 @@ class LoginByApple(BaseLogin):
 
         self.log_info('LoginByApple success:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
+
+class BindByWechat(BaseLogin):
+    """ 绑定微信 """
+    async def post(self, req: Request, **kwargs):
+        code = self.check_str(req.json.get('code'), require=True, p_name="微信code")
+        errcode, req_data = await WeChat.wechat_gzh_login(code)
+        self.log_info('Wechat wechat_app_login result:', errcode, req_data)
+        if errcode > 0:
+            data = {"errcode": errcode, "errmsg": req_data}
+            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+        req_sta, data = await WeChat.wechat_gzh_userinfo(req_data.get('access_token'), req_data.get('openid'))
+        if not req_sta:
+            self.answer(self.sta_code.EXTERNAL_ERR, data=data)
+        openid = data.get('openid')
+        q_params = {
+            "openid": openid,
+            "platform": PlatForm.WECHAT_MP
+        }
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
+        if u_info:
+            return self.answer(self.sta_code.USER_EXIST, hint="微信已绑定其他账号，请直接使用微信登录")
+
+        user = kwargs.get("u_info")
+        updated = {
+            'valid_key': self.rng.mk_str(16),
+            'ip': self.ori_ip(req),
+            'openid': openid,
+            'wechat': 1,
+        }
+        u_info = await BaseUserRC.update_info(user, updated)
+        (not u_info) and self.answer(self.sta_code.FAIL, hint="绑定失败")
+        return self.answer()
 
 
 

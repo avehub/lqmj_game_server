@@ -5,7 +5,6 @@ import random
 from typing import Type, Union, Tuple, List, Dict, Any
 from tortoise.exceptions import OperationalError
 
-from lucky_game.const import OrderStatus
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_db.main import AppVersions
 
@@ -54,3 +53,31 @@ class AppVersionsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败:{e}"
         return data, "成功"
+
+    @classmethod
+    async def compare_versions(cls, install_version: str, new_version: str) -> int:
+        """
+        比较两个版本号的大小
+        Args:
+            install_version: 安装版本号 (e.g. "1.2.3")
+            new_version: 服务器最新版本号 (e.g. "1.0.1")
+        Returns:
+            int:
+                1 if install_version < new_version
+                0 if install_version == new_version
+        """
+        def parse_version(ver: str) -> List[int]:
+            return [int(num) for num in ver.split('.')]
+
+        v1 = parse_version(install_version)
+        v2 = parse_version(new_version)
+        max_len = max(len(v1), len(v2))
+        v1 = v1 + [0] * (max_len - len(v1))
+        v2 = v2 + [0] * (max_len - len(v2))
+
+        for i in range(max_len):
+            if v1[i] < v2[i]:
+                return 1
+        return 0
+
+

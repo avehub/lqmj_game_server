@@ -299,6 +299,20 @@ class WeChat(LogMeta):
             await BaseUserRC.update_cache(u_info.get("uid"), u_info)
             return new_openid
 
+    @classmethod
+    async def wechat_gzh_userinfo(cls, access_token, open_id):
+        """获取公众号用户信息"""
+        url = f"https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={open_id}&connect_redirect=1"
+        # 通过access_token和open_id获取用户个人信息（UnionID机制）
+        req_get = await http_get(url)
+        req_data = json_parse(req_get)
+        cls.log_info('Wechat userinfo result:', req_data)
+        errcode = req_data.get("errcode", 0)
+        if errcode > 0:
+            data = {"errcode": errcode, "errmsg": req_data}
+            return False, data
+        return True, req_data
+
 
 @unique
 class WeChatPayCode(BaseEnum):
