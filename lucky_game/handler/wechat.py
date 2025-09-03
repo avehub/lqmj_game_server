@@ -134,7 +134,7 @@ class WeChat(LogMeta):
 
         url = f"https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token={access_token}&type=jsapi"
         req_data = await http_get(url)
-        return cls.__return_ticket(req_data)
+        return await cls.__return_ticket(req_data)
 
     @classmethod
     async def __request_by_sign(cls, uid, url, path, params, access_token):
