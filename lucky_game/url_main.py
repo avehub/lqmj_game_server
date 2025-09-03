@@ -51,7 +51,7 @@ from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandle
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
-from lucky_game.interface.tools import GetWeChatShareData
+from lucky_game.interface.tools import GetWeChatShareData, GetAppVersions
 
 
 
@@ -66,7 +66,8 @@ class MainBp(BaseBlue):
         # 配置相关
         Urls("/QueryConf/", GetConf),
         # 工具类接口
-        Urls("/GetWeChatShareData/", GetWeChatShareData),
+        Urls("/GetWeChatShareData/", GetWeChatShareData),  # 微信分享数据
+        Urls("/GetAppVersions/", GetAppVersions),  # 获取应用配置
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆

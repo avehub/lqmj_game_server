@@ -14,6 +14,7 @@ from common.public.enum_const import StaCode
 from lucky_game.handler.random_utils import generate_random_string
 from lucky_game.handler.wechat import WeChat
 from common.public.conf import WeChatConf
+from lucky_game.model_rc.app_versions import AppVersionsRC
 
 
 class GetWeChatShareData(SpecialApi):
@@ -62,3 +63,13 @@ class GetWeChatShareData(SpecialApi):
             body=js_data,
             content_type="application/javascript; charset=UTF-8"
         )
+
+
+class GetAppVersions(SpecialApi):
+    """ 获取应用配置 """
+    async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台")
+        c_ver = self.check_str(req.args.get("c_ver"), require=True, p_name="版本号")
+        device_id = self.check_str(req.args.get("device_id "), require=True, p_name="设备ID")
+        data, msg = await AppVersionsRC.get_app_info(platform)
+        return self.answer(data=data)
