@@ -2,7 +2,7 @@
 wx.config({
     debug: true,
     appId: "leqi_app_id",
-    timestamp: "leqi_timestamp",
+    timestamp: leqi_timestamp,
     nonceStr: "leqi_nonce_str",
     signature: "leqi_signature",
     jsApiList: ['updateAppMessageShareData','updateTimelineShareData','onMenuShareAppMessage', 'hideMenuItems', 'showMenuItems', 'hideAllNonBaseMenuItem', 'showAllNonBaseMenuItem','getLocation'],
