@@ -40,8 +40,9 @@ class User(DBModel):
     ip = fields.CharField(max_length=128, null=True, default='', description='登陆IP')
     region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
     country = fields.CharField(max_length=16, null=True, default='CN', description='国家域名')
-    openid = fields.CharField(max_length=128, null=True, default='', description='微信小游戏授权用户唯一标识')
-    unionid = fields.CharField(max_length=128, null=True, default='', description='微信平台用户授权唯一标识')
+    openid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
+    unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
+    wechat = fields.SmallIntField(max_length=2, null=True, default=0, description='微信绑定标识：1已绑定 0未绑定')
     apple_id = fields.CharField(max_length=128, null=True, default='', description='苹果平台用户授权唯一标识')
     ban_time = fields.BigIntField(null=True, default=0, description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
@@ -778,9 +779,9 @@ class LogUserActivity(DBModel):
 
 
 class AppVersions(DBModel):
+    """ 应用版本信息 """
     app_id = fields.CharField(index=True, max_length=50, description='应用标识', )
     build_number = fields.CharField(max_length=20, null=True, description='构建号', )
-    created_at = fields.DatetimeField(null=True, auto_now_add=True, description='创建时间', )
     created_by = fields.IntField(description='创建人ID', )
     download_url = fields.CharField(max_length=500, description='下载链接', )
     file_hash = fields.CharField(max_length=64, null=True, description='文件校验值', )
@@ -791,9 +792,9 @@ class AppVersions(DBModel):
     platform = fields.IntEnumField(enum_type=PlatForm, index=True,
                                    description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     release_notes = fields.TextField(null=True, description='版本更新说明', )
-    release_time = fields.DatetimeField(index=True, description='发布时间', )
-    status = fields.BooleanField(null=True, default=True, description='状态：0-下线，1-正常，2-灰度', )
-    updated_at = fields.DatetimeField(null=True, auto_now=True, description='更新时间', )
+    release_time = fields.BigIntField(index=True, description='发布时间', )
+    status = fields.SmallIntField(null=True, default=1, max_length=2, description='状态：0-下线，1-正常，2-灰度', )
+    updated = fields.BigIntField(null=True, auto_now=True, description='更新时间', )
     updated_by = fields.IntField(description='更新人ID', )
     version_code = fields.CharField(index=True, max_length=20, description='版本号（如：1.2.3）', )
 

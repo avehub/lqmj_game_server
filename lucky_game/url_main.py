@@ -17,7 +17,7 @@ from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 #     SafeBoxOperateUser, GetCosmeticUsedItems, UseCosmeticItem, GetCosmeticHandler, \
 #     ClickNewGoodsItem, GetGamePropHandler, GetDetailShardInfo, GetGoodsJumpChance
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechatMiniProgram, LoginByWechat, \
-    LoginByApple, SendCode, LoginByPhone
+    LoginByApple, SendCode, LoginByPhone, BindByWechat
 # from lucky_game.interface.up_u_info import ModifyGeneralUserInfo, TestAddGold, GetSessionKey, \
 #     GetWeChatGzhOpenid
 # from lucky_game.interface.some_pay import AliPayNotify, MiniGameRecvPush, MakeOrder, MiniGameQueryOrder, \
@@ -51,7 +51,7 @@ from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandle
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
-from lucky_game.interface.tools import GetWeChatShareData, GetAppVersions
+from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion
 
 
 
@@ -67,7 +67,7 @@ class MainBp(BaseBlue):
         Urls("/QueryConf/", GetConf),
         # 工具类接口
         Urls("/GetWeChatShareData/", GetWeChatShareData),  # 微信分享数据
-        Urls("/GetAppVersions/", GetAppVersions),  # 获取应用配置
+        Urls("/GetAppVersion/", GetAppVersion),  # 获取应用版本信息
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -76,6 +76,7 @@ class MainBp(BaseBlue):
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
+        Urls("/BindByWechat/", BindByWechat),  # 绑定微信
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建

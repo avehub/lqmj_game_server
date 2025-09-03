@@ -65,11 +65,14 @@ class GetWeChatShareData(SpecialApi):
         )
 
 
-class GetAppVersions(SpecialApi):
-    """ 获取应用配置 """
+class GetAppVersion(SpecialApi):
+    """ 获取应用版本信息 """
     async def get(self, req: Request, **kwargs):
         platform = self.check_str(req.args.get("platform"), require=True, p_name="平台")
         c_ver = self.check_str(req.args.get("c_ver"), require=True, p_name="版本号")
-        device_id = self.check_str(req.args.get("device_id "), require=True, p_name="设备ID")
+        device_id = self.check_str(req.args.get("device_id"), require=True, p_name="设备ID")
         data, msg = await AppVersionsRC.get_app_info(platform)
+        if not data:
+            return self.answer(StaCode.FAIL, hint=msg)
+        data["is_update"] = await AppVersionsRC.compare_versions(c_ver, data.get("version_code"))
         return self.answer(data=data)

@@ -460,7 +460,7 @@ class SignIn(Base):
             gains = {}
             for i in award_gains:
                 # 只获取累计签到奖励
-                if i.get("type_id") > 6:
+                if i.get("type_id") < 7:
                     continue
                 if gains.get(i["type_id"]):
                     gains[i["type_id"]].append(i)
