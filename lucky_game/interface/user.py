@@ -1,7 +1,7 @@
 from nsanic.libs.tool import json_parse
 from sanic import Request
 from common.utils import tool_certification
-from lucky_game.base_api import GameAuthApi
+from lucky_game.base_api import GameAuthApi, SpecialApi
 from lucky_game.handler.decorator import GameChecker, CurrentLimiting, LimitTestCall
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.utils import UtilsTool
@@ -187,3 +187,44 @@ class WriteOff(GameAuthApi):
         if not data:
             return self.answer(code=self.sta_code.FAIL)
         return self.answer()
+
+class WebUpUserResource(SpecialApi):
+    """ 网页更新用户资源 """
+    async def post(self, req):
+        operation_values = await ExtraUserResourceChangesRC.change_operation()
+        field_values = await ExtraUserResourceChangesRC.change_field()
+        def is_valid_operation(x):
+            return x in operation_values
+        def is_valid_field(x):
+            return x in field_values
+        uid = self.check_int(
+            req.json.get("uid"),
+            require=True,
+            p_name="uid"
+        )
+        operation = self.check_type(
+            req.json.get("operation"),
+            query_fun=is_valid_operation,
+            require=True,
+            is_int=False,
+            p_name="operation"
+        )
+        change_field = self.check_type(
+            req.json.get("change_field"),
+            query_fun=is_valid_field,
+            is_int=False,
+            require=True,
+            p_name="change_field"
+        )
+        change_val = self.check_int(req.json.get("change_val"), require=True, minval=0, p_name="change_val")
+        sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+            uid,
+            change_field,
+            change_val,
+            operation,
+            reason=ReasonCostGold.WECHAT_STORE_SHOPPING
+        )
+        if not sta:
+            return self.answer(code=self.sta_code.FAIL, hint=e)
+        p_info = await BaseUserRC.cache_by_pk(uid)
+        return self.format_response_info(p_info)

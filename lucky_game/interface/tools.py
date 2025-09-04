@@ -76,3 +76,15 @@ class GetAppVersion(SpecialApi):
             return self.answer(StaCode.FAIL, hint=msg)
         data["is_update"] = await AppVersionsRC.compare_versions(c_ver, data.get("version_code"))
         return self.answer(data=data)
+
+
+class GetWechatCode(SpecialApi):
+    """ 微信授权转发 """
+    decorators = []
+    async def get(self, req: Request):
+        redirect_url = self.check_str(req.args.get('redirect_url'), require=True, p_name="redirect_url")
+        return response.redirect(
+            redirect_url,
+            status=301,
+            headers={"Cache-Control": "no-store"}
+        )

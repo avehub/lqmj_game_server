@@ -196,7 +196,8 @@ class WorkersServer(JsonBaseServer):
     async def __notice_by_sign_in_by_month(self, uid):
         """每月累计签到奖励红点"""
         act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
-        sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, count=True)
+        start, end = await self.get_time_range(period="month")
+        sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, start_time=start, end_time=end, count=True)
         self.red_dot_log(uid, "每月累计签到奖励红点查询", sta and gains > 0)
         if sta and gains > 0:
             await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN)

@@ -25,7 +25,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     DouYinGameQueryOrder, GetBalanceByDouYinGame, ReduceBalanceByDouYinGame, ReduceBalanceByWechatMiniProgram, \
 #     GetBalanceByWechatMiniProgram, MiniProgramRecvPush, HuiFuGetPayInfo, HuiFuPayQueryOrder, HuiFuPayNotify, \
 #     CompletePaidOrder
-from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler
+from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList
 # from lucky_game.interface.interaction import MakeAdOrder, CompleteAdOrder, SignInHandler, SignInComplete, \
 #     SignInTotalComplete, GetReliefHandler, GetReliefConf, GetCommonAwardsConf, PullCommonAwards, OpenTreasureBox
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
@@ -51,7 +51,7 @@ from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandle
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
-from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion
+from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode
 
 
 
@@ -68,6 +68,7 @@ class MainBp(BaseBlue):
         # 工具类接口
         Urls("/GetWeChatShareData/", GetWeChatShareData),  # 微信分享数据
         Urls("/GetAppVersion/", GetAppVersion),  # 获取应用版本信息
+        Urls("/GetWechatCode/", GetWechatCode),
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -166,6 +167,7 @@ class MainBp(BaseBlue):
         # # 充值/消费相关
         Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
         Urls("/PayByGood/", PayByGood),  # 商店购物
+        Urls("/StoreList/", StoreList),  # 获取商店商品列表
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
