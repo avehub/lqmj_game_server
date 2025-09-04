@@ -154,6 +154,8 @@ class BaseClubRC(BaseCommonRC):
                 if total > 1:
                     return None, "无法解散，还有其他玩家"
                 club, e = await cls.get_club_by_id(club_id)
+                if not club:
+                    return None, "茶馆不存在"
                 # 茶馆基金
                 if club["room_card"] > 0:
                     # return None, "无法解散，还有未消耗的房卡基金"
@@ -203,13 +205,13 @@ class BaseClubRC(BaseCommonRC):
         try:
             u_operation = "sub" if operation == "add" else "add"
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                up_sta, e = await cls.update_club_int_field(club_id, field_name, num, operation)
-                if not up_sta:
-                    return False, e
                 # 更新用户房卡
                 user_sta, e = await ExtraUserResourceChangesRC.change_user_resource(u_info.get("uid"), field_name, num, u_operation, reason=ReasonCostGold.CLUB_ROOM_CARD)
                 if not user_sta:
                     return False, "更新用户房卡失败"
+                up_sta, e = await cls.update_club_int_field(club_id, field_name, num, operation)
+                if not up_sta:
+                    return False, e
                 # 写入茶馆事件记录
                 if operation == "add":
                     event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]

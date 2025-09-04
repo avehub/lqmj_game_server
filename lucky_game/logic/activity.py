@@ -359,6 +359,8 @@ class SignIn(Base):
         }
         for award in awards:
             content = award["content"]
+            if content["probability"] == 0:
+                continue
             random_num = random.randint(0, len(content["rewards"]) - 1)
             # 从该类型中随机选择一个奖励
             reward = content["rewards"][random_num]

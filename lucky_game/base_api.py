@@ -94,8 +94,12 @@ class BaseApi(BaseHttpApi, CommonApi):
         """
         if not code:
             code = self.sta_code.PASS
-
-        NLogger.info(f"Response : code={code} data={data} total={total} hint={hint} headers={headers}")
+        result = {
+            "code": code,
+            "data": data,
+            "msg": hint,
+        }
+        NLogger.info(f"Response : headers={headers} total={total} result={result}")
         raise JsonFinish(code, data, total, hint, headers)
 
 class GameAuthApi(BaseApi):

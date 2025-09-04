@@ -151,9 +151,7 @@ class ClubGroupRC(RCModel):
             query = {
                 "club_id": club_id
             }
-            data = await cls.db_model.filter(**query).delete()
-            if not data:
-                return False, "失败"
+            await cls.db_model.filter(**query).delete()
         except OperationalError as e:
             return False, e
         return True, "成功"

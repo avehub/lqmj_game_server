@@ -182,7 +182,8 @@ class RecordsGameSegmentRC(BaseCommonRC):
             if record_sid:
                 record = await cls.db_model.del_by_pk(record_sid)
             if record_rid:
-                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
+                await cls.db_model.filter(**{"record_rid": record_rid}).delete()
+                record = True
             if not record:
                 return record, "删除失败"
         except OperationalError as e:

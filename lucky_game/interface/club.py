@@ -276,6 +276,8 @@ class ClubRoomCard(BaseClub):
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         num = self.check_int(req.json.get("num"), require=True, minval=1, p_name="操作数量")
         # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
+        if num > u_info["room_card"]:
+            return self.answer(StaCode.FAIL, hint="您的房卡不足")
         data, e = await BaseClubRC.club_room_card_operation(u_info, club_id, num)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
