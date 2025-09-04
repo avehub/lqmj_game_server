@@ -101,9 +101,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     async def delete_club_behavior(cls, behavior_id: int):
         """删除茶馆行为"""
         try:
-            sta = await cls.db_model.filter(id=behavior_id).delete()
-            if not sta:
-                return False, "删除失败"
+            await cls.db_model.filter(id=behavior_id).delete()
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"
@@ -137,9 +135,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 query["type"] = behavior_type
             if status is not None:
                 query["status"] = status
-            sta = await cls.db_model.filter(**query).delete()
-            if not sta:
-                return False, "删除失败"
+            await cls.db_model.filter(**query).delete()
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"

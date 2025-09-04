@@ -59,9 +59,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
     async def delete_template(cls, template_id: int, club_id: int):
         """删除房间模板"""
         try:
-            sta = await cls.db_model.filter(id=template_id).delete()
-            if not sta:
-                return False, "操作失败"
+            await cls.db_model.filter(id=template_id).delete()
         except OperationalError as e:
             return False, f"模板删除失败: {str(e)}"
         return True, "成功"
@@ -113,9 +111,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             query = {
                 "club_id": club_id
             }
-            data = await cls.db_model.filter(**query).delete()
-            if not data:
-                return False, "失败"
+            await cls.db_model.filter(**query).delete()
         except OperationalError as e:
             return False, e
         return True, "成功"

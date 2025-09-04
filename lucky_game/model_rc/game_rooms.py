@@ -297,7 +297,8 @@ class GameRoomsRC(BaseCommonRC):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 if delete:
-                    sta = await cls.db_model.filter(room_id=room_id).delete()
+                    await cls.db_model.filter(room_id=room_id).delete()
+                    sta = True
                 else:
                     sta, _ = await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
                 if not sta:
