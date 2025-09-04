@@ -372,7 +372,10 @@ class BaseRoom(metaclass=ABCMeta):
             return
         if p.tid != self.__tid:
             return
-        await self.__service.cs2ws_by_rmq(c_code, p.uid, code, hint, data, req_id, ws_id=p.ws_id)
+        uid = p.uid
+        if not uid:
+            return
+        await self.__service.cs2ws_by_rmq(c_code, uid, code, hint, data, req_id, ws_id=p.ws_id)
 
     async def inner_broadcast(self, c_code, data=None, code: StaCode = StaCode.PASS, hint="ok", exclude_uid=0):
         """ 房间内广播 """
@@ -396,7 +399,10 @@ class BaseRoom(metaclass=ABCMeta):
             hint = hint or code.msg
             pb_data = PbWsBaseRep.encode(code, hint, data)
             for player in send_player_list:
-                task_list.append(self.__service.cs2ws_by_rmq_in_room(c_code, player.uid, pb_data, ws_id=player.ws_id))
+                uid = player.uid
+                if not uid:
+                    continue
+                task_list.append(self.__service.cs2ws_by_rmq_in_room(c_code, uid, pb_data, ws_id=player.ws_id))
 
         if task_list:
             await asyncio.gather(*task_list)
