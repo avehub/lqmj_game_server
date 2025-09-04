@@ -3,8 +3,10 @@
 """
 import jwt
 from nsanic.libs import tool_jwt, tool_dt
-from sanic import Request
+from sanic import Request, response
 from typing import List, Dict
+
+
 from c_services.const.cs_enum_const import CmdWorkers
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.decorator import LimitTestCall
@@ -561,7 +563,6 @@ class BindByWechat(BaseLogin):
         u_info = await BaseUserRC.update_info(user, updated)
         (not u_info) and self.answer(self.sta_code.FAIL, hint="绑定失败")
         return self.answer()
-
 
 
 
