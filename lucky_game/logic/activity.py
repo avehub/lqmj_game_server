@@ -359,8 +359,6 @@ class SignIn(Base):
         }
         for award in awards:
             content = award["content"]
-            if content["probability"] == 0:
-                continue
             random_num = random.randint(0, len(content["rewards"]) - 1)
             # 从该类型中随机选择一个奖励
             reward = content["rewards"][random_num]
@@ -376,7 +374,7 @@ class SignIn(Base):
         """ 从奖励列表中抽取一个奖励 """
         if not rewards:
             raise ValueError("奖励列表不能为空")
-        weights = [reward["probability"] for reward in rewards]
+        weights = [reward["probability"] for reward in rewards if reward["probability"] > 0]
         return random.choices(rewards, weights=weights)[0]
 
     async def gain_condition_awards(self, act_awards: dict, uid: int, act_id: int, current_value: int = 0):
