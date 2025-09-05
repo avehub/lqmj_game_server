@@ -374,8 +374,13 @@ class SignIn(Base):
         """ 从奖励列表中抽取一个奖励 """
         if not rewards:
             raise ValueError("奖励列表不能为空")
-        weights = [reward["probability"] for reward in rewards if reward["probability"] > 0]
-        return random.choices(rewards, weights=weights)[0]
+        weights = []
+        new_rewards = []
+        for reward in rewards:
+            if reward["probability"] > 0:
+                weights.append(reward["probability"])
+                new_rewards.append(reward)
+        return random.choices(new_rewards, weights=weights)[0]
 
     async def gain_condition_awards(self, act_awards: dict, uid: int, act_id: int, current_value: int = 0):
         """ 根据条件获取奖励 """
