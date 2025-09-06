@@ -25,7 +25,7 @@ from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat
 #     DouYinGameQueryOrder, GetBalanceByDouYinGame, ReduceBalanceByDouYinGame, ReduceBalanceByWechatMiniProgram, \
 #     GetBalanceByWechatMiniProgram, MiniProgramRecvPush, HuiFuGetPayInfo, HuiFuPayQueryOrder, HuiFuPayNotify, \
 #     CompletePaidOrder
-from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList
+from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList, StoreBuy
 # from lucky_game.interface.interaction import MakeAdOrder, CompleteAdOrder, SignInHandler, SignInComplete, \
 #     SignInTotalComplete, GetReliefHandler, GetReliefConf, GetCommonAwardsConf, PullCommonAwards, OpenTreasureBox
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
@@ -168,6 +168,7 @@ class MainBp(BaseBlue):
         Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
         Urls("/PayByGood/", PayByGood),  # 商店购物
         Urls("/StoreList/", StoreList),  # 获取商店商品列表
+        Urls("/StoreBuy/", StoreBuy),  # 商店购物
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
