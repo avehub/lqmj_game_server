@@ -386,6 +386,7 @@ class Orders(DBModel):
     """用户订单表"""
     id = fields.IntField(max_length=10, pk=True, description='变动ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
+    purchase_uid = fields.IntField(max_length=28, index=True, description='采购人ID')
     good_id = fields.IntField(max_length=28, index=True, description='商品ID')
     sku = fields.CharField(max_length=64, index=True, default=0, description="商品唯一标识")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True,

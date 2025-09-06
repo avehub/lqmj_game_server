@@ -135,6 +135,7 @@ class StoreBuy(GameAuthApi):
         uid = self.check_int(req.json.get("uid"), require=True, p_name='uid')
         if not sku:
             return self.answer(StaCode.ERR_ARG, hint="请选择商品")
+        purchase_user = kwargs.get("u_info")
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             return self.answer(StaCode.NO_PLAYER_INFO)
@@ -146,30 +147,16 @@ class StoreBuy(GameAuthApi):
         (not check_sta) and self.answer(code=self.sta_code.NOT_IN_VALID_STATE, hint=f"{check_desc}")
         platform = PlatForm.WECHAT_MP
         pay_mode = PayMode.HUI_FU_PAY
-        pay_type = express.get("currency")
-        pt_enum = PayType.find_member_by_val(pay_type)
-        (not isinstance(pt_enum, PayType)) and self.answer(self.sta_code.ERR_ARG, hint='没有此兑换方式')
 
-        self.loginfo(f"微信商城购物：user={u_info}，good={express}")
+        self.loginfo(f"微信商城购物：user={u_info}，purchase_user={purchase_user}，good={express}")
         # 支付前校验
-        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
+        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num=num, purchase_uid=purchase_user.get("uid"))
         self.loginfo(f"微信商城支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
         # 支付前校验失败
         if not sta_before:
             return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
         # 购买商品事务处理
         data = data_before.get("order")
-        try:
-            async with in_transaction(connection_name=DbKey.DEFAULT):
-                # 支付中
-                sta_pay, msg, _ = await payment.pay(u_info, data_before, express)
-                self.loginfo(f"微信商城支付处理：sta_pay={sta_pay}，msg={msg}")
-        except Exception as e:
-            tb = traceback.extract_tb(e.__traceback__)
-            for frame in tb:
-                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
-            self.logerr(f'微信商城购物事务执行失败，原因：{e}')
-            self.answer(self.sta_code.FAIL, hint=f'微信商城支付失败，请稍后再试')
         data["buy_good"] = express["content"]
         data["buy_good"]["img"] = express.get("img")
         return self.answer(data=data)
