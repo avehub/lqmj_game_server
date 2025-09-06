@@ -30,9 +30,10 @@ class GameRoomsRC(BaseCommonRC):
     KEY_CLUB_ID = 'club_id'
     SESSION_KEY = "room_player"
     SESSION_DISK_KEY = "room_player_uid"  # 单个游戏房间号内的用户ID集合
-    SESSION_ROOM_KEY = "game_room" # 游戏房间信息缓存
+    SESSION_ROOM_KEY = "game_room"  # 游戏房间信息缓存
     SESSION_ROOM_USER_KEY = "game_room_user"  # 游戏房间中的用户ID集合
     SESSION_ROOM_NUMBER_KEY = "game_room_number"  # 游戏中的房间ID集合
+    SESSION_USER_JOIN_ROOM_KEY = "user_join_room"  # 用户加入的房间ID集合
     NULL_MEG = "房间已解散"
     RULE_DETAILS = {
         "shang_xia_ji": {0, 1},  #上下鸡选项 0未选 1选
@@ -114,6 +115,11 @@ class GameRoomsRC(BaseCommonRC):
         return data
 
     @classmethod
+    async def cache_user_room_get(cls, uid):
+        data = await cls.conf.rds.smembers(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}")
+        return [p.decode('utf-8') for p in data]
+
+    @classmethod
     async def cache_room_drop(cls, room_id):
         return await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
@@ -122,9 +128,9 @@ class GameRoomsRC(BaseCommonRC):
         """生成唯一房间ID"""
         while True:
             room_id = generate_natural_random(num)
-            has = await cls.conf.rds.sismember(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+            has = await cls.conf.rds.sismember(cls.SESSION_ROOM_NUMBER_KEY, room_id)
             if not has:
-                await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.conf.rds.sadd(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 return room_id
 
     @classmethod
@@ -137,19 +143,23 @@ class GameRoomsRC(BaseCommonRC):
             uid=uid,
             club_id=club_id,
         )
+        cls.conf.log.info("获取用户所在所有隔离组关联用户ID", sta, group_ids)
         if not sta:
             return not_join_room
         # 过滤隔离组内在线用户
         on_line_ids = await BaseUserRC.get_online_uid(group_ids)
+        cls.conf.log.info("获取用户所在隔离组在线的用户ID", on_line_ids)
         if on_line_ids:
             # 过滤出在房间内的用户
             u_ids = await cls.get_room_user_group(on_line_ids)
+            cls.conf.log.info("获取当前在房间内用户ID", u_ids)
             if not u_ids:
                 return not_join_room
             for uid in u_ids:
-                room_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
-                if room_info:
-                    not_join_room.add(room_info["tid"])
+                room_id = await cls.cache_user_room_get(uid)
+                if room_id:
+                    not_join_room.update(room_id)
+        cls.conf.log.info("获取用户所在隔离组房间ID", not_join_room)
         return not_join_room
 
 
@@ -310,10 +320,11 @@ class GameRoomsRC(BaseCommonRC):
                 if uids:
                     uids = await CommonApi.bytes_by_int_list(uids)
                     for uid in uids:
-                        await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+                        await cls.conf.rds.srem(cls.SESSION_ROOM_USER_KEY, uid)
                         await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+                        await cls.conf.rds.srem(cls.SESSION_USER_JOIN_ROOM_KEY, uid)
                 await cls.conf.rds.del_item(f"{cls.SESSION_DISK_KEY}:{room_id}")
-                await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.conf.rds.srem(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 await cls.cache_room_drop(room_id)
         except OperationalError as e:
             return False, f"房间删除失败: {str(e)}"
@@ -400,7 +411,8 @@ class GameRoomsRC(BaseCommonRC):
             if len(disk_uid) > max_player:
                 await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
                 return False, "房间已满"
-            await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+            await cls.conf.rds.sadd(cls.SESSION_ROOM_USER_KEY, uid)
+            await cls.conf.rds.sadd(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}", room_id)
         except OperationalError as e:
             return False, f"加入房间失败: {str(e)}"
         return True, "成功"
@@ -420,10 +432,11 @@ class GameRoomsRC(BaseCommonRC):
             if room_data['creator'] == uid:
                 # 关闭房间
                 await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
-                await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.conf.rds.srem(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 await cls.cache_room_drop(room_id)
-            await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+            await cls.conf.rds.srem(cls.SESSION_ROOM_USER_KEY, uid)
             await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+            await cls.conf.rds.srem(cls.SESSION_USER_JOIN_ROOM_KEY, uid)
         except OperationalError as e:
             return False, f"离开房间失败: {str(e)}"
         return True, "成功"
@@ -446,22 +459,23 @@ class GameRoomsRC(BaseCommonRC):
     async def get_room_user_all(cls):
         """获取所有在房间用户"""
         try:
-            data = await cls.conf.rds.smembers(f"{cls.SESSION_ROOM_USER_KEY}")
+            data = await cls.conf.rds.smembers(cls.SESSION_ROOM_USER_KEY)
             if data:
                 data = [p.decode('utf-8') for p in data]
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
-        return data, "成功"
+        return data
 
     @classmethod
     async def get_room_user_group(cls, u_ids: list):
         """过滤隔离组内所有在房间用户"""
         ids = set()
-        data, _ = await cls.get_room_user_all()
+        data = await cls.get_room_user_all()
+        cls.conf.log.info("当前Redis中在房间内的用户ID:", data)
         if data:
             for uid in u_ids:
-                if uid in data:
-                    ids.update(uid)
+                if str(uid) in data or uid in data:
+                    ids.add(uid)
         return ids
 
 
@@ -469,7 +483,7 @@ class GameRoomsRC(BaseCommonRC):
     async def check_uid_room_user(cls, uid: int):
         """检查用户是否在房间"""
         try:
-            sta = await cls.conf.rds.sismember(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+            sta = await cls.conf.rds.sismember(cls.SESSION_ROOM_USER_KEY, uid)
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return sta, "成功"
