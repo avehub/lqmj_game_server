@@ -97,7 +97,7 @@ class OrderRC(BaseCommonRC):
                 query["created__lte"] = end_time
             if order_no is not None:
                 query["order_no"] = order_no
-            print(f"查询订单表信息: {query}")
+            cls.conf.log.info(f"查询订单表信息: {query}")
             if count:
                 data = await cls.db_model.filter(**query).count()
             else:
