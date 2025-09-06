@@ -148,12 +148,13 @@ class CreateRoom(GameRoomAPI):
         if not cs_enum:
             await GameRoomsRC.delete_game_room(new_room)
             return self.answer(StaCode.FAIL, hint="非法服务")
-        room_data["secret"] = C_SERVICE_SECRET_KEY
-        room_data["online_group_user"] = await GameRoomsRC.get_online_user_group(creator, club_id)
+        rmq_data = room_data
+        rmq_data["secret"] = C_SERVICE_SECRET_KEY
+        rmq_data["online_group_user"] = await GameRoomsRC.get_online_user_group(creator, club_id)
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdRoom.NEW_MATCH,
-            room_data,
+            rmq_data,
             creator,
         )
         if again == 1 and again_uid:
@@ -199,12 +200,13 @@ class JoinRoom(GameRoomAPI):
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(room_data['cs_type'])
-        room_data["secret"] = C_SERVICE_SECRET_KEY
-        room_data["online_group_user"] = await GameRoomsRC.get_online_user_group(uid, room_data["club_id"])
+        rmq_data = room_data
+        rmq_data["secret"] = C_SERVICE_SECRET_KEY
+        rmq_data["online_group_user"] = await GameRoomsRC.get_online_user_group(uid, room_data["club_id"])
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdRoom.NEW_MATCH,
-            room_data,
+            rmq_data,
             uid,
         )
         return self.answer(data=room_data)
