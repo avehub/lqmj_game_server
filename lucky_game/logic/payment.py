@@ -76,7 +76,7 @@ class PaymentLogic:
                     return False, '已达到限购次数，请下次再来', {}
         return True, 'OK', buy_record
 
-    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1):
+    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1, purchase_uid: int = None):
         """
         支付前校验及生成订单
         :param u_info: 用户信息
@@ -87,7 +87,6 @@ class PaymentLogic:
         """
         currency = express.get("currency")
         price = express.get("price")
-        uid = u_info.get("uid")
         # 确保 price 是 Decimal 类型
         if isinstance(price, (int, float)):
             price = decimal.Decimal(price)
@@ -126,7 +125,7 @@ class PaymentLogic:
             else:
                 express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
         express["price"] = price
-        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num)
+        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num, purchase_uid=purchase_uid)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
     async def pay(self, u_info: dict, data_before: dict, express: dict):
@@ -267,12 +266,13 @@ class PaymentLogic:
                     await UserVipRC.update_user_vip_level(uid, order["amount"])
             return True, "ok"
 
-    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None):
+    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0):
         # 创建订单
         NLogger.info("create_order 商品信息: good", express)
         order_no = await RngMaker.gen_num(str_len=32)
         new, msg = await OrderRC.add_order(
             uid=uid,
+            purchase_uid=purchase_uid if purchase_uid else uid,
             good_id=express.get("good_id"),
             sku=express.get("sku"),
             platform=platform,
@@ -295,7 +295,7 @@ class PaymentLogic:
 
 
 
-    async def deal_order_general(self, order: dict, return_url: str = None):
+    async def deal_order_general(self, order, return_url: str = None):
         """通用订单处理"""
         return_data = {
             "order_no": order.order_no,
@@ -306,7 +306,7 @@ class PaymentLogic:
         return True, return_data
 
 
-    async def pay_1(self, order_info: dict, return_url: str = None):
+    async def pay_1(self, order_info, return_url: str = None):
         """
         获取汇付支付信息（实际上是后端请求汇付天下之后斗拱的聚合正扫）
         1.用code换取gzh_openid，监测实时订单价变化；
@@ -318,7 +318,7 @@ class PaymentLogic:
         req_res = await BaseUserRC.get_user_pay_info(uid, order_no)
         # 生成支付信息
         if not req_res:
-            u_info = await BaseUserRC.cache_by_pk(uid)
+            u_info = await BaseUserRC.cache_by_pk(order_info.purchase_uid)
             gzh_openid = u_info.get("openid") or ""
             if not gzh_openid:
                 # gzh_openid = await WeChat.update_gzh_openid(uid, code)

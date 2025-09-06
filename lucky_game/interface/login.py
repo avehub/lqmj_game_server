@@ -207,53 +207,9 @@ class LoginByGuest(BaseLogin):
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
-class LoginByWechatMiniProgram(BaseLogin):
-    """ 微信MG登陆 """
-    decorators = []
-
-    async def post(self, req: Request):
-        """ 通过code登录 """
-        # 获取客户端code
-        server_info = await self.whether_through()
-        code = req.json.get('code')
-        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
-
-        errcode, req_data = await WeChat.wechat_mini_game_login(code)
-        self.log_info('Wechat mini_program_login result:', errcode, req_data)
-        if errcode > 0:
-            data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-
-        # 通过union_id查询数据库用户信息
-        openid = req_data.get('openid')
-        platform = PlatForm.WECHAT_MINI_GAME
-        q_params = {
-            "openid": openid,
-            "platform": platform
-        }
-        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
-        login_info = await self.get_login_info(req, LoginWay.WECHAT)
-
-        # 新用户 注册
-        if not u_info:
-            u_info = await self.create_new_user(
-                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
-            self.log_info('WechatMG Reg u_info:', u_info)
-        # 老用户 登录
-        else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('WechatMG Login u_info:', u_info)
-
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO, hint='Failed to login')
-        # 保存session key (有效期不知) 用户登录态凭证
-        session_key = req_data.get("session_key")
-        await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
-        self.log_info('LoginByWechatMiniProgram suc:', u_info.get('uid'))
-        return await self.format_login_info(u_info, server_info, JWType.USER)
-
 
 class LoginByWechat(BaseLogin):
-    """ 微信公众号登陆 """
+    """ 微信登陆（公众号、小程序） """
     decorators = []
 
     async def post(self, req: Request):
@@ -261,25 +217,25 @@ class LoginByWechat(BaseLogin):
         # 获取客户端code
         server_info = await self.whether_through()
         code = req.json.get('code')
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
         dev_ident = req.json.get('device_id') or req.headers.get('device_id')
         (not code or not dev_ident) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
 
-        errcode, req_data = await WeChat.wechat_gzh_login(code)
+        errcode, req_data = await WeChat.wechat_gzh_login(code) if platform == PlatForm.WECHAT_MP else await WeChat.wechat_mini_game_login(code)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
-        return await self.__after_get_token_by_code(req, req_data, server_info, dev_ident)
+        return await self.__after_get_token_by_code(req, req_data, server_info, platform)
 
-    async def __after_get_token_by_code(self, req, data, server_info, dev_ident):
+    async def __after_get_token_by_code(self, req, data, server_info, platform):
         # 获取access_token、open_id等信息
         req_sta, req_data = await WeChat.wechat_gzh_userinfo(data.get('access_token'), data.get('openid'))
         if not req_sta:
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
         # 通过union_id查询数据库用户信息
         openid = req_data.get('openid')
-        platform = PlatForm.WECHAT_MP
         q_params = {
             "openid": openid,
             "platform": platform
@@ -325,106 +281,6 @@ class LoginByToken(BaseLogin):
 
         self.log_info('LoginByToken suc:', u_info.get("uid"), issued)
         return await self.format_login_info(u_info, server_info, issued=issued)
-
-
-class LoginByAlipayGame(BaseLogin):
-    """ 支付宝MG登录 """
-    decorators = []
-
-    async def post(self, req: Request):
-        """ 通过code登录 """
-        # 获取客户端code
-        server_info = await self.whether_through()
-        code = req.json.get('code')
-        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
-
-        results, req_data = await Alipay.ali_get_access_token(code, AliGrantType.GET_TOKEN)
-        self.log_info('Ali get_access_token result:', results, req_data)
-        if not results:
-            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
-            self.answer(self.sta_code.EXTERNAL_ERR, data)
-
-        return await self.__after_get_token_by_code(req, req_data, server_info)
-
-    async def __after_get_token_by_code(self, req, at_data, server_info):
-        """非静默授权"""
-        open_id = at_data.get('open_id')
-        # 通过access_token、open_id获取授权和个人信息（非静默授权再用）
-        # results, req_data = await Alipay.ali_get_user_auth_info(open_id, access_token)
-        # self.log_info('Ali login_by_code results:', results, 'req_data:', req_data)
-        # if not results:
-        #     data = PbS2CExternalReturn.pb_model(
-        #         **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
-        #     self.answer(self.sta_code.EXTERNAL_ERR, data)
-        """静默授权"""
-        platform = PlatForm.ALI_MINI_GAME
-        req_data = {
-            "openid": open_id,
-            "platform": platform
-        }
-
-        # 通过open_id和platform 查询数据库用户信息
-        u_info = await BaseUserRC.cache_by_unique(req_data, BaseUserRC.KEY_OPENID)
-        login_info = await self.get_login_info(req, LoginWay.ALIPAY)
-
-        # 新用户 注册
-        if not u_info:
-            u_info = await self.create_new_user(
-                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
-            self.log_info('Ali Reg u_info:', u_info)
-        # 老用户 登录
-        else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('Ali Login u_info:', u_info)
-
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
-        self.log_info('LoginByAlipayGame suc:', u_info.get("uid"))
-        return await self.format_login_info(u_info, server_info, JWType.USER)
-
-
-class LoginByDouYinGame(BaseLogin):
-    """ 抖音MG登录 """
-    decorators = []
-
-    async def post(self, req: Request):
-        """ 通过code登录 """
-        # 获取客户端code
-        server_info = await self.whether_through()
-        code = req.json.get('code')
-        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
-
-        errcode, req_data = await DouYin.douyin_mini_game_login(code)
-        self.log_info('DouYin mini_game_login result:', code, req_data)
-        if errcode > 0:
-            data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-
-        # 通过union_id查询数据库用户信息
-        union_id = req_data.get('unionid')
-        platform = PlatForm.DOUYIN_MINI_GAME
-        user_data = {
-            "unionid": union_id,
-            "platform": platform
-        }
-        u_info = await BaseUserRC.cache_by_unique(user_data, BaseUserRC.KEY_UNION_ID)
-        login_info = await self.get_login_info(req, LoginWay.WECHAT)
-
-        # 新用户 注册
-        if not u_info:
-            u_info = await self.create_new_user(
-                req, 'unionid', login_info, req_data, BaseUserRC.KEY_UNION_ID, platform=platform)
-            self.log_info('DouYinMG Reg u_info:', u_info)
-        # 老用户 登录
-        else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('DouYinMG Login u_info:', u_info)
-
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
-        # 保存会话密钥，如果请求时有 code 参数才会返回
-        session_key = req_data.get('session_key')
-        await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
-        self.log_info('LoginByDouYinGame suc:', u_info.get("uid"))
-        return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
 class SendCode(BaseLogin):

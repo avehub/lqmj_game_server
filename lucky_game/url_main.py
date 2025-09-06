@@ -16,7 +16,7 @@ from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 # from lucky_game.interface.player_vault import BagHandler, DropBagItem, SafeBoxHandler, \
 #     SafeBoxOperateUser, GetCosmeticUsedItems, UseCosmeticItem, GetCosmeticHandler, \
 #     ClickNewGoodsItem, GetGamePropHandler, GetDetailShardInfo, GetGoodsJumpChance
-from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechatMiniProgram, LoginByWechat, \
+from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat, \
     LoginByApple, SendCode, LoginByPhone, BindByWechat
 # from lucky_game.interface.up_u_info import ModifyGeneralUserInfo, TestAddGold, GetSessionKey, \
 #     GetWeChatGzhOpenid
@@ -75,8 +75,7 @@ class MainBp(BaseBlue):
         Urls("/LoginByToken/", LoginByToken),  # Token登录
         Urls("/SendCode/", SendCode),  # 发送验证码
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
-        Urls("/LoginByWechat/", LoginByWechat),  # 微信公众号登录
-        Urls("/LoginByWechatMiniProgram/", LoginByWechatMiniProgram),  # 微信小程序登录
+        Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序)
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
 
