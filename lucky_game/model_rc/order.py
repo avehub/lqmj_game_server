@@ -17,11 +17,13 @@ class OrderRC(BaseCommonRC):
     @classmethod
     async def add_order(cls, uid: int, good_id: int, sku: str, platform: int, amount: decimal.Decimal, currency: int,
                         pay_mode: int, order_no: str, num: int, out_order_no: str = '', gain_status: int = 0,
-                        status: int = OrderStatus.WAIT_PAY, prepay_id: str = "", explain: str = ""):
+                        status: int = OrderStatus.WAIT_PAY, prepay_id: str = "", explain: str = "",
+                        purchase_uid: int = 0):
         """新增订单"""
         try:
             data = {
                 "uid": uid,
+                "purchase_uid": purchase_uid if purchase_uid else uid,
                 "good_id": good_id,
                 "sku": sku,
                 "platform": platform,

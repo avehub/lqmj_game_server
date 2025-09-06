@@ -64,6 +64,8 @@ class WeChat(LogMeta):
         req_data = await http_get(url)
         return cls.__return_req_data(req_data)
 
+
+
     @classmethod
     async def wechat_gzh_login(cls, code):
         """ 微信公众号登陆 """
