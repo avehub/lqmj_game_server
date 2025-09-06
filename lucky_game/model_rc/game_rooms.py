@@ -167,7 +167,7 @@ class GameRoomsRC(BaseCommonRC):
         # 过滤隔离组内在线用户
         on_line_ids = await BaseUserRC.get_online_uid(group_ids)
         cls.conf.log.info("获取用户所在隔离组在线的用户ID", on_line_ids)
-        return on_line_ids
+        return list(on_line_ids)
 
 
     @classmethod
