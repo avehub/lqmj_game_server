@@ -138,6 +138,24 @@ class GameRoomsRC(BaseCommonRC):
         """可以在加入房间前做一些操作"""
         # 获取除隔离组用户以外的房间
         not_join_room = set()
+        on_line_ids = await cls.get_online_user_group(uid, club_id)
+        if not on_line_ids:
+            return not_join_room
+        # 过滤出在房间内的用户
+        u_ids = await cls.get_room_user_group(on_line_ids)
+        cls.conf.log.info("获取当前在房间内用户ID", u_ids)
+        if not u_ids:
+            return not_join_room
+        for uid in u_ids:
+            room_id = await cls.cache_user_room_get(uid)
+            if room_id:
+                not_join_room.update(room_id)
+        cls.conf.log.info("获取用户所在隔离组房间ID", not_join_room)
+        return not_join_room
+
+    @classmethod
+    async def get_online_user_group(cls, uid: int, club_id: int = 0):
+        """获取当前用户所在隔离组的其他在线用户ID"""
         # 获取用户所在的所有隔离组关联用户ID
         sta, group_ids = await ClubGroupRC.check_uid_by_club(
             uid=uid,
@@ -145,22 +163,11 @@ class GameRoomsRC(BaseCommonRC):
         )
         cls.conf.log.info("获取用户所在所有隔离组关联用户ID", sta, group_ids)
         if not sta:
-            return not_join_room
+            return []
         # 过滤隔离组内在线用户
         on_line_ids = await BaseUserRC.get_online_uid(group_ids)
         cls.conf.log.info("获取用户所在隔离组在线的用户ID", on_line_ids)
-        if on_line_ids:
-            # 过滤出在房间内的用户
-            u_ids = await cls.get_room_user_group(on_line_ids)
-            cls.conf.log.info("获取当前在房间内用户ID", u_ids)
-            if not u_ids:
-                return not_join_room
-            for uid in u_ids:
-                room_id = await cls.cache_user_room_get(uid)
-                if room_id:
-                    not_join_room.update(room_id)
-        cls.conf.log.info("获取用户所在隔离组房间ID", not_join_room)
-        return not_join_room
+        return on_line_ids
 
 
     @classmethod
