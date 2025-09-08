@@ -368,17 +368,16 @@ class BaseLeisureRoom(BaseRoom):
         if sta:
             amount_value = data[0]["content"]["rewards"][0]["amount"]
 
-            ori_gold = self.record_ori_gold.get(player.seat_id) or 0
-            gold = amount_value + ori_gold
+            gold = amount_value
             self.log_info(player.uid, "机器人复活", data[0]["name"], gold)
             if not player.is_robot:
                 await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
                 player.gold = gold
             player.gold = gold
             if solid_time:
-                self.call_flow_robot(solid_time, self.notify_resurgence, player)
+                DelayCall(solid_time, self.notify_resurgence, player).start()
                 return
-            self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
+            DelayCall(random.randint(10, 15), self.notify_resurgence, player).start()
             return
         else:
             self.log_info("获取配置有误",data)
@@ -488,8 +487,7 @@ class BaseLeisureRoom(BaseRoom):
 
     async def player_recharge(self, player):
         """ 玩家充值回调 """
-        if player.seat_id != self.curr_seat_id:
-            return
+        self.log_info("收到玩家复活",player.uid,player.seat_id)
         await self.service.init_player(player)
         if player.gold <= 0:
             return await self.inner_send(player, CmdRoom.RECHARGE, code=StaCode.GOLD_NOT_ENOUGH)

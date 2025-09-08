@@ -1090,25 +1090,9 @@ class Rule(metaclass=NoInstances):
         lai_zi = lai_zi or CardsType.LAI_ZI
         cards = deepcopy(hand_cards)
         # 如果有14张 打出一张之后 算听牌
-        if len(hand_cards) % 3 == 2:
-            cards_list = list(cards)
-            cards_list.sort()
-            curr_c = 0
-            for card in cards_list:
-                if curr_c == card:
-                    continue
-                curr_c = card
-                tian_ting_hand_cards = deepcopy(hand_cards)
-                tian_ting_hand_cards.remove(curr_c)
-                # 打出一张之后能听牌
-                can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, tian_ting_hand_cards, 0, ji_to_score,
-                                                              lai_zi, pai_xing_score_map, extra_score_map)
-                if can_hu:
-                    return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card), hu_path
-        else:
-            can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, 0, ji_to_score, lai_zi, pai_xing_score_map, extra_score_map)
-            if can_hu:
-                return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card), hu_path
+        can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, 0, ji_to_score, lai_zi, pai_xing_score_map, extra_score_map)
+        if can_hu:
+            return Rule.get_jiao_type(table_cards, can_hu, hu_path, cards, curr_card), hu_path
         return 0, []
 
 
