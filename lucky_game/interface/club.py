@@ -183,7 +183,15 @@ class ClubCheck(BaseClub):
         status = req.json.get("status")
         self.check_int(behavior_id, require=True, p_name="申请行为ID")
         self.check_int(status, require=True, p_name="审批状态")
-        # TODO 管理员校验 测试暂不加
+        behavior, e = await ExtraClubBehaviorRC.get_behavior_by_id(behavior_id)
+        if not behavior or behavior.get("status") != ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT:
+            return self.answer(StaCode.FAIL, hint=f"已{ExtraClubBehaviorRC.BEHAVIOR_STATUS[behavior.get('status')]}")
+        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=behavior.get("club_id"))
+        if not club_manage:
+            return self.answer(StaCode.FAIL, hint="无权限审批")
+        manage_uid = [item.get("uid") for item in club_manage]
+        if check_uid not in manage_uid:
+            return self.answer(StaCode.FAIL, hint="无权限审批")
         sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
@@ -192,6 +200,12 @@ class ClubCheck(BaseClub):
             e.get("uid"),
             RedDotType.RD_CLUB_CHECK,
         )
+        for manage in manage_uid:
+            if manage.get("uid") != check_uid:
+                await self.send_red_dot(
+                    manage.get("uid"),
+                    RedDotType.RD_CLUB_APPLY,
+                )
         return self.answer()
 
 

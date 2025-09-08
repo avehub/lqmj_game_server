@@ -2,6 +2,7 @@
 from sanic import Request, json
 from lucky_game.base_api import GameAuthApi
 from common.public.enum_const import StaCode
+from lucky_game.handler.huifu import DouGongPay
 from lucky_game.model_rc.base_records_game import RecordsGameTotalRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC

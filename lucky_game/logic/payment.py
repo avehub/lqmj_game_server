@@ -309,7 +309,7 @@ class PaymentLogic:
     async def pay_1(self, order_info, return_url: str = None):
         """
         获取汇付支付信息（实际上是后端请求汇付天下之后斗拱的聚合正扫）
-        1.用code换取gzh_openid，监测实时订单价变化；
+        1.用code换取user_openid，监测实时订单价变化；
         2.通过DouGongPay获取，并返回pay_info信息返回给前端；
         3.用order_no缓存pay_info，可以匹配上每一个H5链接；
         """
@@ -319,15 +319,14 @@ class PaymentLogic:
         # 生成支付信息
         if not req_res:
             u_info = await BaseUserRC.cache_by_pk(order_info.purchase_uid)
-            gzh_openid = u_info.get("openid") or ""
-            if not gzh_openid:
-                # gzh_openid = await WeChat.update_gzh_openid(uid, code)
-                return False, 'Invalid gzh_openid or code.'
+            user_openid = u_info.get("openid") or ""
+            if not user_openid:
+                return False, 'Invalid user_openid or code.'
 
             info = {
                 "order_no": order_no,
                 "sku": order_info.sku,
-                "gzh_openid": gzh_openid,
+                "user_openid": user_openid,
                 "amount": order_info.amount,
                 "platform": order_info.platform,
             }
@@ -394,12 +393,14 @@ class PaymentLogic:
 
 
     async def pay_3(self, order, return_url: str = None):
-        """微信支付"""
-        good = await GoodRC.get_good_info(order.sku)
+        """微信小程序道具直购"""
+        params = await WeChat.wechat_mini_game_return_order(order.uid, order.amount, order.order_no, order.sku)
+        if not params:
+            return False, "微信支付失败"
         suc, general_data = await self.deal_order_general(order)
         data = {
             "order": general_data,
-            "pay_2": {}
+            "pay_7": params
         }
         return True, data
 
