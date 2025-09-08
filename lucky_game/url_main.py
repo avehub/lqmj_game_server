@@ -32,7 +32,7 @@ from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, Mails
 # from lucky_game.interface.game_tasks import GameTaskComplete, GameActiveComplete, GameTaskHandler, GameTaskUpdate, \
 #     GameTaskUpdateForRookie
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList, \
-ActivityReturnGold
+    ActivityReturnGold
 from lucky_game.interface.club import ClubCreate, ClubList, ClubHall, ClubApply, ClubApplyList, ClubCheck, ClubSearch, \
     ClubCheckList, ClubUserInfo, ClubUpdate, ClubDetail, ClubDismiss, ClubRoomCard, ClubRoomCardList
 from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, RoomDetail

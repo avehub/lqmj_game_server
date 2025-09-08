@@ -10,7 +10,7 @@ from nsanic.libs.tool import json_parse
 
 from common.utils.kit_dt import KitDt
 from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER
-from lucky_game.const import OrderStatus, GainStatus
+from lucky_game.const import OrderStatus, GainStatus, PlatForm
 
 RESPONSE_CODE = {
     "00000000": "交易受理成功；注：交易状态以trans_stat为准",
@@ -100,7 +100,13 @@ class DouGongPay:
         request.req_date = KitDt.get_date_str()
         request.req_seq_id = order_info.get('order_no')
         request.goods_desc = str(order_info.get('sku')) or '未知商品'
-        request.trade_type = 'T_JSAPI'  # T_JSAPI: 微信公众号, JS-A_JSAPI:支付宝, T_APP：微信APP支付, 微信小程序-T_MINIAPP,
+        # T_JSAPI: 微信公众号, JS-A_JSAPI: 支付宝, T_APP: 微信APP支付, 微信小程序: T_MINIAPP
+        trade_type = "JS-A_JSAPI"
+        if order_info.get('platform') == PlatForm.WECHAT_MP:
+            trade_type = "T_JSAPI"
+        elif order_info.get('platform') == PlatForm.WECHAT_MINI_GAME:
+            trade_type = "T_MINIAPP"
+        request.trade_type = trade_type
         request.trans_amt = f"{float(order_info.get('amount')):.2f}"  # 交易金额，必须大于0，保留两位小数点，如0.10、100.05等
 
         # 准备extend_infos，包括所有需要额外传递的参数
