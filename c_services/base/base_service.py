@@ -9,7 +9,7 @@ from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from c_services.base.base_player import BasePlayer
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType
+from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType, RoomStatus
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2, enter_room_model, set_cards_model
 from common.public.enum_const import StaCode, CacheKey
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
@@ -56,6 +56,8 @@ class BaseService(BaseServer, SessionManager):
         player.offline = True
         self.log_info(room.tid, player.uid, "玩家掉线")
         if room.room_type == RoomType.COMMON:
+            # if room.room_status == RoomStatus.T_RECHARGE_ING:
+            #     return
             await room.player_quit_room(player,player.uid)
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
@@ -137,17 +139,14 @@ class BaseService(BaseServer, SessionManager):
         if player.trustee:
             await room.do_trustee(player)
 
-        self.log_info(player.uid, "enter_room", player.tid, id(player),"最大人数",room.max_player_count)
-
         # 同步房间、玩家信息
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
         reenter = enter_room_model.reenter or False
+        self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
-        if room.room_type == RoomType.SELF_BUILD:
-            await room.notify_distance()
 
     @staticmethod
     async def __on_quit_room(player, room, data):

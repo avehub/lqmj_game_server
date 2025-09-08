@@ -2,7 +2,7 @@ from collections import Counter
 from copy import deepcopy
 from datetime import datetime
 
-from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model
+from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model, player_position_model
 from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, \
     S2CShangGaMahjong, S2CShangGaBeginMahjong, S2CDealCardsMahjong, s2c_one_of_model, S2CPublicOperatesMahjong, S2CTurnToMahjong, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
@@ -277,6 +277,7 @@ class Room(BaseCardRoom):
         room_info = self.room_info()
         if self.room_status_is_equal(RoomStatus.T_PLAYING):
             room_info["last_card"] = self.__curr_card
+            room_info['last_seat_id'] = self.__before_seat_id
             room_info["left_count"] = self.poker.left_count
             room_info["dice_num"] = self.__dice_num
             room_info["ding_que_list"] = self.__que_list
@@ -297,6 +298,7 @@ class Room(BaseCardRoom):
                 data.pop("operates", None)
             else:
                 self.is_bi_hu(data)
+        print("玩家信息",room_player_info)
         return S2CPlayerInfo05Mahjong.pb_model(room_player_info)
 
     def get_operate_seats(self):
@@ -388,6 +390,7 @@ class Room(BaseCardRoom):
             data["hand_cards"] = p.cards
             p.sort_cards()
             data["mo_pai"] = 0
+            data["seat_id"] = p.seat_id
             if p.seat_id == self.dealer_id:
                 self.__curr_card = c
                 p.rev_card(c)
@@ -580,6 +583,7 @@ class Room(BaseCardRoom):
                 p.mo_pai = c
                 data["mo_pai"] = c
             data["hand_cards"] = p.cards
+            data["seat_id"] = p.seat_id
             cards_count[p.seat_id] = p.cards_len
             data["left_count"] = self.poker.left_count
             data["cards_count"] = cards_count
@@ -589,7 +593,7 @@ class Room(BaseCardRoom):
 
         if self.is_exchange_three():
             return await self.start_exchange_three()
-        await self.ding_que_or_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
+        await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
     async def start_exchange_three(self):
         if not self.flow_status_is_equal(FlowStatus.T_IN_DEAL_CARDS):
@@ -976,6 +980,7 @@ class Room(BaseCardRoom):
             "seat_id": self.curr_seat_id,
             "seconds": seconds,
             "left_count": self.poker.left_count,
+            "in_flow": self.flow_status,
         }
         for p in self.seats:
             if p.seat_id == self.curr_seat_id:
@@ -1580,7 +1585,8 @@ class Room(BaseCardRoom):
                 "left_count": self.poker.left_count,
                 "seconds": TimerDelay.CHU_PAI_AFTER_WAIT_TIME,
                 "operates": operates,
-                "is_bi_hu": 1 if self.__have_men_jian_hu and ActionType.ACTION_TYPE_HU in operates else 0
+                "is_bi_hu": 1 if self.__have_men_jian_hu and ActionType.ACTION_TYPE_HU in operates else 0,
+                "in_flow": self.flow_status,
             }
             opt_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:
@@ -2514,6 +2520,7 @@ class Room(BaseCardRoom):
                 if p.seat_id == self.dealer_id and p.tian_ting != 1:
                     p.sort_cards()
                     p.mo_pai = p.cards[-1]
+                    self.__curr_card =  p.mo_pai
                     self.log_info(self.tid, "换牌后庄改变摸的牌", p.uid, p.cards[-1])
 
                 result["hand_cards"] = p.cards
@@ -2615,7 +2622,8 @@ class Room(BaseCardRoom):
             "left_count": self.poker.left_count,
         }
         for p in self.seats:
-
+            if self.curr_seat_id == p.seat_id:
+                self.__curr_card = p.mo_pai
             if self.__four_card_bao_ting and p.cards_len < 13:
                 continue
             data["operates"] = self.get_tian_ting_operates(p)
@@ -2972,9 +2980,9 @@ class Room(BaseCardRoom):
         await self.inner_broadcast(CmdRoom.ROUND_START, data_model)
         self.log_info(self.tid, "round_start", self.__shang_ga, self.__default_ji)
         if self.__shang_ga:
-            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else await self.start_player_shang_ga()
+            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else self.call_flow(1.5,self.start_player_shang_ga)
         else:
-            await self.delay_func(2, self.deal_cards)
+            self.call_flow(2, self.deal_cards)
 
     async def round_over(self, over_type=OverType.DEFAULT, **kwargs):
         is_force = kwargs.get("is_force", False)
@@ -3090,7 +3098,7 @@ class Room(BaseCardRoom):
                 deal_cards = True
             p.on_round_over(0)
         bird_info = self.zhong_bird()
-        return {}, -1 if not deal_cards else bird_info
+        return {}, 0 if not deal_cards else bird_info[0]
 
     def zhong_bird(self):
         """ 翻鸡 """
@@ -3254,7 +3262,7 @@ class Room(BaseCardRoom):
                 if ji in self.__default_ji:
                     # 金鸡 x2
                     bei_lv = 1
-                    if ji in fan_bird_list:
+                    if ji in self.__fan_jin_ji_cards:
                         bei_lv = 2
                         pg_ji_count = pg_ji_card_count.get(ji, 0)  # 碰杠鸡
                         if pg_ji_count > 0:
@@ -4413,10 +4421,23 @@ class Room(BaseCardRoom):
         return result
 
     async def notify_distance(self):
-
-        data = {"distances": self.get_all_distances()}
+        distances = self.get_all_distances()
+        self.log_info("下发定位信息",distances)
+        data = {"distances": distances}
         data_model = S2CNotifyPosition.pb_model(**data)
         await self.inner_broadcast(CmdRoom.NOTIFY_POSITION, data_model)
+
+    async def set_player_position(self, player: Player,data):
+
+        player_position_model.ParseFromString(data)
+        x = player_position_model.x or 0
+        y = player_position_model.y or 0
+        if x == 0 and y ==0:
+            x = None
+            y = None
+        player.set_position(x,y)
+        self.log_info("收到定位信息",player.uid,player.seat_id,"x",x,"y",y)
+        await self.notify_distance()
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss)
@@ -4434,7 +4455,6 @@ class Room(BaseCardRoom):
                     await self.liu_ju()
                     return
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                print("直接解散 不记录战绩")
                 return await super(BaseCardRoom, self).game_over()
             self.set_room_status(self.not_playing_room_status)
             return await self.game_over()

@@ -446,7 +446,6 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def notify_player_info(self, curr_player=None, reenter = False):
         """ 通知玩家信息 """
-        print("发送玩家信息")
         if curr_player:
             # 断线重进房间
             room_player_info = self.room_player_info(curr_player)

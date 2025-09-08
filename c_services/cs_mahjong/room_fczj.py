@@ -433,7 +433,8 @@ class RoomFCZJ(BaseLeisureRoom):
             player.lian_sheng -= 1
         else:
             player.lian_sheng = -1
-        self.__wait_recharge_seats.remove(player.seat_id)
+        if player.seat_id in self.__wait_recharge_seats:
+            self.__wait_recharge_seats.remove(player.seat_id)
         await self.inner_broadcast(CmdRoom.GIVE_UP, m)
         self.log_info(player.uid, player.seat_id, "放弃_fc")
         if self.ren_shu_count == self.max_player_count - 1:
@@ -1778,9 +1779,9 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def player_recharge_ing(self, player):
         """ 充值中回调 """
+        self.log_info(player.uid, player.seat_id, "玩家选择复活，复活中。。。",self.room_status)
+
         if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
-            return
-        if player.seat_id != self.curr_seat_id:
             return
         if player.is_robot:
             return
@@ -1854,15 +1855,18 @@ class RoomFCZJ(BaseLeisureRoom):
             p = self.get_player_by_seat_id(choice_seat)  # 杠后摸牌的玩家
         else:
             p = self.next_player(self.curr_seat_id)
+
+
         if self.poker.left_count <= const.LIU_JU_COUNT:  # 黄庄了
             self.find_hua_zhu_players()
             self.not_jiao_pai_player()
             cards_info = self.get_player_cards_info()
             cards_model = S2CHuAfterCards.pb_model(cards_info)
             await self.inner_broadcast(CmdRoom.HU_AFTER_CARDS_INFO, cards_model)
+
             if len(self.__no_jiao_pai_seats) == self.in_room_count:
                 await self.liu_ju_notify()
-                return self.round_over(OverType.LIU_JU)
+                return await self.round_over(OverType.LIU_JU)
             else:
                 return self.call_flow(2, self.start_fan_ji)
 
@@ -2712,13 +2716,14 @@ class RoomFCZJ(BaseLeisureRoom):
         new_data = []
         update_task = []
         for p in self.seats:
+            replay_label = await RecordsGameSegmentRC.make_replay_label()
             record_data = {
                 "record_rid": self.__record_id,
                 "record_tid": 0,
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": [],
-                "replay_label": p.uid
+                "replay_label": replay_label
             }
             p.cancel_timer()  # 清理延时
             if over_check:
@@ -3012,6 +3017,8 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__player_actions = []  # 玩家动作
         self.__curr_card_exist = 0  # 当前牌是否存在
         self.__can_fan_ji_seats = []
+        self.__no_jiao_pai_seats = []
+        self.__hua_zhu_seats = []
         self.__record_id = 0
 
     async def record_game(self):
