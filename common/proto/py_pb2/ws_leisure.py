@@ -1081,6 +1081,7 @@ class S2CClubRoomInfo:
         obj.updated = kwargs.get("updated") or 0
         obj.msg_type = kwargs.get("msg_type") or 0
         obj.round_idx = kwargs.get("round_idx") or 1
+        obj.online_group_user.extend(kwargs.get("online_group_user") or [])
         return obj
 
 # ################################## 茶馆通知 ##################################

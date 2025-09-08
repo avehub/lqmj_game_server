@@ -266,6 +266,9 @@ class RoomZY(RoomBJ):
 
     async def deal_first_ji(self, curr_p: Player):
         await super().deal_first_ji(curr_p)
+        if not self.flow_status_is_equal(FlowStatus.T_IN_PUBLIC_OPRATE):
+            self.log_info(self.tid, "冲锋鸡必须是成功打牌后")
+            return
         if self.play_type == PlayType.ZUN_YI_LAI_ZI and self.curr_card == self.lai_zi and self.__round_first_yi_tong == 0:
             self.__round_first_yi_tong = 1
             self.__cf_yi_tong_seat_id = self.curr_seat_id

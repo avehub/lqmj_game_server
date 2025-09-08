@@ -671,6 +671,7 @@ class BaseCardRoom(BaseRoom):
             "seats": [p.uid for p in self.seats if p],
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
+            "online_group_user": self.room_conf.get("online_group_user"),
             "round_idx": self.round_idx,
             "updated": self.__create_time,
             "msg_type": msg_type,
