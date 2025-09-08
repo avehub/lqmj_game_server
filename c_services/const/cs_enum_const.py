@@ -248,6 +248,7 @@ class RedDotType(BaseEnum):
     RD_CLUB_CHECK = 23, "俱乐部审批"
     RD_CLUB_USER_LIST = 24, "俱乐部用户列表"
     RD_CLUB_KICK = 25, "俱乐部踢出"
+    RD_CLUB_CHECK_REFRESH = 26, "俱乐部审批刷新"
 
 
 class CmdRobotMethods(BaseEnum):

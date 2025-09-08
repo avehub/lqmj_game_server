@@ -555,7 +555,7 @@ class LvDefendType(BaseEnum):
 
 RED_DOTS_OPPORTUNITY_MAP = {
     red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
-    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
+    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN, RedDotType.RD_RELIEF],
 }
 
 
