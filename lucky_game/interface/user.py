@@ -51,7 +51,7 @@ class UpdateUserInfo(GameAuthApi):
         name = self.check_str(req.json.get("name"), require=False, p_name="玩家昵称")
         avatar = self.check_str(req.json.get("avatar"), require=False, p_name="头像地址")
         sex = self.check_int(req.json.get("sex"), minval=0, maxval=2, require=False, p_name="性别")
-        phone = self.check_phone_number(req.json.get("phone"), require=False, p_name="手机号码")
+        phone = self.check_phone_number(req.json.get("phone"), require=False)
         email = self.check_str(req.json.get("email"), require=False, p_name="邮箱")
         address = self.check_str(req.json.get("address"), require=False, p_name="所在地址")
         album = self.check_str(req.json.get("album"), require=False, p_name="相册")

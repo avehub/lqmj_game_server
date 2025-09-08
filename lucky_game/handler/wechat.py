@@ -2,7 +2,7 @@ from nsanic.libs.component import LogMeta
 
 from common.public.base_enum import BaseEnum
 from enum import unique
-from common.public.conf import WeChatConf, H5_SERVER_ADDR, PROD_SERVER_ADDR, LIVE_SERVER
+from common.public.conf import WeChatConf, H5_SERVER_ADDR, PROD_SERVER_ADDR, LIVE_SERVER, ENV
 from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.tool import http_get, http_post, json_parse, json_encode
 from nsanic.libs import tool_dt
@@ -226,12 +226,16 @@ class WeChat(LogMeta):
         if not session_key:
             return
         session_key = session_key.decode("utf-8")
-
+        env = 0
+        app_key = WeChatConf.WE_CHAT_APP_KEY
+        if ENV != "prod":
+            env = 1
+            app_key = WeChatConf.WE_CHAT_APP_KEY_DEV
         sign_data = {
             "mode": 'goods',  # game 游戏币 / goods 道具直购
             "offerId": WeChatConf.WE_CHAT_MG_OFFER_ID,
             "buyQuantity": 1,
-            "env": 0,  # 0：现网环境 也叫正式环境 / 1：沙箱环境
+            "env": env,  # 0：现网环境 也叫正式环境 / 1：沙箱环境
             "currencyType": 'CNY',
             "platform": 'android',
             "zoneId": '1',
@@ -243,7 +247,7 @@ class WeChat(LogMeta):
         # 用户登录态签名  使用session_key（通过session key加密post请求数据）
         signature = UtilsTool.get_hash_secrets(session_key, encode_data, secrets_type="sha256")
         # 支付请求签名（加密url和post请求数据）
-        pay_sign = UtilsTool.get_hash_secrets(WeChatConf.WE_CHAT_APP_KEY, f"{method}&{encode_data}",
+        pay_sign = UtilsTool.get_hash_secrets(app_key, f"{method}&{encode_data}",
                                               secrets_type="sha256")  # 支付请求签名
 
         params = {
