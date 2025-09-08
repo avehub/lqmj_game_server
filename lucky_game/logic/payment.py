@@ -171,7 +171,7 @@ class PaymentLogic:
             PayMode.WECHAT_PAY.val: self.pay_3,
             PayMode.VIVO_PAY.val: self.pay_4,
             PayMode.APPLE_PAY.val: self.pay_5,
-            PayMode.ALIPAY_APP.val: self.pay_6
+            PayMode.ALIPAY_APP.val: self.pay_6,
         }
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
@@ -329,6 +329,7 @@ class PaymentLogic:
                 "sku": order_info.sku,
                 "gzh_openid": gzh_openid,
                 "amount": order_info.amount,
+                "platform": order_info.platform,
             }
             req_res = await DouGongPay.dou_gong_js_pay(**info)
             NLogger.info('HuiFuGetPayInfo DouGong res:', req_res)

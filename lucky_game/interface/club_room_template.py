@@ -32,7 +32,7 @@ class RoomTemplateBase(GameAuthApi):
 
     async def verify_params(self, req: Request, **kwargs):
         """游戏房间常规参数校验"""
-        platform = self.check_int(req.args.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
+        platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         cs_type = self.check_int(req.json.get("cs_type"), require=True, p_name="子服务类型")
         play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
         club_id = self.check_int(req.json.get("club_id"), minval=100000, require=False, p_name="茶馆ID")
