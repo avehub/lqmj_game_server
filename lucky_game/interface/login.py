@@ -226,15 +226,11 @@ class LoginByWechat(BaseLogin):
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-
-        return await self.__after_get_token_by_code(req, req_data, server_info, platform)
-
-    async def __after_get_token_by_code(self, req, data, server_info, platform):
-        # 获取access_token、open_id等信息
-        req_sta, req_data = await WeChat.wechat_gzh_userinfo(data.get('access_token'), data.get('openid'))
-        if not req_sta:
-            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-        # 通过union_id查询数据库用户信息
+        if platform == PlatForm.WECHAT_MP:
+            req_sta, req_data = await WeChat.wechat_gzh_userinfo(req_data.get('access_token'), req_data.get('openid'))
+            if not req_sta:
+                self.answer(self.sta_code.EXTERNAL_ERR, hint=req_data)
+        # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
         q_params = {
             "openid": openid,
@@ -245,7 +241,7 @@ class LoginByWechat(BaseLogin):
 
         # 新用户 注册
         if not u_info:
-            req_data["avatar"] = req_data.get('headimgurl')
+            req_data["avatar"] = req_data.get('headimgurl') if platform == PlatForm.WECHAT_MP else f"avatar/avatar_{random.randint(1, 7)}.png"
             req_data["wechat"] = 1
             req_data["unionid"] = req_data.get('unionid')
             u_info = await self.create_new_user(
@@ -257,8 +253,12 @@ class LoginByWechat(BaseLogin):
             self.log_info('Wechat Login u_info:', u_info)
 
         (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        if platform == PlatForm.WECHAT_MINI_GAME:
+            session_key = req_data.get("session_key")
+            await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
+
 
 
 class LoginByToken(BaseLogin):

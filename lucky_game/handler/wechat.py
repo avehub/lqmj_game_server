@@ -23,6 +23,7 @@ class WeChat(LogMeta):
     def __return_req_data(cls, req_data):
         """ 返回请求数据 """
         req_data = json_parse(req_data)
+        NLogger.info(f"微信平台接口返参解析：{req_data}")
         errcode = req_data.get("errcode") or 0
         if errcode != 0:
             return errcode, req_data.get("errmsg")
