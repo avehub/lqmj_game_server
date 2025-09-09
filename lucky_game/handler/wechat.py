@@ -240,7 +240,7 @@ class WeChat(LogMeta):
             "platform": 'android',
             "zoneId": '1',
             "productId": product_id or '',
-            "goodsPrice": trade_amount * cls.WECHAT_COIN_RATE,  # 单位（分）
+            "goodsPrice": int(trade_amount * cls.WECHAT_COIN_RATE),  # 单位（分）
             "outTradeNo": order_id,
         }
         encode_data = json_encode(sign_data)
