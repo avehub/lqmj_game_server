@@ -13,7 +13,7 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.handler.huifu import DouGongPay
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_db.main import RecordsTradeOrder
+# from lucky_game.model_db.main import RecordsTradeOrder
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.handler.up_assets import UpAssets

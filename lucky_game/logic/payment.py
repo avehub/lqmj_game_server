@@ -264,9 +264,8 @@ class PaymentLogic:
             good_id=express.get("good_id"),
             sku=express.get("sku"),
             platform=platform,
-            # amount=express.get("price"),
-            # TODO 测试用
-            amount=express.get("price") if ENV == "prod" else decimal.Decimal(0.01),
+            amount=express.get("price"),
+            # amount=express.get("price") if ENV == "prod" else decimal.Decimal(0.01),
             currency=express.get("currency"),
             pay_mode=pay_mode,
             num=num,
