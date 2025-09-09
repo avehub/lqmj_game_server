@@ -228,9 +228,9 @@ class WeChat(LogMeta):
         session_key = session_key.decode("utf-8")
         env = 0
         app_key = WeChatConf.WE_CHAT_APP_KEY
-        if ENV != "prod":
-            env = 1
-            app_key = WeChatConf.WE_CHAT_APP_KEY_DEV
+        # if ENV != "prod":
+        #     env = 1
+        #     app_key = WeChatConf.WE_CHAT_APP_KEY_DEV
         sign_data = {
             "mode": 'goods',  # game 游戏币 / goods 道具直购
             "offerId": WeChatConf.WE_CHAT_MG_OFFER_ID,
