@@ -4,6 +4,8 @@
 from sanic import Request
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from nsanic.libs.tool import json_encode, json_parse
+
+from lucky_game.const import PlatForm
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -31,7 +33,7 @@ async def make_again_room_msg(room_data):
 
 class GameRoomAPI(RoomTemplateBase):
 
-    async def _before_create_room(self, creator, price, club_id, u_info, rule_details):
+    async def _before_create_room(self, creator, price, club_id, u_info, rule_details, platform):
         """创建游戏房间前的预处理"""
         # 是否已有创建房间
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, u_info.get("uid"), jsparse=True)
@@ -50,14 +52,18 @@ class GameRoomAPI(RoomTemplateBase):
             # 茶馆创建房间配置权限校验
             if club['uid'] != creator and club['other'].get("host_power_room") in [0, 2]:
                 return self.answer(StaCode.FAIL, hint="无法创建房间")
-            if club['other'].get("pay_type") == 1 and u_info.get("room_card") < price:
+            if club['other'].get("pay_type") == 0 and u_info.get("room_card") < price:
                 return self.answer(StaCode.FAIL, hint="房卡不足")
             if club['other'].get("pay_type") == 2 and club["room_card"] < price:
                 return self.answer(StaCode.FAIL, hint="茶馆基金不足")
         else:
-            if rule_details.get("pay_type") == 1:
-                if u_info.get("room_card") < price:
-                    return self.answer(StaCode.FAIL, hint="房卡不足")
+            if rule_details.get("pay_type") == 0:
+                if platform == PlatForm.WECHAT_MINI_GAME:
+                    if u_info.get("yellow_diamond") < price:
+                        return self.answer(StaCode.FAIL, hint="黄钻不足")
+                else:
+                    if u_info.get("room_card") < price:
+                        return self.answer(StaCode.FAIL, hint="房卡不足")
         return True
 
     async def room_clone(self, template_id, uid, **kwargs):
@@ -119,8 +125,10 @@ class CreateRoom(GameRoomAPI):
             price=int(price),
             club_id=club_id,
             u_info=u_info,
-            rule_details=rule_details
+            rule_details=rule_details,
+            platform=platform
         )
+
         # 创建房间
         new_room, err = await GameRoomsRC.create_game_room(
             platform=platform,
