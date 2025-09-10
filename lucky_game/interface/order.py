@@ -147,6 +147,168 @@ class CallbackIos(GameAuthApi):
             return self.answer(code=self.sta_code.FAIL, hint=msg)
         return self.answer()
 
+class MiniProgramRecvPush(BaseSomePay):
+    """
+    微信小程序回调通知
+    参考文档：https://developers.weixin.qq.com/miniprogram/dev/framework/server-ability/message-push.html#
+    """
+    decorators = []
+
+    @classmethod
+    def parse_session_from(cls, session_from):
+        """
+        解析session_from字符串为字典
+        :param session_from: 形如 "key1=value1,key2=value2" 的字符串
+        """
+        params_dict = {}
+        for item in session_from.split(','):
+            if not item:  # 跳过空字符串项
+                continue
+            try:
+                key, value = item.split('=', 1)
+                params_dict[key] = int(value)  # 尝试将值转换为整数
+            except ValueError as e:
+                cls.log_info(f"无法解析项 '{item}' 到键值对: {e}")
+                continue  # 跳过这个项，继续下一个
+        return params_dict
+
+    async def get(self, req: Request):
+        """测试用"""
+        self.wechat_check_signature(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN)
+        _ = await self.wechat_decode_data(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN, WeChatConf.WE_CHAT_MP_AES_KEY,
+                                          WeChatConf.WE_CHAT_MG_APP_ID)
+        self.log_info("MiniProgramRecvPush 消息推送解密测试：", req.args)
+        return response.text(body=req.args.get("echostr"))
+
+    async def post(self, req: Request):
+        """
+        用户发给小程序的消息以及开发者需要的事件推送，都将被微信转发至该服务器地址中
+        参考文档：https://developers.weixin.qq.com/doc/offiaccount/Message_Management/Receiving_event_pushes.html
+        """
+        self.wechat_check_signature(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN)
+        payload_data = await self.wechat_decode_data(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN,
+                                                     WeChatConf.WE_CHAT_MP_AES_KEY, WeChatConf.WE_CHAT_MG_APP_ID)
+        self.log_info("MiniProgramRecvPush 接收到微信消息推送回调", payload_data)
+        session_from = payload_data.get("SessionFrom") or ""
+        if not session_from:
+            # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
+            # 目前重点处理支付，其他的客服人员处理
+            return response.json({"ErrCode": 0, "ErrMsg": "Success"})
+        from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
+
+        # 1.解析数据:客户端获取-传给微信-回调发送后端
+        params_dict = self.parse_session_from(session_from)
+        self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
+        if params_dict is None:
+            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
+
+        params_key = {"trade_item", "uid", "c_platform", "count"}
+        if not params_key.issubset(params_dict.keys()):
+            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
+
+        # 2.创建订单
+        uid = params_dict.get("uid")
+        trade_item = params_dict.get("trade_item")
+        platform = params_dict.get('c_platform') or ''
+        count = req.json.get("count") or 1
+
+        # order_info, hint = await OrderRC.create_order(uid, trade_item, PayMode.IOS_TO_H5, platform, req, count=count)
+        order_info = {}
+        if order_info:
+            # 3.发送客服消息（支付界面相关信息）
+            access_token = await self.wechat_get_access_token()
+            errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, access_token, order_info)
+            self.log_info(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
+            if not errcode:
+                return response.json({"ErrCode": 0, "ErrMsg": "Success"})
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '发送客服消息失败'})
+        return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": "订单创建失败"})
+
+class MiniProgramRecvPush(SpecialApi):
+    """
+    微信小程序回调通知
+    参考文档：https://developers.weixin.qq.com/miniprogram/dev/framework/server-ability/message-push.html#
+    """
+
+    @classmethod
+    def parse_session_from(cls, session_from):
+        """ 解析session_from字符串为字典: param session_from: 形如 "key1=value1,key2=value2" 的字符串 """
+        params_dict = {}
+        for item in session_from.split(','):
+            if not item:  # 跳过空字符串项
+                continue
+            try:
+                key, value = item.split('=', 1)
+                params_dict[key] = int(value)  # 尝试将值转换为整数
+            except ValueError as e:
+                cls.log_info(f"无法解析项 '{item}' 到键值对: {e}")
+                continue  # 跳过这个项，继续下一个
+        return params_dict
+
+    async def __handel_data(self, req: Request):
+        msg_signature = req.args.get("msg_signature")
+        signature = req.args.get("signature") or ""
+        timestamp = req.args.get("timestamp")
+        nonce = req.args.get("nonce")
+        sta, msg = await WeChat.wechat_check_signature(signature, timestamp, nonce)
+        if not sta:
+            return False, response.json({"ErrCode": self.sta_code.ERR_AUTH, "ErrMsg": msg})
+        payload_sta, payload_data = await WeChat.wechat_decode_data(req.json, msg_signature, timestamp, nonce)
+        self.log_info("MiniProgramRecvPush 接收到微信消息推送回调", payload_sta, payload_data)
+        if not payload_sta:
+            return False, response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
+        self.log_info("MiniProgramRecvPush 消息推送解密测试：", req.args)
+        return True, payload_data
+    async def get(self, req: Request):
+        """测试用"""
+        await WeChat.wechat_get_access_token_stable()
+        sta, payload_data = await self.__handel_data(req)
+        if not sta:
+            return payload_data
+        return response.text(body=req.args.get("echostr"))
+
+    async def post(self, req: Request):
+        """
+        用户发给小程序的消息以及开发者需要的事件推送，都将被微信转发至该服务器地址中
+        参考文档：https://developers.weixin.qq.com/doc/offiaccount/Message_Management/Receiving_event_pushes.html
+        """
+        sta, payload_data = await self.__handel_data(req)
+        if not sta:
+            return payload_data
+        session_from = payload_data.get("SessionFrom") or ""
+        if not session_from:
+            # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
+            # 目前重点处理支付，其他的客服人员处理
+            return response.json({"ErrCode": 0, "ErrMsg": "Success"})
+        from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
+
+        # 1.解析数据:客户端获取-传给微信-回调发送后端
+        params_dict = self.parse_session_from(session_from)
+        self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
+        if params_dict is None:
+            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
+
+        params_key = {"trade_item", "uid", "c_platform", "count"}
+        if not params_key.issubset(params_dict.keys()):
+            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
+
+        # 2.创建订单
+        uid = params_dict.get("uid")
+        sku = params_dict.get("trade_item")
+        num = params_dict.get("count")
+        platform = params_dict.get('c_platform') or ''
+        express = await GoodRC.get_good_info(str(sku))
+        if not express:
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
+        pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, num, purchase_uid=uid)
+        if not pay_info:
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
+        # 3.发送客服消息（支付界面相关信息）
+        errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, pay_info)
+        self.log_info(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
+        if not errcode:
+            return response.json({"ErrCode": 0, "ErrMsg": "Success"})
+        return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '发送客服消息失败'})
 
 class MiniProgramRecvPush(SpecialApi):
     """

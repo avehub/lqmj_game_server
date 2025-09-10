@@ -136,9 +136,6 @@ class BaseService(BaseServer, SessionManager):
         """ 进入房间 """
         # 离开房间则断线，重进则上线
         player.offline = False  # 此处不改变状态，玩家收不到房间以下两条信息
-        if player.trustee:
-            await room.do_trustee(player)
-
         # 同步房间、玩家信息
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
@@ -147,6 +144,8 @@ class BaseService(BaseServer, SessionManager):
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
+        if player.trustee:
+            await room.do_trustee(player)
 
     @staticmethod
     async def __on_quit_room(player, room, data):
