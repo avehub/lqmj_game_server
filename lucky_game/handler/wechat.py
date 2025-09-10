@@ -331,8 +331,8 @@ class WeChat(LogMeta):
             return new_openid
 
     @classmethod
-    async def wechat_gzh_userinfo(cls, access_token, open_id):
-        """获取公众号用户信息"""
+    async def wechat_userinfo(cls, access_token, open_id):
+        """获取微信用户信息"""
         url = f"https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={open_id}&connect_redirect=1"
         # 通过access_token和open_id获取用户个人信息（UnionID机制）
         req_get = await http_get(url)
