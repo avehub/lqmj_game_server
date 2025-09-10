@@ -213,7 +213,7 @@ class LoginByGuest(BaseLogin):
 
 
 class LoginByWechat(BaseLogin):
-    """ 微信登陆（公众号、小程序） """
+    """ 微信登陆（公众号、小程序、微信APP） """
     decorators = []
 
     async def post(self, req: Request):
@@ -230,17 +230,24 @@ class LoginByWechat(BaseLogin):
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-        if platform == PlatForm.WECHAT_MP:
-            req_sta, req_data = await WeChat.wechat_gzh_userinfo(req_data.get('access_token'), req_data.get('openid'))
-            if not req_sta:
-                self.answer(self.sta_code.EXTERNAL_ERR, hint=req_data)
+
         # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
         q_params = {
             "openid": openid,
             "platform": platform
         }
-        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
+        unique_key = BaseUserRC.KEY_OPENID
+        if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
+            # 微信公众号、微信APP为同一账号
+            req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
+            if not req_sta:
+                self.answer(self.sta_code.EXTERNAL_ERR, hint=req_data)
+            q_params = {
+                "unionid": req_data.get('unionid'),
+            }
+            unique_key = BaseUserRC.KEY_UNION_ID
+        u_info = await BaseUserRC.cache_by_unique(q_params, unique_key)
         login_info = await self.get_login_info(req, LoginWay.WECHAT)
 
         # 新用户 注册
@@ -267,7 +274,6 @@ class LoginByWechat(BaseLogin):
 
 class LoginByToken(BaseLogin):
     """ 通过token登录 """
-
     async def post(self, req: Request, **kwargs):
         server_info = await self.whether_through()
         u_info = kwargs.get("u_info")
@@ -402,15 +408,14 @@ class BindByWechat(BaseLogin):
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
-        req_sta, data = await WeChat.wechat_gzh_userinfo(req_data.get('access_token'), req_data.get('openid'))
+        req_sta, data = await WeChat.wechat_userinfo(req_data.get('access_token'), req_data.get('openid'))
         if not req_sta:
             self.answer(self.sta_code.EXTERNAL_ERR, data=data)
-        openid = data.get('openid')
+        unionid = data.get('unionid')
         q_params = {
-            "openid": openid,
-            "platform": PlatForm.WECHAT_MP
+            "unionid": unionid,
         }
-        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_UNION_ID)
         if u_info:
             return self.answer(self.sta_code.USER_EXIST, hint="微信已绑定其他账号，请直接使用微信登录")
 
@@ -418,9 +423,16 @@ class BindByWechat(BaseLogin):
         updated = {
             'valid_key': self.rng.mk_str(16),
             'ip': self.ori_ip(req),
-            'openid': openid,
+            'openid': data.get('openid'),
+            'unionid': unionid,
             'wechat': 1,
+            'name': data.get('nickname'),
         }
+        if data.get('nickname'):
+            updated['name'] = data.get('nickname')
+            updated['sex'] = data.get('sex') or 0
+        if data.get('headimgurl'):
+            updated['avatar'] = data.get('headimgurl')
         u_info = await BaseUserRC.update_info(user, updated)
         (not u_info) and self.answer(self.sta_code.FAIL, hint="绑定失败")
         return self.answer()

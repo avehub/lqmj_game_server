@@ -75,7 +75,7 @@ class MainBp(BaseBlue):
         Urls("/LoginByToken/", LoginByToken),  # Token登录
         Urls("/SendCode/", SendCode),  # 发送验证码
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
-        Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序)
+        Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序/微信APP)
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
 
