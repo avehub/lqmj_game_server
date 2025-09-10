@@ -149,7 +149,11 @@ class BaseLogin(GameAuthApi):
 
         # 新用户登录赠送金币
         gift_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_NEW_USER_GIFT)
-        asset_gift = {'gold': gift_conf.get("gold"), 'diamond': gift_conf.get("diamond"), 'room_card': gift_conf.get("room_card")}
+        asset_gift = {'gold': gift_conf.get("gold"), 'diamond': gift_conf.get("diamond")}
+        if platform == PlatForm.WECHAT_MINI_GAME:
+            asset_gift["yellow_diamond"] = gift_conf.get("yellow_diamond")
+        else:
+            asset_gift["room_card"] = gift_conf.get("room_card")
         u_dict.update(asset_gift)
 
         # 写入新用户信息

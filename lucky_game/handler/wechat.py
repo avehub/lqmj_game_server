@@ -7,6 +7,7 @@ from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.tool import http_get, http_post, json_parse, json_encode
 from nsanic.libs import tool_dt
 from common.utils.utils import UtilsTool
+from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.model_rc.base_user import BaseUserRC
 from nsanic.libs.mult_log import NLogger
 
@@ -83,6 +84,7 @@ class WeChat(LogMeta):
     @classmethod
     async def __return_access_token(cls, result, app_id):
         result = json_parse(result)
+        NLogger.info(f"微信授权登录获取access_token结果：{result}")
         errcode = result.get("errcode") or 0
         if errcode != 0:
             return errcode, result.get("errmsg")
@@ -258,15 +260,17 @@ class WeChat(LogMeta):
         return params
 
     @classmethod
-    async def wechat_send_custom_msg(cls, uid, open_id: str, access_token: str, order_info: dict):
+    async def wechat_send_custom_msg(cls, uid, open_id: str, pay_info: dict):
         """
         发送客服消息 sendCustomMessage
         参考文档：https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/kf-mgnt/kf-message/sendCustomMessage.html
         """
+        errcode, access_token = await WeChat.wechat_get_access_token_stable()
+        cls.log_info("WeChat 获取TOKEN结果：", "成功" if errcode == 0 else "失败")
         url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
-
-        order_id = order_info.get("order_id")
-        trade_amount = order_info.get("trade_amount")
+        order = pay_info.get("order")
+        order_id = order.get("order_no")
+        trade_amount = order.get("trade_amount")
         # 重定向跳转目标地址，简单说就是支付页面，环境：测试
         server_addr = PROD_SERVER_ADDR
         params = {
@@ -276,7 +280,7 @@ class WeChat(LogMeta):
                 {
                     "title": '点我充值',
                     "description": f'{trade_amount}元\n支付完成请返回游戏查看',
-                    "url": f'{H5_SERVER_ADDR}/smxn/payH5/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}',
+                    "url": f'{H5_SERVER_ADDR}/beta/hjmj/hjmj_wxpay_new/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}&payData={json_encode(pay_info)}',
                     # 微信商户后台配置没位了，只能暂用他们的
                     "thumb_url": 'https://ddzres.lpyqp.com/pay2.png'  # 图片地址
                 }
@@ -320,8 +324,30 @@ class WeChat(LogMeta):
             return False, data
         return True, req_data
 
+    @classmethod
+    async def wechat_check_signature(cls, signature, timestamp, nonce):
+        """微信验签"""
+        if not signature or not timestamp or not nonce:
+            return False, "参数错误"
+        tmp_arr = [WeChatConf.WE_CHAT_MG_PUSH_TOKEN, timestamp, nonce]
+        tmp_arr.sort()  # 默认是按照字符串排序，类似于PHP的SORT_STRING
+        tmp_str = ''.join(tmp_arr)  # 使用join函数代替implode
+        tmp_str = UtilsTool.calc_hash(tmp_str, htype="sha1")
+        cls.conf.log.info("wechat_check_signature 微信验签", signature, '=?=', tmp_str)
+        if tmp_str != signature:
+            return False, "验签失败"
+        return True, "验签成功"
 
-@unique
-class WeChatPayCode(BaseEnum):
-    """errcode的合法值"""
-    ORDER_DUPLICATE = 90012, "订单号重复"
+    @classmethod
+    async def wechat_decode_data(cls, req_json, msg_signature, timestamp, nonce):
+        """微信密文、数据格式等解析"""
+        decrypt_tool = WXBizMsgCrypt(WeChatConf.WE_CHAT_MG_PUSH_TOKEN, WeChatConf.WE_CHAT_MG_AES_KEY, WeChatConf.WE_CHAT_MG_APP_ID)
+
+        decrypt_res, decrypt_json = decrypt_tool.DecryptMsg(req_json, msg_signature, timestamp, nonce)
+        decrypt_data = json_parse(decrypt_json)
+        cls.conf.log.info("wechat_decode_data 密文解析：", decrypt_res, decrypt_data)
+        if decrypt_res != 0:
+            return False, "密文消息解密失败"
+        return True, decrypt_data
+
+
