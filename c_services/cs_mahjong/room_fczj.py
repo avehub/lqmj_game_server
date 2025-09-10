@@ -731,6 +731,7 @@ class RoomFCZJ(BaseLeisureRoom):
             "seat_id": self.curr_seat_id,
             "seconds": seconds,
             "left_count": self.poker.left_count,
+            "in_flow": self.flow_status,
         }
         opt_task = []
         for p in self.seats:
@@ -1512,6 +1513,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 "left_count": self.poker.left_count,
                 "seconds": TimerDelay.CHU_PAI_AFTER_WAIT_TIME,
                 "operates": operates,
+                "in_flow": self.flow_status,
             }
             opt_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:
