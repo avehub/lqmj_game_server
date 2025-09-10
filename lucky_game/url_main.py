@@ -50,7 +50,7 @@ from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelatio
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
-from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos
+from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos, MiniProgramRecvPush
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode
 
 
@@ -181,6 +181,7 @@ class MainBp(BaseBlue):
         Urls("/CallbackIos/", CallbackIos),  # 苹果订单校验
         Urls("/UnclaimedOrder/", UnclaimedOrder),  # 未领取订单
         Urls("/GainOrder/", GainOrder),  # 领取订单
+        Urls("/MiniProgramRecvPush/", MiniProgramRecvPush),  # 小程序订单（小程序回调创建订单）
         # Urls("/MiniGameQueryOrder/", MiniGameQueryOrder),  # 微信MG订单查询
         # Urls("/ReduceBalanceByWechatMiniProgram/", ReduceBalanceByWechatMiniProgram),  # 微信扣除游戏币
         # Urls("/GetBalanceByWechatMiniProgram/", GetBalanceByWechatMiniProgram),  # 微信查询游戏币
