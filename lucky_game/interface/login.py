@@ -225,7 +225,7 @@ class LoginByWechat(BaseLogin):
         dev_ident = req.json.get('device_id') or req.headers.get('device_id')
         (not code or not dev_ident) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
 
-        errcode, req_data = await WeChat.wechat_gzh_login(code) if platform == PlatForm.WECHAT_MP else await WeChat.wechat_mini_game_login(code)
+        errcode, req_data = await WeChat.wechat_login(code, platform)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
@@ -396,7 +396,8 @@ class BindByWechat(BaseLogin):
     """ 绑定微信 """
     async def post(self, req: Request, **kwargs):
         code = self.check_str(req.json.get('code'), require=True, p_name="微信code")
-        errcode, req_data = await WeChat.wechat_gzh_login(code)
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
+        errcode, req_data = await WeChat.wechat_login(code, platform)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}

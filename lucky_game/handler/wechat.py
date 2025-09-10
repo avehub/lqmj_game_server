@@ -7,6 +7,7 @@ from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.tool import http_get, http_post, json_parse, json_encode
 from nsanic.libs import tool_dt
 from common.utils.utils import UtilsTool
+from lucky_game.const import PlatForm
 from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.model_rc.base_user import BaseUserRC
 from nsanic.libs.mult_log import NLogger
@@ -79,6 +80,25 @@ class WeChat(LogMeta):
         NLogger.info(f"微信H5登录获取用户授权url：{url}")
         req_data = await http_get(url)
         NLogger.info(f"微信H5登录获取获取授权结果：{req_data}")
+        return cls.__return_req_data(req_data)
+
+    @classmethod
+    async def wechat_login(cls, code, platform):
+        """ 微信公众号登陆 """
+        appid = WeChatConf.WE_CHAT_GZH_APP_ID
+        app_secret = WeChatConf.WE_CHAT_GZH_APP_SECRET
+        if platform == PlatForm.WECHAT_MINI_GAME:
+            appid = WeChatConf.WE_CHAT_MG_APP_ID
+            app_secret = WeChatConf.WE_CHAT_MG_APP_SECRET
+        elif platform == PlatForm.NATIVE_APP:
+            appid = WeChatConf.WE_CHAT_APP_ID
+            app_secret = WeChatConf.WE_CHAT_APP_SECRET
+
+        url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={}&secret={}&code={}&grant_type=authorization_code&connect_redirect=1"
+        url = url.format(appid, app_secret, code)
+        NLogger.info(f"微信登录获取用户授权url：{url}")
+        req_data = await http_get(url)
+        NLogger.info(f"微信登录获取获取授权结果：{req_data}")
         return cls.__return_req_data(req_data)
 
     @classmethod
