@@ -655,7 +655,7 @@ class RoomFCZJ(BaseLeisureRoom):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
             return StaCode.NOT_YOUR_TURN
-        do_trustee and await self.do_trustee(p)
+        # do_trustee and await self.do_trustee(p)
         # 锁牌情况：自动将摸的牌打出，或出第一张牌（理论不会出现癞子，因为锁牌摸到癞子必胡）
         if p.is_lock or p.lock_cards or p.men_cards or p.tian_ting:
             sta = await self.lock_auto_chu_pai(p)
@@ -1427,10 +1427,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def check_can_gang_after_peng(self, p: PlayerFCZJ):
         """ 检测玩家碰后是否能杠 """
-        print("check_can_gang_after_peng")
         operates, gang_card_list = self.get_operates_after_peng(p)
         if operates:
-            print("check_can_gang_after_peng--operates", operates)
             self.clear_table_actions()
             self.set_flow_status(FlowStatus.T_IN_MO_PAI_CALL)  # 设置为在摸牌中
             self.curr_seat_id = p.seat_id  # 设置当前玩家
