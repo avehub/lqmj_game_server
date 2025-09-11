@@ -86,11 +86,11 @@ class WeChat(LogMeta):
     async def wechat_login(cls, code, platform):
         """ 微信公众号登陆 """
         if platform == PlatForm.WECHAT_MINI_GAME:
-            return cls.wechat_mini_game_login(code)
+            return await cls.wechat_mini_game_login(code)
         elif platform == PlatForm.WECHAT_MP:
-            return cls.wechat_gzh_login(code)
+            return await cls.wechat_gzh_login(code)
         elif platform == PlatForm.NATIVE_APP:
-            return cls.wechat_app_login(code)
+            return await cls.wechat_app_login(code)
 
     @classmethod
     async def __return_access_token(cls, result, app_id):
