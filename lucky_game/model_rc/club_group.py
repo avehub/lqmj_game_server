@@ -151,14 +151,15 @@ class ClubGroupRC(RCModel):
         """检测用户是否与房间内用户在同一隔离组中"""
         all_exist = False
         groups, _ = await cls.get_club_group_by_filter(club_id, uid=uid)
+        cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中:uid:{uid},room_uid:{room_uid},groups:{groups}")
         if groups:
             for item in groups:
                 values_to_check = [uid]
                 target_array = json_parse(item["u_ids"])
                 for check_uid in room_uid:
                     values_to_check.append(check_uid)
-                    all_exist = all(value in target_array for value in values_to_check)
-                    if all_exist:
+                    if all(value in target_array for value in values_to_check):
+                        all_exist = True
                         break
         return all_exist
 

@@ -1,7 +1,8 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-from nsanic.base_conf import BaseConf
+# from nsanic.base_conf import BaseConf
+from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
@@ -16,7 +17,7 @@ from common.proto.py_pb2.common import common_pb2
 
 
 class CommonApi(LogMeta):
-    conf: BaseConf
+    conf: BaseConf = base_conf
 
     @classmethod
     async def get_player_ws_id(cls, uid):
@@ -111,6 +112,7 @@ class CommonApi(LogMeta):
         pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
         cmd = UtilsTool.packet_command(cs_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+
     @classmethod
     async def send_red_dot(cls, uid, rd_type):
         """ 红点消息 """
@@ -258,5 +260,3 @@ class CommonApi(LogMeta):
             return f"{url}&{query_string}"
         else:
             return f"{url}?{query_string}"
-
-

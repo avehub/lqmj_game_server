@@ -174,9 +174,9 @@ class GameRoomsRC(BaseCommonRC):
         """检查将要加入房间用户是否与房间成员在隔离组"""
         room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
         exist = await ClubGroupRC.check_uid_by_room(
-            club_id=room_data.get("club_id"),
-            room_uid=room_uid,
-            uid=uid,
+            room_data["club_id"],
+            room_uid,
+            uid,
         )
         if exist:
             return True, "房间可加入"
