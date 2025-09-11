@@ -115,6 +115,7 @@ class Clubs(DBModel):
     play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.AN_LONG_XUE_ZHAN, description="玩法类型")
     room_card = fields.IntField(max_length=20, null=True, default=0, description='茶馆基金（房卡）')
     other = fields.JSONField(null=True, description='其他设置：JSON存储')
+    notice = fields.TextField(null=True, description='公告')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态：0正常')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 

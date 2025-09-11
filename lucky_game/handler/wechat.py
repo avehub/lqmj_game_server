@@ -85,21 +85,12 @@ class WeChat(LogMeta):
     @classmethod
     async def wechat_login(cls, code, platform):
         """ 微信公众号登陆 """
-        appid = WeChatConf.WE_CHAT_GZH_APP_ID
-        app_secret = WeChatConf.WE_CHAT_GZH_APP_SECRET
         if platform == PlatForm.WECHAT_MINI_GAME:
-            appid = WeChatConf.WE_CHAT_MG_APP_ID
-            app_secret = WeChatConf.WE_CHAT_MG_APP_SECRET
+            return cls.wechat_mini_game_login(code)
+        elif platform == PlatForm.WECHAT_MP:
+            return cls.wechat_gzh_login(code)
         elif platform == PlatForm.NATIVE_APP:
-            appid = WeChatConf.WE_CHAT_APP_ID
-            app_secret = WeChatConf.WE_CHAT_APP_SECRET
-
-        url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={}&secret={}&code={}&grant_type=authorization_code&connect_redirect=1"
-        url = url.format(appid, app_secret, code)
-        NLogger.info(f"微信登录获取用户授权url：{url}")
-        req_data = await http_get(url)
-        NLogger.info(f"微信登录获取获取授权结果：{req_data}")
-        return cls.__return_req_data(req_data)
+            return cls.wechat_app_login(code)
 
     @classmethod
     async def __return_access_token(cls, result, app_id):

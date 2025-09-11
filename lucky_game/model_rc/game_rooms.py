@@ -169,6 +169,18 @@ class GameRoomsRC(BaseCommonRC):
         cls.conf.log.info("获取用户所在隔离组在线的用户ID", on_line_ids)
         return [item for item in on_line_ids if item != uid]
 
+    @classmethod
+    async def check_room_group(cls, room_data: dict, uid: int):
+        """检查将要加入房间用户是否与房间成员在隔离组"""
+        room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
+        exist = await ClubGroupRC.check_uid_by_room(
+            club_id=room_data.get("club_id"),
+            room_uid=room_uid,
+            uid=uid,
+        )
+        if exist:
+            return True, "房间可加入"
+        return False, "房间被茶馆主限定，暂时不可加入"
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,

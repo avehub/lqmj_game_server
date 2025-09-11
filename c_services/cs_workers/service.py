@@ -270,8 +270,9 @@ class WorkersServer(JsonBaseServer):
             num = 0
             if sta and progress:
                 num = act.get("join_limit_day") - progress.get("today_total", 0)
-            self.red_dot_log(uid, "救济红点查询", num > 0)
-            if num > 0:
+            result = num > 0 or not progress
+            self.red_dot_log(uid, "救济红点查询", result)
+            if result:
                 await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
 
     async def __notice_by_share(self, uid):

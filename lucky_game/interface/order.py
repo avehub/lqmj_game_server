@@ -8,7 +8,7 @@ from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
 
 from common.public.conf import WeChatConf
-from common.public.enum_const import DbKey
+from common.public.enum_const import DbKey, StaCode
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi, SpecialApi
 from lucky_game.handler.huifu import DouGongPay
@@ -21,7 +21,7 @@ from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import OrderStatus, PayMode, GainStatus
+from lucky_game.const import OrderStatus, PayMode, GainStatus, PlatForm
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 from common.aliyun.pay_service import AlipayPayment
 from lucky_game.logic.payment import PaymentLogic
@@ -319,31 +319,28 @@ class MiniProgramRecvPush(SpecialApi):
     @classmethod
     def parse_session_from(cls, session_from):
         """ 解析session_from字符串为字典: param session_from: 形如 "key1=value1,key2=value2" 的字符串 """
+        if not session_from:
+            return None
         params_dict = {}
         for item in session_from.split(','):
             if not item:  # 跳过空字符串项
                 continue
             try:
                 key, value = item.split('=', 1)
-                params_dict[key] = int(value)  # 尝试将值转换为整数
+                params_dict[key] = value
             except ValueError as e:
                 cls.log_info(f"无法解析项 '{item}' 到键值对: {e}")
                 continue  # 跳过这个项，继续下一个
         return params_dict
 
     async def __handel_data(self, req: Request):
-        msg_signature = req.args.get("msg_signature")
+        payload_data = req.json
         signature = req.args.get("signature") or ""
         timestamp = req.args.get("timestamp")
         nonce = req.args.get("nonce")
         sta, msg = await WeChat.wechat_check_signature(signature, timestamp, nonce)
         if not sta:
             return False, response.json({"ErrCode": self.sta_code.ERR_AUTH, "ErrMsg": msg})
-        payload_sta, payload_data = await WeChat.wechat_decode_data(req.json, msg_signature, timestamp, nonce)
-        self.log_info("MiniProgramRecvPush 接收到微信消息推送回调", payload_sta, payload_data)
-        if not payload_sta:
-            return False, response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
-        self.log_info("MiniProgramRecvPush 消息推送解密测试：", req.args)
         return True, payload_data
     async def get(self, req: Request):
         """测试用"""
@@ -361,38 +358,49 @@ class MiniProgramRecvPush(SpecialApi):
         sta, payload_data = await self.__handel_data(req)
         if not sta:
             return payload_data
+        create_time = payload_data.get("CreateTime") or ""
+        msg_type = payload_data.get("MsgType")
+        event = payload_data.get('Event')
+        mini_game = payload_data.get('MiniGame')
         session_from = payload_data.get("SessionFrom") or ""
+        from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
         if not session_from:
             # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
             # 目前重点处理支付，其他的客服人员处理
             return response.json({"ErrCode": 0, "ErrMsg": "Success"})
-        from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
+        errcode = StaCode.FAIL
+        if event == "user_enter_tempsession":
+            # 客服会话
+            # if mini_game: # 小游戏场景
+            # 1.解析数据:客户端获取-传给微信-回调发送后端
+            params_dict = self.parse_session_from(session_from)
+            self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
+            if params_dict is None:
+                return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
+            params_key = {"trade_item", "uid", "c_platform", "count"}
+            if not params_key.issubset(params_dict.keys()):
+                return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
+            # 2.创建订单 不清楚这块参数是根据什么生成的，目前按老版本逻辑生成
+            uid = params_dict.get("uid")
+            sku = params_dict.get("item_id")
+            platform = params_dict.get('platform') or PlatForm.WECHAT_MP
+            express = await GoodRC.get_good_info(str(sku))
+            if not express:
+                return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
+            pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, purchase_uid=uid)
+            if not pay_info:
+                return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
+            # 3.发送客服消息（支付界面相关信息）
+            errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, pay_info)
+            self.log_info(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
+        elif event == "minigame_deliver_goods":
+            # 发放礼包场景
+            pass
+        else:
+            # 其他客服人员处理
+            pass
+        if errcode:
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '发送客服消息失败'})
+        return response.json({"ErrCode": errcode, "ErrMsg": "Success"})
 
-        # 1.解析数据:客户端获取-传给微信-回调发送后端
-        params_dict = self.parse_session_from(session_from)
-        self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
-        if params_dict is None:
-            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
-
-        params_key = {"trade_item", "uid", "c_platform", "count"}
-        if not params_key.issubset(params_dict.keys()):
-            return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
-
-        # 2.创建订单
-        uid = params_dict.get("uid")
-        sku = params_dict.get("trade_item")
-        num = params_dict.get("count")
-        platform = params_dict.get('c_platform') or ''
-        express = await GoodRC.get_good_info(str(sku))
-        if not express:
-            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
-        pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, num, purchase_uid=uid)
-        if not pay_info:
-            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
-        # 3.发送客服消息（支付界面相关信息）
-        errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, pay_info)
-        self.log_info(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
-        if not errcode:
-            return response.json({"ErrCode": 0, "ErrMsg": "Success"})
-        return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '发送客服消息失败'})
 
