@@ -37,6 +37,7 @@ class BaseCardRoom(BaseRoom):
         self.__timer_dismiss = None
         self.__round_msg_records = []
         self.__winner_list = []
+        self.__online_group_user = []
         self.__agree_dismiss_seats = set()
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
@@ -75,6 +76,14 @@ class BaseCardRoom(BaseRoom):
     @property
     def deal_cards_count(self):
         return self.__deal_cards_count
+
+    @property
+    def online_group_user(self):
+        return self.__online_group_user
+
+    @online_group_user.setter
+    def online_group_user(self, value):
+        self.__online_group_user = value
 
     def set_not_playing_dismiss(self, status, value):
         self.__not_playing_room_status = status
@@ -149,6 +158,14 @@ class BaseCardRoom(BaseRoom):
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             self.service.release_player(player)
             if self.club_id > 0:
+                online_group_user_set = set()
+                for p in self.seats:
+                    if not p:
+                        continue
+                    uid_list =  await GameRoomsRC.get_online_user_group(p.uid, self.club_id)
+                    if uid_list:
+                        online_group_user_set.update(uid_list)
+                self.online_group_user = list(online_group_user_set)
                 await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.QUIT_ROOM))  # 通知茶馆创建房间
         super(BaseCardRoom, self).player_quit_room(player, data)
 
@@ -671,7 +688,7 @@ class BaseCardRoom(BaseRoom):
             "seats": [p.uid for p in self.seats if p],
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
-            "online_group_user": self.room_conf.get("online_group_user"),
+            "online_group_user": self.__online_group_user,
             "round_idx": self.round_idx,
             "updated": self.__create_time,
             "msg_type": msg_type,

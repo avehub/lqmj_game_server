@@ -35,7 +35,6 @@ class BaseCardService(BaseService):
         else:
             player = self.get_player(uid)
             if player and player.tid == tid:
-                # player.set_position(data.get("x", 0), data.get("y", 0))
                 enter_room_model.reenter = True
                 reenter = enter_room_model.SerializeToString()
                 await self.enter_room(player, room, reenter)
@@ -45,8 +44,8 @@ class BaseCardService(BaseService):
             if not room.room_status_is_equal(RoomStatus.T_IDLE):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
         player = self.get_or_create_player(uid, self.PLAYER)
-        # player.set_position(data.get("x", 0), data.get("y", 0))
         if player.seat_id <= 0:
+            room.online_group_user = data.get("online_group_user")
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id,"最大人数",room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)
