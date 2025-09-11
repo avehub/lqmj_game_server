@@ -709,6 +709,12 @@ class FirstCharge(Base):
                                    GoodsSku.SKU_REVIVE_4]:
             # 复活
             act_type = ActivityType.REVIVE_GIFT
+            # 复活礼包直接领取奖励
+            from lucky_game.logic.payment import PaymentLogic
+            good = await GoodRC.get_good_info(order_info["sku"])
+            u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
+            sta, msg = await PaymentLogic().pay_after(u_info, good, order_info["order_no"])
+            NLogger.info(f"复活礼包领取奖励结果：{sta}--{msg}")
             # 通知游戏复活成功
             data = {
                 "secret": C_SERVICE_SECRET_KEY,
@@ -720,12 +726,6 @@ class FirstCharge(Base):
                 data,
                 order_info["uid"],
             )
-            # 复活礼包直接领取奖励
-            from lucky_game.logic.payment import PaymentLogic
-            good = await GoodRC.get_good_info(order_info["sku"])
-            u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
-            sta, msg = await PaymentLogic().pay_after(u_info, good, order_info["order_no"])
-            NLogger.info(f"复活礼包领取奖励结果：{sta}--{msg}")
         elif order_info["sku"] in [GoodsSku.SKU_RETURN_1, GoodsSku.SKU_RETURN_2, GoodsSku.SKU_RETURN_3,
                                    GoodsSku.SKU_RETURN_4]:
             # 返还

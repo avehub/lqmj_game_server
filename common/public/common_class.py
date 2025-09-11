@@ -1,8 +1,8 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-# from nsanic.base_conf import BaseConf
-from c_services.base.base_conf import BaseConf, base_conf
+from nsanic.base_conf import BaseConf
+# from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
@@ -17,7 +17,12 @@ from common.proto.py_pb2.common import common_pb2
 
 
 class CommonApi(LogMeta):
-    conf: BaseConf = base_conf
+    conf = BaseConf()
+
+    # def __init__(self):
+    #     # 确保 conf 已初始化
+    #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
+    #         CommonApi.conf = BaseConf()
 
     @classmethod
     async def get_player_ws_id(cls, uid):

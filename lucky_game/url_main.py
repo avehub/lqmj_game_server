@@ -165,9 +165,9 @@ class MainBp(BaseBlue):
         #
         # # 充值/消费相关
         Urls("/StoreHandler/", StoreHandler),  # 获取商店商品
-        Urls("/PayByGood/", PayByGood),  # 商店购物
+        Urls("/PayByGood/", PayByGood),  # 商店购物（游戏内部）
         Urls("/StoreList/", StoreList),  # 获取商店商品列表
-        Urls("/StoreBuy/", StoreBuy),  # 商店购物
+        Urls("/StoreBuy/", StoreBuy),  # 商店购物（微信网页）
         # Urls("/GetActivityHandler/", GetActivityHandler),  # 获取充值活动配置
         # Urls("/GetActivityAwards/", GetActivityAwards),  # 领取活动奖励
         # Urls("/SwitchStaHandler/", SwitchStaHandler),  # 开关类型
