@@ -489,6 +489,7 @@ class BaseLeisureRoom(BaseRoom):
         """ 玩家充值回调 """
         self.log_info("收到玩家复活",player.uid,player.seat_id)
         await self.service.init_player(player)
+        self.log_info("收到玩家复活gold",player.gold)
         if player.gold <= 0:
             return await self.inner_send(player, CmdRoom.RECHARGE, code=StaCode.GOLD_NOT_ENOUGH)
         if player.is_out:
