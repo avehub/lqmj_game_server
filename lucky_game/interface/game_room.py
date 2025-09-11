@@ -204,6 +204,10 @@ class JoinRoom(GameRoomAPI):
             is_black, e = await ClubUsersRC.is_club_user_black(uid, room_data["club_id"])
             if is_black:
                 return self.answer(StaCode.FAIL, hint=e)
+            # 当前房间成员是否在隔离组
+            exist, msg = await GameRoomsRC.check_room_group(room_data, uid)
+            if not exist:
+                return self.answer(StaCode.FAIL, hint=msg)
         sta, e = await GameRoomsRC.join_room(room_data, uid)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
