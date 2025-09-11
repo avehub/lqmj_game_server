@@ -107,7 +107,7 @@ class ClubGroupRC(RCModel):
         return group, "成功"
 
     @classmethod
-    async def get_club_group_by_filter(cls, club_id: int, name: str = None):
+    async def get_club_group_by_filter(cls, club_id: int, name: str = None, uid: int = None):
         """根据条件获取茶馆隔离组列表"""
         try:
             query = {}
@@ -115,6 +115,8 @@ class ClubGroupRC(RCModel):
                 query["club_id"] = club_id
             if name is not None:
                 query["name"] = name
+            if uid is not None:
+                query["u_ids__contains"] = uid
             groups = await cls.db_model.filter(**query).values()
             if groups:
                 #将u_ids转化为列表
@@ -131,7 +133,7 @@ class ClubGroupRC(RCModel):
         """检测用户是否在茶馆隔离组中"""
         try:
             group_uid = set()
-            groups, _ = await cls.get_club_group_by_filter(club_id)
+            groups, _ = await cls.get_club_group_by_filter(club_id, uid=uid)
             if groups:
                 for item in groups:
                     ids = json_parse(item["u_ids"])
@@ -143,6 +145,22 @@ class ClubGroupRC(RCModel):
         if group_uid:
             sta = True
         return sta, group_uid
+
+    @classmethod
+    async def check_uid_by_room(cls, club_id: int, room_uid: list, uid: int) -> bool:
+        """检测用户是否与房间内用户在同一隔离组中"""
+        all_exist = False
+        groups, _ = await cls.get_club_group_by_filter(club_id, uid=uid)
+        if groups:
+            for item in groups:
+                values_to_check = [uid]
+                target_array = json_parse(item["u_ids"])
+                for check_uid in room_uid:
+                    values_to_check.append(check_uid)
+                    all_exist = all(value in target_array for value in values_to_check)
+                    if all_exist:
+                        break
+        return all_exist
 
     @classmethod
     async def delete_club_all(cls, club_id: int):

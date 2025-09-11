@@ -104,7 +104,7 @@ class BaseClubRC(BaseCommonRC):
         return club, "成功"
 
     @classmethod
-    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None):
+    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None, notice: str = None):
         """更新茶馆信息"""
         try:
             club, e = await cls.get_club_by_id(club_id)
@@ -117,6 +117,8 @@ class BaseClubRC(BaseCommonRC):
                 up_data["other"] = other
             if status:
                 up_data["status"] = status
+            if notice:
+                up_data["notice"] = notice
             if up_data:
                 sta = await cls.db_model.update_by_pk(club_id, up_data)
                 if not sta:

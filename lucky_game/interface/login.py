@@ -206,7 +206,7 @@ class LoginByGuest(BaseLogin):
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
 
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO, hint='Failed to login')
+        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO, hint='Failed to login')
         self.log_info('LoginByGuest suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
@@ -223,13 +223,13 @@ class LoginByWechat(BaseLogin):
         code = req.json.get('code')
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
         dev_ident = req.json.get('device_id') or req.headers.get('device_id')
-        (not code or not dev_ident) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
+        (not code or not dev_ident) and self.answer(StaCode.ERR_ARG, hint='Failed to login')
 
         errcode, req_data = await WeChat.wechat_login(code, platform)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+            self.answer(StaCode.EXTERNAL_ERR, data, hint=req_data)
 
         # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
@@ -242,7 +242,7 @@ class LoginByWechat(BaseLogin):
             # 微信公众号、微信APP为同一账号
             req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
             if not req_sta:
-                self.answer(self.sta_code.EXTERNAL_ERR, hint=req_data)
+                self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
                 "unionid": req_data.get('unionid'),
             }
@@ -263,7 +263,7 @@ class LoginByWechat(BaseLogin):
             u_info = await self.update_user_login_info(req, u_info, login_info)
             self.log_info('Wechat Login u_info:', u_info)
 
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         if platform == PlatForm.WECHAT_MINI_GAME:
             session_key = req_data.get("session_key")
             await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
@@ -279,7 +279,7 @@ class LoginByToken(BaseLogin):
         u_info = kwargs.get("u_info")
         login_info = await self.get_login_info(req, LoginWay.TOKEN)
         u_info = await self.update_user_login_info(req, u_info, login_info)
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         jwt_info = kwargs.get("jwt_info")
         issued = False
         if jwt_info.get('exp') - tool_dt.cur_time() <= 43200:
@@ -335,7 +335,7 @@ class LoginByPhone(BaseLogin):
             u_info = await self.update_user_login_info(req, u_info, login_info)
             self.log_info('DouYinMG Login u_info:', u_info)
 
-        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         server_info = await self.whether_through()
         self.log_info('LoginByPhone suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
@@ -353,7 +353,7 @@ class LoginByApple(BaseLogin):
         device_id = self.check_str(req.json.get('device_id'), require=True, maxlen=18, p_name="设备ID")
         apple_id = self.check_str(req.json.get('apple_id'), require=True, p_name="苹果用户ID")
         if not apple_id:
-            return self.answer(self.sta_code.ERR_ARG, hint="缺少必要参数")
+            return self.answer(StaCode.ERR_ARG, hint="缺少必要参数")
         u_info = await BaseUserRC.cache_by_unique({'apple_id': apple_id, "platform": platform}, BaseUserRC.KEY_APPLE_ID)
         # 2. 获取服务器信息
         server_info = await self.whether_through()
@@ -361,7 +361,7 @@ class LoginByApple(BaseLogin):
         # 3. 使用 code 获取 token 和用户信息
         # success, user_info = await ios_service.get_apple_user_info(code)
         # if not success:
-        #     return self.answer(self.sta_code.TOKEN_INVALID, hint=user_info)
+        #     return self.answer(StaCode.TOKEN_INVALID, hint=user_info)
 
         # 查询用户是否已存在
         # u_info = await BaseUserRC.get_user_by_apple(apple_id)
@@ -393,7 +393,7 @@ class LoginByApple(BaseLogin):
             self.log_info('Apple Login u_info:', u_info)
 
         if not u_info:
-            return self.answer(self.sta_code.USER_CREATE_FAIL, hint="用户登录失败")
+            return self.answer(StaCode.FAIL, hint="用户登录失败")
 
         self.log_info('LoginByApple success:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
@@ -403,23 +403,26 @@ class BindByWechat(BaseLogin):
     async def post(self, req: Request, **kwargs):
         code = self.check_str(req.json.get('code'), require=True, p_name="微信code")
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
+        user = kwargs.get("u_info")
+        if not user or user.get("wechat"):
+            return self.answer(StaCode.NO_PLAYER_INFO)
+        if user.get("wechat"):
+            return self.answer(StaCode.FAIL, hint="微信已绑定")
         errcode, req_data = await WeChat.wechat_login(code, platform)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
             data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+            self.answer(StaCode.EXTERNAL_ERR, data, hint=req_data)
         req_sta, data = await WeChat.wechat_userinfo(req_data.get('access_token'), req_data.get('openid'))
         if not req_sta:
-            self.answer(self.sta_code.EXTERNAL_ERR, data=data)
+            self.answer(StaCode.EXTERNAL_ERR, data=data)
         unionid = data.get('unionid')
         q_params = {
             "unionid": unionid,
         }
         u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_UNION_ID)
         if u_info:
-            return self.answer(self.sta_code.USER_EXIST, hint="微信已绑定其他账号，请直接使用微信登录")
-
-        user = kwargs.get("u_info")
+            return self.answer(StaCode.FAIL, hint="微信已绑定其他账号，请直接使用微信登录")
         updated = {
             'valid_key': self.rng.mk_str(16),
             'ip': self.ori_ip(req),
@@ -434,7 +437,7 @@ class BindByWechat(BaseLogin):
         if data.get('headimgurl'):
             updated['avatar'] = data.get('headimgurl')
         u_info = await BaseUserRC.update_info(user, updated)
-        (not u_info) and self.answer(self.sta_code.FAIL, hint="绑定失败")
+        (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
         return self.answer()
 
 

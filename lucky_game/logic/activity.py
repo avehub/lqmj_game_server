@@ -629,27 +629,13 @@ class InfinitePlay(Base):
         sta, count = await act_count(u_info.get("uid"), ac.get("act_id"), "day")
         if sta and count:
             progress["today_total"] = count
-        progress["is_free_signed"] = progress["today_total"] <= 0
         progress["today_surplus"] = ac["join_limit_day"] - progress["today_total"]
         award_ids = ac.get("condition_awards").get("award_ids")
         gain = []
-        if award_gains:
-            gains = {}
-            for i in award_gains:
-                if gains.get(i["type_id"]):
-                    gains[i["type_id"]].append(i)
-                else:
-                    gains[i["type_id"]] = [i]
-            for award_id in award_ids:
-                if gains.get(award_id):
-                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
-                else:
-                    gain.append({"award_id": award_id, "status": -1})
-        else:
-            conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
-            for award_id in award_ids:
-                status = 0 if u_info.get("gold", 0) < conf_data.get("min_gold") else -1
-                gain.append({"award_id": award_id, "status": status})
+        conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
+        for award_id in award_ids:
+            status = 0 if u_info.get("gold", 0) < conf_data.get("min_gold") else -1
+            gain.append({"award_id": award_id, "status": status if progress["today_surplus"] > 0 else -1})
         data = {
             "gains": gain,
             "progress": progress,
