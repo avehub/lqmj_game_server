@@ -306,7 +306,7 @@ class PaymentLogic:
         # 生成支付信息
         if not req_res:
             u_info = await BaseUserRC.cache_by_pk(order_info.purchase_uid)
-            user_openid = u_info.get("openid") or ""
+            user_openid = u_info.get("openid") if u_info else None
             if not user_openid:
                 return False, 'Invalid user_openid or code.'
 
