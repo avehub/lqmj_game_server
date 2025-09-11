@@ -622,7 +622,7 @@ class Common(Base):
 class InfinitePlay(Base):
     """ 救济金 """
 
-    async def progress_data(self, ac: dict, progress: dict, award_gains: list, u_info: dict) -> dict:
+    async def progress_data(self, ac: dict, progress: dict, u_info: dict) -> dict:
         if not progress:
             progress = {}
         progress["today_total"] = 0
