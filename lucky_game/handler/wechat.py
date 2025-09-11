@@ -296,6 +296,7 @@ class WeChat(LogMeta):
                     "thumb_url": 'https://ddzres.lpyqp.com/pay2.png'  # 图片地址
                 }
         }
+        cls.log_info("微信小程序发送客服消息内容：", params)
         req_data = await http_post(url, param=json_encode(params), jsparse=False)
         return cls.__return_req_data(req_data)
 

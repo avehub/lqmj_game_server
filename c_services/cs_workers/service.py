@@ -269,7 +269,7 @@ class WorkersServer(JsonBaseServer):
             sta, msg, progress, _ = await Base().act_progress(act, u_info)
             num = 0
             if sta and progress:
-                num = act.get("join_limit_day") - progress.get("today_total", 0)
+                num = act.get("join_limit_day") - progress.get("current_value", 0)
             result = num > 0 or not progress
             self.red_dot_log(uid, "救济红点查询", result)
             if result:
