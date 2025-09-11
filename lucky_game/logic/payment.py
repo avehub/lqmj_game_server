@@ -485,7 +485,6 @@ class PaymentLogic:
                 # 如果订单为活动订单需要更新活动进度
                 if order_status == OrderStatus.PAID:
                     await FirstCharge().charge_order(order_info)
-
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
@@ -494,7 +493,10 @@ class PaymentLogic:
 
     async def return_gold_order(self, order: dict):
         """返还金币订单"""
-        return_gold = order["explain"].get("return_gold", 0)
+        explain = order["explain"]
+        if not explain or not isinstance(explain, dict):
+            return False, "无返还信息"
+        return_gold = explain.get("return_gold", 0)
         if return_gold:
             add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                 order["uid"],

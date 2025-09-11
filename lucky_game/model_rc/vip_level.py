@@ -140,7 +140,7 @@ class UserVipRC(RCModel):
         if cur_level != new_level:
             u_info = await BaseUserRC.cache_by_pk(uid)
             await BaseUserRC.update_info(u_info, {"vip": vip_id})
-        cls.conf.info_log(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
+        cls.conf.log.info(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
 
         return True, True if cur_level < new_level else False
 
