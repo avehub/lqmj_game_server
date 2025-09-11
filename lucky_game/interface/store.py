@@ -47,7 +47,7 @@ class StoreHandler(GameAuthApi):
 
 
 class PayByGood(GameAuthApi):
-    """ 商店购物 """
+    """ 商店购物（游戏内部） """
     async def post(self, req: Request, **kwargs):
         platform = self.check_int(req.args.get("platform"), require=True, p_name='平台ID')
         sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')

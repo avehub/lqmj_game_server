@@ -364,7 +364,7 @@ class MiniProgramRecvPush(SpecialApi):
         # 3.发送客服消息（支付界面相关信息）
         errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, pay_info)
         self.log_info(uid, "微信小程序发送客服消息：", req_data, errcode)
-        return response.text(body=req.args.get("echostr"))
+        return response.text(body="Success")
 
     async def post(self, req: Request):
         """
@@ -374,10 +374,7 @@ class MiniProgramRecvPush(SpecialApi):
         sta, payload_data = await self.__handel_data(req)
         if not sta:
             return payload_data
-        create_time = payload_data.get("CreateTime") or ""
-        msg_type = payload_data.get("MsgType")
         event = payload_data.get('Event')
-        mini_game = payload_data.get('MiniGame')
         session_from = payload_data.get("SessionFrom") or ""
         from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
         if not session_from:
