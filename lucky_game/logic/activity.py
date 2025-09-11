@@ -714,7 +714,7 @@ class FirstCharge(Base):
                 "secret": C_SERVICE_SECRET_KEY,
                 "uid": order_info["uid"],
             }
-            await self.cs2cs_by_rmq(
+            await CommonApi.cs2cs_by_rmq(
                 ServiceEnum.C_MAHJONG_FC,
                 CmdRoom.RECHARGE,
                 data,
@@ -736,9 +736,6 @@ class FirstCharge(Base):
                                                           UserActivityProgressRC.STATUS_FINISH)
 
         return sta, msg, result
-
-    async def cs2cs_by_rmq(self, cs_enum, NEW_MATCH, data, creator):
-        pass
 
 
 class ReturnGift(Base):

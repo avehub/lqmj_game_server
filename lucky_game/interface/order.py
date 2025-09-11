@@ -348,6 +348,22 @@ class MiniProgramRecvPush(SpecialApi):
         sta, payload_data = await self.__handel_data(req)
         if not sta:
             return payload_data
+
+        session_from = payload_data.get("debug_str") or ""
+        from_user_name = payload_data.get("FromUserName")
+        params_dict = self.parse_session_from(session_from)
+        uid = params_dict.get("uid")
+        sku = params_dict.get("item_id")
+        express = await GoodRC.get_good_info(str(sku))
+        if not express:
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
+        pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, PlatForm.WECHAT_MP, purchase_uid=uid)
+        self.log_info(uid, "微信小程序创建订单：", pay_info, msg)
+        if not pay_info:
+            return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
+        # 3.发送客服消息（支付界面相关信息）
+        errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, pay_info)
+        self.log_info(uid, "微信小程序发送客服消息：", req_data, errcode)
         return response.text(body=req.args.get("echostr"))
 
     async def post(self, req: Request):
@@ -377,9 +393,6 @@ class MiniProgramRecvPush(SpecialApi):
             self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
             if params_dict is None:
                 return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
-            params_key = {"trade_item", "uid", "c_platform", "count"}
-            if not params_key.issubset(params_dict.keys()):
-                return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
             # 2.创建订单 不清楚这块参数是根据什么生成的，目前按老版本逻辑生成
             uid = params_dict.get("uid")
             sku = params_dict.get("item_id")
