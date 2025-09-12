@@ -26,6 +26,7 @@ class ConfJsonRC(RCModel):
     CONF_ADS_AWARDS = 'CONF_ADS_AWARDS'  # 大厅看广告领奖几率
     CONF_LUCK = "CONF_LUCK"  # 今日运势
     CONF_KF = "CONF_KF"  # 客服信息
+    CONF_NOTICE = "CONF_NOTICE"  # 系统公告
 
     @classmethod
     async def cache_conf_data_by_pk(cls, pk_val) -> dict:
