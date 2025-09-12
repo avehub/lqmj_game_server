@@ -1084,6 +1084,13 @@ class S2CClubRoomInfo:
         obj.online_group_user.extend(kwargs.get("online_group_user") or [])
         return obj
 
+class S2CClubNotice:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CClubNotice()
+        obj.notice_content = kwargs.get("notice_content") or ""
+        return obj
+
 # ################################## 茶馆通知 ##################################
 
 

@@ -58,6 +58,7 @@ class CmdClub(BaseEnum):
     CLUB_OWNER_DISMISS = 4, "茶馆房主解散"
     PLAYER_READY_EXCEPT_OWNER = 5, "所有玩家准备，除了房主", CallCheck.INNER.val
     LEAVE_CLUB = 6, "离开茶馆"
+    CLUB_NOTICE = 7,"茶馆公告通知", CallCheck.INNER.val
 
 
 @unique
