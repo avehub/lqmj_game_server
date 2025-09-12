@@ -698,6 +698,7 @@ class FirstCharge(Base):
         msg = ""
         result = {}
         act_type = None
+        u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
         if order_info["sku"] == GoodsSku.SKU_FIRST:
             # 首充
             act_type = ActivityType.FIRST_CHARGE
@@ -712,7 +713,6 @@ class FirstCharge(Base):
             # 复活礼包直接领取奖励
             from lucky_game.logic.payment import PaymentLogic
             good = await GoodRC.get_good_info(order_info["sku"])
-            u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
             sta, msg = await PaymentLogic().pay_after(u_info, good, order_info["order_no"])
             NLogger.info(f"复活礼包领取奖励结果：{sta}--{msg}")
             # 通知游戏复活成功
@@ -731,7 +731,7 @@ class FirstCharge(Base):
             # 返还
             act_type = ActivityType.RETURN_GIFT
         if act_type:
-            activity, _ = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+            activity, _ = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=u_info.get("platform"))
             sta, msg, result = await self.up_act_progress(order_info["uid"], activity["act_id"], activity["act_type"],
                                                           UserActivityProgressRC.STATUS_FINISH)
 

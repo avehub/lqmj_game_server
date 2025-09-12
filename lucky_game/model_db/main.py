@@ -644,6 +644,8 @@ class ConfActivity(DBModel):
     """活动配置"""
     act_id = fields.IntField(max_length=10, pk=True, default=3000, description='充值活动ID')
     act_type = fields.IntEnumField(enum_type=ActivityType, index=True, default=0, description='活动类型')
+    platform = fields.CharField(max_length=32, null=True,
+                                description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     act_name = fields.CharField(max_length=32, null=True, default='', description='活动名称')
     act_level = fields.SmallIntField(max_length=4, null=True, default=0, description='活动级别')
     repetition = fields.SmallIntField(max_length=2, null=True, default=0, description='重复类型：0否 1是')

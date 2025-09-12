@@ -29,6 +29,7 @@ class ActivityDetail(GameAuthApi):
     """
 
     async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
         try:
             act_type = req.args.get("act_type")
             uid = kwargs.get("u_info").get("uid")
@@ -37,7 +38,7 @@ class ActivityDetail(GameAuthApi):
                 act_type = self.check_int(act_type, p_name="act_type")
                 act_enum = ActivityType.find_member_by_val(act_type)
                 (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-                ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+                ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
             else:
                 act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
                 ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
@@ -61,13 +62,14 @@ class ActivityList(GameAuthApi):
     """
 
     async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
         act_type = req.args.get("act_type")
         uid = kwargs.get("u_info").get("uid")
         # 1.获取活动配置
         act_type = self.check_int(act_type, p_name="act_type", default=None, require=True)
         act_enum = ActivityType.find_member_by_val(act_type)
         (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type)
+        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type, platform=platform)
         (not ac_list) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
         try:
             # 2.奖励内容
@@ -143,7 +145,8 @@ class ProgressActivity(GameAuthApi):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         act_type = self.check_int(req.args.get("act_type"), require=True, p_name="活动类型")
-        ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
+        ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
