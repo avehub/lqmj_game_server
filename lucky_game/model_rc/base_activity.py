@@ -50,10 +50,16 @@ class ConfActivityRC(BaseRC):
         return [i for i in info if i.get("act_type") == act_type]
 
     @classmethod
-    async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, act_level: int = None, status: int = 1):
+    async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, act_level: int = None, status: int = 1,
+                                    platform: any = None):
         """获取单条活动信息"""
         query = {"status": status}
         try:
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform__contains"] = platform
             if act_type:
                 query["act_type"] = act_type
             if act_id:
@@ -68,10 +74,16 @@ class ConfActivityRC(BaseRC):
         return info, "成功"
 
     @classmethod
-    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, act_level: any = None, status: int = 1):
+    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, act_level: any = None, status: int = 1,
+                                    platform: any = None):
         """获取单条活动信息"""
         query = {"status": status}
         try:
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform__contains"] = platform
             if act_type is not None:
                 if isinstance(act_type, list):
                     query["act_type__in"] = act_type

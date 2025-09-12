@@ -178,9 +178,9 @@ class GameRoomsRC(BaseCommonRC):
             room_uid,
             uid,
         )
-        if exist:
+        if not exist:
             return True, "房间可加入"
-        return False, "房间被茶馆主限定，暂时不可加入"
+        return False, "房间暂时被其他玩家占用"
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,
