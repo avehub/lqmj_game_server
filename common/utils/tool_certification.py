@@ -14,6 +14,7 @@ from common.utils.utils import UtilsTool
 APPID = CertificationConf.APPID
 SECRET_KEY = CertificationConf.SECRET_KEY
 BIZ_ID = CertificationConf.BIZ_ID  # 游戏备案识别码（bizId）
+CODE_SUCCESS = 0  # 成功
 
 
 class AesGcm(object):
@@ -65,12 +66,14 @@ async def do_shi_ming_check(real_name, id_num, ai, test_code=""):
     # url = f"https://wlc.nppa.gov.cn/test/authentication/check/{test_code}"
     url = "https://api.wlc.nppa.gov.cn/idcard/authentication/check"
     req_res = await http_post(url, param=body_data, headers=headers, jsparse=False)
-    result = json_parse(req_res)  # '{"errcode":1005,"errmsg":"SYS REQ IP ERROR"}'
-    errcode = result.get('errcode')
-    if errcode == 0:
-        pi = result
-        return True, pi
-    return False, result
+    data = json_parse(req_res)  # '{"errcode":1005,"errmsg":"SYS REQ IP ERROR"}'
+    errcode = data.get('errcode')  # 响应结果：0表示请求成功
+    result = False
+    if errcode == CODE_SUCCESS:
+        status = data.get('result').get('status')  # 认证结果：0认证成功, 1认证中, 2认证失败
+        if status == CODE_SUCCESS:
+            result = True
+    return result, data
 
 
 async def do_shi_ming_query(ai, test_code=""):
