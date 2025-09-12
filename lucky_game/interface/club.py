@@ -66,7 +66,15 @@ class ClubUpdate(BaseClub):
                 return self.answer(StaCode.FAIL, hint=e)
             if notice:
                 # 茶馆公告更新同步所有玩家
-                pass
+                cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+                data, _ = await BaseClubRC.get_club_by_id(club_id)
+                data["secret"] = C_SERVICE_SECRET_KEY
+                await self.cs2cs_by_rmq(
+                    cs_enum,
+                    CmdClub.CLUB_NOTICE,
+                    data,
+                    uid,
+                )
         return self.answer()
 
 
