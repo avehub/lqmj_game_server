@@ -97,7 +97,7 @@ class Certification(BaseUserInfo):
             "sex": sex,
             "id_card": id_card,
             "real_name": real_name,
-            "pi": result.get('result').get('pi'),
+            "pi": result.get('pi'),
         }
         p_info = await BaseUserRC.update_info(u_info, new_info)
         return self.format_response_info(p_info)
