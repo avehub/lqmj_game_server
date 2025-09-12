@@ -195,7 +195,8 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_sign_in_by_month(self, uid):
         """每月累计签到奖励红点"""
-        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN, platform=u_info.get("platform"))
         start, end = await self.get_time_range(period="month")
         sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, start_time=start, end_time=end, count=True)
         self.red_dot_log(uid, "每月累计签到奖励红点查询", sta and gains > 0)
@@ -467,7 +468,8 @@ class WorkersServer(JsonBaseServer):
     async def __login_sign_in(self, uid):
         """登陆签到"""
         # 1.检查是否完成签到
-        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN, platform=u_info.get("platform"))
         sta, count = await act_count(uid, act.get("act_id", 0), "day")
         if count > 0:
             self.log_info(uid, "今天的签到已完成")
