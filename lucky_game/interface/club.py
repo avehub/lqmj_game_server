@@ -57,7 +57,7 @@ class ClubUpdate(BaseClub):
         check_sta, e = await BaseClubRC.check_club_name(name, club_id)
         if not check_sta:
             return self.answer(StaCode.FAIL, hint=e)
-        if name or other:
+        if name or other or notice:
             other_dict = {}
             if other:
                 other_dict = await self._check_other_params(other)
