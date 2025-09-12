@@ -3,8 +3,8 @@ import asyncio
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CmdClub, CallCheck
 from c_services.cs_club.room import ClubRoom
-from common.proto.py_pb2.ws_c2s import leave_club_model
-from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo
+from common.proto.py_pb2.ws_c2s import leave_club_model, club_notice_model
+from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice
 from common.public.enum_const import StaCode
 
 
@@ -18,6 +18,7 @@ class ClubServer(BaseServer):
             CmdClub.CLUB_OWNER_DISMISS: self.__club_owner_dismiss,
             CmdClub.PLAYER_READY_EXCEPT_OWNER: self.__player_ready_except_owner,
             CmdClub.LEAVE_CLUB: self.__leave_club,
+            CmdClub.CLUB_NOTICE: self.__club_notice,
         })
 
         self.__rooms = {}
@@ -70,6 +71,15 @@ class ClubServer(BaseServer):
             room.player_quit_room(uid)
             self.log_info("club_id", club_id, "玩家离开茶馆", uid)
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
+
+    async def __club_notice(self,uid,data):
+        notice_content = data.get("notice_content")
+        club_id = data.get("club_id")
+        room = await self.check_in_room(CmdClub.CLUB_NOTICE, uid, club_id)
+        if room:
+            data = {"notice_content":notice_content}
+            data_model = S2CClubNotice.pb_model(**data)
+            await room.inner_broadcast(CmdClub.CLUB_NOTICE, data_model)
 
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """
