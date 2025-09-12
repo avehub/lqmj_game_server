@@ -85,25 +85,21 @@ class Certification(BaseUserInfo):
         res = UtilsTool.validate_name(real_name)
         not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
         u_info = kwargs.get("u_info") or {}
-        if u_info.get("id_card"):
+        if u_info.get("pi"):
             self.answer(self.sta_code.HAD_CERTIFICATED)
 
         status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
         self.log_info("实名结果：", "status", status, "result", result)
         if not status:
-            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result)
-        pi = result.get('data').get('result').get('pi')
+            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result, hint="实名认证失败")
         sex = UtilsTool.determine_gender(id_card)
         new_info = {
             "sex": sex,
             "id_card": id_card,
             "real_name": real_name,
+            "pi": result.get('result').get('pi'),
         }
-        if pi:
-            new_info["pi"] = pi
         p_info = await BaseUserRC.update_info(u_info, new_info)
-        # 领取实名认证礼包
-        await Base().gain_awards(u_info.get("uid"), award_id=18, act_id=6)
         return self.format_response_info(p_info)
 
 

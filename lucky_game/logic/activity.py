@@ -82,6 +82,12 @@ class Base:
                           ActivityType.RETURN_GIFT]:
             sta, msg, data = await FirstCharge().handler(uid, activity, award_type, pay_mode, platform, return_url)
             return sta, msg, {"award": [], "pay_info": data}
+        elif act_type == ActivityType.AUTHENTICATION:
+            pi = u_info.get("pi")
+            if not pi:
+                return False, "请先认证", {}
+            sta, msg, data = await Common().handler(activity, uid, award_type)
+            return sta, msg, {"award": data, "pay_info": {}}
 
 
     async def act_by_awards(self, uid: int, activity: dict):
