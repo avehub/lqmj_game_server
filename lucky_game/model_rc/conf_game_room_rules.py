@@ -92,7 +92,7 @@ class ConfGameRoomRulesRC(BaseCommonRC):
     async def get_by_parent(cls, pip: int):
         """根据父级ID获取子规则列表"""
         try:
-            rules = await cls.db_model.filter(pip=pip).all()
+            rules = await cls.db_model.filter(pip=pip).values()
             if not rules:
                 return rules, "暂无规则配置"
         except OperationalError as e:
@@ -122,6 +122,18 @@ class ConfGameRoomRulesRC(BaseCommonRC):
                     if val['id'] == child['pip']:
                         val["child"].append(child)
                     await cls._child(children)
+        return rule
+
+    @classmethod
+    async def __child_info(cls, rule: dict):
+        """根据父级规则获取子集配置列表"""
+        children, e = await cls.get_by_parent(rule["id"])
+        if children:
+            rule["child"] = []
+            for child in children:
+                if rule['id'] == child['pip']:
+                    rule["child"].append(child)
+                await cls._child(children)
         return rule
 
     @classmethod
@@ -155,3 +167,49 @@ class ConfGameRoomRulesRC(BaseCommonRC):
         except OperationalError as e:
             return result, f"查询失败: {str(e)}"
         return result, "成功"
+
+    @classmethod
+    async def get_game_rule_info(cls, play_type: int = None, rule_type: int = None, status: int = 0):
+        """获取单个游戏规则"""
+        result = []
+        try:
+            query = {"status": status}
+            if play_type is not None:
+                query["play_type"] = play_type
+            if rule_type is not None:
+                query["rule_type"] = rule_type
+            rules = await cls.db_model.filter(**query).first().values()
+            if not rules:
+                return result, "暂无配置"
+            result = await cls.__child_info(rules)
+        except OperationalError as e:
+            return result, f"查询失败: {str(e)}"
+        return result, "成功"
+
+    @classmethod
+    async def get_game_rule_price(cls, play_type: int, player_num: int, total_round: int, rule_type: int = None):
+        """根据游戏类型、玩家数量获取游戏消费资源"""
+        price = 0
+        rule, e = await cls.get_game_rule_info(play_type, rule_type)
+        if not rule:
+            return price, e
+        # 根据人数匹配消息资源
+        child = rule.get("child")
+        if not child:
+            return price, e
+        player_key = f"player_{player_num}"
+        for item in child:
+            rate_list = item.get("rule_info").get("rate")
+            if not rate_list:
+                continue
+            for rate in rate_list:
+                if rate.get(player_key):
+                    play_list = rate.get(player_key)
+                    if not play_list:
+                        continue
+                    for play in play_list:
+                        if play.get("total_round") == total_round:
+                            price = play.get("price")
+                            break
+        return price, "成功"
+

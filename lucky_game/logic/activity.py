@@ -12,7 +12,8 @@ from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdRoom
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum, DbKey
-from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus, GoodsSku
+from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus, GoodsSku, \
+    PlatForm
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_activity import ConfActivityRC
@@ -484,6 +485,8 @@ class Package(Base):
     """ 限时登录 """
     AM_AWARD_ID = 14
     PM_AWARD_ID = 15
+    WECHAT_MG_AM_AWARD_ID = 44
+    WECHAT_MG_PM_AWARD_ID = 45
     # 上午领取时间12：00-13:59
     GAIN_AM_START = 12
     GAIN_AM_END = 13
@@ -517,7 +520,7 @@ class Package(Base):
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)
         return True, "成功", {"gain_awards": awards}
 
-    async def now_award_id(self) -> int:
+    async def now_award_id(self, platform: int) -> int:
         """返回当前时间下的奖励ID"""
         award_id = 0
         now = tool_dt.cur_time()
@@ -526,12 +529,12 @@ class Package(Base):
         pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_PM_START,
                                                                       end_hour=self.GAIN_PM_END)
         if pm_range_start <= now <= pm_range_end:
-            award_id = self.PM_AWARD_ID
+            award_id = self.PM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_AM_AWARD_ID
         if am_range_start <= now <= am_range_end:
-            award_id = self.AM_AWARD_ID
+            award_id = self.AM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_PM_AWARD_ID
         return award_id
 
-    async def get_progress(self, award_id: int, uid: int = None):
+    async def get_progress(self, award_id: int, uid: int, ac: dict):
         status = -1
         time_status = -1
         am_range_start, am_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_AM_START,
@@ -539,8 +542,9 @@ class Package(Base):
         pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_PM_START,
                                                                       end_hour=self.GAIN_PM_END)
         now = tool_dt.cur_time()
-        start_time = end_time = None
-        if award_id == self.AM_AWARD_ID:
+        start_time = None
+        end_time = None
+        if award_id == self.AM_AWARD_ID or award_id == self.WECHAT_MG_AM_AWARD_ID:
             if am_range_start <= now <= am_range_end:
                 time_status = status = ActivitySta.ACT_NOT_JOIN
                 start_time = am_range_start
@@ -555,13 +559,13 @@ class Package(Base):
             elif now > pm_range_end:
                 time_status = 1
         if uid and status == ActivitySta.ACT_NOT_JOIN:
-            count = await self.get_package_count(uid, start_time, end_time)
+            count = await self.get_package_count(uid, start_time, end_time, ac.get("act_id"))
             if count:
                 status = ActivitySta.ACT_COMPLETED
         return {"award_id": award_id, "status": status, "time_status": time_status}
 
-    async def get_package_count(self, uid: int, start_time: int, end_time: int) -> int:
-        sta, count = await LogUserActivityRC.activity_frequency(uid=uid, pay_type=ActivityType.PACKAGE,
+    async def get_package_count(self, uid: int, start_time: int, end_time: int, act_id: int) -> int:
+        sta, count = await LogUserActivityRC.activity_frequency(uid=uid, act_id=act_id,
                                                                 start_time=start_time,
                                                                 end_time=end_time, count=True)
         return count
@@ -580,11 +584,11 @@ class Package(Base):
                 if gains.get(award_id):
                     gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
                 else:
-                    package_gain = await self.get_progress(award_id, uid)
+                    package_gain = await self.get_progress(award_id, uid, ac)
                     gain.append(package_gain)
         else:
             for award_id in award_ids:
-                package_gain = await self.get_progress(award_id, uid)
+                package_gain = await self.get_progress(award_id, uid, ac)
                 gain.append(package_gain)
 
         return {"gains": gain}

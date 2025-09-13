@@ -289,9 +289,12 @@ class WorkersServer(JsonBaseServer):
     async def __notice_by_limit_login(self, uid):
         """ 限时登录红点 """
         package = Package()
-        now_award_id = await package.now_award_id()
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        platform = u_info.get("platform")
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.PACKAGE, platform=platform)
+        now_award_id = await package.now_award_id(platform)
         if now_award_id:
-            progress = await package.get_progress(now_award_id, uid)
+            progress = await package.get_progress(now_award_id, uid, act)
             sta = progress["status"] == 0
             self.log_info(uid, "限时登录红点查询", sta)
             if sta:

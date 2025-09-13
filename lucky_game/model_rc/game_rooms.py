@@ -13,6 +13,7 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
 from lucky_game.const.const import PlatForm, ReasonCostGold
+from lucky_game.model_rc.conf_game_room_rules import ConfGameRoomRulesRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from nsanic.libs import tool_dt
@@ -223,20 +224,24 @@ class GameRoomsRC(BaseCommonRC):
         """结算房卡"""
         key = "room_card"
         userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
+        price = room_data['price']
         if room_data["club_id"] and room_data["club_id"] > 0:
             # 扣除茶馆基金
             if room_data["pay_type"] == 2:
                 up_room_card = await BaseClubRC.update_club_int_field(
                     room_data["club_id"],
                     key,
-                    room_data["price"],
+                    price,
                     "sub"
                 )
             else:
+
+                if room_data["pay_type"] == 3:
+                    price = room_data['price']/room_data['max_player']
                 up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
                     room_data["creator"],
                     key,
-                    room_data['price'],
+                    price,
                     "sub",
                     reason=ReasonCostGold.CLUB_ROOM_CARD_TICKETS
                 )
@@ -245,7 +250,7 @@ class GameRoomsRC(BaseCommonRC):
             event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
                 name=userinfo["name"],
                 uid=userinfo["uid"],
-                price=room_data["price"],
+                price=price,
                 play_type=room_data["play_type"],
                 room_id=room_data["room_id"],
             )
@@ -256,13 +261,17 @@ class GameRoomsRC(BaseCommonRC):
                 event_msg,
             )
         else:
-            # 扣除黄钻
             if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+                # 扣除黄钻
                 key = "yellow_diamond"
+                price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
+                cls.conf.log.info("查询待扣除黄钻价格", price, e)
+                if price:
+                    price = price/room_data['max_player']
             up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
                 room_data["creator"],
                 key,
-                room_data['price'],
+                price,
                 "sub",
                 reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
             )
@@ -430,6 +439,20 @@ class GameRoomsRC(BaseCommonRC):
             if len(disk_uid) > max_player:
                 await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
                 return False, "房间已满"
+            if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+                # 扣除黄钻
+                key = "yellow_diamond"
+                price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
+                cls.conf.log.info("查询待扣除黄钻价格", price, e)
+                if price:
+                    price = price/room_data['max_player']
+                    await ExtraUserResourceChangesRC.change_user_resource(
+                        uid,
+                        key,
+                        price,
+                        "sub",
+                        reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
+                    )
             await cls.conf.rds.sadd(cls.SESSION_ROOM_USER_KEY, uid)
             await cls.conf.rds.sadd(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}", room_id)
         except OperationalError as e:
