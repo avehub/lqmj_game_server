@@ -166,7 +166,7 @@ class ConfGameRoomRules(DBModel):
     id = fields.IntField(max_length=10, pk=True, description='规则ID')
     pip = fields.IntField(max_length=10, index=True, default=0, description='父级ID')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态：0显示 1隐藏')
-    rule_type = fields.SmallIntField(max_length=2, null=True, default=0, description='规则类型：1房卡场 2休闲场')
+    rule_type = fields.SmallIntField(max_length=2, null=True, default=0, description='规则类型：1房卡场 2休闲场 3黄钻场')
     play_type = fields.SmallIntField(max_length=2, null=True, default=0, description='玩法类型')
     rule_name = fields.CharField(max_length=20, null=True, description='规则名')
     rule_info = fields.JSONField(null=True, description='规则信息：JSON存储')

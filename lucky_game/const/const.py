@@ -605,8 +605,8 @@ class ReasonCostGold(BaseEnum):
     ACTIVITY_SHARE = 40, "分享奖励"
     CLUB_ROOM_CARD = 41, "茶馆房卡变更"
     CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
-    CLUB_ROOM_CARD_TICKETS = 43, "茶馆场内房卡门票"
-    CLUB_YELLOW_DIAMOND_TICKETS = 44, "茶馆场内黄钻门票"
+    CLUB_ROOM_CARD_TICKETS = 43, "游戏房卡门票"
+    CLUB_YELLOW_DIAMOND_TICKETS = 44, "游戏黄钻门票"
     ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
     WECHAT_STORE_SHOPPING = 46, "微信商店购物"
 

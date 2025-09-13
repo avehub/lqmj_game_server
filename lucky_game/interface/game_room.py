@@ -33,13 +33,13 @@ async def make_again_room_msg(room_data):
 
 class GameRoomAPI(RoomTemplateBase):
 
-    async def _before_create_room(self, creator, price, club_id, u_info, rule_details, platform):
+    async def _before_create_room(self, creator, price, club_id, u_info, pay_type, platform, max_player):
         """创建游戏房间前的预处理"""
         # 是否已有创建房间
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, u_info.get("uid"), jsparse=True)
         if cs_info:
             cs_info["exist"] = True
-            self.answer(self.sta_code.FAIL, data=cs_info, hint="已有在游戏房间")
+            self.answer(self.sta_code.FAIL, data=cs_info, hint="已有加入的游戏房间")
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
             # 校验茶馆成员身份信息
@@ -52,14 +52,18 @@ class GameRoomAPI(RoomTemplateBase):
             # 茶馆创建房间配置权限校验
             if club['uid'] != creator and club['other'].get("host_power_room") in [0, 2]:
                 return self.answer(StaCode.FAIL, hint="无法创建房间")
-            if club['other'].get("pay_type") == 0 and u_info.get("room_card") < price:
+            # 支付方式：0房主 1冠军支付 2茶馆基金 3AA支付
+            if pay_type == 0 and u_info.get("room_card") < price:
                 return self.answer(StaCode.FAIL, hint="房卡不足")
-            if club['other'].get("pay_type") == 2 and club["room_card"] < price:
+            if pay_type == 2 and club["room_card"] < price:
                 return self.answer(StaCode.FAIL, hint="茶馆基金不足")
+            if pay_type == 3 and u_info.get("room_card") < (price/max_player):
+                return self.answer(StaCode.FAIL, hint="房卡不足")
         else:
-            if rule_details.get("pay_type") == 0:
+            if price > 0:
                 if platform == PlatForm.WECHAT_MINI_GAME:
-                    if u_info.get("yellow_diamond") < price:
+                    # 小程序房间房间默认AA支付
+                    if u_info.get("yellow_diamond") < (price/max_player):
                         return self.answer(StaCode.FAIL, hint="黄钻不足")
                 else:
                     if u_info.get("room_card") < price:
@@ -111,8 +115,8 @@ class CreateRoom(GameRoomAPI):
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             pay_type = club["other"]["pay_type"]
         else:
-            pay_type = self.check_int(req.json.get("pay_type"), require=True, p_name="支付方式")
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
+            pay_type = 0    # 默认房主支付
         # 创建房间前判断是否在黑名单中
         if club_id:
             is_black, e = await ClubUsersRC.is_club_user_black(creator, club_id)
@@ -125,8 +129,9 @@ class CreateRoom(GameRoomAPI):
             price=int(price),
             club_id=club_id,
             u_info=u_info,
-            rule_details=rule_details,
-            platform=platform
+            pay_type=pay_type,
+            platform=platform,
+            max_player=max_player,
         )
 
         # 创建房间
@@ -195,9 +200,14 @@ class JoinRoom(GameRoomAPI):
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
         if not room_data or room_data["status"] not in [RoomStatus.T_IDLE, RoomStatus.T_READY]:
             return self.answer(StaCode.FAIL, hint=e)
-        if room_data["pay_type"] == 1:
-            if u_info.get("room_card") < room_data['price']:
-                return self.answer(StaCode.FAIL, hint="房卡不足")
+        if room_data["pay_type"] == 3:
+            price_key = "room_card"
+            hint_key = "房卡"
+            if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+                price_key = "yellow_diamond"
+                hint_key = "黄钻"
+            if u_info.get(price_key) < (room_data['price']/room_data['max_player']):
+                return self.answer(StaCode.FAIL, hint=hint_key+"不足")
         uid = u_info.get("uid")
         # 加入房间前判断是否在黑名单中
         if room_data["club_id"]:

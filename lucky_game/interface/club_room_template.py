@@ -14,7 +14,7 @@ from c_services.const.cs_enum_const import ClubMsgType, CmdClub
 
 
 async def verify_rule_detail(rule_details, play_type) -> dict:
-    """游侠房间规则校验"""
+    """游戏房间规则校验"""
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
     play_rule = await GameRoomsRC.get_play_rule(play_type)
