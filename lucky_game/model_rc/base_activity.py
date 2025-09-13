@@ -20,6 +20,17 @@ class ConfActivityRC(BaseRC):
     tb_name = db_model.sheet_name()
     expired_mode = 0
 
+    KEY_SESSION = "conf_activity"
+    @classmethod
+    async def cache_session_set(cls, query, value):
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{query}", value)
+
+    @classmethod
+    async def cache_session_get(cls, query):
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{query}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def get_activity_item_by_id(cls, act_id, platform='', os=''):
@@ -66,6 +77,9 @@ class ConfActivityRC(BaseRC):
                 query["act_id"] = act_id
             if act_level:
                 query["act_level"] = act_level
+            if query:
+                query_key = [key for key in query.values()]
+                info = await cls.cache_session_get()
             info = await cls.db_model.filter(**query).first().values()
             if not info:
                 return None, "暂时没找到这类型的活动哦"
