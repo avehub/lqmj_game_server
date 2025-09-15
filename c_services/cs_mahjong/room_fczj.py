@@ -603,7 +603,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if curr_player.mo_pai_can_operates():
             data = {"seat_id": curr_player.seat_id, "seconds": seconds, "in_flow": self.flow_status}
             data_model = S2CTurnToMahjong.pb_model(**data)
-            await self.inner_send(curr_player, CmdRoom.TURN_TO, data_model)
+            await self.inner_broadcast(CmdRoom.TURN_TO, data_model)
             self.call_flow(TimerDelay.CHU_PAI_TIME, self.mo_pai_call_time_out, curr_player)
             self.call_flow_trustee(TimerDelay.TUO_GUAN_TIME, self.mo_pai_call_trustee, curr_player)
             if curr_player.is_robot:

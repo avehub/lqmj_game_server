@@ -386,8 +386,12 @@ class BaseCardRoom(BaseRoom):
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
             if self.__record_id > 0:
+                if over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE:
+                    room_status = 1
+                else:
+                    room_status = 0
                 over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
-                                                                                , final_ranking, final_grade, p.game_over_data, num)
+                                                                                , final_ranking, final_grade, p.game_over_data, num,room_status)
                 self.log_info("总结算战绩插入", over_record)
                 if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
                     up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,round_num= self.round_idx)
