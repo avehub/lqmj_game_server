@@ -251,6 +251,7 @@ class RecordsGameRoom(DBModel):
     end_time = fields.BigIntField(default=0, index=True, description='结束时间', )
     pay_type = fields.SmallIntField(description='支付方式：0房主 1冠军支付 2茶馆基金 3AA支付', )
     price = fields.SmallIntField(description='费用', )
+    room_status = fields.SmallIntField(null=True, default=0, description='房间状态：0完局结束、1中途解散（人为操作解散）、2异常解散（非人为解散）', )
     updated = fields.BigIntField(default=0, description='更新时间', )
 
     class Meta:

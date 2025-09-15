@@ -21,7 +21,7 @@ class RecordsGameTotalRC(BaseCommonRC):
     @classmethod
     async def create_record_game_total(cls, record_rid: int, uid: int, final_status: int, final_score: int,
                                        final_ranking: int,
-                                       final_grade: int, final_result: dict, num: int = 0):
+                                       final_grade: int, final_result: dict, num: int = 0, room_status: int = None):
         """创建战绩总局记录"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
@@ -53,6 +53,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                         record_rid,
                         end_time=int(datetime.now().timestamp()),
                         round_num=record["total_round"],
+                        room_status=room_status,
                     )
                     if not up_room_sta:
                         return new_record, "创建失败"
