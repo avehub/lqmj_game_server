@@ -67,7 +67,7 @@ class Base:
             sta, msg, data = await SignIn().handler(activity, uid, award_type)
             return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.PACKAGE:
-            sta, msg, data = await Package().handler(activity, uid, award_type)
+            sta, msg, data = await Package().handler(activity, uid, award_type, platform)
             return sta, msg, {"award": data, "pay_info": {}}
         elif act_type == ActivityType.SHARE:
             sta, msg, data = await Common().handler(activity, uid, award_type)
@@ -494,12 +494,12 @@ class Package(Base):
     GAIN_PM_START = 18
     GAIN_PM_END = 20
 
-    async def handler(self, activity: dict, uid: int, award_type: int):
+    async def handler(self, activity: dict, uid: int, award_type: int, platform: int):
         """ 处理限时登录活动 """
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
         pay_type = PayType.BY_FREE
-        award_id = await self.now_award_id()
+        award_id = await self.now_award_id(platform)
         if not award_id:
             return False, "当前时间不在活动时间内", {}
         rewards, _ = await AwardRC.get_award_info(award_id)
