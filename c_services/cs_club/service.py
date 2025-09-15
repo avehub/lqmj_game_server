@@ -3,7 +3,7 @@ import asyncio
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CmdClub, CallCheck
 from c_services.cs_club.room import ClubRoom
-from common.proto.py_pb2.ws_c2s import leave_club_model, club_notice_model
+from common.proto.py_pb2.ws_c2s import leave_club_model
 from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice
 from common.public.enum_const import StaCode
 
@@ -73,11 +73,12 @@ class ClubServer(BaseServer):
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
 
     async def __club_notice(self,uid,data):
-        notice_content = data.get("notice_content")
-        club_id = data.get("club_id")
+        print("茶馆公告",data)
+        notice = data.get("notice")
+        club_id = data.get("id")
         room = await self.check_in_room(CmdClub.CLUB_NOTICE, uid, club_id)
         if room:
-            data = {"notice_content":notice_content}
+            data = {"notice":notice}
             data_model = S2CClubNotice.pb_model(**data)
             await room.inner_broadcast(CmdClub.CLUB_NOTICE, data_model)
 
