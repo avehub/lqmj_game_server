@@ -343,6 +343,8 @@ class BaseCardRoom(BaseRoom):
     async def check_game_start(self, force=False):
         if not self.room_status_is_equal(RoomStatus.T_IDLE):
             return False
+        if self.max_player_count<2:
+            return False
         if force:
             if 2 > self.in_room_count:  # 手动开始人数未满2人
                 return False
@@ -393,10 +395,12 @@ class BaseCardRoom(BaseRoom):
                 over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
                                                                                 , final_ranking, final_grade, p.game_over_data, num,room_status)
                 self.log_info("总结算战绩插入", over_record)
-                if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
-                    up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,round_num= self.round_idx)
-                    if not up_room_sta:
-                        self.log_info("更新战绩时间失败", up_result)
+
+        if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
+            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=self.round_idx)
+            if not up_room_sta:
+                self.log_info("更新战绩时间失败", up_result)
+
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
