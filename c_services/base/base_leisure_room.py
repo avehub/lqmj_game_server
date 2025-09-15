@@ -410,7 +410,7 @@ class BaseLeisureRoom(BaseRoom):
         """ 机器人概率复活 """
         # #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
         # flag = 0
-        flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
+        flag = UtilsTool.random_choice_num([0, 1], [0.7, 0.3])
         if flag:
             return await self.__do_resurgence(player)
         print("机器人认输")
