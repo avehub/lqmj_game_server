@@ -30,19 +30,19 @@ class ActivityDetail(GameAuthApi):
 
     async def get(self, req: Request, **kwargs):
         platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
+        act_type = req.args.get("act_type")
+        uid = kwargs.get("u_info").get("uid")
+        # 1.获取活动配置
+        if act_type:
+            act_type = self.check_int(act_type, p_name="act_type")
+            act_enum = ActivityType.find_member_by_val(act_type)
+            (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
+            ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
+        else:
+            act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
+            ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
+        (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
         try:
-            act_type = req.args.get("act_type")
-            uid = kwargs.get("u_info").get("uid")
-            # 1.获取活动配置
-            if act_type:
-                act_type = self.check_int(act_type, p_name="act_type")
-                act_enum = ActivityType.find_member_by_val(act_type)
-                (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-                ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
-            else:
-                act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
-                ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
-            (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
             # 2.奖励内容
             once_awards, condition_awards = await Base().act_by_awards(uid, ac)
             ac["once_awards"] = once_awards
