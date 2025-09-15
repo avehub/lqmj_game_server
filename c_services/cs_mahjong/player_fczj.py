@@ -131,6 +131,7 @@ class PlayerFCZJ(Player):
     def player_info(self, contain_cards=True):
         p_info = super().player_info(contain_cards)
         p_info["is_out"] = self.is_out
+        p_info["total_score"] = 0
         return p_info
 
     def clear_player(self):
