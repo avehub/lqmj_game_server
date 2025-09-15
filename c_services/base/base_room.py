@@ -28,7 +28,8 @@ class BaseRoom(metaclass=ABCMeta):
         self.__base_score = room_conf.get("base_score") or 1  # 底分
 
         self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get(
+            "total_round") or 1  # 总局数
 
         self.__curr_seat_id = 0
         self.__dealer = 0
@@ -340,7 +341,7 @@ class BaseRoom(metaclass=ABCMeta):
         cards_data = []
         for c in cards:
             data = []
-            if len(c.values)>0:
+            if len(c.values) > 0:
                 all_cards.extend(c.values)
                 data.extend(c.values)
                 cards_data.append(data)
@@ -428,11 +429,11 @@ class BaseRoom(metaclass=ABCMeta):
         """ 子类实现 """
         raise NotImplementedError
 
-    async def notify_player_enter_room(self, player,reenter = False):
+    async def notify_player_enter_room(self, player, reenter=False):
         # 房间信息
         await self.notify_room_info(player)
         # 发送房间内所有玩家信息给当前玩家
-        await self.notify_player_info(player,reenter)
+        await self.notify_player_info(player, reenter)
 
     async def notify_room_info(self, player=None):
         data = self.serialize_room_info()
@@ -444,7 +445,7 @@ class BaseRoom(metaclass=ABCMeta):
         else:
             await self.inner_broadcast(CmdRoom.ROOM_INFO, data)
 
-    async def notify_player_info(self, curr_player=None, reenter = False):
+    async def notify_player_info(self, curr_player=None, reenter=False):
         """ 通知玩家信息 """
         if curr_player:
             # 断线重进房间
@@ -454,7 +455,7 @@ class BaseRoom(metaclass=ABCMeta):
             if not reenter:
                 curr_p_info = curr_player.player_info(contain_cards=False)
                 data = self.serialize_player_info([curr_p_info])
-                await self.inner_broadcast(CmdRoom.PLAYER_INFO,data  ,exclude_uid=curr_player.uid)
+                await self.inner_broadcast(CmdRoom.PLAYER_INFO, data, exclude_uid=curr_player.uid)
             return
 
         task_list = []
@@ -508,16 +509,20 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def game_over(self):
         """ 游戏结束 """
+        task_list = []
         for p in self.__seats:
             if p:
                 if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
                     if self.__room_type == RoomType.SELF_BUILD:
-                        leave_result = await GameRoomsRC.leave_room(p.tid, p.uid)
-                        self.log_info("游戏结束离开房间:",leave_result,"房间状态:",self.__room_status)
-                    await self.service.del_player_in_service(p.uid)
+                        task_list.append(GameRoomsRC.leave_room(p.tid, p.uid))
+                        # self.log_info("游戏结束离开房间:", leave_result, "房间状态:", self.__room_status)
+                    task_list.append(self.service.del_player_in_service(p.uid))
                 self.service.release_player(p)
         self.__room_status = RoomStatus.T_CLOSED
         self.service.release_room(self)
+
+        if task_list:
+            await asyncio.gather(*task_list)
 
     def clear_room(self):
         """ 清理房间 """
@@ -541,6 +546,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__level_desc = room_conf.get("desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
         self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get(
+            "total_round") or 1  # 总局数
 
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
