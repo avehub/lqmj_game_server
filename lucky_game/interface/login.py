@@ -245,6 +245,7 @@ class LoginByWechat(BaseLogin):
                 self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
                 "unionid": req_data.get('unionid'),
+                "platform__in": [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP],
             }
             unique_key = BaseUserRC.KEY_UNION_ID
         u_info = await BaseUserRC.cache_by_unique(q_params, unique_key)
