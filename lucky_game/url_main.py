@@ -52,6 +52,7 @@ from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos, MiniProgramRecvPush
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode
+from lucky_game.interface.ad_event import CreateAdRecord
 
 
 
@@ -68,7 +69,8 @@ class MainBp(BaseBlue):
         # 工具类接口
         Urls("/GetWeChatShareData/", GetWeChatShareData),  # 微信分享数据
         Urls("/GetAppVersion/", GetAppVersion),  # 获取应用版本信息
-        Urls("/GetWechatCode/", GetWechatCode),
+        Urls("/GetWechatCode/", GetWechatCode),  # 获取微信登录code
+        Urls("/CreateAdRecord/", CreateAdRecord),  # 添加广告记录
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
