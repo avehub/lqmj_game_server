@@ -629,6 +629,7 @@ class S2CPlayerInfo05Mahjong:
             p_info.out_cards.extend(one_data.get("out_cards") or [])
             p_info.lock_cards.extend(one_data.get("lock_cards") or [])
             p_info.que = one_data.get("que") or 0
+            p_info.total_score = one_data.get("total_score") or 0
             pack_table_cards(p_info, **one_data)
             men_cards = one_data.get("men_cards") or []
             for men_data in men_cards:
@@ -1088,7 +1089,7 @@ class S2CClubNotice:
     @classmethod
     def pb_model(cls,**kwargs):
         obj = ws_leisure_pb2.S2CClubNotice()
-        obj.notice_content = kwargs.get("notice_content") or ""
+        obj.notice = kwargs.get("notice") or ""
         return obj
 
 # ################################## 茶馆通知 ##################################
