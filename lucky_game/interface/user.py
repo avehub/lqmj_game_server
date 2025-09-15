@@ -91,7 +91,7 @@ class Certification(BaseUserInfo):
         status, result = await tool_certification.do_shi_ming_check(real_name, id_card, u_info.get("uid"))
         self.log_info("实名结果：", "status", status, "result", result)
         if not status:
-            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result, hint="实名认证失败")
+            self.answer(code=self.sta_code.EXTERNAL_ERR, data=result, hint="您填的身份信息不对哦，请检查再提交认证")
         sex = UtilsTool.determine_gender(id_card)
         new_info = {
             "sex": sex,
