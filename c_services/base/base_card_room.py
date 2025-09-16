@@ -137,8 +137,11 @@ class BaseCardRoom(BaseRoom):
     async def player_join_room(self, players: list):
         await super(BaseCardRoom, self).player_join_room(players)
         if self.club_id > 0:
-            print("玩家进入房间，通知茶馆创建房间")
-            await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
+            if self.__owner == players[0].uid:
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.CREATE_ROOM))
+            else:
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
+
 
     async def player_quit_room(self, player, data):
         self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began(), "owner:", self.owner, "tid:", self.tid)
