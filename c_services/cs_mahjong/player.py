@@ -779,7 +779,7 @@ class Player(BaseLeisurePlayer):
     def game_over_data(self):
         return {
             "seat_id": self.seat_id,
-            "uid": self.__uid,
+            "uid": self.uid,
             "total_score": self.total_score,  # 总分
             "dian_pao_count": self.__dian_pao_count,  # 点炮次数
             "jie_pao_count": self.__jie_pao_count,  # 接炮次数
