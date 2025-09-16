@@ -8,6 +8,7 @@ from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
+from lucky_game.handler.vivo_pay import vivo_payment
 from lucky_game.logic.activity import FirstCharge
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
