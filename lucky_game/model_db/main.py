@@ -26,6 +26,7 @@ class User(DBModel):
     real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
     album = fields.CharField(max_length=256, null=True, default='', description='相册')
     pi = fields.CharField(max_length=64, index=True, default='', description='已通过实名认证用户的唯一标识')
+    discount = fields.FloatField(max_digits=3, null=True, decimal_places=2, default=1, description="消费折扣")
     gold = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="金币")
     diamond = fields.IntField(max_digits=20, null=True, default=0, description="钻石")
     room_card = fields.IntField(max_digits=20, null=True, default=0, description="房卡")

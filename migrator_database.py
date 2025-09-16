@@ -41,6 +41,7 @@ class DatabaseConfig:
     ssh_host: str = None
     ssh_port: int = 22
     ssh_username: str = None
+    ssh_password: str = None
     ssh_private_key_path: str = None  # SSH私钥路径
     ssh_private_key_password: str = None  # 私钥密码（如果有）
 
@@ -285,8 +286,8 @@ class UserMigrator(BaseMigrator):
         """从旧用户表提取数据"""
         sql = """
         SELECT 
-            uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, 
-            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2
+            uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, pi, 
+            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2, dai_li_zhe_kou
         FROM players LEFT JOIN player_diamond2 ON players.uid = player_diamond2.uid
         WHERE players.uid >= 1000000 
 	    AND players.real_name <> ""
@@ -294,11 +295,11 @@ class UserMigrator(BaseMigrator):
         return self.old_db.execute_query(sql)
 
     def extract_batch(self, offset, limit):
-        """提取一批俱乐部数据"""
+        """从旧用户表提取数据(分页)"""
         sql = """
         SELECT 
-            players.uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, 
-            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2
+            players.uid, nick_name, avatar, sex,  model, reg_time, diamond, appleid, gold, room_card, openid, unionid, pi,  
+            phone, month_vip, vip_lv,lottery_times, shen_fen_zheng_no, real_name, platform, diamond2, dai_li_zhe_kou
         FROM players LEFT JOIN player_diamond2 ON players.uid = player_diamond2.uid
         WHERE players.uid >= 1000000 
 	    AND players.real_name <> ""
@@ -309,16 +310,21 @@ class UserMigrator(BaseMigrator):
     def transform_data(self, old_data: List[Dict]) -> List[Dict]:
         """转换用户数据"""
         transformed = []
-
         for user in old_data:
             # 基础用户信息
             platform = 0
             if user['platform'] == 0:
                 platform = 1
-            elif user['platform'] == 3:
-                platform = 2
             elif user['platform'] == 1:
                 platform = 3
+            elif user['platform'] == 2:
+                platform = 3
+            elif user['platform'] == 3:
+                platform = 3
+            elif user['platform'] == 6:
+                platform = 2
+            elif user['platform'] == 7:
+                platform = 4
             user_data = {
                 'uid': user['uid'],
                 'avatar': user['avatar'] if len(user['avatar']) > 2 else f"avatar/avatar_{user['avatar']}.png",
@@ -337,7 +343,9 @@ class UserMigrator(BaseMigrator):
                 'id_card': user['shen_fen_zheng_no'],
                 'real_name': user['real_name'],
                 'platform': platform,
-                'apple_id': user['appleid']
+                'apple_id': user['appleid'],
+                'discount': user['dai_li_zhe_kou'] if user['dai_li_zhe_kou'] else 1,
+                'pi': user['pi'] if user['pi'] and user['pi'] != "None" else str(user['uid']),
             }
 
 
@@ -363,11 +371,11 @@ class UserMigrator(BaseMigrator):
         user_sql = """
         INSERT INTO user (
             uid, name, avatar, sex, created, dev_ident, diamond, gold, room_card, openid, unionid, 
-            phone, id_card, real_name, platform, apple_id, yellow_diamond
+            phone, id_card, real_name, platform, apple_id, yellow_diamond, discount
         ) VALUES (
             %(uid)s, %(name)s, %(avatar)s, %(sex)s, %(created)s, %(dev_ident)s, %(diamond)s, %(gold)s, 
             %(room_card)s, %(openid)s, %(unionid)s, %(phone)s, %(id_card)s, %(real_name)s, %(platform)s, %(apple_id)s,
-            %(yellow_diamond)s
+            %(yellow_diamond)s, %(discount)s
         )
         """
 
@@ -797,23 +805,24 @@ def main():
     """主函数示例"""
     # 数据库配置
     old_db_config = DatabaseConfig(
-        host='rm-bp1x90i6i270j3723.mysql.rds.aliyuncs.com',
-        port=3306,
-        username='lqddzadmin',
-        password='leqi#@!51112346',
+        host='mysql98511917888a.rds.ivolces.com',
+        port=33068,
+        username='lucky',
+        password='5YZtRhMVaZtFCV',
         database='hjmj_db',
         # ssh_host='47.98.42.167',  # SSH服务器地址
-        # ssh_port=22222,  # SSH端口，默认22
-        # ssh_username='root',  # SSH用户名
+        # ssh_port=22,  # SSH端口，默认22
+        # ssh_username='www',  # SSH用户名
+        # ssh_password='Lucky86400.',  # SSH用户名
         # ssh_private_key_path='./alichild.pem',  # SSH私钥路径
     )
 
     new_db_config = DatabaseConfig(
-        host='localhost',
-        port=3306,
-        username='root',
-        password='1234',
-        database='game_server'
+        host='mysql98511917888a.rds.ivolces.com',
+        port=33068,
+        username='lucky',
+        password='5YZtRhMVaZtFCV',
+        database='lucky_game'
     )
 
     # 创建迁移编排器

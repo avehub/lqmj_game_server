@@ -54,6 +54,7 @@ class PayByGood(GameAuthApi):
         if not sku:
             return self.answer(self.sta_code.ERR_ARG, hint="请选择商品")
         pay_mode = self.check_int(req.json.get("pay_mode"), require=True, p_name='支付方式')
+        os = self.check_int(req.args.get("c_os"), require=True, p_name='c_os')
         num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
         plat_enum = PlatForm.find_member_by_val(platform)
         pay_enum = PayMode.find_member_by_val(pay_mode)
@@ -75,7 +76,7 @@ class PayByGood(GameAuthApi):
 
         self.loginfo(f"商店购物：user={u_info}，good={express}")
         # 支付前校验
-        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
+        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num=num, os=os)
         self.loginfo(f"支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
         # 支付前校验失败
         if not sta_before:

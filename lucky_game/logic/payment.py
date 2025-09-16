@@ -8,11 +8,13 @@ from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
+from lucky_game.handler.vivo_pay import vivo_payment
 from lucky_game.logic.activity import FirstCharge
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.const import ReasonCostGold, CurrencyType, PayMode, OrderStatus, GainStatus, GoodsSku
+from lucky_game.const import ReasonCostGold, CurrencyType, PayMode, OrderStatus, GainStatus, GoodsSku, PlatForm, \
+    OperatingSystem, StoreType
 from nsanic.libs.mult_log import NLogger
 from common.public.conf import ENV
 from common.public.conf import LIVE_SERVER
@@ -64,7 +66,7 @@ class PaymentLogic:
                     return False, '已达到限购次数，请下次再来', {}
         return True, 'OK', buy_record
 
-    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1, purchase_uid: int = None):
+    async def pay_before(self, u_info: dict, express: dict, pay_mode: int, platform: int, num: int = 1, purchase_uid: int = None, os: str = None):
         """
         支付前校验及生成订单
         :param u_info: 用户信息
@@ -104,6 +106,12 @@ class PaymentLogic:
                 # 校验支付方式
                 if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP]:
                     return False, "支付方式错误", {}
+                # 购买房卡时获取用户折扣价格
+                discount = u_info.get("discount")
+                if express.get("type") == StoreType.SKIN and discount < 1:
+                    if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP] or (platform == PlatForm.NATIVE_APP and os == OperatingSystem.Android):
+                        # 安卓、H5购买房卡才享受折扣
+                        price *= discount
         else:
             field_name = "免费领取"
             field = "gold"
@@ -257,6 +265,7 @@ class PaymentLogic:
     async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0):
         # 创建订单
         NLogger.info("create_order 商品信息: good", express)
+
         order_no = await RngMaker.gen_num(str_len=32)
         new, msg = await OrderRC.add_order(
             uid=uid,
