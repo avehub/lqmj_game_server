@@ -643,7 +643,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
             is_trustee = True
 
-        is_trustee and await self.do_trustee(p)
+        not is_trustee and await self.do_trustee(p)
         if not is_can_men:
             self.set_flow_status(FlowStatus.T_IN_CHU_PAI)  # 在出牌中
             self.log_info(p.uid, "玩家摸牌call超时，直接进入出牌")
@@ -654,7 +654,8 @@ class RoomFCZJ(BaseLeisureRoom):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
             return StaCode.NOT_YOUR_TURN
-        # do_trustee and await self.do_trustee(p)
+        if not p.trustee:
+            do_trustee and await self.do_trustee(p)
         # 锁牌情况：自动将摸的牌打出，或出第一张牌（理论不会出现癞子，因为锁牌摸到癞子必胡）
         if p.is_lock or p.lock_cards or p.men_cards or p.tian_ting:
             sta = await self.lock_auto_chu_pai(p)

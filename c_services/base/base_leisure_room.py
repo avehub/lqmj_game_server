@@ -363,7 +363,6 @@ class BaseLeisureRoom(BaseRoom):
             await asyncio.gather(*send_list)
 
     async def __do_resurgence(self, player, solid_time=0):
-        print("进入机器人复活")
         sta, data = await ReturnGift().act_award(self.level)
         if sta:
             amount_value = data[0]["content"]["rewards"][0]["amount"]
@@ -408,12 +407,12 @@ class BaseLeisureRoom(BaseRoom):
 
     async def robot_go_broke(self, player):
         """ 机器人概率复活 """
-        # #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
-        # flag = 0
         flag = UtilsTool.random_choice_num([0, 1], [0.7, 0.3])
+        if self.poker.left_count < 3:  #剩余牌量小于3 机器人不复活
+            flag = 0
+            self.log_info("剩余牌量小于3 机器人不复活")
         if flag:
             return await self.__do_resurgence(player)
-        print("机器人认输")
         return DelayCall(random.randint(2, 5), self.player_give_up, player).start()
 
     async def notify_resurgence(self, player):
