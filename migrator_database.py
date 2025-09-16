@@ -810,6 +810,7 @@ def main():
         username='lucky',
         password='5YZtRhMVaZtFCV',
         database='hjmj_db',
+        charset='utf8mb3',
         # ssh_host='47.98.42.167',  # SSH服务器地址
         # ssh_port=22,  # SSH端口，默认22
         # ssh_username='www',  # SSH用户名
