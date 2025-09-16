@@ -9,3 +9,4 @@ __pycache__/
 restart.sh
 test.py
 luck_proto/
+.python-version
