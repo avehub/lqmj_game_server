@@ -1037,6 +1037,12 @@ class S2CRoundOverInfoByLeisure:
             seat.hu_type = data.get("hu_type") or 0
             seat.hand_cards.extend(data.get("hand_cards") or [])
             seat.ji_pai.extend(data.get("ji_pai") or [])
+            ji_score_data = data.get("ji_scores") or []
+            for score in ji_score_data:
+                ji = seat.ji_scores.add()
+                ji.ji_card = score.get("ji_card") or 0
+                ji.ji_count = score.get("ji_count") or 0
+                ji.ji_score = score.get("ji_score") or 0
             pack_table_cards(seat, **data)
         return obj
 

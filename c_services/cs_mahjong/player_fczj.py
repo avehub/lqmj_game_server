@@ -17,6 +17,7 @@ class PlayerFCZJ(Player):
         self.__max_hu_type = 0
         self.__max_multiple = 0
         self.__hu_type_score = 0
+        self.__ji_score = []
 
     @property
     def first_down(self):
@@ -88,6 +89,10 @@ class PlayerFCZJ(Player):
     def hu_type_score(self, hu_type_score):
         self.__hu_type_score = hu_type_score
 
+    def set_ji_score(self, ji_score):
+        self.__ji_score = ji_score
+
+
     def record_account(self, data, is_copy=True):
         """
         玩家记账
@@ -113,7 +118,8 @@ class PlayerFCZJ(Player):
             "hu_type": self.hu_type,
             "ji_pai": self.ji_pai,
             "max_hu_type": self.__max_hu_type,
-            "max_multiple": self.__max_multiple
+            "max_multiple": self.__max_multiple,
+            "ji_scores": self.__ji_score,
         }
         data.update(result)
         return data
@@ -140,4 +146,5 @@ class PlayerFCZJ(Player):
         self.__record_account = []
         self.__fan_ji = 0
         self.__hua_zhu = 0
+        self.__ji_score = []
         super().clear_player()

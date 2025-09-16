@@ -24,7 +24,6 @@ class BaseCardRoom(BaseRoom):
 
     def __init__(self, tid, service, room_conf, poker, not_include=0):
         rule_details = room_conf.pop("rule_details")
-        print("rule_details", rule_details)
         room_conf.update(rule_details)
         super().__init__(tid, service, room_conf, poker, not_include)
         self.__rule_details = rule_details
