@@ -29,7 +29,6 @@ from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
-from lucky_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatement
 # from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
 from lucky_game.model_db.main import Mails, Orders
 from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
@@ -96,15 +95,8 @@ class WorkersServer(JsonBaseServer):
             # await self.__process_safe_box(uid, _)
             await self.__user_event_tracking(uid, {'event_tracking': EventTracking.AFTER_FIRST_PAY.val})
 
-    async def __insert_gold_statement(self, uid, data):
-        """ 插入金币流水 """
-        self.log_info(uid, "插入金币流水", data)
-        await RecordsGoldStatement.insert_one(uid, **data)
 
-    async def __insert_diamond_statement(self, uid, data):
-        """ 插入钻石流水 """
-        self.log_info(uid, "插入钻石流水", data)
-        await RecordsDiamondStatement.insert_one(uid, **data)
+
 
     async def __new_user_give_gift(self, uid, data):
         """ 新用户赠送礼物 """
