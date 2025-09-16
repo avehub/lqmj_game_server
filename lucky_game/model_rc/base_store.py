@@ -132,7 +132,7 @@ class StoreRC(BaseCommonRC):
 
     @classmethod
     async def get_store_filter(cls, platform: any = None, sid: any = None, status: int = None, type_id: any = None,
-                        start_time: int = None, end_time: int = None, currency: int = None,
+                        start_time: str = None, end_time: str = None, currency: int = None,
                         order_by: str = None, sku_id: any = None, fields: str = None):
         """获取用户参与活动次数"""
         try:
@@ -180,7 +180,7 @@ class GoodRC(BaseCommonRC):
 
     @classmethod
     async def get_good_filter(cls, good_id: any = None, sid: any = None, status: int = None, type_id: any = None,
-                              start_time: int = None, end_time: int = None, kind: int = None, currency: int = None,
+                              start_time: str = None, end_time: str = None, kind: int = None, currency: int = None,
                         order_by: str = None, bag_type: int = None, sku: any = None, fields: str = None):
         """获取用户参与活动次数"""
         try:
@@ -244,7 +244,7 @@ class GoodRC(BaseCommonRC):
 
     async def create_good(cls, sid: int, type: int, currency: int, name: str, img: str, original: float, price: float,
                       content: str, status: int = 1, desc: str = None, purchase_limit: str = None,
-                      total: int = -1, kind: int = 0, up_time: int = None, down_time: int = None, bag_type: int = 0,
+                      total: int = -1, kind: int = 0, up_time: str = None, down_time: str = None, bag_type: int = 0,
                           rank: int = 0) -> dict:
         good = {
             "sid": sid,
