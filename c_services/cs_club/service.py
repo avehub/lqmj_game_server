@@ -40,6 +40,7 @@ class ClubServer(BaseServer):
 
     async def __enter_club(self, uid, data):
         """ 进入 """
+        self.log_info("玩家进入茶馆",uid,data)
         club_id = data.get("club_id")
         # todo: 1.检验club_id 是否有对应茶馆
         if club_id <= 0:

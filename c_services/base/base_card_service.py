@@ -29,9 +29,6 @@ class BaseCardService(BaseService):
         if not room:
             room = self.create_room(self.ROOM, data,tid = tid)
             self.log_info(f"创建房间{room.tid}")
-            room.creator = uid
-            if club_id > 0:
-                await room.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, room.club_room_info(ClubMsgType.CREATE_ROOM))
         else:
             player = self.get_player(uid)
             if player and player.tid == tid:
