@@ -198,7 +198,9 @@ class JoinRoom(GameRoomAPI):
         room_id = self.check_int(req.json.get("room_id"), require=True, p_name="房间ID")
         u_info = kwargs.get("u_info")
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
-        if not room_data or room_data["status"] not in [RoomStatus.T_IDLE, RoomStatus.T_READY] or room_data["platform"] != u_info.get("platform"):
+        if not room_data or room_data["status"] not in [RoomStatus.T_IDLE, RoomStatus.T_READY]:
+            return self.answer(StaCode.FAIL, hint="房间不存在")
+        if u_info.get("platform") == PlatForm.WECHAT_MINI_GAME and room_data["platform"] != u_info.get("platform"):
             return self.answer(StaCode.FAIL, hint="房间不存在")
         if room_data["pay_type"] == 3:
             price_key = "room_card"
