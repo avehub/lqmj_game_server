@@ -24,7 +24,6 @@ class BaseCardRoom(BaseRoom):
 
     def __init__(self, tid, service, room_conf, poker, not_include=0):
         rule_details = room_conf.pop("rule_details")
-        print("rule_details", rule_details)
         room_conf.update(rule_details)
         super().__init__(tid, service, room_conf, poker, not_include)
         self.__rule_details = rule_details
@@ -138,8 +137,11 @@ class BaseCardRoom(BaseRoom):
     async def player_join_room(self, players: list):
         await super(BaseCardRoom, self).player_join_room(players)
         if self.club_id > 0:
-            print("玩家进入房间，通知茶馆创建房间")
-            await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
+            if self.__owner == players[0].uid:
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.CREATE_ROOM))
+            else:
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
+
 
     async def player_quit_room(self, player, data):
         self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began(), "owner:", self.owner, "tid:", self.tid)
@@ -343,6 +345,8 @@ class BaseCardRoom(BaseRoom):
     async def check_game_start(self, force=False):
         if not self.room_status_is_equal(RoomStatus.T_IDLE):
             return False
+        if self.max_player_count<2:
+            return False
         if force:
             if 2 > self.in_room_count:  # 手动开始人数未满2人
                 return False
@@ -386,13 +390,19 @@ class BaseCardRoom(BaseRoom):
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
             if self.__record_id > 0:
+                if over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE:
+                    room_status = 1
+                else:
+                    room_status = 0
                 over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
-                                                                                , final_ranking, final_grade, p.game_over_data, num)
+                                                                                , final_ranking, final_grade, p.game_over_data, num,room_status)
                 self.log_info("总结算战绩插入", over_record)
-                if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
-                    up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,round_num= self.round_idx)
-                    if not up_room_sta:
-                        self.log_info("更新战绩时间失败", up_result)
+
+        if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
+            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=self.round_idx)
+            if not up_room_sta:
+                self.log_info("更新战绩时间失败", up_result)
+
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)

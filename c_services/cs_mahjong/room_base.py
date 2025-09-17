@@ -4450,14 +4450,14 @@ class Room(BaseCardRoom):
                     if self.not_playing_room_status != RoomStatus.T_PLAYING:
                         self.set_room_status(self.not_playing_room_status)
                         self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                        return await self.game_over()
+                        return await self.game_over(over_type)
                     self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                     await self.liu_ju()
                     return
                 self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
                 return await super(BaseCardRoom, self).game_over()
             self.set_room_status(self.not_playing_room_status)
-            return await self.game_over()
+            return await self.game_over(over_type)
         await self.liu_ju()
 
     async def liu_ju(self):
