@@ -54,7 +54,7 @@ class PayByGood(GameAuthApi):
         if not sku:
             return self.answer(self.sta_code.ERR_ARG, hint="请选择商品")
         pay_mode = self.check_int(req.json.get("pay_mode"), require=True, p_name='支付方式')
-        os = self.check_int(req.args.get("c_os"), require=True, p_name='c_os')
+        os = self.check_str(req.args.get("c_os"), require=True, p_name='c_os')
         num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
         plat_enum = PlatForm.find_member_by_val(platform)
         pay_enum = PayMode.find_member_by_val(pay_mode)
