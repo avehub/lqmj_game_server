@@ -111,7 +111,7 @@ class PaymentLogic:
                 if express.get("type") == StoreType.SKIN and discount < 1:
                     if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP] or (platform == PlatForm.NATIVE_APP and os == OperatingSystem.Android):
                         # 安卓、H5购买房卡才享受折扣
-                        price *= discount
+                        price *= decimal.Decimal(discount)
         else:
             field_name = "免费领取"
             field = "gold"
