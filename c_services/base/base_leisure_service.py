@@ -97,6 +97,9 @@ class BaseLeisureService(BaseService, LeisureService):
             "round_num": 1,
         }
         new_room,err = await GameRoomsRC.create_game_room(platform,user_list[0].get("uid"),{},play_type,0,**room_data)
+        if not new_room:
+            self.log_info("休闲场创建房间失败",err,"参数",platform,user_list[0].get("uid"),play_type,room_data)
+            return
         extra_room_info["tid"] = new_room
         room = self.create_room(room, room_conf, **extra_room_info)
         self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)
