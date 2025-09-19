@@ -17,7 +17,7 @@ from lucky_game.const import OrderStatus, CurrencyType
 class AppleService:
     """iOS 应用内购服务"""
 
-    def __init__(self):
+    def __init__(self,):
         """
         初始化iOS支付服务
         """
@@ -138,13 +138,17 @@ class AppleService:
             NLogger.error(f"iOS receipt verification failed: {str(e)}")
             return {"status": -1, "message": str(e)}
 
-    async def process_payment(self, order_id: str, receipt_data: str):
+    async def process_payment(self, order_id: str, receipt_data: str, sandbox: int):
         """
         处理iOS支付
         :param order_id: 订单ID
         :param receipt_data: 收据数据
+        :param sandbox: 沙箱环境：0否 1是
         :return: 处理结果
         """
+        if sandbox:
+            self.sandbox = True
+            self.url = "https://sandbox.itunes.apple.com/verifyReceipt"
         # 验证收据
         receipt_info = await self.verify_receipt(receipt_data)
         NLogger.info("IOS支付回调通知 解析回调数据", receipt_info)

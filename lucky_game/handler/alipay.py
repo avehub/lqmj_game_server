@@ -24,7 +24,7 @@ from alipay.aop.api.response.AlipayUserGamecenterPaymentQuerystatusResponse impo
     AlipayUserGamecenterPaymentQuerystatusResponse
 from alipay.aop.api.util.SignatureUtils import verify_with_rsa
 from nsanic.libs.tool import json_parse
-from common.public.conf import AliPayConf
+from common.public.conf import AliPayConf, SERVER_ADDR
 from common.public.conf import LIVE_SERVER
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.enum_const import StaCode
@@ -74,7 +74,7 @@ class Alipay:
         model.subject = subject
         model.out_trade_no = out_trade_no
         request = AlipayTradeAppPayRequest(biz_model=model)
-        request.notify_url = AliPayConf.NOTIFY_URL if LIVE_SERVER else AliPayConf.NOTIFY_URL_DEV  # 阿里回调通知
+        request.notify_url = SERVER_ADDR + AliPayConf.NOTIFY_URL  # 阿里回调通知
         response = client.sdk_execute(request)
         return response
 
