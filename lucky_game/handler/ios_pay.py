@@ -17,7 +17,7 @@ from lucky_game.const import OrderStatus, CurrencyType
 class AppleService:
     """iOS 应用内购服务"""
 
-    def __init__(self):
+    def __init__(self,):
         """
         初始化iOS支付服务
         """
@@ -148,6 +148,7 @@ class AppleService:
         """
         if sandbox:
             self.sandbox = True
+            self.url = "https://sandbox.itunes.apple.com/verifyReceipt"
         # 验证收据
         receipt_info = await self.verify_receipt(receipt_data)
         NLogger.info("IOS支付回调通知 解析回调数据", receipt_info)
