@@ -212,9 +212,9 @@ class GameRoomsRC(BaseCommonRC):
                 if not new_room:
                     return None, "创建失败"
                 # 预扣除房卡
-                room_card_sta, e = await cls.settle_room_card(room_data)
-                if not room_card_sta:
-                    return False, e
+                # room_card_sta, e = await cls.settle_room_card(room_data)
+                # if not room_card_sta:
+                #     return False, e
         except OperationalError as e:
             return None, f"房间创建失败: {str(e)}"
         return room_data["room_id"], "成功"
@@ -277,6 +277,71 @@ class GameRoomsRC(BaseCommonRC):
             )
         if not up_room_card:
             return False, "房卡结算失败"
+        return True, "成功"
+
+    @classmethod
+    async def room_start_sub(cls, room_id: int, room_uid: list):
+        """房间开始扣除资源"""
+        room_data, e = await cls.get_game_room_by_room_id(room_id)
+        if not room_data or room_data["price"] == 0:
+            return False, "房间无需资源扣除"
+        if not room_uid:
+            return False, "房间无用户"
+        # 扣除资源判断
+        key = "room_card"
+        if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+            key = "yellow_diamond"
+        userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
+        price = room_data['price']
+        async with in_transaction(connection_name=DbKey.DEFAULT):
+            # 茶馆
+            if room_data["club_id"] and room_data["club_id"] > 0 and room_data["pay_type"] == 2:
+                # 茶馆基金
+                up_room_card = await BaseClubRC.update_club_int_field(
+                    room_data["club_id"],
+                    key,
+                    price,
+                    "sub"
+                )
+                # 记录茶馆事件
+                event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
+                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
+                    name=userinfo["name"],
+                    uid=userinfo["uid"],
+                    price=price,
+                    play_type=room_data["play_type"],
+                    room_id=room_data["room_id"],
+                )
+                add_club_behavior, _ = await ExtraClubEventRC.create_event(
+                    room_data["club_id"],
+                    event_type,
+                    room_data["creator"],
+                    event_msg,
+                )
+            else:
+                reason = ReasonCostGold.CLUB_ROOM_CARD_TICKETS if key == "room_card" else ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
+                # AA付费
+                if room_data["pay_type"] == 3:
+                    price = price / room_data['max_player']
+                    # 扣除房间成员资源
+                    for uid in room_uid:
+                        await ExtraUserResourceChangesRC.change_user_resource(
+                            uid,
+                            key,
+                            price,
+                            "sub",
+                            reason=reason
+                        )
+                # 扣除房主资源
+                up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
+                    room_data["creator"],
+                    key,
+                    price,
+                    "sub",
+                    reason=reason
+                )
+                if not up_room_card:
+                    return False, "房卡结算失败"
         return True, "成功"
 
     @classmethod
@@ -439,20 +504,20 @@ class GameRoomsRC(BaseCommonRC):
             if len(disk_uid) > max_player:
                 await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
                 return False, "房间已满"
-            if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
-                # 扣除黄钻
-                key = "yellow_diamond"
-                price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
-                cls.conf.log.info("查询待扣除黄钻价格", price, e)
-                if price:
-                    price = price/room_data['max_player']
-                    await ExtraUserResourceChangesRC.change_user_resource(
-                        uid,
-                        key,
-                        price,
-                        "sub",
-                        reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
-                    )
+            # if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+            #     # 扣除黄钻
+            #     key = "yellow_diamond"
+            #     price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
+            #     cls.conf.log.info("查询待扣除黄钻价格", price, e)
+            #     if price:
+            #         price = price/room_data['max_player']
+            #         await ExtraUserResourceChangesRC.change_user_resource(
+            #             uid,
+            #             key,
+            #             price,
+            #             "sub",
+            #             reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
+            #         )
             await cls.conf.rds.sadd(cls.SESSION_ROOM_USER_KEY, uid)
             await cls.conf.rds.sadd(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}", room_id)
         except OperationalError as e:
