@@ -85,7 +85,7 @@ class GetSessionKey(BaseUserInfo):
         code = req.json.get('code')
         (not code) and self.answer(self.sta_code.ERR_ARG, hint='Invalid code.')
 
-        platform = req.args.get('c_platform') or ''
+        platform = req.args.get('platform') or ''
         if platform == PlatForm.WECHAT_MINI_GAME:
             # 请求微信session_key
             errcode, req_data = await WeChat.wechat_mini_game_login(code)
