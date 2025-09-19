@@ -99,10 +99,10 @@ class BaseCardRoom(BaseRoom):
             return
         if tool_dt.cur_time() - self.__create_time < self.__timeout_idle_time:
             return
-        if self.in_room_count > 0:
-            self.__timeout_idle_time += 300
-            return
-        self.log_info("超时关闭房间",self.in_room_count)
+        # if self.in_room_count > 0:
+        #     self.__timeout_idle_time += 300
+        #     return
+        self.log_info("超时关闭房间",self.in_room_count,self.seats)
         await self.force_dismiss()
 
     @property
@@ -370,6 +370,11 @@ class BaseCardRoom(BaseRoom):
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
         if self.round_idx == 1:
+            uid_list = [p.uid for p in self.seats if p and p.uid != self.owner]
+            sta,e = await GameRoomsRC.room_start_sub(self.tid, uid_list)
+            if not sta:
+                self.log_info("扣费失败",e,"入参",self.tid, uid_list)
+                return
             record_info = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
             self.__record_id = record_info[0].record_rid
         self.call_flow(2, self.round_start)
