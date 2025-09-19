@@ -27,7 +27,7 @@ class GameTaskHandler(GameAuthApi):
 
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        platform = req.args.get('c_platform') or ''
+        platform = req.args.get('platform') or ''
 
         # 1.获取任务配置 + 用户任务数据
         task_items = await ConfTaskRC.get_task_items(task_type=task_type, platform=platform, is_pack=True)

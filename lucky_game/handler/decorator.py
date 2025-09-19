@@ -74,8 +74,8 @@ class GameChecker(BaseDecorator):
         """ 检查必要参数 """
         c_os = req.args.get("c_os")
         self.check_str(c_os, require=True, p_name="c_os")
-        c_platform = req.args.get("c_platform")
-        self.check_str(c_platform, require=True, p_name="c_platform")
+        platform = req.args.get("platform")
+        self.check_str(platform, require=True, p_name="platform")
         c_uid = req.args.get("c_uid")
         self.check_int(c_uid, require=True, minval=1, p_name="c_uid")
         c_ver = req.args.get("c_ver")

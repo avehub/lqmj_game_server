@@ -175,7 +175,7 @@ class SwitchStaHandler(GameAuthApi):
     async def get(self, req: Request, **_):
         conf_switch = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_SWITCH)
         c_os = req.args.get("c_os")
-        c_platform = req.args.get("c_platform")
+        platform = req.args.get("platform")
         switch_type = req.args.get("switch_type")
         if switch_type:
             switch_type = self.check_int(switch_type, require=True, minval=1)
@@ -184,7 +184,7 @@ class SwitchStaHandler(GameAuthApi):
         match switch_type:
             case switch_type_enum.IAP:
                 data = conf_switch.get("iap")
-                platform = PlatForm.get_val_by_phrase(c_platform)
+                platform = PlatForm.get_val_by_phrase(platform)
                 switch = data.get(f'{c_os}_{platform}') or switch_enum.OPEN
                 one_of_model = get_one_of_model()
                 one_of_model.switch = switch
