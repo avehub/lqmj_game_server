@@ -22,7 +22,7 @@ from alipay.aop.api.util.SignatureUtils import get_sign_content, verify_with_rsa
 from nsanic.libs.tool import json_parse
 
 from common.public.common_class import CommonApi
-from common.public.conf import AliPayConf
+from common.public.conf import AliPayConf, SERVER_ADDR
 from datetime import datetime
 from nsanic.libs.mult_log import NLogger
 from alipay.aop.api.util import EncryptUtils
@@ -53,24 +53,13 @@ class AlipayPayment:
         self.client_config.timeout = 30
         # 根据支付类型设置不同的配置
         self.type_conf = AliPayConf.PLATFORM.get(payment_type)
-        # self.client_config.app_id = self.type_conf.get("APP_ID")
-        # self.client_config.app_private_key = self.type_conf.get("PRIVATE_KEY")
+        self.client_config.app_id = self.type_conf.get("APP_ID")
+        self.client_config.app_private_key = self.type_conf.get("PRIVATE_KEY")
         # self.client_config.return_url = AliPayConf.RETURN_URL
-        # self.client_config.alipay_public_key = AliPayConf.ALIPAY_PUBLIC_KEY
-        # self.notify_url = AliPayConf.NOTIFY_URL
+        self.client_config.alipay_public_key = AliPayConf.ALIPAY_PUBLIC_KEY
+        self.client_config.server_url = AliPayConf.SERVER_URL
+        self.notify_url = SERVER_ADDR + AliPayConf.NOTIFY_URL
         self.private_key = self.type_conf.get("PRIVATE_AES")
-        """ 沙箱环境配置
-        APPID: 9021000140665835
-        应用名称: sandbox 默认应用:2088721044134099
-        绑定的商家账号（PID）: 2088721044134099
-        支付宝网关地址: https://openapi-sandbox.dl.alipaydev.com/gateway.do
-        """
-        self.client_config.app_id = "9021000140665835"
-        self.client_config.app_private_key = "MIIEowIBAAKCAQEAtOuLYXapuud0HcAyokJtNCXvYuIW0Nn07oRXzLuALzZeyISMRbiNPmM3O2cyKayhPcmYNmD33hvTPIaU4P6TEj8Te4I8ronYLqrCPjUGX5p+/Pai2YsxRtdHRwlSjZARdpXP3s30U7eDdPTeLyuHQa6JXw4IGMnjrFc/3C87FBjqOGRlpErKhV5fTVPPheTuphl2XuQOCY7okj4oEync8y+Zl9q7msK0ZGUFOLcqcJ9kUPc1KFBD3ilNzVd4POJ50u29SM6BieUET6mTIcYuuz4HsaeqCXjl8+Z7QIw96Whm7ZVtQX7sxQyhMWkn5tJptjFg9n91SDGhlxS8c4W5uwIDAQABAoIBABlqqeckW431bDutv69J87uKxMm4h4oJxL4pe4g4ozZ+xewXqvk0hytHlv/SbJqsNO7QPoENOGVMtW1gXtQJD7JViDAmyM2gce2Ecct5eY6+zq5NG+3B/0c7gTj6l01p+voU6+IaPwPv2Rj6OaiYzeStV4EyIHMTEdgpXcBaJkuZQ/aUjU2JpXyTWvSTqt7OQ+0F/TCSu3UHAFfr5l7e7POvbjvTH4jfJu/Oe/xvVE2sNdo7sssemAxgNkpabx5hE2VvUZXuYFFrCYcwGQrar+bdUJvApcZiIf7gVaaJh8RzJq9jCbcFO/CS/oahmmr4IDiOwa9AZJt4ftcVGIPJytkCgYEA3ioe6TsFIE7O7GWZEuafMFHcakTeynnUh3fWhKpo0usrSZmfWN0rn/aHagSIMkCYKyDRvYHOn7NobfZw0fgcpv6a5M28fdklY5kDJlYbbGBUkSUzfGygmft0E3On8FsSowQUZod07jhJZKyct5fxEmNwxYQXAhJZ/+K4ESbhWLcCgYEA0HlcmFpJY9xIOcSYMM5Ja9LkbVHiAaSDbSwxd1hB64MnfOs0F0AWYEg73uk9i+pHd0q9iCTQPbwG5X72LegClWTjrlJPNMWXpVKlauf63zqm9+UzNhCEF8fHcjP1rC0+ElzYuF7sd3N2RQJ5KVyg6WtOBDAXUbWMKRIYHQZXux0CgYB24ldUO28M0N9OBTgasyqwcr3eaChIdVVTgL9ckswxQgMSCZEJvqDfos7n3rD7IzHKsm9KV7I4J4tUfLH2yiya+Ffu5GFfftnRKEpVM3LNVecrHJsmlAKFI9gDqLpPloysizxXeVkLOTedFflvDXHFg00PhRXC2AstMSeKliG0lQKBgQCR0vJ0F2OSmHlk/yE9sm4lH+VsmoQuhfbwnKMVSgUCSkGK3bMYOFnui1hluly0y/GlfgBJhQasyCNC0KY+wjVcbq/cNfL1hOloWQEgYJhZIVu9tvM1dCQRxkq6laHZB+SNT6jAfpWFkJw/9VTvG73qyIZP45vMKeOaru9zDga7+QKBgBEi05i4WyhmXv6KzXSEMs53GtQ7h5TusynrTzDB257S9MRIgei63gJFIFrf92QKoLfEbjV5r6KYiHQTTBDhBHyXc4Tf1O56IgelLo2ziaEZpLqkK1g4rv8KNsDpfCNSPAwWv+swaoMnD+EuxbpJGllTeU711v276UK/FjKmUNcY"
-        self.client_config.server_url = "https://openapi-sandbox.dl.alipaydev.com/gateway.do"
-        self.client_config.alipay_public_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzlMZ5W/L5Nd5vnhPDJLb+02ss8yLzmuCKNOhbAZaADFpbG5taaJeMHsSPHBEd+eSx0PmCYeejvYkYv8t17a2qBx2DA7lf59prH+Oc3bRHRPvw3Y3PZgCN1deOv4gwJKGW2s3xnVtyeqrDrquYXphHZ94zCqU7e/dd7OGpVH0V9NsvevjHSvq7NAoP0YzYsezf2EYozWoUozu8w/BW6wkE6V+UuO0IW5+1tVzTyAPaISSubHykGpjuu/twVE6XAQxMskWz9DJr3cX9bWxIiSuaRMQ0jtOphBNU9AzFwbsT+ZozBxlirOpctgiHMEfFMGLBkEQFW6jSZQiEOr6cGDRhQIDAQAB"
-        self.notify_url = "https://jadzzweb.0858sy.com/luckyGame/CallbackAli"
-
         # 初始化客户端
         self.client = DefaultAlipayClient(self.client_config)
         # 保存支付类型
