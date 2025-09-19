@@ -138,13 +138,16 @@ class AppleService:
             NLogger.error(f"iOS receipt verification failed: {str(e)}")
             return {"status": -1, "message": str(e)}
 
-    async def process_payment(self, order_id: str, receipt_data: str):
+    async def process_payment(self, order_id: str, receipt_data: str, sandbox: int):
         """
         处理iOS支付
         :param order_id: 订单ID
         :param receipt_data: 收据数据
+        :param sandbox: 沙箱环境：0否 1是
         :return: 处理结果
         """
+        if sandbox:
+            self.sandbox = True
         # 验证收据
         receipt_info = await self.verify_receipt(receipt_data)
         NLogger.info("IOS支付回调通知 解析回调数据", receipt_info)

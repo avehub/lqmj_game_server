@@ -134,8 +134,9 @@ class CallbackIos(GameAuthApi):
 
     async def post(self, req: Request, **kwargs):
         order_no = self.check_str(req.json.get("order_no"), require=True, p_name="订单号")
+        sandbox = self.check_int(req.json.get("sandbox"), require=True, minval=0, maxval=1, p_name="沙箱环境")
         receipt_data = self.check_str(req.json.get("receipt_data"), require=True, p_name="购买凭据")
-        sta, data = await ios_service.process_payment(order_no, receipt_data)
+        sta, data = await ios_service.process_payment(order_no, receipt_data, sandbox)
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint="订单校验失败")
         order_no = data.get("order_no")
