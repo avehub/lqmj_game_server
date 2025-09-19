@@ -203,14 +203,14 @@ class MiniProgramRecvPush(BaseSomePay):
         if params_dict is None:
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
 
-        params_key = {"trade_item", "uid", "c_platform", "count"}
+        params_key = {"trade_item", "uid", "platform", "count"}
         if not params_key.issubset(params_dict.keys()):
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
 
         # 2.创建订单
         uid = params_dict.get("uid")
         trade_item = params_dict.get("trade_item")
-        platform = params_dict.get('c_platform') or ''
+        platform = params_dict.get('platform') or ''
         count = req.json.get("count") or 1
 
         # order_info, hint = await OrderRC.create_order(uid, trade_item, PayMode.IOS_TO_H5, platform, req, count=count)
