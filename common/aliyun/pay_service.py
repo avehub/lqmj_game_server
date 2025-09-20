@@ -53,6 +53,7 @@ class AlipayPayment:
         self.client_config.timeout = 30
         # 根据支付类型设置不同的配置
         self.type_conf = AliPayConf.PLATFORM.get(payment_type)
+        NLogger.info(f"支付宝支付配置信息: type_conf {type(self.type_conf)} {self.type_conf}")
         self.client_config.app_id = self.type_conf.get("APP_ID")
         self.client_config.app_private_key = self.type_conf.get("PRIVATE_KEY")
         # self.client_config.return_url = AliPayConf.RETURN_URL
