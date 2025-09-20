@@ -208,7 +208,6 @@ class BaseServer(BasePubService, CommonApi):
             gold = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
         except Exception as e:
             gold = {"gold": 0}
-        cls.log_info(f"{uid} 获取待返还金币: {CacheKey.PLAYER_GOLD} {gold}")
         return gold
 
     async def del_play_gold(self, uid):
