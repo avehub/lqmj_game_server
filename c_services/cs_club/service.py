@@ -110,7 +110,9 @@ class ClubServer(BaseServer):
 
     async def __player_ready_except_owner(self,uid,data):
         club_id = data.get("club_id")
-        room = self.get_room(club_id)
+        room = await self.check_in_room(CmdClub.PLAYER_READY_EXCEPT_OWNER, uid, club_id)
+        if not room:
+            return
         if not room.check_player_in_club(uid):
             return
 
