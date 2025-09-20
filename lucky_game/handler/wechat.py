@@ -7,7 +7,7 @@ from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.tool import http_get, http_post, json_parse, json_encode
 from nsanic.libs import tool_dt
 from common.utils.utils import UtilsTool
-from lucky_game.const import PlatForm
+from lucky_game.const import PlatForm, OrderStatus
 from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.model_rc.base_user import BaseUserRC
 from nsanic.libs.mult_log import NLogger
@@ -20,6 +20,7 @@ class WeChat(LogMeta):
     WECHAT_ACCESS_TOKEN_GZH = "wechat_access_token_gzh"  # 公众号access_token
     WECHAT_TICKET = "wechat_ticket"  # jsapi_ticket
     WECHAT_COIN_RATE = 100  # 价格（人名币） * 游戏币兑换比例 = 游戏币扣除数量 1:100
+    PAY_CODE_SUCCESS = 2
 
     @classmethod
     def __return_req_data(cls, req_data):
@@ -210,8 +211,10 @@ class WeChat(LogMeta):
         return await cls.__request_by_sign(uid, url, path, params, access_token)
 
     @classmethod
-    async def wechat_mini_game_query_order(cls, uid, open_id: str, access_token: str, order_id: str):
+    async def wechat_mini_game_query_order(cls, uid, open_id: str, order_id: str):
         """ 小游戏查询订单接口 pay_v2.queryOrder """
+        errcode, access_token = await WeChat.wechat_get_access_token_stable()
+        cls.log_info("WeChat 获取TOKEN结果：", "成功" if errcode == 0 else "失败")
         url = "https://api.weixin.qq.com/wxa/game/queryorderinfo?access_token={0}&signature={1}" \
               "&sig_method=hmac_sha256&pay_sig={2}"
         path = "/wxa/game/queryorderinfo"
@@ -223,9 +226,19 @@ class WeChat(LogMeta):
             "zone_id": "1",
             "env": 0,  # 0：现网环境 也叫正式环境 1：沙箱环境
             "out_trade_no": order_id,
-            "biz_id": 1,  # 1 代币 2 道具直购
+            "biz_id": 2,  # 1 代币 2 道具直购
         }
-        return await cls.__request_by_sign(uid, url, path, params, access_token)
+        errcode, req_data = await cls.__request_by_sign(uid, url, path, params, access_token)
+        NLogger.info(f"微信小程序订单查询结果：errcode: {errcode} req_data: {req_data}")
+        data = {"errcode": errcode, "errmsg": req_data}
+        if errcode:
+            return False, "查询小程序订单失败", data
+        order_status = OrderStatus.FAIL
+        if req_data.get("pay_state") == cls.PAY_CODE_SUCCESS:  # 支付状态（用户是否已支付）1 未支付 2 已支付
+            order_status = OrderStatus.PAID
+        return True, "OK", {"trade_status": order_status, "trade_no": req_data.get("mch_order_no"),
+                            "order_no": order_id}
+
 
     @classmethod
     async def wechat_mini_game_return_order(cls, uid, trade_amount: int, order_id: str, product_id: str,

@@ -25,7 +25,8 @@ from lucky_game.interface.club_user import JoinBlack, CancelBlack, UpdateRelatio
 from lucky_game.interface.file_handle import FileUploadHandler, FileDeleteHandler
 from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
-from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos, MiniProgramRecvPush
+from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos, \
+    MiniProgramRecvPush
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode
 from lucky_game.interface.ad_event import CreateAdRecord
 

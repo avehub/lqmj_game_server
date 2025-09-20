@@ -147,7 +147,6 @@ class CallbackIos(GameAuthApi):
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
         return self.answer()
-
 class MiniProgramRecvPush(BaseSomePay):
     """
     微信小程序回调通知
