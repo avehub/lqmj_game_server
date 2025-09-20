@@ -24,7 +24,7 @@ from alipay.aop.api.response.AlipayUserGamecenterPaymentQuerystatusResponse impo
     AlipayUserGamecenterPaymentQuerystatusResponse
 from alipay.aop.api.util.SignatureUtils import verify_with_rsa
 from nsanic.libs.tool import json_parse
-from common.public.conf import AliPayConf
+from common.public.conf import AliPayConf, SERVER_ADDR
 from common.public.conf import LIVE_SERVER
 from lucky_game.config import conf_srv, ConfSrv
 from common.public.enum_const import StaCode
@@ -40,7 +40,7 @@ class Alipay:
     ALI_COIN_RATE = 100  # 价格（人名币） * 游戏币兑换比例 = 游戏币扣除数量 1:100
 
     @classmethod
-    def get_client(cls):
+    def get_client(cls, platform: str = "H5"):
         """
         得到客户端对象
         注意，一个alipay_client_config对象对应一个DefaultAlipayClient，定义DefaultAlipayClient对象后，alipay_client_config不得修改
@@ -49,10 +49,10 @@ class Alipay:
         """
         if not cls.CLIENT:
             alipay_client_config = AlipayClientConfig()
-            alipay_client_config.app_id = AliPayConf.ALIPAY_APP_ID
-            alipay_client_config.app_private_key = AliPayConf.ALIPAY_APP_PRIVATE_KEY
+            alipay_client_config.app_id = AliPayConf.PLATFORM.get(platform).get("APP_ID")
+            alipay_client_config.app_private_key = AliPayConf.PLATFORM.get(platform).get("PRIVATE_KEY")
             alipay_client_config.alipay_public_key = AliPayConf.ALIPAY_PUBLIC_KEY
-            cls.conf.log.info(f'ali_get_client ALIPAY_APP_ID: {AliPayConf.ALIPAY_APP_ID}')
+            cls.conf.log.info(f'ali_get_client {platform} ALIPAY_APP_ID: {alipay_client_config.app_id}')
             cls.CLIENT = DefaultAlipayClient(alipay_client_config=alipay_client_config, logger=cls.conf.log)
         return cls.CLIENT
 
@@ -74,7 +74,7 @@ class Alipay:
         model.subject = subject
         model.out_trade_no = out_trade_no
         request = AlipayTradeAppPayRequest(biz_model=model)
-        request.notify_url = AliPayConf.NOTIFY_URL if LIVE_SERVER else AliPayConf.NOTIFY_URL_DEV  # 阿里回调通知
+        request.notify_url = SERVER_ADDR + AliPayConf.NOTIFY_URL  # 阿里回调通知
         response = client.sdk_execute(request)
         return response
 

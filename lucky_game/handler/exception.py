@@ -6,9 +6,10 @@ from sanic import Request, response
 from nsanic.libs.manager import HeaderSet
 from nsanic.libs.rds_client import RdsError
 from nsanic.exception import JsonFinish
-from common.proto.py_pb2.http_base import PbBaseRep
 from http import HTTPStatus
 from common.public.enum_const import StaCode
+from sanic.handlers import ErrorHandler
+from sanic.exceptions import SanicException
 
 
 @dataclass
@@ -53,16 +54,12 @@ class RCatchExpt():
         req_id and cls.conf.rds and cls.conf.rds.drop_item(f"{cls.conf.PROCESSING_REQ}:{req_id}")
         headers = HeaderSet.out(cls.conf)
         hasattr(expt, 'headers') and expt.headers and headers.update(expt.headers)
-        if isinstance(expt, RdsError):
-            body = PbBaseRep.encode(code=500, msg='Invalid Cache Server. Please contact administrator.')
-            return response.raw(body, status=500, headers=headers)
-        if isinstance(expt, RealJsonFinish):
+        # if isinstance(expt, RdsError):
+        #     data = PbBaseRep.encode(code=500, msg='Invalid Cache Server. Please contact administrator.')
+        #     return response.json(data, status=500, headers=headers)
+        if isinstance(expt, JsonFinish):
             body = {'code': expt.code.val, 'data': expt.data, 'msg': expt.hint or expt.code.msg}
             return response.json(body, status=expt.code.http, headers=headers)
-        if isinstance(expt, JsonFinish):
-            body = PbBaseRep.encode(code=expt.code.val, msg=expt.hint or expt.code.msg, _any=expt.data)
-            # return response.raw(body, status=expt.code.web, headers=headers)
-            return response.raw(body, headers=headers)
         if hasattr(expt, 'status_code'):
             enum_code = HTTPStatus._value2member_map_.get(expt.status_code)
             if not enum_code:
@@ -71,8 +68,13 @@ class RCatchExpt():
                 hint = enum_code.phrase
             if expt.status_code == 500:
                 cls.__log_err_info(req, traceback.format_exc())
-            body = PbBaseRep.encode(code=expt.status_code, msg=hint)
-            return response.raw(body, status=expt.status_code, headers=headers)
+
+            data = {'code': expt.status_code, 'msg': hint}
+            return response.json(data, status=expt.status_code, headers=headers)
         cls.__log_err_info(req, traceback.format_exc())
-        body = PbBaseRep.encode(code=500, msg='There are some error, please connect administrator to check.')
-        return response.raw(body, status=500)
+        data = {'code': 500, 'msg': 'There are some error, please connect administrator to check.'}
+        return response.json(data, status=500)
+
+    #@app.report_exception
+    # async def catch_any_exception(cls, exception: Exception):
+    #     print("Caught exception:", exception)

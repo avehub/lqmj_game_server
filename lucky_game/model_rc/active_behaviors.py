@@ -5,7 +5,7 @@
 """
 import datetime
 import random
-from typing import Type
+from typing import Type, Union, Tuple, List, Dict, Any
 from nsanic.orm.db_model import DBModel
 from nsanic.libs.tool import json_encode, json_parse
 from tortoise.exceptions import OperationalError
@@ -14,8 +14,10 @@ from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.const import AwardType, CompleteSta
-from lucky_game.model_db.main import StatsWatchAdTimes, ConfAward, StatsItemOrderCount, RecordsUserSignIn
+# from lucky_game.model_db.main import StatsWatchAdTimes, ConfAward, RecordsUserSignIn
 from lucky_game.model_db.extra import RecordsUserLuck, RecordsUserActiveScore, RecordsUserRaffle
+from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_db.main import LogUserActivity
 
 
 class UserBehaviorsRC():
@@ -171,7 +173,7 @@ class UserBehaviorsRC():
 
         active_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ACTIVE_SCORE)
         active_awards_sta = ConfJsonRC.stat_of_completion(active_score, active_achieved,
-                                                                active_conf.get("targets", []))
+                                                          active_conf.get("targets", []))
 
         return active_awards_sta, active_score
 
@@ -229,94 +231,6 @@ class UserBehaviorsRC():
 
         sign_awards_sta = ConfJsonRC.stat_of_completion(len(sign_in_date), sign_in_achieved, sign_targets)
         return CompleteSta.COMPLETED.val in sign_awards_sta
-
-    @classmethod
-    async def update_user_order_count(cls, uid, order_info: dict):
-        """
-        更新用户订单数
-        order_info：刚成交订单信息
-        """
-
-        async def update_cache(info: list):
-            await cls.conf.rds.set_item(f"{StatsItemOrderCount.sheet_name()}:{uid}", json_encode(info), ex_time=cls.expired_sec)
-            return info
-
-        async def __add_one():
-            new_param = {
-                "uid": uid,
-                "trade_item": trade_item,
-                "order_count": target_val,
-                "order_id": order_id
-            }
-            new_record = await StatsItemOrderCount.add_one(new_param)
-            new_param['id'] = new_record.id
-            return new_param
-
-        if not order_info:
-            return []
-        target_val = order_info.get("trade_item_count", 0)
-        order_id = order_info.get("order_id")
-        trade_item = order_info.get("trade_item")
-
-        old_records = await cls.cache_user_order_count(uid) or []
-        updated = False  # 标记是否有更新操作发生
-        if not old_records:
-            res = await __add_one()
-            if res:
-                old_records.append(res)
-                updated = True
-        else:
-            founded = False
-            for one in old_records:
-                if one.get("trade_item") == trade_item:
-                    old_value = one.get("order_count", 0)
-                    new_value = old_value + target_val
-
-                    if new_value != old_value:  # 检查 order_count 是否发生变化
-                        one["order_count"] = new_value
-                        one["order_id"] = order_id
-                        await StatsItemOrderCount.update_by_pk(one.get("id"), {"order_count": new_value, "order_id": order_id})
-                        updated = True
-                    founded = True
-                    break
-
-            if not founded:
-                res = await __add_one()
-                if res:
-                    old_records.append(res)
-                    updated = True
-
-        if updated:
-            return await update_cache(old_records)
-        return old_records
-
-    @classmethod
-    async def cache_user_order_count(cls, uid):
-        """查询并缓存用户订单数"""
-
-        async def from_db():
-            db_info = await StatsItemOrderCount.get_by_dict({"uid": uid})
-            if db_info:
-                await cls.conf.rds.set_item(key, json_encode(db_info), ex_time=cls.expired_sec)
-                return db_info
-            return []
-
-        key = f"{StatsItemOrderCount.sheet_name()}:{uid}"
-        info = await cls.conf.rds.get_item(key)
-        if info:
-            return json_parse(info, cls.conf.error_log)
-        return await cls.conf.rds.locked(key, fun=from_db)
-
-    @classmethod
-    async def query_is_first_buy(cls, uid, trade_item) -> bool:
-        """查询该商品是否首次购买（已发货状态的订单数量 > 0）"""
-        records = await cls.cache_user_order_count(uid) or []
-        if records:
-            for r in records:
-                if r.get("trade_item") == trade_item:
-                    return r.get("order_count", 0) <= 0
-            return True
-        return True
 
     @classmethod
     async def cache_user_raffle_records(cls, unique: dict):
@@ -444,3 +358,6 @@ class UserBehaviorsRC():
         sign_in_date = json_parse(si_d) if si_d else []
         sign_in_achieved = json_parse(si_a) if si_a else []
         return sign_in_date, sign_in_achieved
+
+
+

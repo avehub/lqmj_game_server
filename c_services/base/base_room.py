@@ -1,8 +1,10 @@
 import asyncio
 from c_services.const.cs_enum_const import RoomStatus, RoomType, CmdRoom
 from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.proto.py_pb2.ws_c2s import set_cards_model
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import StaCode, BaseEnum, ServiceEnum
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .base_player import BasePlayer
 from .base_service import BaseService
 from typing import List, Optional
@@ -13,7 +15,7 @@ from abc import ABCMeta, abstractmethod
 class BaseRoom(metaclass=ABCMeta):
     """ 基础玩法类 """
 
-    def __init__(self, tid, service: BaseService, room_conf, poker):
+    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0,extra_count =0):
         self.__tid = tid
         self.__service = service
         self.__room_status = RoomStatus.T_IDLE
@@ -22,18 +24,19 @@ class BaseRoom(metaclass=ABCMeta):
         self.__room_type = room_conf.get("room_type") or RoomType.COMMON
         self.__play_type = room_conf.get("play_type") or 1
         self.__level = room_conf.get("level") or ''
-        self.__level_desc = room_conf.get("desc") or ''
+        self.__level_desc = room_conf.get("level_desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
 
-        self.__max_player_count = room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get(
+            "total_round") or 1  # 总局数
 
         self.__curr_seat_id = 0
         self.__dealer = 0
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
-        self.__poker = poker()
+        self.__poker = poker(not_include,extra_count)
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer
@@ -183,30 +186,30 @@ class BaseRoom(metaclass=ABCMeta):
         return (self.__timer and self.__timer.left_seconds() or
                 self.__timer_robot and self.__timer_robot.left_seconds() or 0)
 
-    def info_log(self, *data):
-        self.__service.info_log(self.__tid, *data)
+    def log_info(self, *data):
+        self.__service.log_info(self.__tid, *data)
 
     def err_log(self, *data):
-        self.__service.error_log(self.__tid, *data)
+        self.__service.log_err(self.__tid, *data)
 
     def set_room_status(self, status: RoomStatus):
         self.__room_status = status
-        self.info_log("房间状态变动：", status, status.phrase)
+        self.log_info("房间状态变动：", status, status.phrase)
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.info_log("流程变动：", flow_status, flow_status.phrase)
+        self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
             return True
-        self.info_log("当前房间状态：", self.__room_status, room_status)
+        self.log_info("当前房间状态：", self.__room_status, room_status)
         return False
 
     def flow_status_is_equal(self, flow_status: BaseEnum):
         if self.__flow_status == flow_status:
             return True
-        self.info_log("当前流程状态：", self.__flow_status, flow_status)
+        self.log_info("当前流程状态：", self.__flow_status, flow_status)
         return False
 
     def in_flow_status(self, *status):
@@ -243,7 +246,10 @@ class BaseRoom(metaclass=ABCMeta):
     def sit_down(self, player, seat):
         player.tid = self.__tid
         player.seat_id = seat
-        self.__seats.append(player)
+        if self.room_type == RoomType.COMMON:
+            self.__seats.append(player)
+        else:
+            self.__seats[seat] = player
 
     def dealer(self):
         return self.get_player_by_seat_id(self.__dealer)
@@ -266,7 +272,7 @@ class BaseRoom(metaclass=ABCMeta):
                 if with_cards and not p.cards:
                     continue
                 return p
-        for i in range(self.max_player_count - 1, seat_id - 2, -1):  # 前包后不包，只到当前玩家的下一个玩家
+        for i in range(self.max_player_count - 1, seat_id - 1, -1):  # -1是当前玩家，不能包含当前玩家
             p = self.seats[i]
             if p:
                 if p.is_out:
@@ -319,28 +325,41 @@ class BaseRoom(metaclass=ABCMeta):
     def player_quit_room(self, player, _):
         """ 玩家离开房间 """
         player.offline = True
-        self.info_log(player.uid, "玩家离开房间", player.is_out)
+        self.log_info(player.uid, "玩家离开房间", player.is_out)
 
     def set_cards_in_debug(self, data):
         """ 设牌调试 """
         if LIVE_SERVER:
             return StaCode.FAIL, "不允许设牌"
-        dealer_id = data.dealer_id
-        cards = data.cards
+        set_cards_model.ParseFromString(data)
+        dealer_id = set_cards_model.dealer_id or 0
+        cards = set_cards_model.cards
+        if len(cards) != self.max_player_count + 1:
+            return StaCode.FAIL, "设牌数据结构错误"
+
         all_cards = []
+        cards_data = []
         for c in cards:
-            all_cards.extend(c)
+            data = []
+            if len(c.values) > 0:
+                all_cards.extend(c.values)
+                data.extend(c.values)
+                cards_data.append(data)
+            else:
+                cards_data.append([])
         card2count = {}
         for c in all_cards:
             count = card2count.get(c, 0) + 1
             card2count[c] = count
-            if count > 4:
+            if count > self.__poker.CARDS_NUM:
                 return StaCode.FAIL, "设牌多于牌该有的数量"
-            if not self.poker.CARDS_ENUM.find_member_by_val(c):
+            card = self.__poker.CARDS_ENUM.find_member_by_val(c)
+            if not card:
                 return StaCode.FAIL, "设牌错误"
+
         if dealer_id > 0:
             pass  # todo 设置庄家
-        self.__poker.set_order_cards(cards, self.__max_player_count)  # 具体设置牌
+        self.__poker.set_order_cards(cards_data)  # 具体设置牌
         return StaCode.PASS, ""
 
     async def round_start(self):
@@ -361,6 +380,8 @@ class BaseRoom(metaclass=ABCMeta):
         task_list = []
         send_player_list = []
         for p in self.__seats:
+            if not p:
+                continue
             if p.offline:
                 continue
             if p.is_robot:
@@ -408,39 +429,40 @@ class BaseRoom(metaclass=ABCMeta):
         """ 子类实现 """
         raise NotImplementedError
 
-    async def notify_player_enter_room(self, player):
+    async def notify_player_enter_room(self, player, reenter=False):
         # 房间信息
         await self.notify_room_info(player)
         # 发送房间内所有玩家信息给当前玩家
-        await self.notify_player_info(player)
+        await self.notify_player_info(player, reenter)
 
     async def notify_room_info(self, player=None):
         data = self.serialize_room_info()
+        if not data:
+            return
+        print("发送房间信息")
         if player:
             await self.inner_send(player, CmdRoom.ROOM_INFO, data)
         else:
             await self.inner_broadcast(CmdRoom.ROOM_INFO, data)
 
-    async def notify_player_info(self, curr_player=None):
+    async def notify_player_info(self, curr_player=None, reenter=False):
         """ 通知玩家信息 """
         if curr_player:
             # 断线重进房间
             room_player_info = self.room_player_info(curr_player)
             data = self.serialize_player_info(room_player_info)
             await self.inner_send(curr_player, CmdRoom.PLAYER_INFO, data)
+            if not reenter:
+                curr_p_info = curr_player.player_info(contain_cards=False)
+                data = self.serialize_player_info([curr_p_info])
+                await self.inner_broadcast(CmdRoom.PLAYER_INFO, data, exclude_uid=curr_player.uid)
             return
 
         task_list = []
         for player in self.seats:
             if player.is_robot:
                 continue
-            room_player_info = [player.player_info()]
-            for other_p in self.seats:
-                if player.seat_id != other_p.seat_id:
-                    other_info = other_p.player_info()
-                    other_info["cards"] = []  # 过滤其它玩家手牌
-                    room_player_info.append(other_info)
-
+            room_player_info = self.room_player_info(player)
             data = self.serialize_player_info(room_player_info)
             task_list.append(self.inner_send(player, CmdRoom.PLAYER_INFO, data))
         if task_list:
@@ -449,10 +471,10 @@ class BaseRoom(metaclass=ABCMeta):
     def room_player_info(self, curr_player=None):
         result = []
         for player in self.seats:
-            info = player.player_info()
-            if curr_player and player.seat_id != curr_player.seat_id:
-                info["cards"] = []
-            result.append(info)
+            if player:
+                contain_cards = curr_player and player.seat_id == curr_player.seat_id or False
+                info = player.player_info(contain_cards)
+                result.append(info)
         return result
 
     def room_info(self):
@@ -478,8 +500,8 @@ class BaseRoom(metaclass=ABCMeta):
         raise NotImplemented
 
     async def force_dismiss(self):
-        self.info_log("强制解散：", self.room_status, self.flow_status)
-        if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS):
+        self.log_info("强制解散：", self.room_status, self.flow_status)
+        if self.room_status in (RoomStatus.T_CHECK_OUT, RoomStatus.T_CLOSED):
             return
         # 该条判断主要为了避免重复回收房间
         if self.service.get_room(self.__tid):
@@ -487,15 +509,26 @@ class BaseRoom(metaclass=ABCMeta):
 
     async def game_over(self):
         """ 游戏结束 """
-        self.cancel_all_timer()
+        task_list = []
         for p in self.__seats:
-            if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
-                await self.service.del_player_in_service(p.uid)
-            self.service.release_player(p)
+            if p:
+                if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
+                    uid = p.uid
+                    if self.__room_type == RoomType.SELF_BUILD:
+                        tid = p.tid
+                        task_list.append(GameRoomsRC.leave_room(tid, uid))
+                        # self.log_info("游戏结束离开房间:", leave_result, "房间状态:", self.__room_status)
+                    task_list.append(self.service.del_player_in_service(uid))
+                self.service.release_player(p)
+        self.__room_status = RoomStatus.T_CLOSED
+        if task_list:
+            await asyncio.gather(*task_list)
         self.service.release_room(self)
+
 
     def clear_room(self):
         """ 清理房间 """
+        self.__service = None
         self.__room_status = RoomStatus.T_IDLE
         self.__flow_status = 0
         self.__curr_seat_id = 0
@@ -503,15 +536,19 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats.clear()
 
-    def refresh_room_conf(self, room_conf):
+        self.cancel_all_timer()
+
+    def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """
+        self.__service = service
         self.__room_conf = room_conf
         self.__room_type = room_conf.get("room_type") or RoomType.COMMON
         self.__play_type = room_conf.get("play_type") or 1
         self.__level = room_conf.get("level") or 1
         self.__level_desc = room_conf.get("desc") or ''
         self.__base_score = room_conf.get("base_score") or 1  # 底分
-        self.__max_player_count = room_conf.get("rule_conf", {}).get("max_player") or 4
-        self.__total_round = room_conf.get("rule_conf", {}).get("total_round") or 1  # 总局数
+        self.__max_player_count = room_conf.get("max_player") or room_conf.get("rule_conf", {}).get("max_player") or 4
+        self.__total_round = room_conf.get("total_round") or room_conf.get("rule_conf", {}).get(
+            "total_round") or 1  # 总局数
 
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
