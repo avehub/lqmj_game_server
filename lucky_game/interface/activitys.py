@@ -183,9 +183,8 @@ class ActivityReturnGold(GameAuthApi):
     async def get(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        return_gold = await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
-        # return_gold = await BaseServer().get_play_gold(uid)
-        sta = hasattr(return_gold, "gold")
+        return_gold = await CommonApi.get_player_join_gold(uid)
+        sta = return_gold.get('gold', None)
         return self.answer(data={"return_gold": return_gold.get("gold") if sta and return_gold.get("gold") > 0 else 0})
 
 

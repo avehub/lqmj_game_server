@@ -439,7 +439,6 @@ class BaseRoom(metaclass=ABCMeta):
         data = self.serialize_room_info()
         if not data:
             return
-        print("发送房间信息")
         if player:
             await self.inner_send(player, CmdRoom.ROOM_INFO, data)
         else:

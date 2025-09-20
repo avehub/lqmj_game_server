@@ -30,6 +30,15 @@ class CommonApi(LogMeta):
         return ws_id
 
     @classmethod
+    async def get_player_join_gold(cls, uid):
+        try:
+            gold = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            gold = {"gold": 0}
+        cls.conf.log.info(f"{uid} 获取待返还金币: {gold}")
+        return gold
+
+    @classmethod
     async def get_player_ws_info(cls, uid):
         ws_info = await cls.conf.rds.get_hash(CacheKey.WS_ONLINE_INFO, uid)
         if ws_info:
