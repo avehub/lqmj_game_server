@@ -8,6 +8,7 @@ from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
 
 from c_services.base.base_server import BaseServer
+from common.public.common_class import CommonApi
 from common.public.enum_const import DbKey
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi
@@ -182,7 +183,7 @@ class ActivityReturnGold(GameAuthApi):
     async def get(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        return_gold = await BaseServer().get_play_gold(uid)
+        return_gold = await BaseServer.get_play_gold(uid)
         sta = hasattr(return_gold, "gold")
         return self.answer(data={"return_gold": return_gold.get("gold") if sta and return_gold.get("gold") > 0 else 0})
 
