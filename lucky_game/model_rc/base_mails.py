@@ -5,6 +5,7 @@ from .base_rc import BaseRC
 from lucky_game.model_db.main import Mails
 from nsanic.libs import tool_dt
 from lucky_game.const import MailSta
+from lucky_game.model_rc.base_award import AwardRC
 
 
 class MailsRC(BaseRC):
@@ -38,3 +39,24 @@ class MailsRC(BaseRC):
         if mails_info:
             return True
         return False
+
+    @classmethod
+    async def get_mail_awards(cls, mail_list: list):
+        """获取邮件奖励"""
+        attachments = [i.get('attachment').get("award_ids") for i in mail_list]
+        if attachments:
+            award_ids = []
+            for i in attachments:
+                award_ids.extend(i)
+            award_data, e = await AwardRC.get_award_by_filter(award_id=award_ids)
+            if award_data:
+                award_dict = {item['award_id']: item for item in award_data}
+                for i in mail_list:
+                    i_award_ids = i.get('attachment').get("award_ids")
+                    i['attachment']['awards'] = []
+                    for i_award_id in i_award_ids:
+                        i_award = award_dict.get(i_award_id)
+                        if i_award:
+                            i['attachment']['awards'].extend(i_award.get("content")["rewards"])
+        return mail_list
+

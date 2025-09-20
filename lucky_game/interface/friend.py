@@ -4,7 +4,6 @@
 from sanic import Request
 from datetime import datetime, timedelta
 from lucky_game.base_api import GameAuthApi
-from common.proto.py_pb2.http_friend import PbFriendship
 from lucky_game.const import FriendshipSta, FriendOpType
 from lucky_game.model_rc.base_friend import UserFriendshipRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -51,10 +50,9 @@ class GetUserFriendList(GameAuthApi):
                 if friend_status == FriendshipSta.ACCEPTED.val:
                     friend_list.append(f)
 
-        self.info_log(uid, f"GetUserFriendList 获取{is_new}列表 成功", friend_list)
+        self.log_info(uid, f"GetUserFriendList 获取{is_new}列表 成功", friend_list)
         # (not friend_list) and self.answer(self.sta_code.NO_PLAYER_INFO, hint="没有任何相关好友记录")
-        proto_data = PbFriendship.pb_model(friend_list)
-        return self.answer(data=proto_data)
+        return self.answer(data=friend_list)
 
 
 class FriendshipOperate(GameAuthApi):
@@ -89,11 +87,10 @@ class FriendshipOperate(GameAuthApi):
         opt_func = map_func.get(opt_type)
         if opt_func and callable(opt_func):
             opt_res = await opt_func(operate_uid, target_uid)
-            self.info_log(operate_uid, f"FriendshipOperate {ot_enum.phrase}操作结果 {opt_res}")
+            self.log_info(operate_uid, f"FriendshipOperate {ot_enum.phrase}操作结果 {opt_res}")
 
             if opt_res:
-                proto_data = PbFriendship.pb_model([opt_res])
-                return self.answer(hint="OK", data=proto_data)
+                return self.answer(hint="OK", data=[opt_res])
 
             return self.answer(code=self.sta_code.FAIL, hint="好友操作失败")
         return self.answer(code=self.sta_code.FAIL, hint="非有效操作")
@@ -104,7 +101,7 @@ class FriendshipOperate(GameAuthApi):
         操作玩家发起，目标玩家收到
         """
         add_res, add_hint = await UserFriendshipRC.add_friend_request(target_uid, operate_uid)
-        self.info_log(f"{operate_uid} 发起好友申请结果：{add_res}，描述：{add_hint}")
+        self.log_info(f"{operate_uid} 发起好友申请结果：{add_res}，描述：{add_hint}")
         (not add_res) and self.answer(code=self.sta_code.FAIL, hint=add_hint)
 
         return add_res
@@ -116,7 +113,7 @@ class FriendshipOperate(GameAuthApi):
         """
         accept_res, accept_hint = await UserFriendshipRC.response_friend_request(operate_uid, target_uid,
                                                                                  FriendshipSta.ACCEPTED)
-        self.info_log(f"{operate_uid} 接受好友申请结果：{accept_res}，描述：{accept_hint}")
+        self.log_info(f"{operate_uid} 接受好友申请结果：{accept_res}，描述：{accept_hint}")
         (not accept_res) and self.answer(code=self.sta_code.FAIL, hint=accept_hint)
 
         return accept_res
@@ -128,7 +125,7 @@ class FriendshipOperate(GameAuthApi):
         """
         reject_res, reject_hint = await UserFriendshipRC.response_friend_request(operate_uid, target_uid,
                                                                                  FriendshipSta.REJECTED)
-        self.info_log(f"{operate_uid} 拒绝好友申请结果：{reject_res}，描述：{reject_hint}")
+        self.log_info(f"{operate_uid} 拒绝好友申请结果：{reject_res}，描述：{reject_hint}")
         (not reject_res) and self.answer(code=self.sta_code.FAIL, hint=reject_hint)
 
         return reject_res
@@ -139,7 +136,7 @@ class FriendshipOperate(GameAuthApi):
         双方都可操作
         """
         block_res, block_hint = await UserFriendshipRC.block_or_unblock_friend(operate_uid, target_uid, is_block=True)
-        self.info_log(f"{operate_uid} 屏蔽好友结果：{block_res}，描述：{block_hint}")
+        self.log_info(f"{operate_uid} 屏蔽好友结果：{block_res}，描述：{block_hint}")
         (not block_res) and self.answer(code=self.sta_code.FAIL, hint=block_hint)
 
         return block_res
@@ -151,7 +148,7 @@ class FriendshipOperate(GameAuthApi):
         """
         unblock_res, unblock_hint = await UserFriendshipRC.block_or_unblock_friend(operate_uid, target_uid,
                                                                                    is_block=False)
-        self.info_log(f"{operate_uid} 取消屏蔽好友结果：{unblock_res}，描述：{unblock_hint}")
+        self.log_info(f"{operate_uid} 取消屏蔽好友结果：{unblock_res}，描述：{unblock_hint}")
         (not unblock_res) and self.answer(code=self.sta_code.FAIL, hint=unblock_hint)
 
         return unblock_res
@@ -162,7 +159,7 @@ class FriendshipOperate(GameAuthApi):
         双方都可操作
         """
         remove_res, remove_hint = await UserFriendshipRC.unfriend_request(operate_uid, target_uid)
-        self.info_log(f"{operate_uid} 解除好友关系结果：{remove_res}，描述：{remove_hint}")
+        self.log_info(f"{operate_uid} 解除好友关系结果：{remove_res}，描述：{remove_hint}")
         (not remove_res) and self.answer(code=self.sta_code.FAIL, hint=remove_hint)
 
         return remove_res
