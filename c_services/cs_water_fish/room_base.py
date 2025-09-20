@@ -29,7 +29,7 @@ class Room(BaseLeisureRoom):
     async def deal_cards(self):
         """ 发牌 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_READY):
-            self.log_info("发牌错误，桌子未就绪")
+            self.info_log("发牌错误，桌子未就绪")
             return
         self.set_flow_status(FlowStatus.FLOW_IN_DEAL_CARDS)
         all_cards = self.__poker.deal_cards(self.__real_count, self.__card_count)
@@ -109,10 +109,10 @@ class Room(BaseLeisureRoom):
     def start_sa_pu(self):
         """ 开始撒扑 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_DEAL_CARDS):
-            self.log_info("流程错误，撒扑前应该是发牌")
+            self.info_log("流程错误，撒扑前应该是发牌")
             return
         self.set_flow_status(FlowStatus.FLOW_IN_SA_PU)
-        self.log_info("开始撒扑")
+        self.info_log("开始撒扑")
         self.robot_auto_sa_pu()
 
     def robot_auto_sa_pu(self):
@@ -127,9 +127,9 @@ class Room(BaseLeisureRoom):
     async def start_operates(self):
         """ 开始操作：走/杀/开/信/反 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_SA_PU_END):
-            self.log_info("流程错误，必须撒扑完才开始庄操作")
+            self.info_log("流程错误，必须撒扑完才开始庄操作")
             return
-        self.log_info("开始庄喊话")
+        self.info_log("开始庄喊话")
         self.set_flow_status(FlowStatus.FLOW_IN_OPERATE)
         dealer = self.dealer()
         await self.continue_dealer_operate(dealer)
@@ -147,7 +147,7 @@ class Room(BaseLeisureRoom):
         """ 继续庄操作 """
         while 1:
             if self.curr_seat_id == self.dealer_id:
-                self.log_info("庄家操作完")
+                self.info_log("庄家操作完")
                 return
             next_player = self.next_player(self.curr_seat_id)
             self.curr_seat_id = next_player.seat_id
@@ -192,14 +192,14 @@ class Room(BaseLeisureRoom):
     async def player_sa_pu(self, player, cards, sp_status: int):
         """ 玩家撒扑 """
         if len(cards) != self.__card_count:
-            self.log_info(player.uid, "撒扑有误，撒扑的牌必须满足该有数量，", len(cards))
+            self.info_log(player.uid, "撒扑有误，撒扑的牌必须满足该有数量，", len(cards))
             return StaCode.FORBID, "牌数不对"
         if player.seat_id == self.dealer_id:
             player.sp_status = OperateType.FARMER_MI
         else:
             dealer = self.dealer()
             if dealer.sp_status == 0:
-                self.log_info(player.uid, "操作有误，闲家撒扑前需要等庄家撒扑")  # 主要为了防止闲强攻后直接进入round_over
+                self.info_log(player.uid, "操作有误，闲家撒扑前需要等庄家撒扑")  # 主要为了防止闲强攻后直接进入round_over
                 return StaCode.FORBID, "庄家还未撒扑"
             player.sp_status = sp_status
             if sp_status == OperateType.FARMER_QG:
@@ -209,7 +209,7 @@ class Room(BaseLeisureRoom):
             return StaCode.FORBID, "撒扑的牌不合法"
 
         player.cards = Rule.sort_sa_pu(cards)  # 大小铺分扑
-        self.log_info(player.uid, "玩家撒扑: ", player.cards, sp_status)
+        self.info_log(player.uid, "玩家撒扑: ", player.cards, sp_status)
 
         sa_pu_model.seat_id = player.seat_id
         sa_pu_model.sp_status = player.sp_status
@@ -246,7 +246,7 @@ class Room(BaseLeisureRoom):
             return StaCode.FORBID, f"操作有误，庄家已经对该玩家{seat_id}操作过了"
 
         self.__records_dealer_op[seat_id] = operate
-        self.log_info(f"庄{self.dealer_id}对闲{seat_id}进行：{operate.phrase}")
+        self.info_log(f"庄{self.dealer_id}对闲{seat_id}进行：{operate.phrase}")
 
         wait_sec = 10
         operate_model = s2c_operate_model(seat_id, operate, wait_sec)
@@ -264,13 +264,13 @@ class Room(BaseLeisureRoom):
     async def time_out_dealer_operate(self, dealer, seat_id):
         """ 庄操作超时 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_OPERATE):
-            self.log_info(f"庄操作超时，流程错误：{self.flow_status}")
+            self.info_log(f"庄操作超时，流程错误：{self.flow_status}")
             return
         if seat_id != self.curr_seat_id:
-            self.log_info(f"庄操作超时，当前玩家id不对：", seat_id, self.curr_seat_id)
+            self.info_log(f"庄操作超时，当前玩家id不对：", seat_id, self.curr_seat_id)
             return
         if self.__records_dealer_op.get(seat_id):
-            self.log_info(f"庄操作超时，对当前玩家已操作过：", seat_id)
+            self.info_log(f"庄操作超时，对当前玩家已操作过：", seat_id)
             return
         if not dealer.trustee:
             await self.do_trustee(dealer, True)
@@ -284,7 +284,7 @@ class Room(BaseLeisureRoom):
     async def time_out_farmer_operate(self, player):
         """ 闲操作超时 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_OPERATE):
-            self.log_info(player.uid, player.seat_id, f"闲操作超时，流程错误：{self.flow_status}")
+            self.info_log(player.uid, player.seat_id, f"闲操作超时，流程错误：{self.flow_status}")
             return
         dealer_operate = self.__records_dealer_op.get(player.seat_id)
         if not dealer_operate:
@@ -333,7 +333,7 @@ class Room(BaseLeisureRoom):
     async def round_over(self):
         """ 一局结束 """
         if not self.flow_status_is_equal(FlowStatus.FLOW_IN_OPERATE_END):
-            self.log_info("round over err 庄闲没有操作完")
+            self.info_log("round over err 庄闲没有操作完")
             return
         self.set_flow_status(FlowStatus.FLOW_IN_CHECK)
         result = self.compare_cards()
@@ -397,8 +397,8 @@ class Room(BaseLeisureRoom):
         lose_gold = sum(lose_gold_info.values())
         win_gold = sum(win_gold_info.values())
         diff_gold = dealer.gold + abs(lose_gold) - win_gold
-        self.log_info(dealer.uid, dealer.seat_id, "是否够赔付：", diff_gold)
-        res_diff_gold = diff_gold  # 剩余的差额金币
+        self.info_log(dealer.uid, dealer.seat_id, "是否够赔付：", diff_gold)
+        res_diff_gold = diff_gold  # 剩余的差额灵石
         if diff_gold < 0:
             # 不够赔付时按赢家赔付 比例 递减
             for seat, gold in win_gold_info.items():
@@ -418,14 +418,14 @@ class Room(BaseLeisureRoom):
     def compare_cards(self):
         """ 结算 """
         dealer = self.dealer()
-        self.log_info("庄的牌：", dealer.cards)
+        self.info_log("庄的牌：", dealer.cards)
         result = {}
         for p in self.seats:
             if p.seat_id == self.dealer_id:
                 continue
             sp_status = p.sp_status
             op_enum = OperateType.find_member_by_val(sp_status)
-            self.log_info(f"闲撒扑：{op_enum.phrase}, 牌：", p.cards)
+            self.info_log(f"闲撒扑：{op_enum.phrase}, 牌：", p.cards)
             compare_num = 0
             if sp_status == OperateType.FARMER_QG:
                 compare_num = 2
@@ -434,7 +434,7 @@ class Room(BaseLeisureRoom):
                     compare_num = 2
                 else:
                     result[p.seat_id] = CompareRes.WIN
-                    self.log_info("闲密庄信，庄输")
+                    self.info_log("闲密庄信，庄输")
             elif sp_status == OperateType.FARMER_LP:
                 if self.__records_dealer_op.get(p.seat_id) == OperateType.LANDLORD_SHA:
                     if self.__records_farmer_op.get(p.seat_id) == OperateType.FARMER_SHA_FAN:
@@ -442,21 +442,21 @@ class Room(BaseLeisureRoom):
                     # 庄赢
                     else:
                         result[p.seat_id] = CompareRes.LOSE
-                        self.log_info("闲亮庄杀闲信，庄赢")
+                        self.info_log("闲亮庄杀闲信，庄赢")
                 else:
                     if self.__records_farmer_op.get(p.seat_id) == OperateType.FARMER_ZOU_FAN:
                         compare_num = 2
                     else:
                         result[p.seat_id] = CompareRes.DRAW
-                        self.log_info("闲亮庄走闲走，平局")
+                        self.info_log("闲亮庄走闲走，平局")
             if compare_num > 0:
                 res = Rule.compare(p.cards, dealer.cards, compare_num)
                 if res:
                     result[p.seat_id] = CompareRes.WIN
-                    self.log_info(f"闲比庄，比{compare_num}铺", "闲赢")
+                    self.info_log(f"闲比庄，比{compare_num}铺", "闲赢")
                 else:
                     result[p.seat_id] = CompareRes.LOSE
-                    self.log_info(f"闲比庄，比{compare_num}铺", "庄赢")
+                    self.info_log(f"闲比庄，比{compare_num}铺", "庄赢")
         return result
 
     async def round_start(self):

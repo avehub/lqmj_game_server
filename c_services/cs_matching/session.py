@@ -48,8 +48,8 @@ class Session:
     def players_ranking_pool(self):
         return self.__players_ranking_pool
 
-    def log_info(self, *data):
-        self.__service.log_info(*data)
+    def info_log(self, *data):
+        self.__service.info_log(*data)
 
     def add_wait_player(self, p: Player, matching_mode: MatchingMode):
         """ 添加等待玩家 """
@@ -58,9 +58,9 @@ class Session:
         else:
             self.__players_ranking_pool.setdefault(p.ranking_level, set()).add(p)
 
-        p.max_wait_time = random.randint(3, 7)
+        p.max_wait_time = random.randint(3, 12)
         p.s_key = f"{self.cs_type}_{self.play_type}_{self.level}"
-        self.log_info(p.uid, "玩家加入匹配队列", matching_mode, self.cs_type, self.level)
+        self.info_log(p.uid, "玩家加入匹配队列", matching_mode, self.cs_type, self.level)
 
     def rm_wait_player(self, p, matching_mode):
         """ 移除等待玩家 """
@@ -93,7 +93,6 @@ class Session:
             cur_time = tool_dt.cur_time()
             for player in self.__players:
                 if cur_time - player.enter_time >= player.max_wait_time:
-                    print("player.max_wait_time",player.max_wait_time)
                     immediate_match = True
                     break
             if immediate_match:

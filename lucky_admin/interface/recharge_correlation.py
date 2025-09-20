@@ -74,7 +74,7 @@ class ReplenishmentOrder(AdminAuthApi):
         if not u_info:
             self.answer(hint=f"获取不到玩家信息：{uid}")
 
-        self.log_info("补单：", uid, order_id)
+        self.info_log("补单：", uid, order_id)
         pay_mode = order_info.get("pay_mode")
         match pay_mode:
             case PayMode.DOUYIN_MINI_GAME:

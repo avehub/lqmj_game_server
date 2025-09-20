@@ -49,7 +49,7 @@ class RoomBf(Room):
         for seat_id in broke_seats:
             if set_dealer_card in all_cards[seat_id - 1]:
                 all_cards[seat_id - 1], all_cards[playing_seat] = all_cards[playing_seat], all_cards[seat_id - 1]
-                self.log_info("破产玩家交换牌", playing_seat, seat_id - 1)
+                self.info_log("破产玩家交换牌", playing_seat, seat_id - 1)
                 break
         await super().do_deal_cards(all_cards, set_dealer_card, extra_data)
 

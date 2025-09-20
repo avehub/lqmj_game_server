@@ -21,7 +21,7 @@ class JuLiangAdsMonitor(GameAuthApi):
 
     async def get(self, req: Request):
         # todo:暂时不使用监测数据
-        self.log_info("JuLiangAdsMonitor 监测转化数据:", req.args)
+        self.info_log("JuLiangAdsMonitor 监测转化数据:", req.args)
 
         promotion_id = req.args.get("promotion_id")
         self.check_str(promotion_id, minlen=1, require=True)
@@ -53,7 +53,7 @@ class DataNexusAdsMonitor(GameAuthApi):
 
     async def get(self, req: Request):
         # todo:暂时不使用监测数据
-        self.log_info("DataNexusAdsMonitor 监测转化数据:", req.args)
+        self.info_log("DataNexusAdsMonitor 监测转化数据:", req.args)
         return self.answer(self.sta_code.PASS)
 
         # click_id = req.args.get("click_id") or ''  # 点击id
@@ -87,7 +87,7 @@ class CommonAdsMatchedData(GameAuthApi):
 
         promotion_id = self.check_str(req.json.get("promotionid"), require=True, p_name='promotionid')
 
-        self.log_info(f"CommonAdsMatchedData 通用广告点击匹配转化 {us_enum.phrase}数据:", req.json)
+        self.info_log(f"CommonAdsMatchedData 通用广告点击匹配转化 {us_enum.phrase}数据:", req.json)
         u_info = await self.__verify_user(et_enum, req)
 
         # match user_source:
@@ -101,7 +101,7 @@ class CommonAdsMatchedData(GameAuthApi):
         if user_source == UserSource.JuLiang:
             res1, hint1 = await self.ad_by_user(u_info, us_enum, et_enum, promotion_id, req)
             if not res1:
-                self.log_err(f"广告用户记录更新失败: {hint1}")
+                self.error_log(f"广告用户记录更新失败: {hint1}")
 
         res, hint = await self.ad_by_event(u_info, us_enum, et_enum, promotion_id, req)
         if res:
@@ -125,12 +125,12 @@ class CommonAdsMatchedData(GameAuthApi):
             u_info, _ = await GameChecker.verify_token(req)
             return u_info or {}  # 老用户返回用户信息，新用户返回空字典
         except Exception as e:
-            self.log_info(f"AD_ACTIVE事件获取用户信息异常(可能为新用户): {str(e)}")
+            self.info_log(f"AD_ACTIVE事件获取用户信息异常(可能为新用户): {str(e)}")
             return {}  # 出现异常也返回空字典
 
     async def ad_by_event(self, u_info, us_enum, et_enum, promotion_id, req: Request):
         """通用广告处理"""
-        self.log_info(f"CommonAdsMatchedData {et_enum.phrase} 事件处理")
+        self.info_log(f"CommonAdsMatchedData {et_enum.phrase} 事件处理")
         click_id = self.check_str(req.json.get("clickid"), require=True, p_name='clickid')
         (click_id == '__CLICKID__') and self.answer(self.sta_code.ERR_ARG, hint="非点击事件不保存和统计")
 
@@ -153,12 +153,12 @@ class CommonAdsMatchedData(GameAuthApi):
             res = await BaseAds.stats_ads_event(u_info, promotion_id, et_enum, user_source=us_enum, product_price=product_price)
             return res, 'OK'
         except Exception as e:
-            self.log_err(f"通用广告处理失败，原因：{e}")
+            self.error_log(f"通用广告处理失败，原因：{e}")
             return {}, e
 
     async def ad_by_user(self, u_info, us_enum, et_enum, promotion_id, _):
         """广告用户记录"""
-        self.log_info(f"CommonAdsMatchedData {et_enum.phrase} 用户处理")
+        self.info_log(f"CommonAdsMatchedData {et_enum.phrase} 用户处理")
         # promotion_id = '' if promotion_id == 'undefined' or not promotion_id else promotion_id
 
         openid = u_info.get("openid") or ''

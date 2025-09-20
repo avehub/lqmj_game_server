@@ -6,7 +6,7 @@ from sanic import Request
 from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdWorkers, CmdWs
 from common.public.conf import R_UID_THRESHOLD
-from common.public.enum_const import DbKey, ServiceEnum
+from common.public.enum_const import DbKey
 from lucky_admin.base_api import AdminAuthApi
 from lucky_admin.handler.pack_msg import pack_background_timed_task
 from lucky_admin.model_db.main import RecordsAdminTimedTask
@@ -42,9 +42,9 @@ class BanHandler(AdminAuthApi):
             "uid": uid,
             "ban_time": ban_time,
         }
-        await self.inner_cs2ws(ServiceEnum.WS_HALL, CmdWs.BAN_PLAYER, 1, data)
+        await self.inner_cs2ws(CmdWs.BAN_PLAYER, 1, data)
 
-        self.log_info("封禁玩家：", uid, ban_time)
+        self.info_log("封禁玩家：", uid, ban_time)
         self.answer(hint="ok")
 
 
@@ -149,7 +149,7 @@ class MailsManagerSend(AdminAuthApi):
         attachment = req.json.get("attachment") or []
         if attachment and isinstance(attachment, list):
             if len(attachment) > 20:
-                self.log_info(len(attachment), "附件最多不能超过20项")
+                self.info_log(len(attachment), "附件最多不能超过20项")
                 self.answer(code=self.sta_code.ERR_ARG, hint="附件最多不能超过20项")
             try:
                 await GoodsManagerRC.pack_goods_list(attachment)
@@ -171,7 +171,7 @@ class MailsManagerSend(AdminAuthApi):
                 if uid <= R_UID_THRESHOLD:
                     self.answer(code=self.sta_code.FAIL, hint="uid错误，请检查")
 
-        self.log_info(f"即将{receiver.get('type')}群发邮件，定时:{start_time}")
+        self.info_log(f"即将{receiver.get('type')}群发邮件，定时:{start_time}")
         mails_data = {
             "mails": [
                 {
@@ -268,7 +268,7 @@ class ItemRemovalCompensator(AdminAuthApi):
 
         # 1.查询背包里的持有数量
         bag_records = await UserBag.filter(goods_id__in=goods_ids_to_process)
-        self.log_info("1.查询背包记录，总记录数:", len(bag_records))
+        self.info_log("1.查询背包记录，总记录数:", len(bag_records))
 
         # 2.遍历记录，计算每个uid的补偿总额
         compensation_dict = {}  # 创建一个字典用于保存每个uid的补偿总和
@@ -282,7 +282,7 @@ class ItemRemovalCompensator(AdminAuthApi):
             if uid not in compensation_dict:
                 compensation_dict[uid] = 0
             compensation_dict[uid] += goods_count * price
-        self.log_info("2.计算每个玩家的补偿总额:", compensation_dict)
+        self.info_log("2.计算每个玩家的补偿总额:", compensation_dict)
 
         # 预先打包补偿物品信息（仅需执行一次）
         compensation_goods = {
@@ -291,7 +291,7 @@ class ItemRemovalCompensator(AdminAuthApi):
         }
         compensation_goods_list = [compensation_goods]
         await GoodsManagerRC.pack_goods_list(compensation_goods_list)
-        self.log_info("3.补偿物品信息打包:", compensation_goods_list)
+        self.info_log("3.补偿物品信息打包:", compensation_goods_list)
 
         # 3.构建邮件数据
         mails = []
@@ -337,5 +337,5 @@ class ItemRemovalCompensator(AdminAuthApi):
         else:
             result = {"status": "SUC", "message": "所有用户持有记录已删除。"}
 
-        self.log_info("4.补偿邮件已发，数据删除结果:", result)
+        self.info_log("4.补偿邮件已发，数据删除结果:", result)
         self.answer(data={'result': result}, hint='OK')

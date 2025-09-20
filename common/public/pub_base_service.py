@@ -31,6 +31,12 @@ class BasePubService(metaclass=SingleTon):
         for k, v in cmd_handlers.items():
             self.__add_handler(k, v)
 
+    @classmethod
+    def register_rc_model(cls, *models):
+        """ 注册缓存模型 """
+        for model in models:
+            model.conf = cls.conf
+
     async def service(self, cmd, uid, data):
         """
         uid: uid or ws

@@ -4,20 +4,16 @@
 import asyncio
 import base64
 import binascii
-import hashlib
 import os
 from Crypto.Cipher import AES
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import http_post, http_get, json_parse, json_encode
 from common.public.conf import CertificationConf
 from common.utils.utils import UtilsTool
-from nsanic.libs.mult_log import NLogger
-
 
 APPID = CertificationConf.APPID
 SECRET_KEY = CertificationConf.SECRET_KEY
 BIZ_ID = CertificationConf.BIZ_ID  # 游戏备案识别码（bizId）
-CODE_SUCCESS = 0  # 成功
 
 
 class AesGcm(object):
@@ -69,18 +65,12 @@ async def do_shi_ming_check(real_name, id_num, ai, test_code=""):
     # url = f"https://wlc.nppa.gov.cn/test/authentication/check/{test_code}"
     url = "https://api.wlc.nppa.gov.cn/idcard/authentication/check"
     req_res = await http_post(url, param=body_data, headers=headers, jsparse=False)
-    data = json_parse(req_res)  # '{"errcode":1005,"errmsg":"SYS REQ IP ERROR"}'
-    NLogger.info("实名认证请求结果解析:", data)
-    errcode = data.get('errcode')  # 响应结果：0表示请求成功
-    result = False
-    if errcode == CODE_SUCCESS:
-        status = data.get('data').get('result').get('status')  # 认证结果：0认证成功, 1认证中, 2认证失败
-        if status != 2:
-            result = True
-            data = {
-                "pi": data.get('data').get('result').get('pi') if status == 0 else ai,
-            }
-    return result, data
+    result = json_parse(req_res)  # '{"errcode":1005,"errmsg":"SYS REQ IP ERROR"}'
+    errcode = result.get('errcode')
+    if errcode == 0:
+        pi = result
+        return True, pi
+    return False, result
 
 
 async def do_shi_ming_query(ai, test_code=""):

@@ -6,7 +6,7 @@ from common.proto.py_pb2.ws_leisure import bid_model, do_bid_model, confirm_deal
     S2CTurnTOLandlords, redouble_model, do_redouble_model, play_cards_model, S2CRoundOverLandlords, \
     S2CPlayerInfo04Landlords, S2CRoomInfo03Landlords
 from .rule import Rule
-from common.public.enum_const import StaCode, ServiceEnum, TaskId#, PlayType
+from common.public.enum_const import StaCode, ServiceEnum, TaskId, PlayType
 from .const import FlowStatus, ActionType
 from .poker import Poker, Cards
 from c_services.base.base_leisure_room import BaseLeisureRoom
@@ -67,9 +67,9 @@ class Room(BaseLeisureRoom):
     async def deal_cards(self):
         """ 发牌 """
         if not self.flow_status_is_equal(FlowStatus.F_IN_IDLE):
-            self.log_info(f"flow error: {self.flow_status}")
+            self.info_log(f"flow error: {self.flow_status}")
             return
-        self.log_info("开始发牌")
+        self.info_log("开始发牌")
         self.set_flow_status(FlowStatus.F_IN_DEAL_CARDS)
         self.set_room_status(RoomStatus.T_PLAYING)
         all_cards = self.poker.deal_cards(self.max_player_count)
@@ -81,7 +81,7 @@ class Room(BaseLeisureRoom):
     async def start_bid(self):
         """ 开始叫分 """
         self.set_flow_status(FlowStatus.F_IN_BID)
-        self.log_info("开始叫分", self.curr_seat_id)
+        self.info_log("开始叫分", self.curr_seat_id)
         await self.inner_broadcast(CmdRoom.START_BID)
         await self.turn_bid(True)
 
@@ -108,10 +108,10 @@ class Room(BaseLeisureRoom):
                     # 都不要则重新发牌
                     self.__bid_count += 1
                     if self.__bid_count < self.__max_bid_count:
-                        self.log_info("都未叫分，进入重新发牌", self.__bid_count)
+                        self.info_log("都未叫分，进入重新发牌", self.__bid_count)
                         return await self.re_deal_cards()
 
-                if self.play_type == 1: #PlayType.CLASSICAL:  # 全国玩法确定地主后加倍
+                if self.play_type == PlayType.CLASSICAL:  # 全国玩法确定地主后加倍
                     return await self.start_redouble()
 
                 await self.confirm_dealer()
@@ -146,7 +146,7 @@ class Room(BaseLeisureRoom):
             return
         not trustee and await self.do_trustee(player, True)
         code, msg = await self.player_bid(player, 0)
-        self.log_info(player.uid, player.seat_id, "超时叫分：", code, msg, trustee)
+        self.info_log(player.uid, player.seat_id, "超时叫分：", code, msg, trustee)
         if code == StaCode.PASS:
             await self.turn_bid()
 
@@ -154,7 +154,7 @@ class Room(BaseLeisureRoom):
         """ 开始加倍 """  # todo: 每个玩家都能加倍？
         self.set_flow_status(FlowStatus.F_IN_REDOUBLE)
         self.__header_redouble_seat = self.curr_seat_id
-        self.log_info("开始铲", self.__header_redouble_seat)
+        self.info_log("开始铲", self.__header_redouble_seat)
         await self.inner_broadcast(CmdRoom.START_REDOUBLE)
 
         await self.turn_redouble()
@@ -165,7 +165,7 @@ class Room(BaseLeisureRoom):
             await self.confirm_dealer()
             return await self.delay_func(1, self.turn_start)
 
-        self.log_info(player.uid, player.seat_id, "轮到玩家铲")
+        self.info_log(player.uid, player.seat_id, "轮到玩家铲")
         self.curr_seat_id = player.seat_id
         wait_sec = 10
 
@@ -191,14 +191,14 @@ class Room(BaseLeisureRoom):
             return
         not trustee and await self.do_trustee(player, True)
         code, msg = await self.player_redouble(player, 0)
-        self.log_info(player.uid, player.seat_id, "超时铲：", code, msg)
+        self.info_log(player.uid, player.seat_id, "超时铲：", code, msg)
         if code == StaCode.PASS:
             await self.turn_redouble()
 
     async def start_re_redouble(self):
         """ 开始反铲 """
         self.set_flow_status(FlowStatus.F_IN_RE_REDOUBLE)
-        self.log_info("开始反铲")
+        self.info_log("开始反铲")
         self.__header_re_redouble_seat = self.curr_seat_id
         await self.inner_broadcast(CmdRoom.START_RE_REDOUBLE, redouble_model)
         await self.turn_re_redouble()
@@ -211,7 +211,7 @@ class Room(BaseLeisureRoom):
             await self.confirm_dealer()
             return await self.delay_func(1, self.turn_start)
 
-        self.log_info(player.uid, player.seat_id, "轮到玩家反铲")
+        self.info_log(player.uid, player.seat_id, "轮到玩家反铲")
         self.curr_seat_id = player.seat_id
         wait_sec = 10
         redouble_model.seat_id = player.seat_id
@@ -237,7 +237,7 @@ class Room(BaseLeisureRoom):
             return
         not trustee and await self.do_trustee(player, True)
         code, msg = await self.player_re_redouble(player, 0)
-        self.log_info(player.uid, player.seat_id, "超时反铲：", code, msg)
+        self.info_log(player.uid, player.seat_id, "超时反铲：", code, msg)
         if code == StaCode.PASS:
             await self.turn_re_redouble()
 
@@ -276,7 +276,7 @@ class Room(BaseLeisureRoom):
             dealer.rev_card(card)
             self.__dealer_cards.append(card)
 
-        self.log_info("开始定庄", dealer_id, self.__dealer_cards)
+        self.info_log("开始定庄", dealer_id, self.__dealer_cards)
 
         # 通知地主
         confirm_dealer_model.seat_id = self.dealer_id
@@ -302,7 +302,7 @@ class Room(BaseLeisureRoom):
         """ 首出 """
         if not self.in_flow_status(flow, ):
             return
-        self.log_info("turn_start")
+        self.info_log("turn_start")
         self.set_flow_status(FlowStatus.F_IN_TURN_TO)
         turn_player = self.dealer()
         await self.turn_to_someone(turn_player)
@@ -342,7 +342,7 @@ class Room(BaseLeisureRoom):
             data_model.seconds = 5
         await self.inner_send(player, CmdRoom.TURN_TO, data_model)
 
-        self.log_info("轮到某人", player.uid, self.curr_seat_id, yao_de_qi)
+        self.info_log("轮到某人", player.uid, self.curr_seat_id, yao_de_qi)
 
         if not yao_de_qi:
             wait_sec = 5
@@ -377,7 +377,7 @@ class Room(BaseLeisureRoom):
             "cmd": cmd,
         }
         # 使用rmq推送机器人预测铲/反铲
-        self.log_info("推送斗地主机器人[铲/反铲]: ", req_model_id, cmd)
+        self.info_log("推送斗地主机器人[铲/反铲]: ", req_model_id, cmd)
         await self.cs2cs_by_rmq(
             cs_type=ServiceEnum.ROBOT_LANDLORDS,
             c_code=cmd,
@@ -402,7 +402,7 @@ class Room(BaseLeisureRoom):
             "cmd": CmdRobotMethods.CAL_BID.val,
         }
         # 使用rmq推送机器人预测叫分
-        self.log_info("推送斗地主机器人[叫分]: ", req_model_id)
+        self.info_log("推送斗地主机器人[叫分]: ", req_model_id)
         await self.cs2cs_by_rmq(
             cs_type=ServiceEnum.ROBOT_LANDLORDS,
             c_code=CmdRobotMethods.CAL_BID.val,
@@ -416,7 +416,7 @@ class Room(BaseLeisureRoom):
         """
         # 处理手牌异常
         if not curr_p.cards:
-            self.log_info(curr_p.seat_id, curr_p.cards, "No cards")
+            self.info_log(curr_p.seat_id, curr_p.cards, "No cards")
             return
         # 模型请求ID: 桌子号+玩家UID
         req_model_id = "".join([str(curr_p.tid), str(curr_p.uid)])
@@ -436,7 +436,7 @@ class Room(BaseLeisureRoom):
             "cmd": CmdRobotMethods.CAL_ACTION.val,
         }
         # 使用rmq推送机器人预测叫分
-        self.log_info("推送斗地主机器人[出牌]: ", req_model_id)
+        self.info_log("推送斗地主机器人[出牌]: ", req_model_id)
         await self.cs2cs_by_rmq(
             cs_type=ServiceEnum.ROBOT_LANDLORDS,
             c_code=CmdRobotMethods.CAL_ACTION.val,
@@ -457,7 +457,7 @@ class Room(BaseLeisureRoom):
 
     async def time_out_play_card(self, player, trustee=False):
         """ 超时出牌 """
-        self.log_info(player.uid, player.seat_id, "超时出牌：", trustee, self.flow_status)
+        self.info_log(player.uid, player.seat_id, "超时出牌：", trustee, self.flow_status)
         if not self.flow_status_is_equal(FlowStatus.F_IN_TURN_TO):
             return
         if player.seat_id != self.curr_seat_id:
@@ -479,7 +479,7 @@ class Room(BaseLeisureRoom):
 
     async def do_play_cards(self, player, cards: list):
         code, msg = await self.player_play_cards(player, cards)
-        self.log_info(player.uid, player.seat_id, "do_play_cards 返回", code, msg)
+        self.info_log(player.uid, player.seat_id, "do_play_cards 返回", code, msg)
         if code == StaCode.PASS:
             if not player.cards:
                 return await self.delay_func(1, self.round_over)
@@ -559,7 +559,7 @@ class Room(BaseLeisureRoom):
         self.set_flow_status(FlowStatus.F_IN_CHECK_OUT)
 
         curr_player = self.curr_player()
-        self.log_info(
+        self.info_log(
             "round_over", self.dealer_id, "赢家：", curr_player.uid, curr_player.seat_id, self.__table_cards)
         await self.do_check_out(curr_player)
         player_info = self.room_win_lose_data()
@@ -602,7 +602,7 @@ class Room(BaseLeisureRoom):
             self.__max_bid_score = bid_score
             self.__max_bid_seat = player.seat_id
 
-        self.log_info(player.uid, "完成叫分: ", bid_score)
+        self.info_log(player.uid, "完成叫分: ", bid_score)
 
         do_bid_model.seat_id = player.seat_id
         do_bid_model.bid_score = bid_score
@@ -622,7 +622,7 @@ class Room(BaseLeisureRoom):
             self.__multiple *= 2
             self.__is_redouble = True
 
-        self.log_info(player.uid, "铲完成: ", score)
+        self.info_log(player.uid, "铲完成: ", score)
 
         do_redouble_model.seat_id = player.seat_id
         do_redouble_model.score = score
@@ -648,7 +648,7 @@ class Room(BaseLeisureRoom):
             self.__multiple *= 2
             self.__is_re_redouble = True
 
-        self.log_info(player.uid, "反铲完成: ", score)
+        self.info_log(player.uid, "反铲完成: ", score)
 
         do_redouble_model.seat_id = player.seat_id
         do_redouble_model.score = score
@@ -689,7 +689,7 @@ class Room(BaseLeisureRoom):
 
             player.rm_cards(cards)
 
-        self.log_info(player.uid, "出牌完成: ", cards)
+        self.info_log(player.uid, "出牌完成: ", cards)
 
         # todo: 记录AI使用参数
         # 清空上一个操作，用于记录最新的

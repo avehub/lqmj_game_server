@@ -4,14 +4,14 @@
 import asyncio
 from nsanic.libs import tool_dt
 from nsanic.orm.rc_model import RCModel
-from lucky_game.model_db.main import UserBags
+from lucky_game.model_db.main import UserBag
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import BagSta, GoodsItem, JumpTarget, GoodsType, BagType
 
 
 class UserBagRC(RCModel):
-    db_model = UserBags
+    db_model = UserBag
     tb_name = db_model.sheet_name()
 
     expired_mode = 0

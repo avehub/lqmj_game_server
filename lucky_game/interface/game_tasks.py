@@ -6,8 +6,10 @@ from c_services.const.cs_enum_const import CmdWorkers
 from common.utils.kit_dt import KitDt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
+from common.proto.py_pb2.http_player_vault import PbGoods
 from common.public.enum_const import TaskId, DbKey
 from lucky_game.base_api import GameAuthApi
+from common.proto.py_pb2.http_interaction import PbTask, pack_task_data
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_rc.base_award import ConfAwardRC
 from lucky_game.model_rc.base_game_task import ConfTaskRC, UserTaskRC
@@ -27,7 +29,7 @@ class GameTaskHandler(GameAuthApi):
 
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        platform = req.args.get('platform') or ''
+        platform = req.args.get('c_platform') or ''
 
         # 1.获取任务配置 + 用户任务数据
         task_items = await ConfTaskRC.get_task_items(task_type=task_type, platform=platform, is_pack=True)
@@ -53,8 +55,9 @@ class GameTaskHandler(GameAuthApi):
             return_data["active_conf"] = active_conf
             return_data["active_data"] = active_data
 
-        self.log_info(uid, f"GameTaskHandler {tt_enum.phrase} 获取任务配置 / 用户日活数据 成功")
-        return self.answer(data=return_data)
+        pro_data = PbTask.pb_model(return_data)
+        self.info_log(uid, f"GameTaskHandler {tt_enum.phrase} 获取任务配置 / 用户日活数据 成功")
+        return self.answer(data=pro_data)
 
 
 class GameTaskUpdateForRookie(GameAuthApi):
@@ -74,7 +77,8 @@ class GameTaskUpdateForRookie(GameAuthApi):
         }
         finish_flag, task_data = await UserTaskRC.update_user_task_records(uid, task_info)
         if finish_flag:
-            self.answer(data=task_data, hint="ok")
+            data_model = pack_task_data(PbTask.task_model(), **task_data)
+            self.answer(data=data_model, hint="ok")
         self.answer(hint="任务更新失败！")
 
 
@@ -83,11 +87,10 @@ class GameTaskUpdate(GameAuthApi):
 
     async def post(self, req: Request, **kwargs):
         task_id = req.json.get("task_id")
-        task_enum = TaskId.find_member_by_val(task_id)
-        if not task_enum:
+        if not TaskId.find_member_by_val(task_id):
             self.answer(self.sta_code.ERR_ARG, hint="该任务不存在")
 
-        if task_enum.desc != "allow_update":  # 更新任务交由客户端调用时需要进行非法拦截，避免恶意调用
+        if task_id not in UserTaskRC.ALLOW_UPDATE_TASKS:  # 更新任务交由客户端调用时需要进行非法拦截，避免恶意调用
             self.answer(self.sta_code.ERR_ARG, hint="任务更新非法调用")
 
         add_val = req.json.get("add_val") or 1  # 增加值
@@ -105,7 +108,8 @@ class GameTaskUpdate(GameAuthApi):
         }
         finish_flag, task_data = await UserTaskRC.update_user_task_records(uid, task_info, is_sum=is_sum)
         if finish_flag:
-            self.answer(data=task_data, hint="ok")
+            data_model = pack_task_data(PbTask.task_model(), **task_data)
+            self.answer(data=data_model, hint="ok")
         self.answer(hint="任务更新失败！")
 
 
@@ -177,11 +181,12 @@ class GameTaskComplete(GameAuthApi):
                 if event_tracking:
                     await self.push_task2worker(CmdWorkers.USER_EVENT_TRACKING, uid=uid, msg={'event_tracking': event_tracking})
         except Exception as e:
-            self.log_err(f"GameTaskComplete 事务执行失败，原因：{e}")
+            self.error_log(f"GameTaskComplete 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="任务完成发奖失败，请联系客服")
 
-        self.log_info(uid, f"GameTaskComplete {ti_enum.phrase} 任务完成领奖成功")
-        return self.answer(data=up_goods)
+        pro_data = PbGoods.pb_model(up_goods)
+        self.info_log(uid, f"GameTaskComplete {ti_enum.phrase} 任务完成领奖成功")
+        return self.answer(data=pro_data)
 
 
 class GameActiveComplete(GameAuthApi):
@@ -232,8 +237,9 @@ class GameActiveComplete(GameAuthApi):
                 await UserBehaviorsRC.update_user_active_records(active_params, pull_info, old_active)
                 up_goods = await UpAssets.update_assets(uid, awards, [])
         except Exception as e:
-            self.log_err(f"GameActiveComplete 事务执行失败，原因：{e}")
+            self.error_log(f"GameActiveComplete 事务执行失败，原因：{e}")
             return self.answer(self.sta_code.FAIL, hint="活跃达成发奖失败，请联系客服")
 
-        self.log_info(uid, f"GameActiveComplete 活跃{cur_score}达成领奖成功 {active_achieved}")
-        return self.answer(data=up_goods)
+        pro_data = PbGoods.pb_model(up_goods)
+        self.info_log(uid, f"GameActiveComplete 活跃{cur_score}达成领奖成功 {active_achieved}")
+        return self.answer(data=pro_data)

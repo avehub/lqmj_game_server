@@ -23,6 +23,7 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_cosmetic import ItemsCosmeticRC, UserCosmeticRC
+from common.proto.py_pb2.http_player_vault import PbBag, PbCosmetic, PbSafeBox, PbGameProp, PbUsedGoods, PbGoods
 from common.public.enum_const import CacheKey, ServiceEnum, GameType, DbKey, Switch, TaskId
 from lucky_game.const import SafeBoxOpType, GotType, ReasonCostGold, PutType, GoodsType, SeasonStatus, \
     CompleteSta, JumpTarget, ActivityItem, JumpType
@@ -51,8 +52,9 @@ class BagHandler(GameAuthApi):
             "all_bag": all_bag,
             "new_bag": [] if not new_bag else json_parse(new_bag)
         }
-        self.log_info(uid, "BagHandler 背包加载成功")
-        return self.answer(data=data)
+        proto_data = PbBag.pb_model(data)
+        self.info_log(uid, "BagHandler 背包加载成功")
+        return self.answer(data=proto_data)
 
 
 class DropBagItem(GameAuthApi):
@@ -77,8 +79,9 @@ class DropBagItem(GameAuthApi):
             "all_bag": all_bag,
             "new_bag": [] if not new_bag else json_parse(new_bag)
         }
-        self.log_info(uid, f"DropBagItem 背包删除物品{bag_id}成功")
-        return self.answer(data=data)
+        proto_data = PbBag.pb_model(data)
+        self.info_log(uid, f"DropBagItem 背包删除物品{bag_id}成功")
+        return self.answer(data=proto_data)
 
 
 class GetGamePropHandler(GameAuthApi):
@@ -98,8 +101,9 @@ class GetGamePropHandler(GameAuthApi):
         all_prop = UserBagRC.check_bag_data(user_bag, prop_conf, is_ready=True, season_sta=season_sta)
         (not all_prop) and self.answer(self.sta_code.ERR_CONF, hint="没有道具数据，请稍后再试")
 
-        self.log_info(uid, f"GetGamePropHandler 玩家持有道具加载成功 赛季状态 {season_sta}")
-        return self.answer(data=all_prop)
+        proto_data = PbGameProp.pb_model(all_prop)
+        self.info_log(uid, f"GetGamePropHandler 玩家持有道具加载成功 赛季状态 {season_sta}")
+        return self.answer(data=proto_data)
 
 
 class GetCosmeticHandler(GameAuthApi):
@@ -120,8 +124,9 @@ class GetCosmeticHandler(GameAuthApi):
             "all_cos": user_cos,
             "new_cos": [] if not new_cos else json_parse(new_cos)
         }
-        self.log_info(uid, "GetCosmeticHandler 游戏装扮加载成功")
-        return self.answer(data=data)
+        proto_data = PbCosmetic.pb_model(data)
+        self.info_log(uid, "GetCosmeticHandler 游戏装扮加载成功")
+        return self.answer(data=proto_data)
 
 
 class GetCosmeticUsedItems(GameAuthApi):
@@ -139,7 +144,7 @@ class GetCosmeticUsedItems(GameAuthApi):
 
         for uid in query_uid_list:
             if not isinstance(uid, int):
-                self.log_info(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
+                self.info_log(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
                 return self.answer(self.sta_code.ERR_ARG, hint=f"非法的用户ID: {uid}")
 
         result_list = []
@@ -173,8 +178,9 @@ class GetCosmeticUsedItems(GameAuthApi):
 
             result_list.append({"uid": uid, "used_goods": used_list})
 
-        self.log_info(query_uid_list, "GetCosmeticUsedItems 正在使用的装扮查询成功")
-        return self.answer(data=result_list)
+        proto_data = PbUsedGoods.pb_model(result_list)
+        self.info_log(query_uid_list, "GetCosmeticUsedItems 正在使用的装扮查询成功")
+        return self.answer(data=proto_data)
 
 
 class UseCosmeticItem(GameAuthApi):
@@ -200,7 +206,7 @@ class UseCosmeticItem(GameAuthApi):
         sta = await UserCosmeticRC.set_user_cosmetic(uid, goods_id, cosmetic_type)
         (not sta) and self.answer(self.sta_code.FAIL, hint="切换使用失败，请稍后再试")
 
-        self.log_info(uid, f"UseCosmeticItem 装扮道具{goods_id}使用成功")
+        self.info_log(uid, f"UseCosmeticItem 装扮道具{goods_id}使用成功")
         return self.answer(hint="使用成功")
 
 
@@ -230,7 +236,7 @@ class ClickNewGoodsItem(GameAuthApi):
         sta = await BaseUserRC.deal_user_update_goods(uid, id_list=id_list, is_del=True, key_name=key_name)
         (not sta) and self.answer(hint="重复点击或失败")
 
-        self.log_info(uid, f"ClickNewGoodsItem 新物品点击成功 {id_list}")
+        self.info_log(uid, f"ClickNewGoodsItem 新物品点击成功 {id_list}")
         return self.answer(hint="点击成功")
 
 
@@ -266,8 +272,9 @@ class SafeBoxHandler(GameAuthApi):
             "safe_box_conf": conf_data,
             "safe_box_data": user_data
         }
-        self.log_info(uid, "SafeBoxHandler 加载保险箱成功")
-        return self.answer(data=data)
+        proto_data = PbSafeBox.pb_model(data)
+        self.info_log(uid, "SafeBoxHandler 加载保险箱成功")
+        return self.answer(data=proto_data)
 
 
 class SafeBoxOperateUser(GameAuthApi):
@@ -299,7 +306,7 @@ class SafeBoxOperateUser(GameAuthApi):
         opt_func = map_func.get(opt_type)
         if opt_func and callable(opt_func):
             sta = await opt_func(u_info, req, safe_box_info)
-            self.log_info(uid, f"SafeBoxOperateUser {ot_enum.phrase}保险箱操作结果 {sta}")
+            self.info_log(uid, f"SafeBoxOperateUser {ot_enum.phrase}保险箱操作结果 {sta}")
             if sta:
                 return self.answer(hint='保险箱操作成功')
             return self.answer(code=self.sta_code.FAIL)
@@ -314,7 +321,7 @@ class SafeBoxOperateUser(GameAuthApi):
         (amount < 1) and self.answer(self.sta_code.ERR_ARG, hint="不能存入小于1的金额，请重新输入")
         uid = u_info.get("uid")
 
-        # 1.该限制主要避免玩家游戏中要输时退出游戏来将金币存入保险箱
+        # 1.该限制主要避免玩家游戏中要输时退出游戏来将灵石存入保险箱
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
         if cs_info:
             cs_enum = ServiceEnum.find_member_by_val(cs_info.get("cs_type"))
@@ -322,7 +329,7 @@ class SafeBoxOperateUser(GameAuthApi):
                                                                hint="当前在休闲场游戏中，不能使用保险箱")
         # 3.验证钱包余额
         (amount > u_info.get("gold", 0)) and self.answer(self.sta_code.GOLD_NOT_ENOUGH,
-                                                         hint="对不起，您的金币不足，请注意金币余额！")
+                                                         hint="对不起，您的灵石不足，请注意灵石余额！")
         # 2.验证使用次数
         used_record = await BaseUserRC.get_safe_box_count(uid)
         time_node = used_record.get("time_node")
@@ -352,7 +359,7 @@ class SafeBoxOperateUser(GameAuthApi):
                 await UserSafeBoxRC.update_safe_box(uid, box_data, safe_box_info)
                 await BaseUserRC.update_user_asset(uid, user_data, ReasonCostGold.SAFE_BOX_SAVE)
         except Exception as e:
-            self.log_err(f"safe_box_save 事务执行失败，原因：{e}")
+            self.error_log(f"safe_box_save 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="保险箱存入失败，请稍后重试")
         await BaseUserRC.cache_safe_box_count(uid, cache_data)
 
@@ -374,7 +381,7 @@ class SafeBoxOperateUser(GameAuthApi):
                 await UserSafeBoxRC.update_safe_box(uid, box_data, safe_box_info)
                 await BaseUserRC.update_user_asset(uid, user_data, ReasonCostGold.SAFE_BOX_DRAW)
         except Exception as e:
-            self.log_err(f"safe_box_draw 事务执行失败，原因：{e}")
+            self.error_log(f"safe_box_draw 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="保险箱取出失败，请稍后重试")
 
         return True
@@ -430,8 +437,9 @@ class GetDetailShardInfo(GameAuthApi):
         await GoodsManagerRC.pack_goods_list(goods)
         (not goods) and self.answer(self.sta_code.GOODS_NOT_FOUND, hint="未找到物品配置")
 
-        self.log_info(f"GetDetailShardInfo 查询{goods_id}详细信息成功")
-        return self.answer(data=goods)
+        proto_data = PbGoods.pb_model(goods)
+        self.info_log(f"GetDetailShardInfo 查询{goods_id}详细信息成功")
+        return self.answer(data=proto_data)
 
 
 class GetGoodsJumpChance(GameAuthApi):
@@ -462,7 +470,7 @@ class GetGoodsJumpChance(GameAuthApi):
 
         one_of_model = get_one_of_model()
         one_of_model.jump_sta = jump_sta
-        self.log_info(uid, f"GetGoodsJumpChance 获取{tp_enum.phrase}类型跳转机会：{jump_sta}")
+        self.info_log(uid, f"GetGoodsJumpChance 获取{tp_enum.phrase}类型跳转机会：{jump_sta}")
         self.answer(self.sta_code.PASS, data=one_of_model)
 
     @classmethod

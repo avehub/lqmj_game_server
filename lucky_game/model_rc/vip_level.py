@@ -1,17 +1,14 @@
 """
 充值VIP模型
 """
-from decimal import Decimal, getcontext
-
 from nsanic.libs.tool import json_encode, json_parse
 from nsanic.orm.rc_model import RCModel
 from common.public.enum_const import LevelType
 from common.utils.kit_dt import KitDt
 from lucky_game.const import CompleteSta
-# from lucky_game.model_rc.goods_manager import GoodsManagerRC
+from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_rc import BaseRC
 from lucky_game.model_db.main import ConfVip, UserVip
-from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
@@ -27,7 +24,7 @@ class ConfVipRC(BaseRC):
         if vip_conf:
             for vc in vip_conf:
                 vc["increase_space"] = int(vc.get("increase_space", 0))
-            #             await GoodsManagerRC.pack_goods_many_conf(vip_conf, is_all=is_all)
+            await GoodsManagerRC.pack_goods_many_conf(vip_conf, is_all=is_all)
             return vip_conf
 
 
@@ -67,7 +64,6 @@ class UserVipRC(RCModel):
     @classmethod
     async def update_user_vip(cls, uid, update_info: dict, old_info: dict):
         """更新vip一般记录"""
-
         async def update_cache(db_info):
             await cls.conf.rds.set_item(f"{cls.tb_name}:{uid}", json_encode(db_info), ex_time=cls.expired_sec)
 
@@ -76,7 +72,6 @@ class UserVipRC(RCModel):
     @classmethod
     async def update_user_vip_level(cls, uid, amount: int = 0, add_exp=0):
         """更新vip等级记录"""
-
         async def update_cache(db_info):
             await cls.conf.rds.set_item(f"{cls.tb_name}:{uid}", json_encode(db_info), ex_time=cls.expired_sec)
 
@@ -95,10 +90,10 @@ class UserVipRC(RCModel):
                 break
 
         # 已加经验等级
-        cur_exp = Decimal(vip_info.get("cur_exp") or 0)
-        cur_exp += Decimal(add_exp)
-        cur_amount = Decimal(vip_info.get("recharge_amount") or 0)
-        cur_amount += Decimal(amount)
+        cur_exp = vip_info.get("cur_exp") or 0
+        cur_exp += add_exp
+        cur_amount = vip_info.get("recharge_amount") or 0  # 当前充值金额
+        cur_amount += amount
 
         top_reached = False  # 满级达成标识
         new_level = cur_level
@@ -137,11 +132,8 @@ class UserVipRC(RCModel):
 
         if not sta:
             return False, False
-        if cur_level != new_level:
-            u_info = await BaseUserRC.cache_by_pk(uid)
-            await BaseUserRC.update_info(u_info, {"vip": vip_id})
-        cls.conf.log.info(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
 
+        cls.conf.info_log(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
         return True, True if cur_level < new_level else False
 
     @classmethod
@@ -169,7 +161,9 @@ class UserVipRC(RCModel):
         old_daily_achieved = [] if pull_time_node != today_time_node else u_vip_info.get("daily_achieved")
         daily_achieved = [] if not old_daily_achieved else json_parse(old_daily_achieved)
 
+
         daily_awards_sta = ConfJsonRC.stat_of_completion(c_vip_data.get("level"), daily_achieved, vip_targets)
         if CompleteSta.COMPLETED.val in daily_awards_sta:
             return True
         return False
+

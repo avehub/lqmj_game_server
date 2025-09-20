@@ -1,5 +1,5 @@
 # coding=utf-8
-# from lucky_ws.config.conf_start import ConfSrv
+# from promising_ws.config.conf_start import ConfSrv
 
 
 # conf_srv = ConfSrv()

@@ -7,14 +7,14 @@ from collections import defaultdict
 from common.public.common_class import CommonApi
 from common.utils.utils import UtilsTool
 from lucky_game.config import conf_srv, ConfSrv
-# from lucky_game.model_rc.base_bag import UserBagRC
-# from lucky_game.model_rc.base_cosmetic import UserCosmeticRC
-# from lucky_game.model_rc.base_skin import UserSkinRC
-# from lucky_game.model_rc.goods_manager import GoodsManagerRC
-# from lucky_game.model_rc.base_award import ConfAwardRC
+from lucky_game.model_rc.base_bag import UserBagRC
+from lucky_game.model_rc.base_cosmetic import UserCosmeticRC
+from lucky_game.model_rc.base_skin import UserSkinRC
+from lucky_game.model_rc.goods_manager import GoodsManagerRC
+from lucky_game.model_rc.base_award import ConfAwardRC
 from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
-# from c_services.const.cs_enum_const import CmdWorkers, RedDotType
+from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
+from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from lucky_game.const import GoodsItem, StoreType, ReasonCostDiamond, ActivityType, ReasonCostGold, PutType, \
     GoodsType
 
@@ -36,28 +36,28 @@ class UpAssets(CommonApi):
 
         conf_gifts = []
         # 1.立得商品处理
-        # if not conf_items:
-        #     return conf_items, ""
-        # await GoodsManagerRC.pack_goods_list(conf_items)
-        #
-        # # 2.赠品处理
-        # if first_gifts:
-        #     is_first = await UserBehaviorsRC.query_is_first_buy(uid, trade_item)
-        #     if is_first:  # 是否首单（同个人买过同个商品则不算首单），有首单则不计common_gifts
-        #         conf_gifts.extend(first_gifts)
-        #     else:
-        #         conf_gifts.extend(common_gifts)
-        #
-        # elif common_gifts:
-        #     conf_gifts.extend(first_gifts)
-        #
-        # if conf_gifts:
-        #     await GoodsManagerRC.pack_goods_list(conf_gifts)
-        #
-        # # 3.资产添加流水原因
-        # StatFlow.stat_transaction_flow(express, trade_item, goods=conf_items, gifts=conf_gifts)
-        #
-        # cls.log_info(uid, "stat_express 得物：", conf_items, "赠品：", conf_gifts)
+        if not conf_items:
+            return conf_items, ""
+        await GoodsManagerRC.pack_goods_list(conf_items)
+
+        # 2.赠品处理
+        if first_gifts:
+            is_first = await UserBehaviorsRC.query_is_first_buy(uid, trade_item)
+            if is_first:  # 是否首单（同个人买过同个商品则不算首单），有首单则不计common_gifts
+                conf_gifts.extend(first_gifts)
+            else:
+                conf_gifts.extend(common_gifts)
+
+        elif common_gifts:
+            conf_gifts.extend(first_gifts)
+
+        if conf_gifts:
+            await GoodsManagerRC.pack_goods_list(conf_gifts)
+
+        # 3.资产添加流水原因
+        StatFlow.stat_transaction_flow(express, trade_item, goods=conf_items, gifts=conf_gifts)
+
+        cls.info_log(uid, "stat_express 得物：", conf_items, "赠品：", conf_gifts)
         return conf_items, conf_gifts
 
     @classmethod
@@ -65,12 +65,11 @@ class UpAssets(CommonApi):
         """
         快递打包 2：统计奖励的奖品，并打包
         """
-        # award_item = await ConfAwardRC.get_award_item_by_id(award_id)
-        # conf_items = award_item.get("conf_items") or []
+        award_item = await ConfAwardRC.get_award_item_by_id(award_id)
+        conf_items = award_item.get("conf_items") or []
         # 奖品处理
-        # if conf_items:
-        #     await GoodsManagerRC.pack_goods_list(conf_items)
-        conf_items = []
+        if conf_items:
+            await GoodsManagerRC.pack_goods_list(conf_items)
 
         return conf_items
 
@@ -141,7 +140,7 @@ class UpAssets(CommonApi):
         更新任务收集为多个协程对象 update_task 并发执行；
         """
         if not goods:
-            cls.log_info(uid, "商品缺货，请联系客服")
+            cls.info_log(uid, "商品缺货，请联系客服")
             return False
         # 1.统计累加物品
         goods_copy = goods.copy()
@@ -168,7 +167,7 @@ class UpAssets(CommonApi):
             put_type = ag.get("put_type")
             pt_enum = PutType.find_member_by_val(put_type)
             if not isinstance(pt_enum, PutType):
-                cls.log_info('PutType 不存在', all_goods)
+                cls.info_log('PutType 不存在', all_goods)
                 continue
             group_express.setdefault(put_type, []).append(ag)
 
@@ -204,62 +203,62 @@ class UpAssets(CommonApi):
                 p_info = await BaseUserRC.update_user_asset(uid, new_info, reason)
             else:
                 p_info = await BaseUserRC.update_user_asset(uid, new_info)
-                cls.log_info('add_to_wallet 捕捉没有加入流水的出处以供解决', uid, new_info)
+                cls.info_log('add_to_wallet 捕捉没有加入流水的出处以供解决', uid, new_info)
 
             if p_info:
-                cls.log_info(uid, 'add_to_wallet 添加钱包成功')
+                cls.info_log(uid, 'add_to_wallet 添加钱包成功')
         return True
 
     @classmethod
     async def add_to_bag(cls, uid, express: list, is_notice=True):
         """物流发货 3：道具，发往背包"""
-        # b_info = await UserBagRC.update_user_bag(uid, express, is_notice=is_notice)
-        # if b_info:
-        #     cls.log_info(uid, 'add_to_bag 添加背包成功')
-        #     if not is_notice:
-        #         return True
-        #
-        #     rd_type_list = [RedDotType.RD_BAG]
-        #     goods_types = set(item.get('goods_type') for item in express)
-        #     # 若只有隐藏物品的话，则不通知
-        #     if all(gt in UserBagRC.HIDDEN_TYPES for gt in goods_types):
-        #         is_notice = False
-        #
-        #     if is_notice:
-        #         # 若有精魄的话，则加入可升级通知
-        #         if GoodsType.SKIN_SHARD in goods_types:
-        #             rd_type_list.append(RedDotType.RD_SKIN)
-        #         await cls.send_express_notice(uid, rd_type_list)
-        #     return True
+        b_info = await UserBagRC.update_user_bag(uid, express, is_notice=is_notice)
+        if b_info:
+            cls.info_log(uid, 'add_to_bag 添加背包成功')
+            if not is_notice:
+                return True
+
+            rd_type_list = [RedDotType.RD_BAG]
+            goods_types = set(item.get('goods_type') for item in express)
+            # 若只有隐藏物品的话，则不通知
+            if all(gt in UserBagRC.HIDDEN_TYPES for gt in goods_types):
+                is_notice = False
+
+            if is_notice:
+                # 若有精魄的话，则加入可升级通知
+                if GoodsType.SKIN_SHARD in goods_types:
+                    rd_type_list.append(RedDotType.RD_SKIN)
+                await cls.send_express_notice(uid, rd_type_list)
+            return True
         return False
 
     @classmethod
     async def add_to_cosmetic(cls, uid, express: list, is_notice=True):
         """物流发货 4：装扮，发往装扮"""
-        # p_info = await UserCosmeticRC.update_user_cosmetic(uid, express, is_notice=is_notice)
-        # if p_info:
-        #     cls.log_info(uid, 'add_to_cosmetic 添加装扮成功')
-        #     if is_notice:
-        #         await cls.send_express_notice(uid, [RedDotType.RD_PERSONAL])
-        #     return True
+        p_info = await UserCosmeticRC.update_user_cosmetic(uid, express, is_notice=is_notice)
+        if p_info:
+            cls.info_log(uid, 'add_to_cosmetic 添加装扮成功')
+            if is_notice:
+                await cls.send_express_notice(uid, [RedDotType.RD_PERSONAL])
+            return True
         return False
 
     @classmethod
     async def add_to_skin(cls, uid, express: list, is_notice=True):
         """物流发货 5：皮肤，发往法相系统，如果已获得则兑换成精魄"""
-        # new_skin = await UserSkinRC.update_user_skin(uid, express, is_notice=is_notice)
-        # if new_skin:
-        #     cls.log_info(uid, 'add_to_skin 添加皮肤成功')
-        #     if is_notice:
-        #         await cls.send_express_notice(uid, [RedDotType.RD_SKIN])
-        #     return True
+        new_skin = await UserSkinRC.update_user_skin(uid, express, is_notice=is_notice)
+        if new_skin:
+            cls.info_log(uid, 'add_to_skin 添加皮肤成功')
+            if is_notice:
+                await cls.send_express_notice(uid, [RedDotType.RD_SKIN])
+            return True
         return False
 
     @classmethod
     async def send_express_notice(cls, uid, rd_type_list: list):
         """快递红点通知"""
-        # await cls.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, msg={"rd_type_list": rd_type_list}, uid=uid)
-        pass
+        await cls.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, msg={"rd_type_list": rd_type_list}, uid=uid)
+
 
 class StatFlow():
     """
