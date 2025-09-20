@@ -4,7 +4,6 @@ from typing import AnyStr
 
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
-from nsanic.orm.rc_model import RCModel
 from tortoise import Tortoise, connections
 
 from c_services.const.cs_enum_const import CmdChat, CallCheck
@@ -74,7 +73,7 @@ class BaseServer(BasePubService, CommonApi):
         self.__service_info = server_info
         self.conf.set_conf(self.__service_name, self.__server_id)
         self.__listen_channel.append(f'{Channel.C_SERVICES}_{service_type}')
-        self.log_info(f"""
+        self.info_log(f"""
             启动服务: {self.__service_name}
             服务号: {self.service_type}
             监听频道：{self.__listen_channel}
@@ -102,16 +101,16 @@ class BaseServer(BasePubService, CommonApi):
             async for message in self.__listener_obj.listen():
                 try:
                     data = message["data"]  # 订阅成功返回1（忽略）
-                    self.log_info(f"收到消息：{message}")
+                    self.info_log(f"收到消息：{message}")
                     if data == 1:
                         continue
                     await self.receive_data_callback(data)
                 except Exception as e:
-                    self.log_err(f"message callback error:{traceback.format_exc()} \n e: {e}")
+                    self.error_log(f"message callback error:{traceback.format_exc()} \n e: {e}")
         except asyncio.exceptions.CancelledError:
             await self.on_signal_stop("xxx")
         except Exception as data:
-            self.log_err(f"read task error: {data}")
+            self.error_log(f"read task error: {data}")
             await asyncio.sleep(0.5)
 
     async def receive_data_callback(self, data: AnyStr):
@@ -158,23 +157,18 @@ class BaseServer(BasePubService, CommonApi):
                         return
                     await self.rep_by_rpc(cs_enum, res_data, message.reply_to, message.correlation_id)
             except Exception as e:
-                self.log_err(f"on_message_rpc error:{traceback.format_exc()} \n -->e: {e}")
+                self.error_log(f"on_message_rpc error:{traceback.format_exc()} \n -->e: {e}")
 
     async def start_server(self):
         """ 启动服务 """
-        await self.init_component()
-        asyncio.create_task(self.__read_task())
-        await self.clear_in_service()
-        asyncio.create_task(self.rpc_client())
-        await self.__consume_rmq()
-
-    async def init_component(self):
-        """ 初始化组件 """
-        RCModel.set_conf(self.conf)
         await self.init_db()  # 初始化db
         self.conf.rds.init_loop()  # 初始化redis
         self.conf.rmq.init_pool()  # 初始化rmq
         await self.__init_listen_channel()
+        asyncio.create_task(self.__read_task())
+        await self.clear_in_service()
+        asyncio.create_task(self.rpc_client())
+        await self.__consume_rmq()
 
     async def clear_in_service(self):
         """ 子类重写（某些不是游戏的服务不需要清理） """
@@ -194,29 +188,9 @@ class BaseServer(BasePubService, CommonApi):
     async def del_player_in_service(self, uid):
         await self.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
 
-    async def save_play_gold(self,uid ,gold):
-        info = {
-            "cs_type": self.service_type,
-            "gold":gold
-        }
-        await self.conf.rds.set_hash(CacheKey.PLAYER_GOLD, uid, info)
-        self.log_info(f"{uid} 存储待返还金币: {gold}")
-
-    @classmethod
-    async def get_play_gold(cls, uid):
-        try:
-            gold = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
-        except Exception as e:
-            gold = {"gold": 0}
-        cls.conf.log.info(f"{uid} 获取待返还金币: {gold}")
-        return gold
-
-    async def del_play_gold(self, uid):
-        await self.conf.rds.drop_hash(CacheKey.PLAYER_GOLD, uid)
-        self.log_info(f"{uid} 清空待返还金币")
     async def on_signal_stop(self, *args):
         """ 服务关闭时触发 """
-        self.log_info(f"{self.service_name} 服务关闭")
+        self.info_log(f"{self.service_name} 服务关闭")
         await connections.close_all()
         self.conf.rmq.close()
         await self.__listener_obj.close()
@@ -234,7 +208,7 @@ class BaseServer(BasePubService, CommonApi):
                 self.__listener_obj = obj
                 break
             except Exception as data:
-                self.log_err(f"sid {self.server_id} init_listen_channel error: {str(data)}")
+                self.error_log(f"sid {self.server_id} init_listen_channel error: {str(data)}")
                 await asyncio.sleep(2)
 
     async def publish_data(self, channel: str, cmd, uid, data: AnyStr):
@@ -243,7 +217,7 @@ class BaseServer(BasePubService, CommonApi):
         try:
             await self.conf.rds.publish(channel, pack_data)
         except Exception as data:
-            self.log_err(f"publish data error: {self.server_id} {data}")
+            self.error_log(f"publish data error: {self.server_id} {data}")
 
     async def cs2ws_by_rds(self, c_code, uid, code: StaCode, hint="", msg: AnyStr = None, req_id=""):
         """
@@ -286,6 +260,14 @@ class BaseServer(BasePubService, CommonApi):
         r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{ws_id}"
         await self.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
 
+    async def __get_routing_key(self, uid):
+        if uid == 1:
+            r_key = Channel.CHANNEL_SYSTEM_MSG
+        else:
+            ws_id = await self.get_player_ws_id(uid)
+            r_key = f"{ServiceEnum.WS_HALL.phrase}_{ServiceEnum.WS_HALL.val}_{ws_id}"
+        return r_key
+
     async def notice_ws_by_rmq(
             self, c_code, uid=1, code=StaCode.DEFAULT, hint="", msg=None, req_id="", cs_type=ServiceEnum.C_NOTICE):
         """
@@ -293,26 +275,25 @@ class BaseServer(BasePubService, CommonApi):
         注意：uid=1时广播所有在线玩家
         uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
         """
-        await self.send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=cs_type)
+        r_key = await self.__get_routing_key(uid)
+        hint = hint or code.msg
+        pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
+        cmd = UtilsTool.packet_command(cs_type, c_code)
+        await self.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
 
-    async def send_msg_to_player(
-            self,
-            c_code,
-            uid=1,
-            code=StaCode.DEFAULT,
-            hint="",
-            msg=None,
-            req_id="",
-            cs_type: ServiceEnum = 0
-    ):
-        cs_type = cs_type or self.service_type
-        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=cs_type)
+    async def chat_ws_by_rmq(self, c_code, uid=1, code=StaCode.DEFAULT, hint="", msg=None, req_id=""):
+        """
+        通过 chat 服务号9 广播聊天消息
+        注意：uid=1时广播所有在线玩家
+        uid=1: 默认为系统消息频道，推送该频道当前所有在线玩家都可收到消息
+        """
+        await self.notice_ws_by_rmq(c_code, uid, code, hint, msg, req_id, ServiceEnum.C_CHAT)
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """
-        data = json_parse(data, self.log_err)
+        data = json_parse(data, self.error_log)
         if data.get("secret", "") != self.conf.SECRET_KEY:
-            self.log_info("非法调用！！！", cmd, uid, data)
+            self.info_log("非法调用！！！", cmd, uid, data)
             return {}
         # data.pop("secret")
         return data

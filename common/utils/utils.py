@@ -539,14 +539,3 @@ class UtilsTool(metaclass=NoInstances):
             else:
                 left = mid + 1
         return
-
-    @staticmethod
-    def check_float(data):
-        # 从字符串转换成double
-        if not data:
-            return 0.0
-        try:
-            return float(data)
-        except Exception as data:
-            print(data)
-        return 0.0

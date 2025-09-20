@@ -1,6 +1,6 @@
 """
 脚本执行文件
-具体脚本请在：lucky_game/script下实现
+具体脚本请在：promising_game/script下实现
 """
 
 import asyncio

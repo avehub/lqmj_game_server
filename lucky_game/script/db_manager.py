@@ -56,7 +56,7 @@ async def init_db():
     await Tortoise.init(
         config={
             'apps': {
-                "lucky_game": {'models': ["lucky_game.model_db.main", "lucky_game.model_db.extra"]}},
+                "promising_game": {'models': ["promising_game.model_db.main", "promising_game.model_db.extra"]}},
             'connections': CONF_DB,
             'use_tz': False,
             'timezone': "UTC"

@@ -13,7 +13,8 @@ class BaseRobotRC(BaseRC):
     tb_name = db_model.sheet_name()
 
     query_fields = [
-        "uid", "name", "sex", "avatar", "address", "region"
+        "uid", "name", "sex", "avatar", "address", "region", "r_score", "r_top_score",
+        "game_count_5", "game_win_count_5", "extra_info"
     ]
 
     @classmethod

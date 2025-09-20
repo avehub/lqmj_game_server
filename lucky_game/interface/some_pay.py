@@ -7,20 +7,23 @@ from dg_sdk import DGTools
 from sanic import Request, response
 from tortoise.transactions import in_transaction
 from c_services.const.cs_enum_const import CmdWorkers
+from common.proto.py_pb2.http_login import PbS2CExternalReturn
+from common.proto.py_pb2.http_player_vault import PbGoods
 from common.public.conf import DouYinConf, WeChatConf, HuiFuConf, LIVE_SERVER
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.douyin import DouYin
 from lucky_game.handler.huifu import DouGongPay
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_db.main import RecordsTradeOrder
+from lucky_game.model_db.main import RecordsTradeOrder
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.handler.up_assets import UpAssets
 from nsanic.libs import tool_dt
 from lucky_game.handler.alipay import Alipay
 from common.utils.utils import UtilsTool
-from lucky_game.model_rc.base_store import StoreRC
+from lucky_game.model_rc.base_store import ConfStoreRC
+from common.proto.py_pb2.http_trade_center import PbOrder
 from common.proto.py_pb2.common import get_one_of_model
 from common.public.enum_const import DbKey, TaskId
 from nsanic.libs.tool import json_parse, json_encode
@@ -30,12 +33,12 @@ from lucky_game.const import PayMode, OrderStatus, DeliverStatus, PlatForm, Good
 class BaseSomePay(GameAuthApi):
 
     @classmethod
-    def log_info(cls, *data):
-        cls.loginfo("支付日志：", *data)
+    def info_log(cls, *data):
+        cls.conf.info_log("支付日志：", *data)
 
     @classmethod
-    def log_err(cls, *data):
-        cls.logerr("支付错误：", *data)
+    def error_log(cls, *data):
+        cls.conf.info_log("支付错误：", *data)
 
     async def process_after_deliver(self, uid, trade_amount):
         """发货后处理（更新物品和发货状态之后）"""
@@ -73,7 +76,7 @@ class BaseSomePay(GameAuthApi):
         if item_num == 3:
             express = await ConfActivityRC.get_activity_item_by_id(act_id=trade_item)
         else:
-            express = await StoreRC.get_store_item_by_id(store_id=trade_item)
+            express = await ConfStoreRC.get_store_item_by_id(store_id=trade_item)
 
         randed = False  # 是否返利
         if not express:
@@ -110,7 +113,7 @@ class BaseSomePay(GameAuthApi):
                             express["orig_price"] = price
                             express["price"] = discount_price
 
-                        # 返还金币
+                        # 返还灵石
                         conf_items = express.get("conf_items")
                         for c in conf_items or []:
                             multiple = sale_limit.get("multiple")
@@ -127,9 +130,10 @@ class BaseSomePay(GameAuthApi):
         (not all([open_id, order_id, trade_amount, trade_name, trade_desc])) and self.answer(code=self.sta_code.ERR_ARG)
 
         result, req_data = await Alipay.ali_mini_game_coin_pay(open_id, order_id, trade_amount, trade_name, trade_desc)
-        self.log_info("AliPay 扣减游戏币结果", req_data)
+        self.info_log("AliPay 扣减游戏币结果", req_data)
         if not result:
-            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
+            data = PbS2CExternalReturn.pb_model(
+                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -138,9 +142,9 @@ class BaseSomePay(GameAuthApi):
         (not all([open_id, order_id, trade_amount, access_token])) and self.answer(code=self.sta_code.ERR_ARG)
 
         errcode, req_data = await DouYin.douyin_mini_game_coin_pay(open_id, access_token, trade_amount, order_id)
-        self.log_info("DouYin 扣减游戏币结果：", errcode, req_data)
+        self.info_log("DouYin 扣减游戏币结果：", errcode, req_data)
         if errcode:
-            data = {"errcode": int(errcode), "errmsg": req_data}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -151,9 +155,9 @@ class BaseSomePay(GameAuthApi):
 
         errcode, req_data = await WeChat.wechat_mini_game_coin_pay(uid, open_id, access_token, trade_amount, order_id,
                                                                    u_ip)
-        self.log_info("WeChat 扣减游戏币结果：", errcode, req_data)
+        self.info_log("WeChat 扣减游戏币结果：", errcode, req_data)
         if errcode:
-            data = {"errcode": int(errcode), "errmsg": req_data}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return True
 
@@ -163,9 +167,9 @@ class BaseSomePay(GameAuthApi):
             # return self.answer(self.sta_code.FAIL, hint="非正式环境不获取抖音token")
             return "08011218474439544a56377756473068485058586d6978554d673d3d"
         errcode, access_token = await DouYin.douyin_get_access_token()
-        self.log_info("DouYin 获取TOKEN结果：", errcode)
+        self.info_log("DouYin 获取TOKEN结果：", errcode)
         if errcode:
-            data = {"errcode": int(errcode), "errmsg": access_token}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": access_token})
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return access_token
 
@@ -173,9 +177,9 @@ class BaseSomePay(GameAuthApi):
                                       app_secret=WeChatConf.WE_CHAT_MG_APP_SECRET):
         """WeChat 获取TOKEN"""
         errcode, access_token = await WeChat.wechat_get_access_token_stable(app_id=app_id, app_secret=app_secret)
-        self.log_info("WeChat 获取TOKEN结果：", errcode)
+        self.info_log("WeChat 获取TOKEN结果：", errcode)
         if errcode:
-            data = {"errcode": int(errcode), "errmsg": access_token}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": access_token})
             return self.answer(self.sta_code.EXTERNAL_ERR, data)
         return access_token
 
@@ -189,7 +193,7 @@ class BaseSomePay(GameAuthApi):
         tmp_arr.sort()  # 默认是按照字符串排序，类似于PHP的SORT_STRING
         tmp_str = ''.join(tmp_arr)  # 使用join函数代替implode
         tmp_str = UtilsTool.calc_hash(tmp_str, htype="sha1")
-        self.log_info("wechat_check_signature 微信验签", signature, '=?=', tmp_str)
+        self.info_log("wechat_check_signature 微信验签", signature, '=?=', tmp_str)
         if tmp_str != signature:
             return response.json({"ErrCode": self.sta_code.ERR_AUTH, "ErrMsg": "验签失败"})
 
@@ -203,7 +207,7 @@ class BaseSomePay(GameAuthApi):
         nonce = req.args.get("nonce")
         decrypt_res, decrypt_json = decrypt_tool.DecryptMsg(req.json, msg_signature, timestamp, nonce)
         decrypt_data = json_parse(decrypt_json)
-        self.log_info("wechat_decode_data 密文解析：", decrypt_res, decrypt_data)
+        self.info_log("wechat_decode_data 密文解析：", decrypt_res, decrypt_data)
         if decrypt_res != 0:
             return response.json({"ErrCode": self.sta_code.ERR_AUTH, "ErrMsg": "密文消息解密失败"})
 
@@ -216,7 +220,8 @@ class BaseSomePay(GameAuthApi):
 
     def rep_express(self, goods, gifts):
         express = goods + (gifts if gifts else [])
-        return self.answer(self.sta_code.PASS, data=express)
+        pro_data = PbGoods.pb_model(express)
+        return self.answer(self.sta_code.PASS, data=pro_data)
 
 
 class MakeOrder(BaseSomePay):
@@ -229,12 +234,13 @@ class MakeOrder(BaseSomePay):
         trade_item = self.check_int(req.json.get("trade_item"), require=True, minval=2000, maxval=4000,
                                     p_name="trade_item")
         pay_mode = req.json.get("pay_mode")
-        platform = req.args.get('platform') or ''
+        platform = req.args.get('c_platform') or ''
         count = req.json.get("count") or 1
 
         order_info, hint = await self.create_order(uid, trade_item, pay_mode, platform, req, count=count)
         if order_info:
-            return self.answer(data=order_info)
+            pro_data = PbOrder.pb_model(order_info)
+            return self.answer(data=pro_data)
         return self.answer(self.sta_code.FAIL, hint=hint)
 
     @classmethod
@@ -276,7 +282,7 @@ class MakeOrder(BaseSomePay):
         insert_data = await RecordsTradeOrder.gen_insert_data(**data)
         record_trade = await RecordsTradeOrder.add_one(insert_data)
         if not record_trade:
-            cls.log_err(uid, "MakeOrder 订单表插入失败", insert_data)
+            cls.error_log(uid, "MakeOrder 订单表插入失败", insert_data)
             return {}, "订单创建失败"
 
         # 3.订单创建完成，按下单平台返回数据
@@ -289,7 +295,7 @@ class MakeOrder(BaseSomePay):
         deal_func = map_func.get(pay_mode)
         if deal_func and callable(deal_func):
             order_info = await deal_func(uid, insert_data)
-            cls.log_info(uid, f"MakeOrder {pm_enum.phrase} 订单创建结果", order_info)
+            cls.info_log(uid, f"MakeOrder {pm_enum.phrase} 订单创建结果", order_info)
             return order_info, "ok"
         return {}, "无此交易方式"
 
@@ -342,7 +348,7 @@ class ReduceBalanceByWechatMiniProgram(BaseSomePay):
         # 1.查询订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "ReduceBalanceByWechatMiniProgram 无此订单", order_id)
+            self.error_log(uid, "ReduceBalanceByWechatMiniProgram 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
         trade_amount = order_info.get("trade_amount") or 0
 
@@ -373,16 +379,16 @@ class ReduceBalanceByWechatMiniProgram(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="支付宝代币支付订单发货失败")
 
             # 7.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "ReduceBalanceByWechatMiniProgram 已经发货了", order_id)
+            self.info_log(uid, "ReduceBalanceByWechatMiniProgram 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
-        self.log_info(uid, "ReduceBalanceByWechatMiniProgram 订单交易成功", order_id)
+        self.info_log(uid, "ReduceBalanceByWechatMiniProgram 订单交易成功", order_id)
         return self.rep_express(goods, gifts)
 
 
@@ -401,12 +407,12 @@ class GetBalanceByWechatMiniProgram(BaseSomePay):
         access_token = await self.wechat_get_access_token()
         errcode, req_data = await WeChat.wechat_mini_game_coin_query(uid, openid, access_token, u_ip)
         if errcode != 0:
-            self.log_info(uid, "失败查询Wechat游戏币余额：", errcode, req_data)
-            data = {"errcode": int(errcode), "errmsg": req_data}
+            self.info_log(uid, "失败查询Wechat游戏币余额：", errcode, req_data)
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
         else:
             balance = req_data.get("balance") or 0
-            self.log_info(uid, "成功查询Wechat游戏币余额：", errcode, req_data)
+            self.info_log(uid, "成功查询Wechat游戏币余额：", errcode, req_data)
             return self.rep_balance(balance)
 
 
@@ -429,21 +435,21 @@ class MiniGameQueryOrder(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "MiniGameQueryOrder 无此订单", order_id)
+            self.error_log(uid, "MiniGameQueryOrder 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
         trade_amount = order_info.get("trade_amount") or 0
-        self.log_info(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"主动查询，本地结果 {order_info}")
+        self.info_log(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"主动查询，本地结果 {order_info}")
 
         # 2.查询微信小游戏订单
         access_token = await self.wechat_get_access_token()
         errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, access_token, order_id)
-        self.log_info(uid, "MiniGameQueryOrder 解析查询数据：", req_data, errcode)
+        self.info_log(uid, "MiniGameQueryOrder 解析查询数据：", req_data, errcode)
         if errcode:
-            data = {"errcode": errcode, "errmsg": req_data}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         if req_data.get("pay_state") != OrderStatus.PAID:  # 支付状态（用户是否已支付）1 未支付 2 已支付
-            self.log_info(uid, "MiniGameQueryOrder 订单未支付", order_id)
+            self.info_log(uid, "MiniGameQueryOrder 订单未支付", order_id)
             self.answer(self.sta_code.FAIL, hint="订单未支付")
 
         # 3.更新订单
@@ -472,16 +478,16 @@ class MiniGameQueryOrder(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="微信订单查询发货失败")
 
             # 6.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "MiniGameQueryOrder 已经发货了", order_id)
+            self.info_log(uid, "MiniGameQueryOrder 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
-        self.log_info(uid, "MiniGameQueryOrder 订单交易成功", order_id)
+        self.info_log(uid, "MiniGameQueryOrder 订单交易成功", order_id)
         return self.rep_express(goods, gifts)
 
 
@@ -496,7 +502,7 @@ class MiniGameRecvPush(BaseSomePay):
         """测试用"""
         self.wechat_check_signature(req)
         _ = await self.wechat_decode_data(req)
-        self.log_info("MiniGameRecvPush 消息推送解密测试：", req.args)
+        self.info_log("MiniGameRecvPush 消息推送解密测试：", req.args)
         return response.text(body=req.args.get("echostr"))
 
     async def post(self, req: Request):
@@ -516,23 +522,23 @@ class MiniGameRecvPush(BaseSomePay):
         u_info = await BaseUserRC.cache_by_unique({"openid": to_openid, "platform": PlatForm.WECHAT_MINI_GAME},
                                                   BaseUserRC.KEY_OPENID)
         if not u_info:
-            self.log_err("MiniGameRecvPush 找不到对应下单用户", out_trade_no)
+            self.error_log("MiniGameRecvPush 找不到对应下单用户", out_trade_no)
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": "找不到对应下单用户"})
         uid = u_info.get("uid")
         u_ip = u_info.get("ip")
 
         # 4.查询本地订单信息
         order_info = await RecordsTradeOrder.query_trade_order(order_id=out_trade_no)
-        self.log_info(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"回调通知，本地结果 {order_info}")
+        self.info_log(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"回调通知，本地结果 {order_info}")
         if not order_info:
-            self.log_err(uid, "MiniGameRecvPush 无此订单", out_trade_no)
+            self.error_log(uid, "MiniGameRecvPush 无此订单", out_trade_no)
             return response.json({"ErrCode": self.sta_code.ORDER_NOT_FOUND, "ErrMsg": "无此订单"})
 
         # 重复查询，避免订单更新不及时
         if order_info.get("order_status") != OrderStatus.PAID:
             await asyncio.sleep(1)
             order_info = await RecordsTradeOrder.query_trade_order(order_id=out_trade_no)
-            self.log_info(tool_dt.cur_time(), f"MiniGameRecvPush 延迟1秒开始重复查询，本地结果 {order_info}")
+            self.info_log(tool_dt.cur_time(), f"MiniGameRecvPush 延迟1秒开始重复查询，本地结果 {order_info}")
         trade_item = order_info.get("trade_item")
         trade_amount = order_info.get("trade_amount") or 0
 
@@ -562,16 +568,16 @@ class MiniGameRecvPush(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": "发货事务失败"})
 
             # 7.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "MiniGameRecvPush 已经发货了", out_trade_no)
+            self.info_log(uid, "MiniGameRecvPush 已经发货了", out_trade_no)
             return response.json({"ErrCode": 0, "ErrMsg": "Success"})
 
-        self.log_info(uid, "MiniGameRecvPush 订单交易成功", out_trade_no)
+        self.info_log(uid, "MiniGameRecvPush 订单交易成功", out_trade_no)
         return response.json({"ErrCode": 0, "ErrMsg": "Success"})
 
 
@@ -586,11 +592,11 @@ class GetBalanceByAliMiniProgram(BaseSomePay):
         results, req_data = await Alipay.ali_mini_game_coin_query(open_id)
         if not results:
             balance = 0
-            self.log_info(uid, "失败查询Ali游戏币余额：", req_data)
+            self.info_log(uid, "失败查询Ali游戏币余额：", req_data)
         else:
             data = json_parse(req_data)
             balance = data.get("balance")
-            self.log_info(uid, "成功查询Ali游戏币余额：", data)
+            self.info_log(uid, "成功查询Ali游戏币余额：", data)
 
         return self.rep_balance(balance)
 
@@ -610,7 +616,7 @@ class ReduceBalanceByAliMiniProgram(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "ReduceBalanceByAliMiniProgram 无此订单", order_id)
+            self.error_log(uid, "ReduceBalanceByAliMiniProgram 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
         trade_amount = order_info.get("trade_amount") or 0
 
@@ -641,16 +647,16 @@ class ReduceBalanceByAliMiniProgram(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="支付宝代币支付订单发货失败")
 
             # 5.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "ReduceBalanceByAliMiniProgram 已经发货了", order_id)
+            self.info_log(uid, "ReduceBalanceByAliMiniProgram 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
-        self.log_info(uid, "ReduceBalanceByAliMiniProgram 订单交易成功", order_id)
+        self.info_log(uid, "ReduceBalanceByAliMiniProgram 订单交易成功", order_id)
         return self.rep_express(goods, gifts)
 
 
@@ -672,19 +678,20 @@ class AliPayQueryStatus(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "AliPayQueryStatus 无此订单", order_id)
+            self.error_log(uid, "AliPayQueryStatus 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
         trade_amount = order_info.get("trade_amount") or 0
 
         # 2.查询阿里订单
         results, req_data = await Alipay.ali_order_query_status(open_id, order_id)
-        self.log_info(uid, "AliPayQueryStatus 解析查询数据：", results, req_data)
+        self.info_log(uid, "AliPayQueryStatus 解析查询数据：", results, req_data)
         if not results:
-            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
+            data = PbS2CExternalReturn.pb_model(
+                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
             self.answer(self.sta_code.EXTERNAL_ERR, data)
 
         if req_data.get("status") != 'success':  # 支付状态 成功: success / 关闭: closed / 已退款: refunded / 中间状态: processing
-            self.log_info(uid, "AliPayQueryStatus 订单未支付", order_id)
+            self.info_log(uid, "AliPayQueryStatus 订单未支付", order_id)
             self.answer(self.sta_code.FAIL, hint="订单未支付")
 
         # 3.查询货物 goods立得货物 / gifts赠物
@@ -714,16 +721,16 @@ class AliPayQueryStatus(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="支付宝订单查询发货失败")
 
             # 6.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "AliPayQueryStatus 已经发货了", order_id)
+            self.info_log(uid, "AliPayQueryStatus 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
-        self.log_info(uid, "AliPayQueryStatus 订单交易成功", order_id)
+        self.info_log(uid, "AliPayQueryStatus 订单交易成功", order_id)
         return self.rep_express(goods, gifts)
 
 
@@ -760,7 +767,7 @@ class AliPayNotify(BaseSomePay):
             flag = Alipay.verify_with_rsa(wait_verify_str, signature)
             return flag
         except Exception as e:
-            self.log_err("支付回调验签失败: ", e)
+            self.error_log("支付回调验签失败: ", e)
             return False
 
     def __check_signature(self, req: Request, signature):
@@ -780,10 +787,10 @@ class AliPayNotify(BaseSomePay):
         message = bytes(sorted_params, encoding='utf-8')
         try:
             flag = Alipay.verify_with_rsa(message, signature)
-            self.log_info("支付回调验签结果: ", flag)
+            self.info_log("支付回调验签结果: ", flag)
             return flag
         except Exception as e:
-            self.log_err("支付回调验签失败: ", e)
+            self.error_log("支付回调验签失败: ", e)
 
             # todo:返回TRUE观测修改之后的验签结果
             return True
@@ -798,19 +805,19 @@ class AliPayNotify(BaseSomePay):
         data = req.form
         to_openid = data.get("open_id")
         custom_id = data.get("custom_id")  # 下单时传入的订单号
-        self.log_info("AliPayNotify req form: ", data, "u_info: ", to_openid)
+        self.info_log("AliPayNotify req form: ", data, "u_info: ", to_openid)
 
         # 2.验证买家和查询本地订单
         u_info = await BaseUserRC.cache_by_unique({"openid": to_openid, "platform": PlatForm.ALI_MINI_GAME},
                                                   BaseUserRC.KEY_OPENID)
         if not u_info:
-            self.log_err("AliPayNotify 找不到对应下单用户", to_openid)
+            self.error_log("AliPayNotify 找不到对应下单用户", to_openid)
             return response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
         uid = u_info.get("uid")
 
         order_info = await RecordsTradeOrder.query_trade_order(order_id=custom_id)
         if not order_info:
-            self.log_err(uid, "AliPayNotify 无此订单", custom_id)
+            self.error_log(uid, "AliPayNotify 无此订单", custom_id)
             return response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
         order_id = order_info.get("order_id")
         trade_item = order_info.get("trade_item")
@@ -818,7 +825,7 @@ class AliPayNotify(BaseSomePay):
 
         # 4.查询阿里订单
         results, req_data = await Alipay.ali_order_query_status(custom_id, order_id)
-        self.log_info(uid, "AliPayNotify 解析查询数据：", results, req_data)
+        self.info_log(uid, "AliPayNotify 解析查询数据：", results, req_data)
         if not results:
             return response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
 
@@ -853,17 +860,17 @@ class AliPayNotify(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 return response.json(
                     {"response": {"code": self.sta_code.FAIL, "msg": '发货事务失败'}, "sign": signature})
 
             # 7.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "AliPayNotify 已经发货了", custom_id)
+            self.info_log(uid, "AliPayNotify 已经发货了", custom_id)
             return response.json({"response": {"code": '10000', "msg": 'Success'}, "sign": signature})
 
-        self.log_info(uid, "AliPayNotify 订单交易成功", custom_id)
+        self.info_log(uid, "AliPayNotify 订单交易成功", custom_id)
         return response.json({"response": {"code": '10000', "msg": 'Success'}, "sign": signature})
 
 
@@ -881,9 +888,10 @@ class AliPayRefund(BaseSomePay):
         open_id = u_info.get("openid")
 
         results, req_data = await Alipay.ali_payment_refund(open_id, trade_no)
-        self.log_info(uid, "AliPayRefund 解析请求数据：", results, req_data)
+        self.info_log(uid, "AliPayRefund 解析请求数据：", results, req_data)
         if not results:
-            data = {"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')}
+            data = PbS2CExternalReturn.pb_model(
+                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         self.answer(hint="申请退款成功，平台正在处理")
@@ -901,10 +909,10 @@ class GetBalanceByDouYinGame(BaseSomePay):
         errcode, req_data = await DouYin.douyin_mini_game_coin_query(open_id, access_token)
         if errcode:
             balance = 0
-            self.log_info(uid, "失败查询DouYin游戏币余额：", errcode, req_data)
+            self.info_log(uid, "失败查询DouYin游戏币余额：", errcode, req_data)
         else:
             balance = req_data.get("balance") or 0  # 用户游戏币余额，单位个，整数
-            self.log_info(uid, "成功查询DouYin游戏币余额：", errcode, req_data)
+            self.info_log(uid, "成功查询DouYin游戏币余额：", errcode, req_data)
 
         return self.rep_balance(balance)
 
@@ -924,7 +932,7 @@ class ReduceBalanceByDouYinGame(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "ReduceBalanceByDouYinGame 无此订单", order_id)
+            self.error_log(uid, "ReduceBalanceByDouYinGame 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
         trade_amount = order_info.get("trade_amount") or 0
 
@@ -955,16 +963,16 @@ class ReduceBalanceByDouYinGame(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="支付宝代币支付订单发货失败")
 
             # 5.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "ReduceBalanceByDouYinGame 已经发货了", order_id)
+            self.info_log(uid, "ReduceBalanceByDouYinGame 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
-        self.log_info(uid, "ReduceBalanceByDouYinGame 订单交易成功", order_id)
+        self.info_log(uid, "ReduceBalanceByDouYinGame 订单交易成功", order_id)
         return self.rep_express(goods, gifts)
 
 
@@ -990,9 +998,9 @@ class DouYinGamePayNotify(BaseSomePay):
         join_str = ''.join(sorted_str)
         sign_str = UtilsTool.calc_hash(join_str, htype="sha1")
 
-        self.log_info(f"DouYinGamePayNotify: {req.json}")
+        self.info_log(f"DouYinGamePayNotify: {req.json}")
         if sign_str != signature:
-            self.log_err("DouYin 小游戏支付回调通知验签失败", sign_str, signature)
+            self.error_log("DouYin 小游戏支付回调通知验签失败", sign_str, signature)
             return False
         return True
 
@@ -1013,7 +1021,7 @@ class DouYinGamePayNotify(BaseSomePay):
         # 1.查询订单状态（查无订单直接返成功，为了防止来自测试服订单的回调，仅回调使用此逻辑）
         order_info = await RecordsTradeOrder.query_trade_order(order_id=cp_orderno)
         if not order_info:
-            self.log_err("DouYinGamePayNotify 无此订单", cp_orderno)
+            self.error_log("DouYinGamePayNotify 无此订单", cp_orderno)
             return response.json({"ErrCode": self.sta_code.PASS, "ErrMsg": "Success"})
             # return response.json({"ErrCode": self.sta_code.ORDER_NOT_FOUND, "ErrMsg": "无此订单"})
 
@@ -1024,7 +1032,7 @@ class DouYinGamePayNotify(BaseSomePay):
         # 2.验证买家
         u_info = await BaseUserRC.cache_by_uid(uid)
         if not u_info:
-            self.log_err("DouYinGamePayNotify 找不到对应下单用户", cp_orderno)
+            self.error_log("DouYinGamePayNotify 找不到对应下单用户", cp_orderno)
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": "找不到对应下单用户"})
 
         # 3.扣减游戏币/更新支付状态
@@ -1054,16 +1062,16 @@ class DouYinGamePayNotify(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": "发货事务失败"})
 
             # 6.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "DouYinGamePayNotify 已经发货了", cp_orderno)
+            self.info_log(uid, "DouYinGamePayNotify 已经发货了", cp_orderno)
             return response.json({"ErrCode": self.sta_code.PASS, "ErrMsg": "Success"})
 
-        self.log_info(uid, "DouYinGamePayNotify 订单交易成功", cp_orderno)
+        self.info_log(uid, "DouYinGamePayNotify 订单交易成功", cp_orderno)
         return response.json({"ErrCode": self.sta_code.PASS, "ErrMsg": "Success"})
 
 
@@ -1082,7 +1090,7 @@ class DouYinGameQueryOrder(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err(uid, "DouYinGameQueryOrder 无此订单", order_id)
+            self.error_log(uid, "DouYinGameQueryOrder 无此订单", order_id)
             self.answer(self.sta_code.ORDER_NOT_FOUND, hint="无此订单")
 
         open_id = u_info.get("openid")
@@ -1092,13 +1100,13 @@ class DouYinGameQueryOrder(BaseSomePay):
         # 2.抖音小游戏订单查询
         access_token = await self.douyin_get_access_token()
         errcode, req_data = await DouYin.douyin_query_pay_status(access_token, order_id)
-        self.log_info(uid, "DouYinGameQueryOrder 解析查询数据：", errcode, req_data)
+        self.info_log(uid, "DouYinGameQueryOrder 解析查询数据：", errcode, req_data)
         if errcode:
-            data = {"errcode": int(errcode), "errmsg": req_data}
+            data = PbS2CExternalReturn.pb_model(**{"errcode": int(errcode), "errmsg": req_data})
             self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
         if req_data.get("status") != "success":  # success 表示支付成功且发币到账，unsuccess 表示支付失败或支付成功未发币到账
-            self.log_info(uid, "DouYinGameQueryOrder 支付失败或支付成功未发币到账", order_id)
+            self.info_log(uid, "DouYinGameQueryOrder 支付失败或支付成功未发币到账", order_id)
             self.answer(self.sta_code.FAIL, hint="支付失败或支付成功未发币到账")
 
         # 3.扣减游戏币/更新支付状态
@@ -1126,20 +1134,20 @@ class DouYinGameQueryOrder(BaseSomePay):
                     if item_num == 3:
                         await UserActivityRC.update_user_charge_records(uid, express)
             except Exception as e:
-                self.log_err(f"事务执行失败，原因：{e}")
+                self.error_log(f"事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="抖音订单查询发货失败")
 
             # 6.发货后处理
             await self.process_after_deliver(uid, trade_amount)
         else:
-            self.log_info(uid, "DouYinGameQueryOrder 已经发货了", order_id)
+            self.info_log(uid, "DouYinGameQueryOrder 已经发货了", order_id)
 
         await self.process_after_received(uid, order_info, buy_record=buy_record)
 
         call_admin = kwargs.get("call_admin") or False
-        self.log_info(uid, "DouYinGameQueryOrder 订单交易成功1", order_id, call_admin)
+        self.info_log(uid, "DouYinGameQueryOrder 订单交易成功1", order_id, call_admin)
         if call_admin:
-            self.log_info(uid, "DouYinGameQueryOrder 后台补单", order_id, call_admin)
+            self.info_log(uid, "DouYinGameQueryOrder 后台补单", order_id, call_admin)
             return self.answer()
         return self.rep_express(goods, gifts)
 
@@ -1165,7 +1173,7 @@ class MiniProgramRecvPush(BaseSomePay):
                 key, value = item.split('=', 1)
                 params_dict[key] = int(value)  # 尝试将值转换为整数
             except ValueError as e:
-                cls.log_info(f"无法解析项 '{item}' 到键值对: {e}")
+                cls.info_log(f"无法解析项 '{item}' 到键值对: {e}")
                 continue  # 跳过这个项，继续下一个
         return params_dict
 
@@ -1174,7 +1182,7 @@ class MiniProgramRecvPush(BaseSomePay):
         self.wechat_check_signature(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN)
         _ = await self.wechat_decode_data(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN, WeChatConf.WE_CHAT_MP_AES_KEY,
                                           WeChatConf.WE_CHAT_MG_APP_ID)
-        self.log_info("MiniProgramRecvPush 消息推送解密测试：", req.args)
+        self.info_log("MiniProgramRecvPush 消息推送解密测试：", req.args)
         return response.text(body=req.args.get("echostr"))
 
     async def post(self, req: Request):
@@ -1185,7 +1193,7 @@ class MiniProgramRecvPush(BaseSomePay):
         self.wechat_check_signature(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN)
         payload_data = await self.wechat_decode_data(req, WeChatConf.WE_CHAT_MP_PUSH_TOKEN,
                                                      WeChatConf.WE_CHAT_MP_AES_KEY, WeChatConf.WE_CHAT_MG_APP_ID)
-        self.log_info("MiniProgramRecvPush 接收到微信消息推送回调", payload_data)
+        self.info_log("MiniProgramRecvPush 接收到微信消息推送回调", payload_data)
         session_from = payload_data.get("SessionFrom") or ""
         if not session_from:
             # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
@@ -1195,18 +1203,18 @@ class MiniProgramRecvPush(BaseSomePay):
 
         # 1.解析数据:客户端获取-传给微信-回调发送后端
         params_dict = self.parse_session_from(session_from)
-        self.log_info("MiniProgramRecvPush SessionFrom:", params_dict)
+        self.info_log("MiniProgramRecvPush SessionFrom:", params_dict)
         if params_dict is None:
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
 
-        params_key = {"trade_item", "uid", "platform", "count"}
+        params_key = {"trade_item", "uid", "c_platform", "count"}
         if not params_key.issubset(params_dict.keys()):
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
 
         # 2.创建订单
         uid = params_dict.get("uid")
         trade_item = params_dict.get("trade_item")
-        platform = params_dict.get('platform') or ''
+        platform = params_dict.get('c_platform') or ''
         count = req.json.get("count") or 1
 
         order_info, hint = await MakeOrder.create_order(uid, trade_item, PayMode.IOS_TO_H5, platform, req, count=count)
@@ -1214,7 +1222,7 @@ class MiniProgramRecvPush(BaseSomePay):
             # 3.发送客服消息（支付界面相关信息）
             access_token = await self.wechat_get_access_token()
             errcode, req_data = await WeChat.wechat_send_custom_msg(uid, from_user_name, access_token, order_info)
-            self.log_info(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
+            self.info_log(uid, "sendCustomMessage 发送客服消息：", req_data, errcode)
             if not errcode:
                 return response.json({"ErrCode": 0, "ErrMsg": "Success"})
             return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '发送客服消息失败'})
@@ -1237,7 +1245,7 @@ class HuiFuGetPayInfo(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id) or {}
         if not order_info:
-            self.log_err("WeChatGetPayInfo 无此订单", order_id)
+            self.error_log("WeChatGetPayInfo 无此订单", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.ORDER_NOT_FOUND, "ErrMsg": '无此订单'})
 
         # 2.检查订单状态是否可拉取支付
@@ -1270,7 +1278,7 @@ class HuiFuGetPayInfo(BaseSomePay):
 
             order_info["gzh_openid"] = gzh_openid
             req_res = await DouGongPay.dou_gong_js_pay(**order_info)
-            self.log_info('HuiFuGetPayInfo DouGong res:', req_res, 'old & new:', trade_amount_old, trade_amount_new)
+            self.info_log('HuiFuGetPayInfo DouGong res:', req_res, 'old & new:', trade_amount_old, trade_amount_new)
 
             resp_code = req_res.get('resp_code')
             if resp_code != '00000100':  # 下单成功
@@ -1296,7 +1304,7 @@ class HuiFuPayQueryOrder(BaseSomePay):
         # 1.查询本地订单
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err("HuiFuPayQueryOrder 无此订单", order_id)
+            self.error_log("HuiFuPayQueryOrder 无此订单", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.GOODS_NOT_FOUND, "ErrMsg": '无此订单'})
         uid = order_info.get("uid")
         trade_amount = order_info.get("trade_amount") or 0
@@ -1304,13 +1312,13 @@ class HuiFuPayQueryOrder(BaseSomePay):
 
         # 2.汇付天下交易查询
         req_res = await DouGongPay.dou_gong_query(order_id)
-        # self.log_info(uid, "HuiFuPayQueryOrder 解析查询数据：", req_res)
+        # self.info_log(uid, "HuiFuPayQueryOrder 解析查询数据：", req_res)
         resp_code = req_res.get('resp_code')
         if resp_code != '00000000':
             self.answer_json(data={"ErrCode": resp_code, "ErrMsg": req_res})
 
         if req_res.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
-            self.log_info(uid, "HuiFuPayQueryOrder 支付失败或支付成功未发币到账", order_id)
+            self.info_log(uid, "HuiFuPayQueryOrder 支付失败或支付成功未发币到账", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.FAIL, "ErrMsg": '支付失败或支付成功未发币到账'})
 
         # 3.查询货物 goods立得货物 / gifts赠物
@@ -1329,16 +1337,16 @@ class HuiFuPayQueryOrder(BaseSomePay):
                     await RecordsTradeOrder.update_by_pk(order_id, update_paid, order_info)
                     await BaseUserRC.cache_user_paid_order(uid, order_id, goods, gifts)  # 预发货
             except Exception as e:
-                self.log_err(f"HuiFuPayQueryOrder 事务执行失败，原因：{e}")
+                self.error_log(f"HuiFuPayQueryOrder 事务执行失败，原因：{e}")
                 self.answer_json(data={"ErrCode": self.sta_code.FAIL, "ErrMsg": '快递打包失败'})
 
             # 5.发快递后处理/预处理货物的购买数据
             await self.process_after_deliver(uid, trade_amount)
             await self.process_after_received(uid, order_info, buy_record=buy_record)
         else:
-            self.log_info(uid, "HuiFuPayQueryOrder 快递已经发出", order_id)
+            self.info_log(uid, "HuiFuPayQueryOrder 快递已经发出", order_id)
 
-        self.log_info(uid, "HuiFuPayQueryOrder 快递入站成功", order_id)
+        self.info_log(uid, "HuiFuPayQueryOrder 快递入站成功", order_id)
         return self.answer_json(data={"order_id": order_id, "order_status": order_status})
 
 
@@ -1358,7 +1366,7 @@ class HuiFuPayNotify(BaseSomePay):
         resp_desc = form.get('resp_desc')
         resp_data_str = form.get('resp_data')
         sign = form.get('sign')
-        self.log_info("HuiFuPayNotify 汇付天下支付回调通知", resp_code, resp_desc)
+        self.info_log("HuiFuPayNotify 汇付天下支付回调通知", resp_code, resp_desc)
 
         if resp_code != '00000000':
             return False, {"ErrCode": self.sta_code.FAIL, "ErrMsg": 'Invalid resp_code.'}
@@ -1367,7 +1375,7 @@ class HuiFuPayNotify(BaseSomePay):
         resp_data = json_parse(resp_data_str)
         result = DGTools.verify_sign(resp_data, sign, pub_key=HuiFuConf.DOUGONG_APP_PUBLIC_KEY)
         if not result:
-            self.log_err(f"HuiFu 汇付天下支付回调通知{result}验签失败")
+            self.error_log(f"HuiFu 汇付天下支付回调通知{result}验签失败")
             return False, {"ErrCode": self.sta_code.ERR_AUTH, "ErrMsg": "验签失败"}
         return True, resp_data
 
@@ -1378,16 +1386,16 @@ class HuiFuPayNotify(BaseSomePay):
             self.answer_json(data=res_dict)
 
         # 1.验签成功后，处理业务逻辑
-        # self.log_info("HuiFuPayNotify 解析回调数据", res_dict)
+        # self.info_log("HuiFuPayNotify 解析回调数据", res_dict)
         order_id = res_dict.get('req_seq_id')  # 交易时传入，原样返回
         if res_dict.get("trans_stat") != "S":  # P：处理中；S：成功；F：失败；I: 初始（初始状态很罕见，请联系汇付技术人员处理）；交易状态以此字段为准。
-            self.log_info("HuiFuPayNotify 支付失败或支付成功未发币到账", order_id)
+            self.info_log("HuiFuPayNotify 支付失败或支付成功未发币到账", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.FAIL, "ErrMsg": "支付失败或支付成功未发币到账"})
 
         # 1.查询本地订单状态（查无订单直接返成功，为了防止来自测试服订单的回调，仅回调使用此逻辑）
         order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
         if not order_info:
-            self.log_err("HuiFuPayNotify 无此订单", order_id)
+            self.error_log("HuiFuPayNotify 无此订单", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.ORDER_NOT_FOUND, "ErrMsg": "无此订单"})
         uid = order_info.get("uid")
         trade_amount = order_info.get("trade_amount") or 0
@@ -1396,7 +1404,7 @@ class HuiFuPayNotify(BaseSomePay):
         # 2.验证买家
         u_info = await BaseUserRC.cache_by_uid(uid)
         if not u_info:
-            self.log_err("HuiFuPayNotify 找不到对应下单用户", order_id)
+            self.error_log("HuiFuPayNotify 找不到对应下单用户", order_id)
             self.answer_json(data={"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": "找不到对应下单用户"})
 
         # 3.查询货物 goods立得货物 / gifts赠物
@@ -1413,16 +1421,16 @@ class HuiFuPayNotify(BaseSomePay):
                     await RecordsTradeOrder.update_by_pk(order_id, update_paid, order_info)
                     await BaseUserRC.cache_user_paid_order(uid, order_id, goods, gifts)  # 预发货
             except Exception as e:
-                self.log_err(f"HuiFuPayNotify 事务执行失败，原因：{e}")
+                self.error_log(f"HuiFuPayNotify 事务执行失败，原因：{e}")
                 self.answer(self.sta_code.FAIL, hint="HuiFuPayNotify 快递打包失败")
 
             # 5.发快递后处理/预处理货物的购买数据
             await self.process_after_deliver(uid, trade_amount)
             await self.process_after_received(uid, order_info, buy_record=buy_record)
         else:
-            self.log_info(uid, "HuiFuPayNotify 快递已经发出", order_id)
+            self.info_log(uid, "HuiFuPayNotify 快递已经发出", order_id)
 
-        self.log_info(uid, "HuiFuPayNotify 快递入站成功", order_id)
+        self.info_log(uid, "HuiFuPayNotify 快递入站成功", order_id)
         return self.answer_json(data={"ErrCode": self.sta_code.PASS, "ErrMsg": "Success"})
 
 
@@ -1439,7 +1447,8 @@ class CompletePaidOrder(BaseSomePay):
         # 1.注意物品和赠品以预发货的为主
         paid_orders = await BaseUserRC.get_user_paid_order(uid)
         if not paid_orders:
-            data = {"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '没有待领取订单'}
+            data = PbS2CExternalReturn.pb_model(
+                **{"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '没有待领取订单'})
             self.answer(data=data)
 
         all_goods = []
@@ -1453,8 +1462,9 @@ class CompletePaidOrder(BaseSomePay):
             # 2.查询多个本地订单
             order_info = await RecordsTradeOrder.query_trade_order(order_id=order_id)
             if not order_info:
-                self.log_err("CompletePaidOrder 无此待领取订单", order_id)
-                data = {"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '无此待领取订单'}
+                self.error_log("CompletePaidOrder 无此待领取订单", order_id)
+                data = PbS2CExternalReturn.pb_model(
+                    **{"errcode": self.sta_code.ORDER_NOT_FOUND, "errmsg": '无此待领取订单'})
                 self.answer(data=data)
 
             # 3.发货并准备派送
@@ -1473,15 +1483,16 @@ class CompletePaidOrder(BaseSomePay):
                         if express and item_num == 3:
                             await UserActivityRC.update_user_charge_records(uid, express)
                 except Exception as e:
-                    self.log_err(f"CompletePaidOrder 事务执行失败，原因：{e}")
-                    data = {"errcode": self.sta_code.FAIL, "errmsg": '查询发货失败'}
+                    self.error_log(f"CompletePaidOrder 事务执行失败，原因：{e}")
+                    data = PbS2CExternalReturn.pb_model(
+                        **{"errcode": self.sta_code.FAIL, "errmsg": '查询发货失败'})
                     self.answer(data=data)
 
                 # 4.将当前订单的货物和奖励加入总结果
                 all_goods.extend(goods)
                 all_gifts.extend(gifts)
             else:
-                self.log_info(uid, "CompletePaidOrder 已经取件了", order_id)
+                self.info_log(uid, "CompletePaidOrder 已经取件了", order_id)
 
-        self.log_info(uid, "CompletePaidOrder 订单交易成功")
+        self.info_log(uid, "CompletePaidOrder 订单交易成功")
         return self.rep_express(all_goods, all_gifts)

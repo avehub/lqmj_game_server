@@ -5,6 +5,7 @@ from nsanic.libs import tool_dt
 from sanic import Request
 from c_services.const.cs_enum_const import CmdChat
 from common.proto.py_pb2.common import pack_chat_history
+from common.proto.py_pb2.http_leisure import PbQuickChat
 from common.public.enum_const import ServiceEnum, ChatChannel, BanType
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.sensitive_words import SensitiveWords
@@ -47,8 +48,9 @@ class GetQuickChatConf(GameAuthApi):
             else:
                 pass
 
-        self.log_info(f"GetQuickChatConf 快捷聊天 {chat_type}，游戏 {cs_type}，场次 {level} 配置加载成功")
-        return self.answer(data=chat_confs)
+        proto_data = PbQuickChat.pb_model(chat_confs)
+        self.info_log(f"GetQuickChatConf 快捷聊天 {chat_type}，游戏 {cs_type}，场次 {level} 配置加载成功")
+        return self.answer(data=proto_data)
 
 
 class SendChatMessage(GameAuthApi):

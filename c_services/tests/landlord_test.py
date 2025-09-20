@@ -60,7 +60,7 @@ class RuleTest(unittest.TestCase):
             []
         ]
         poker = Poker()
-        poker.set_order_cards(cards)
+        poker.set_order_cards(cards, 3)
         all_cards = poker.deal_cards(3)
         self.assertTrue(all_cards)
 

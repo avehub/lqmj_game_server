@@ -6,7 +6,7 @@ from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, SERVER_
 
 
 class ConfSrv(BaseConf):
-    SERVER_NAME = 'lucky_admin'
+    SERVER_NAME = 'promising_admin'
     SERVER_ID = 'A0001'
     RUN_PORT = 8999
     HOST = '0.0.0.0'
@@ -42,15 +42,27 @@ class ConfSrv(BaseConf):
         return
 
     @classmethod
+    def info_log(cls, *data):
+        if cls.DEBUG_MODE:
+            return print(*data)
+        cls.log.info(*data)
+
+    @classmethod
+    def error_log(cls, *data):
+        if cls.DEBUG_MODE:
+            return print(*data)
+        cls.log.error(*data)
+
+    @classmethod
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
-        model_list = [f'lucky_game.model_db.{item}' for item in models]
+        model_list = [f'promising_game.model_db.{item}' for item in models]
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
-        server_name = "lucky_game"
+        server_name = "promising_game"
         return {
             'apps': {
                 server_name: {'models': model_list},

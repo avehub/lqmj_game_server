@@ -11,9 +11,9 @@ from lucky_admin.model_db.main import RecordsAdminTimedTask
 from lucky_game.const import SeasonStatus
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.handler.douyin import DouYin
-# from lucky_game.model_db.main import RecordsUserRankingHistory
-# from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
-# from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
+from lucky_game.model_db.main import RecordsUserRankingHistory
+from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
+from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
@@ -29,8 +29,13 @@ class TimedService():
         self.__main_service = main_service
         self.__scheduler = None
 
-    def log_info(self, *data):
-        self.__main_service.log_info("定时任务：", *data)
+        self.__main_service.register_rc_model(
+            ConfSeasonRC, UserRankingRC, BaseRobotRC, DouYin, BaseAds, JuLiangAdsRC
+        )
+
+    @classmethod
+    def info_log(cls, *data):
+        cls.conf.info_log("定时任务：", *data)
 
     @property
     def scheduler(self):
@@ -65,13 +70,13 @@ class TimedService():
 
         params["job_id"] = job_id
         if old_job_id == job_id:
-            self.log_info('worker服务重启，旧后台任务不插入表！', job_id)
+            self.info_log('worker服务重启，旧后台任务不插入表！', job_id)
             return
 
         await self.__main_service.save_date_task(uid, start_time, params)
         sta = await RecordsAdminTimedTask.insert_one(job_id, cmd, name, start_time, args[1], BackTaskSta.PENDING.val)
         if sta:
-            self.log_info('后台任务启动成功！', job_id)
+            self.info_log('后台任务启动成功！', job_id)
             return job_id
 
     def __add_default_jobs(self):
@@ -81,8 +86,8 @@ class TimedService():
 
         # 1.从00:00点，30分钟刷新排行榜数据：00: 30, 01:00, 01:30...
         # self.__scheduler.add_cron_job(self.__order_do_tasks, hour='0-23', minute='0/30')
-        # self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')  # 每小时
-        # self.__scheduler.add_cron_job(self.__reset_ranking_score, minute='*/3')  # 每3分钟执行一次
+        self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')  # 每小时
+        self.__scheduler.add_cron_job(self.__reset_ranking_score, minute='*/3')  # 每3分钟执行一次
 
         # self.__scheduler.add_cron_job(self.__stats_juliang_ads_data, minute='*/3')  # 每3分钟执行一次测试
 
@@ -95,17 +100,17 @@ class TimedService():
         # 4.刷新机器人排位分数分  2小时刷新一次
         # 0-23/2 表示从0点到23点的每一小时，每隔2小时执行一次任务。
         # self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23/2')
-        # self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23', minute='0/30')  # 半小时刷一次
+        self.__scheduler.add_cron_job(self.__refresh_robot_ranking_info, hour='0-23', minute='0/30')  # 半小时刷一次
         # self.__scheduler.add_interval_job(self.__refresh_robot_ranking_info, seconds=5)
 
         # 5.数据统计任务，每天0点过后执行
-        # self.__scheduler.add_cron_job(self.__stats_data_tasks, hour=0, minute=0)  # 每天执行一次
+        self.__scheduler.add_cron_job(self.__stats_data_tasks, hour=0, minute=0)  # 每天执行一次
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, minute='*/3')  # 每5分钟执行一次 测试
 
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
         now_time = datetime.now()
-        self.log_info(f"数据统计任务开始 {now_time}")
+        self.info_log(f"数据统计任务开始 {now_time}")
         self.__scheduler.add_date_job(StatsExpert.stats_game_times, run_date=now_time + timedelta(minutes=5))
         self.__scheduler.add_date_job(StatsExpert.stats_user_data_analysis, run_date=now_time + timedelta(minutes=10))
         self.__scheduler.add_date_job(StatsExpert.stats_retention_user_own, run_date=now_time + timedelta(minutes=15))
@@ -138,9 +143,9 @@ class TimedService():
         # 1.休赛期排行榜不刷新了
         curr_season = await ConfSeasonRC.get_current_season()
         if curr_season.get("status") != SeasonStatus.ACTIVE_SEASON:
-            cls.log_info(f"非开赛期，刷新排行榜失败: {curr_season.get('status')}")
+            cls.info_log(f"非开赛期，刷新排行榜失败: {curr_season.get('status')}")
             return
-        cls.log_info("刷新世界、地区排行榜")
+        cls.info_log("刷新世界、地区排行榜")
         season_id = curr_season.get("season_id")
         await UserRankingRC.refresh_ranking_list_group_by_region(season_id)  # 地区排行榜
 
@@ -158,24 +163,24 @@ class TimedService():
         """
         curr_season = await cls.__check_season_status(SeasonStatus.OFF_SEASON)
         if not curr_season:
-            # cls.log_info("非休赛期，无法重置排位分数")
+            # cls.info_log("非休赛期，无法重置排位分数")
             return
 
         next_season_conf = await ConfSeasonRC.db_model.filter(status=SeasonStatus.NEXT_SEASON).first()
         if not next_season_conf:
-            # cls.log_info("下个赛季还未配置，暂不重置玩家排位分数")
+            # cls.info_log("下个赛季还未配置，暂不重置玩家排位分数")
             return
         cur_time = tool_dt.cur_time()
         diff_time = next_season_conf.start_time - cur_time
         if diff_time >= 60 * 10:  # 默认10分钟
-            cls.log_info(f"下个赛季开始时间还差{diff_time}s, 不重置玩家修为！")
+            cls.info_log(f"下个赛季开始时间还差{diff_time}s, 不重置玩家修为！")
             return
 
         curr_season_id = curr_season.get('season_id')
         data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
         # if not data or not data.season_achieved:
         if not data:
-            cls.log_info(f"历史数据还未迁移，此时不能重置玩家修为分")
+            cls.info_log(f"历史数据还未迁移，此时不能重置玩家修为分")
             return
         # 2.将user_ranking的分数按公式递减
         # 3.更新user_ranking的ranking_id
@@ -188,9 +193,9 @@ class TimedService():
             await cls.scan_all_string_key_del(f'{UserRankingRC.tb_name}:*')
             await ConfSeasonRC.update_season_info(
                 curr_season_id, {'status': SeasonStatus.DAN_RESET}, curr_season)
-            cls.log_info("重置玩家排位分数")
+            cls.info_log("重置玩家排位分数")
         except Exception as e:
-            cls.log_info(f"事务执行失败，原因：{e}")
+            cls.info_log(f"事务执行失败，原因：{e}")
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -213,9 +218,9 @@ class TimedService():
                         pipe.delete(key)
                     # 执行管道中的所有命令
                     await pipe.execute()
-                cls.log_info("del_string_all_key suc!")
+                cls.info_log("del_string_all_key suc!")
         except Exception as e:
-            cls.log_info("del_string_all_key fail", e)
+            cls.info_log("del_string_all_key fail", e)
 
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
@@ -236,15 +241,15 @@ class TimedService():
         """ 排位数据写入历史表 """
         curr_season = await cls.__check_season_status(SeasonStatus.OFF_SEASON)
         if not curr_season:
-            cls.log_info("非休赛期，无法开始迁移到历史表")
+            cls.info_log("非休赛期，无法开始迁移到历史表")
             return
         curr_season_id = curr_season.get("season_id")
         data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
         if data:
-            cls.log_info(f"S{curr_season_id}赛季历史数据已写入，不再重复迁移")
+            cls.info_log(f"S{curr_season_id}赛季历史数据已写入，不再重复迁移")
             return
 
-        cls.log_info(f"S{curr_season_id}赛季主表迁移到历史表开始")
+        cls.info_log(f"S{curr_season_id}赛季主表迁移到历史表开始")
         # 事务：1.将user_ranking数据写入新表
         current_season_data = await UserRankingRC.query_all()
 
@@ -264,7 +269,7 @@ class TimedService():
         # 批量插入新的记录
         if new_records:
             sta = await RecordsUserRankingHistory.bulk_create(new_records, batch_size=1000)
-            cls.log_info("迁移主表到历史表 结果: ", sta)
+            cls.info_log("迁移主表到历史表 结果: ", sta)
 
     @classmethod
     @UtilsTool.cal_time()
@@ -315,7 +320,7 @@ class TimedService():
                 min_game_win_count,
                 max_game_win_game_count,
             )
-            cls.log_info(
+            cls.info_log(
                 "刷新机器人排位分数！",
                 curr_season.get("status"),
                 min_r_score,
@@ -333,7 +338,7 @@ class TimedService():
                 max_game_win_game_count,
             )
 
-            cls.log_info(
+            cls.info_log(
                 "刷新机器人游戏局数",
                 min_game_count,
                 max_game_count,
@@ -355,32 +360,32 @@ class TimedService():
         """ 赛季结算 邮件发奖 / 更新领奖状态 """
         curr_season = await self.__check_season_status(SeasonStatus.OFF_SEASON)
         if not curr_season:
-            self.log_info("非休赛期，无法开始赛季结算")
+            self.info_log("非休赛期，无法开始赛季结算")
             return
 
         curr_season_id = curr_season.get("season_id")
         data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
         if not data:
-            self.log_info(f"S{curr_season_id}赛季历史数据还未迁移，无法颁奖")
+            self.info_log(f"S{curr_season_id}赛季历史数据还未迁移，无法颁奖")
             return
         if data.season_achieved:
-            self.log_info(f"S{curr_season_id}赛季已经结算过，无法重复颁奖")
+            self.info_log(f"S{curr_season_id}赛季已经结算过，无法重复颁奖")
             return
 
-        self.log_info(f"S{curr_season_id}赛季结算正式开始")
+        self.info_log(f"S{curr_season_id}赛季结算正式开始")
         # 颁奖、起草邮件、更新状态
         await self.__main_service.season_settle_mails(..., data=curr_season)
-        self.log_info(f"赛季结算已完成")
+        self.info_log(f"赛季结算已完成")
 
     async def __stats_juliang_ads_data(self):
         """ 统计抖音小游戏巨量平台用户信息（每小时） """
-        self.log_info(f"{tool_dt.cur_time()} 即将开始统计抖音小游戏巨量平台投流用户信息")
+        self.info_log(f"{tool_dt.cur_time()} 即将开始统计抖音小游戏巨量平台投流用户信息")
         errcode, access_token = await DouYin.douyin_get_access_token()
         if errcode:
             return
 
         res_code, res_data = await JuLiangAdsRC.juliang_get_ecpm(access_token)
-        self.log_info(f"{tool_dt.cur_time()} 巨量平台投流用户信息查询结果：{res_code}, 数据列表：{res_data}")
+        self.info_log(f"{tool_dt.cur_time()} 巨量平台投流用户信息查询结果：{res_code}, 数据列表：{res_data}")
         if res_data and res_code == 0:
             await BaseAds.stats_and_update_ad_revenue(res_data)
 

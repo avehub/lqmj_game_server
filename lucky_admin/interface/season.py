@@ -132,7 +132,7 @@ class SeasonRankingHandler(AdminAuthApi):
         try:
             await ConfRankingRC.db_model.bulk_create(data_list)
         except Exception as e:
-            self.log_err(f'创建失败：{e}')
+            self.error_log(f'创建失败：{e}')
             self.answer(code=self.sta_code.FAIL, hint="创建失败")
 
     async def post(self, req: Request, **_b):

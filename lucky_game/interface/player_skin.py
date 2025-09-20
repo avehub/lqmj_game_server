@@ -14,6 +14,7 @@ from lucky_game.model_rc.base_prop import ItemsPropRC
 from lucky_game.model_rc.base_robot import ConfRobotRC
 from lucky_game.model_rc.base_skin import ItemsSkinRC, UserSkinRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from common.proto.py_pb2.http_player_vault import PbSkin, PbUsedGoods, PbGoods
 from common.public.enum_const import ServiceEnum, MonsterCardType, Switch, DbKey
 from lucky_game.const import GotType, GoodsItem, GamePropType, GoodsType, ReasonCostGold
 from lucky_game.model_rc.goods_manager import GoodsManagerRC
@@ -56,8 +57,9 @@ class SkinDharmaForm(GameAuthApi):
             "new_skin": [] if not new_skin else json_parse(new_skin),
             "cur_relics": upgrade_items.get("cur_relics") or 0
         }
-        self.log_info(uid, f"SkinDharmaForm 法相一级：法相之形 {cs_type}>>>")
-        return self.answer(data=data)
+        proto_data = PbSkin.pb_model(data)
+        self.info_log(uid, f"SkinDharmaForm 法相一级：法相之形 {cs_type}>>>")
+        return self.answer(data=proto_data)
 
 
 class SkinDharmaAppear(GameAuthApi):
@@ -105,8 +107,9 @@ class SkinDharmaAppear(GameAuthApi):
             "upgrade_skin": upgrade_skin,
             "new_skin": [] if not new_skin else json_parse(new_skin)
         }
-        self.log_info(uid, f"SkinDharmaAppear 法相二级：法相显现 {mc_enum.phrase}>>>")
-        return self.answer(data=data)
+        proto_data = PbSkin.pb_model(data, is_more=True)
+        self.info_log(uid, f"SkinDharmaAppear 法相二级：法相显现 {mc_enum.phrase}>>>")
+        return self.answer(data=proto_data)
 
 
 class GetSkinAllStarItems(GameAuthApi):
@@ -127,8 +130,9 @@ class GetSkinAllStarItems(GameAuthApi):
         (not filter_skin) and self.answer(self.sta_code.NO_CONFIGURATION, hint="没有法相配置，请稍后再试")
 
         data = {"all_skin": filter_skin}
-        self.log_info(f"GetSkinAllStarItems {public_id}所有星级信息")
-        return self.answer(data=data)
+        proto_data = PbSkin.pb_model(data, is_more=True)
+        self.info_log(f"GetSkinAllStarItems {public_id}所有星级信息")
+        return self.answer(data=proto_data)
 
 
 class UseSkinItem(GameAuthApi):
@@ -170,7 +174,7 @@ class UseSkinItem(GameAuthApi):
             sta = await UserSkinRC.set_user_skin(uid, goods_id, conf_skin.get("match_card")) # 对应卡牌（例如孙悟空里只能使用一款法相）
             (not sta) and self.answer(self.sta_code.FAIL, hint="装备法相失败，请稍后再试")
 
-        self.log_info(uid, f"UseSkinItem 法相装备成功 {goods_id}")
+        self.info_log(uid, f"UseSkinItem 法相装备成功 {goods_id}")
         return self.answer(hint="装备成功")
 
 
@@ -252,7 +256,7 @@ class UpgradeSkinItem(GameAuthApi):
                 await UserBagRC.update_user_bag(uid, cost_items)  # 更新剩余升级材料
                 await UserSkinRC.deal_upgradable_skin(uid, cs_type, id_list=[goods_id], is_del=True)  # 去除可升级名单
         except Exception as e:
-            self.log_err(f"UpgradeSkinItem 事务执行失败，原因：{e}")
+            self.error_log(f"UpgradeSkinItem 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="升星错误，请稍后再试")
 
         # 6.返回最新配置，使用状态不变
@@ -261,8 +265,9 @@ class UpgradeSkinItem(GameAuthApi):
             if s.get("cs_type") == cs_type:
                 new_skin['got_type'] = s.get("got_type")
 
-        self.log_info(uid, f"UpgradeSkinItem 法相升星成功，使用万能：{use_relic}")
-        return self.answer(data=new_skin, hint="升星成功")
+        proto_data = PbSkin.pb_model(new_skin, is_upgrade=True)
+        self.info_log(uid, f"UpgradeSkinItem 法相升星成功，使用万能：{use_relic}")
+        return self.answer(data=proto_data, hint="升星成功")
 
 
 class GetGameSkinUsedItems(GameAuthApi):
@@ -284,7 +289,7 @@ class GetGameSkinUsedItems(GameAuthApi):
 
         for uid in query_uid_list:
             if not isinstance(uid, int):
-                self.log_info(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
+                self.info_log(f"Invalid UID detected: {uid}, UIDs: {query_uid_list}")
                 return self.answer(self.sta_code.ERR_ARG, hint=f"非法的用户ID: {uid}")
 
         result_list = []
@@ -314,8 +319,9 @@ class GetGameSkinUsedItems(GameAuthApi):
                                     used_list.append(int(res))
                         result_list.append({"uid": uid, "used_goods": used_list})
 
-        self.log_info(query_uid_list, "GetGameSkinUsedItems 正在使用的法相查询成功")
-        return self.answer(data=result_list)
+        proto_data = PbUsedGoods.pb_model(result_list)
+        self.info_log(query_uid_list, "GetGameSkinUsedItems 正在使用的法相查询成功")
+        return self.answer(data=proto_data)
 
 
 class UseLimitedTimeSkin(GameAuthApi):
@@ -391,10 +397,10 @@ class UseLimitedTimeSkin(GameAuthApi):
                     up_goods = await UpAssets.update_assets(uid, [convert_goods], [])
                 await UserBagRC.update_user_bag(uid, [cost_item])
         except Exception as e:
-            self.log_err(f"UseLimitedTimeSkin 事务执行失败，原因：{e}")
+            self.error_log(f"UseLimitedTimeSkin 事务执行失败，原因：{e}")
             self.answer(self.sta_code.FAIL, hint="使用限时法相失败，请联系客服")
 
-        pro_data = [convert_goods] if to_updated else up_goods
-        self.log_info(uid, f"UseLimitedTimeSkin 使用限时法相成功，获得{days}天使用时间", skin_item_id)
+        pro_data = PbGoods.pb_model([convert_goods] if to_updated else up_goods)
+        self.info_log(uid, f"UseLimitedTimeSkin 使用限时法相成功，获得{days}天使用时间", skin_item_id)
         return self.answer(data=pro_data)
 

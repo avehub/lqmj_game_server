@@ -9,7 +9,7 @@ from common.utils.kit_dt import KitDt
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_award import ConfAwardRC
-# from lucky_game.model_rc.goods_manager import GoodsManagerRC
+from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from nsanic.libs.tool import json_encode, json_parse
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
@@ -41,7 +41,7 @@ class InteractionRC(RCModel):
                 awards_conf["award_level"] = a_item.get("award_level")
                 awards_list.append(awards_conf)
 
-#         await GoodsManagerRC.pack_goods_list(awards_list)
+        await GoodsManagerRC.pack_goods_list(awards_list)
         data = []
         for ac in awards_list:
             data.append({

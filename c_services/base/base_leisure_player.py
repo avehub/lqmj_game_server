@@ -17,9 +17,9 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__ranking_score = 0  # 段位分
         self.__check_info_ranking = {}
 
-        self.__skin_addition_num = 0  # 皮肤加成数量(金币)
-        self.__multiple_card_addition_num = 0  # 多倍卡加成数量(金币)
-        self.__free_loss_num = 0  # 免输数量（护盾卡）(金币)
+        self.__skin_addition_num = 0  # 皮肤加成数量(灵石)
+        self.__multiple_card_addition_num = 0  # 多倍卡加成数量(灵石)
+        self.__free_loss_num = 0  # 免输数量（护盾卡）(灵石)
         self.__ranking_score_free_num = 0  # 修为免输数量（固元丹）
 
         self.__actual_score = 0  # 实际赢分，非加成
@@ -54,12 +54,6 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__cancel_timer()
         self.__timer = DelayCall(seconds, func, *params, **kwargs)
         self.__timer.start()
-
-    def cancel_timer(self):
-        self.__cancel_timer()
-
-    def left_seconds(self) -> int:
-        return self.__timer and self.__timer.left_seconds()
 
     @property
     def is_out(self):
@@ -97,12 +91,12 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__is_win = flag
 
     def init_player(self, u_info: dict):
-        self.__gold = int(u_info.get("gold")) if u_info.get("gold") is not None else 0
+        self.__gold = u_info.get("gold") or 0
         self.__diamond = u_info.get("diamond") or 0
 
     def update_gold(self, score: int, accumulate=True):
         """
-        更新玩家金币
+        更新玩家灵石
         accumulate: 是否累计在得分上
         """
         res_count = self.__gold + score
@@ -163,9 +157,9 @@ class BaseLeisurePlayer(BasePlayer, Player):
     def add_ranking_score_free_num(self, num: int):
         self.__ranking_score_free_num += num
 
-    def player_info(self,contain_cards = True):
+    def player_info(self):
         """ 玩家信息：子类必须实现 """
-        data = super().player_info(contain_cards)
+        data = super().player_info()
         data["gold"] = self.__gold
         return data
 

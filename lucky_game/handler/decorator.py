@@ -4,14 +4,11 @@ from nsanic.libs import tool_jwt, tool_dt
 from sanic.request import Request
 from nsanic.libs.mult_log import NLogger
 from nsanic.handler_http import BaseRps
+
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import JWType
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.config import conf_srv, ConfSrv
-from nsanic.libs.consts import StaCode
-from nsanic.exception import JsonFinish
-from nsanic.libs.consts import Code
-from .middleware import logging_middleware
 
 
 class BaseDecorator(BaseRps):
@@ -25,42 +22,9 @@ class BaseDecorator(BaseRps):
 
     async def call_method(self, req, *args, **kwargs):
         response = self.__func(req, *args, **kwargs)
-
         if isawaitable(response):
             response = await response
         return response
-
-    async def check_inner(
-            self,
-            val: any,
-            require: bool = False,
-            default: any = None,
-            inner_dick: tuple = (),
-            p_name='') -> int or str:
-        """
-        内部指定参数校验
-        :param val: 待校验对象
-        :param require: 是否必要参数 默认非必要
-        :param default: 非必要状态下的默认值
-        :param inner_dick: 校验范围列表
-        :param p_name: 参数名
-        :return 转换的值--int
-        """
-        if not require:
-            return default
-        if val is None:
-            return self.answer(
-                code=StaCode.ERR_ARG,
-                hint=f"The parameter {p_name} is required"
-            )
-        if val in inner_dick:
-            return val
-        else:
-            return self.answer(
-                code=StaCode.ERR_ARG,
-                hint=f"The parameter {p_name} is not within the range of parameter values"
-            )
-
 
 
 class GameChecker(BaseDecorator):
@@ -74,8 +38,8 @@ class GameChecker(BaseDecorator):
         """ 检查必要参数 """
         c_os = req.args.get("c_os")
         self.check_str(c_os, require=True, p_name="c_os")
-        platform = req.args.get("platform")
-        self.check_str(platform, require=True, p_name="platform")
+        c_platform = req.args.get("c_platform")
+        self.check_str(c_platform, require=True, p_name="c_platform")
         c_uid = req.args.get("c_uid")
         self.check_int(c_uid, require=True, minval=1, p_name="c_uid")
         c_ver = req.args.get("c_ver")
@@ -94,9 +58,7 @@ class GameChecker(BaseDecorator):
 
         kwargs.update({"u_info": u_info})
         kwargs.update({"jwt_info": data})
-        result = await self.call_method(req, *args, **kwargs)
-        self.loginfo(f"出参:", result)
-        return result
+        return await self.call_method(req, *args, **kwargs)
 
     @classmethod
     async def verify_token(cls, req):
@@ -140,7 +102,7 @@ class CurrentLimiting(BaseDecorator):
         await self.conf.rds.expired(cache_key, self.exp)  # 设置键过期时间
 
         if incr_value > self.limit_times:
-            return self.answer(code=self.sta_code.REQ_FREQUENT)
+            self.answer(code=self.sta_code.REQ_FREQUENT)
 
         return await self.call_method(req, *args, **kwargs)
 

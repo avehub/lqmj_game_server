@@ -69,22 +69,22 @@ class BaseWS(BaseWebsocket, CommonApi):
         while 1:
             try:
                 msg = await ws.recv()
-                (c_type, c_code), data = self.fun_parse_msg(msg, log_fun=self.log_err)
+                (c_type, c_code), data = self.fun_parse_msg(msg, log_fun=self.error_log)
                 if c_type and (c_type == self.dft_type) and (c_code == self.beat_code):
                     await ws.send(msg)
                 else:
                     await self.distribute(ws, c_type, c_code, data)
             except WebsocketClosed as e:
-                self.log_err(f"{ws.ukey}, ws关闭：{e}")
+                self.error_log(f"{ws.ukey}, ws关闭：{e}")
                 return
             except Exception as e:
-                self.log_err(f"消息错误：{e}")
+                self.error_log(f"消息错误：{e}")
                 return
 
     async def __consume_rmq(self):
         """ 消费rabbitmq """
         exchange_name = f"{Channel.C_SERVICES}_{self.conf.SERVER_ENUM.val}"
-        self.log_info(f"""
+        self.info_log(f"""
             ws启动rmq服务：
             交换器：{exchange_name},
             路由键：{self.routing_key},
@@ -147,13 +147,13 @@ class BaseWS(BaseWebsocket, CommonApi):
         old_ws = self.ws_manager.get_ws(uid)
         if old_ws:
             if old_ws.timestamp >= timestamp:
-                self.log_info("ws请求过期", uid, old_ws.timestamp, timestamp)
+                self.info_log("ws请求过期", uid, old_ws.timestamp, timestamp)
                 data = PbWsBaseRep.encode(self.sta_code.EXPIRED, hint=f"请求过期（{timestamp}），请刷新！")
                 await ws.send(self.fun_pack_msg(self.dft_type, self.reject_code, data))
                 return False
             data = PbWsBaseRep.encode(self.sta_code.MULT_LOGIN)
             await old_ws.send(self.fun_pack_msg(self.dft_type, self.reject_code, data))
-            self.log_info("异地登录, 旧连接：", old_ws.ws_proto.id, "新连接：", ws.ws_proto.id)
+            self.info_log("异地登录, 旧连接：", old_ws.ws_proto.id, "新连接：", ws.ws_proto.id)
         else:
             await self.mult_login_at_different_process(uid)
 
@@ -167,20 +167,20 @@ class BaseWS(BaseWebsocket, CommonApi):
         """ 异地登录在不同的进程 """
         ws_id = await self.get_player_ws_id(uid)
         if ws_id > 0 and ws_id != self.__process_id:
-            self.log_info(uid, f"异地登录在不同的进程, 老进程：{ws_id}, 新进程: {self.__process_id}")
+            self.info_log(uid, f"异地登录在不同的进程, 老进程：{ws_id}, 新进程: {self.__process_id}")
             data = {"from_pid": self.__process_id, "uid": uid}
             await self.cs2cs_by_rmq(ServiceEnum.WS_HALL, self.mult_process_login_code, data, 1, r_key=self.extra_rkey)
 
     async def deal_mult_process_login(self, data: bytes):
         """ 处理多进程登录 """
-        data = json_parse(data, log_fun=self.log_err)
+        data = json_parse(data, log_fun=self.error_log)
         from_pid = data.get('from_pid')
         if from_pid == self.__process_id:
             return
         uid = data.get("uid")
         old_ws = self.ws_manager.get_ws(uid)  # 旧连接没有与新连接不是一个进程
         if old_ws:
-            self.log_info(uid, f"处理多进程登录, 新进程：{from_pid}通知老进程: {self.__process_id}关闭连接")
+            self.info_log(uid, f"处理多进程登录, 新进程：{from_pid}通知老进程: {self.__process_id}关闭连接")
             data = PbWsBaseRep.encode(self.sta_code.MULT_LOGIN)
             await old_ws.send(self.fun_pack_msg(self.dft_type, self.reject_code, data))
             await self.ws_manager.close_ws(uid, del_key=False)
@@ -194,7 +194,7 @@ class BaseWS(BaseWebsocket, CommonApi):
 
         await super().on_offline(uid)  # todo: 这里不删除online key
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
-        self.log_info(uid, "玩家断线, 通知所在子服务：", cs_info)
+        self.info_log(uid, "玩家断线, 通知所在子服务：", cs_info)
         if cs_info:
             cs_type = cs_info.get("cs_type")
             cs_enum = ServiceEnum.find_member_by_val(cs_type)
@@ -231,7 +231,7 @@ class BaseWS(BaseWebsocket, CommonApi):
         """ rmq监听消息回调 """
         async with message.process():
             # 此处用上下文处理必须走完所有逻辑消息才算完成
-            c_type, c_code, data, uid = self.parse_channel_msg(message.body, self.log_err)
+            c_type, c_code, data, uid = self.parse_channel_msg(message.body, self.error_log)
             match message.routing_key:
                 case self.extra_rkey:
                     uid = -1
@@ -250,7 +250,7 @@ class BaseWS(BaseWebsocket, CommonApi):
 
     async def __deal_ban_player_online(self, data):
         """ 在线处理封禁玩家 """
-        data = json_parse(data, log_fun=self.log_err)
+        data = json_parse(data, log_fun=self.error_log)
         uid = data.get("uid")
         ws = self.ws_manager.get_ws(uid)
         if not ws:
@@ -277,7 +277,7 @@ class BaseWS(BaseWebsocket, CommonApi):
                 try:
                     ws and (await ws.send(self.fun_pack_msg(c_type, c_code, data)))
                 except Exception as err:
-                    self.log_info(f'公共消息推送失败：{err}')
+                    self.info_log(f'公共消息推送失败：{err}')
             return
         ws = self.ws_manager.get_ws(receiver)
         if not ws:
@@ -285,4 +285,4 @@ class BaseWS(BaseWebsocket, CommonApi):
         try:
             return await ws.send(self.fun_pack_msg(c_type, c_code, data))
         except Exception as err:
-            self.log_info(f'发送目标消息失败,receiver:{receiver},data:{data},错误信息：{err}')
+            self.info_log(f'发送目标消息失败,receiver:{receiver},data:{data},错误信息：{err}')

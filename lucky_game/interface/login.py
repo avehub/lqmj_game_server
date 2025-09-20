@@ -1,32 +1,26 @@
 """
 登录相关接口
 """
-import jwt
 from nsanic.libs import tool_jwt, tool_dt
-from sanic import Request, response
+from sanic import Request
 from typing import List, Dict
-
-
 from c_services.const.cs_enum_const import CmdWorkers
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.decorator import LimitTestCall
 from lucky_game.handler.douyin import DouYin
-from lucky_game.handler.ios_pay import ios_service
 from lucky_game.model_db.log import RecordsGameUserLogin
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
-# from lucky_game.model_rc.vip_level import UserVipRC
+from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.server_addr import ServerAddrRC
-from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum, StaCode
+from common.public.enum_const import JWType, LoginWay, DbKey, RegionEnum
+from common.proto.py_pb2.http_login import PbLogin, PbS2CExternalReturn
 from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
-from lucky_game.handler.ali_verification import AliVerification
-from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
-from common.public.conf import ASSET_SERVER_ADDR
-import random
+
 
 class BaseLogin(GameAuthApi):
 
@@ -37,7 +31,7 @@ class BaseLogin(GameAuthApi):
             return {}
         data = {}
         if not self.conf.DEBUG_MODE:
-            ip_info = await UtilsTool.get_ip_geo(ip, self.log_info)  # 获取玩家地址相关
+            ip_info = await UtilsTool.get_ip_geo(ip, self.info_log)  # 获取玩家地址相关
             if not ip_info:
                 return data
             data["address"] = ip_info.get("city") or ""
@@ -49,7 +43,10 @@ class BaseLogin(GameAuthApi):
     async def update_user_login_info(self, req, u_info, login_info):
         """ 更新玩家表登录数据 """
         updated = {'valid_key': self.rng.mk_str(16), 'ip': self.ori_ip(req)}
+        # ip_info = await self.request_get_ip_geo(req, u_info.get("ip"))  # 2024/11/19仅在玩家第一次登录游戏获取
+        # updated.update(ip_info)
         u_info = await BaseUserRC.update_info(u_info, updated)
+
         login_info.update({'uid': u_info.get('uid')})
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
         return u_info
@@ -63,7 +60,7 @@ class BaseLogin(GameAuthApi):
             'dev_id': dev_ident,
             'login_ip': ip,  # req.remote_addr or req.ip,
             'tst_mark': True if login_way == LoginWay.GUEST else False,
-            'platform': req.args.get('platform') or req.json.get('platform') or req.headers.get('platform') or "",
+            'platform': req.args.get('c_platform') or req.json.get('c_platform') or req.headers.get('c_platform') or "",
             'dev_name': req.args.get('c_os') or req.json.get('c_os') or req.headers.get('c_os') or ""
         }
         return login_info
@@ -76,43 +73,45 @@ class BaseLogin(GameAuthApi):
         """
         safe_key = self.rng.mk_str(18)
         valid_key = self.rng.mk_str(16)
-        dev_ident = login_info.get("dev_id")
-        platform = user_info.get("platform")
+
         name = user_info.get("nickname") or user_info.get("nick_name") or ""
-        avatar = user_info.get("avatar", f"avatar/avatar_{random.randint(1, 7)}.png")
         if name:
             name = UtilsTool.filter_emoji(name[:20])
         else:
-            name = f"游客{self.rng.mk_str(4, True)}"
+            name = f"游客{self.conf.rng.mk_str(8, True)}"
 
-        unique = dev_ident
-        if platform == PlatForm.NATIVE_APP:
-            unique = dev_ident + user_info.get("apple_id", "")
-
-        print("login_info", login_info)
-        print("user_info", user_info)
         info = {
             'name': name,
             'safe_key': safe_key,
             'valid_key': valid_key,
+
             "ip": login_info.get("login_ip"),
             'address': login_info.get("address"),
             'region': login_info.get("region"),
             'country': login_info.get("country") or "CN",
             'tst_mark': login_info.get("tst_mark") or False,
-            "dev_ident": dev_ident,
-            "platform": platform,
-            'wechat': user_info.get("wechat") or 0,
-            "unionid": user_info.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', unique)),
-            "openid": user_info.get("openid", UtilsTool.get_hash_secrets('guest_openid', unique)),
-            "avatar": avatar,
-            "phone": user_info.get("phone", ""),
-            "apple_id": user_info.get("apple_id", ""),
+            "dev_ident": login_info.get("dev_id"),
+
+            "platform": user_info.get("platform") or PlatForm.DEFAULT,
+            "unionid": user_info.get("unionid"),
+            "openid": user_info.get("openid")
         }
         return info
 
     async def format_login_info(self, u_info: dict, server_info: list, jwt_type=JWType.USER, issued=True):
         uid = u_info.get("uid")
+        # -- snip --
+        # todo: 临时代码(上线去掉)
+        # if LIVE_SERVER:
+        #     if tool_dt.cur_time() < ONLINE_TIME:
+        #         flag = await self.rds.conn.sismember('white_list', uid)
+        #         if not flag:
+        #             hint = f"游戏将于{ONLINE_TIME_STR}开启\n请玩家耐心等待……({uid})"
+        #             self.answer(code=self.sta_code.FAIL, hint=hint)
+        #     else:
+        #         await self.rds.drop_item('white_list')
+        # -- snip --
+
         if issued:  # 未签发走这里，签发jwt
             safe_key = u_info.pop('safe_key')
             subject_info = f"{u_info.get('created')}_{uid}"  # client_info
@@ -121,15 +120,16 @@ class BaseLogin(GameAuthApi):
             u_info.update({'token': token})
 
         # vip等级查询
-        # vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
-        # u_info.update({"vip_level": vip_info.get("level")})
+        vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
+        u_info.update({"vip_level": vip_info.get("level")})
 
         data = {"user_info": u_info, "server_info": server_info}
-        self.log_info("user login: ", uid, u_info.get("token"))
+        proto_data = PbLogin.pb_model(data)
+        self.info_log("user login: ", uid, u_info.get("token"))
 
         await self.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, uid=uid)
         await self.push_task2worker(CmdWorkers.LOGIN_SIGN_IN, uid=uid)
-        return self.answer(data=data)
+        return self.answer(data=proto_data)
 
     async def create_new_user(
             self,
@@ -144,20 +144,16 @@ class BaseLogin(GameAuthApi):
         login_info.update(ip_info)
 
         req_user_info = req_user_info or {}
-        req_user_info["platform"] = platform
+        req_user_info["platform"] = platform or PlatForm.DEFAULT
         u_dict = self.init_user_info(login_info, req_user_info)
 
-        # 新用户登录赠送金币
+        # 新用户登录赠送灵石
         gift_conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_NEW_USER_GIFT)
         asset_gift = {'gold': gift_conf.get("gold"), 'diamond': gift_conf.get("diamond")}
-        if platform == PlatForm.WECHAT_MINI_GAME:
-            asset_gift["yellow_diamond"] = gift_conf.get("yellow_diamond")
-        else:
-            asset_gift["room_card"] = gift_conf.get("room_card")
         u_dict.update(asset_gift)
 
         # 写入新用户信息
-        self.log_info('init user:', u_dict)
+        self.info_log('init user:', u_dict)
         await BaseUserRC.db_model.add_one(u_dict)
         cache_key = cache_key or unique_key
         # 返回新用户信息
@@ -171,8 +167,7 @@ class BaseLogin(GameAuthApi):
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
         await self.push_task2worker(
             CmdWorkers.USER_EVENT_TRACKING, uid=uid, msg={'event_tracking': EventTracking.AFTER_REGISTER.val})
-        # 赠送金币记录入库
-        await ExtraUserResourceChangesRC.bulk_register_change_record(uid, asset_gift)
+
         await self.push_task2worker(CmdWorkers.FETCH_ACTIVE_MAILS, uid=uid)
         u_info["new_user"] = True
         return u_info
@@ -191,29 +186,28 @@ class LoginByGuest(BaseLogin):
 
     async def post(self, req: Request):
         server_info = await self.whether_through()
-        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台ID")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        # platform = PlatForm.WEBPAGE
+        platform = PlatForm.TEST
         q_params = {
             "dev_ident": dev_ident,
             "platform": platform,
         }
         u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_DEVICE_ID)
         login_info = await self.get_login_info(req, LoginWay.GUEST, dev_ident=dev_ident)
+
         if not u_info:
             u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform)
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
 
-        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO, hint='Failed to login')
-        self.log_info('LoginByGuest suc:', u_info.get("uid"))
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO, hint='Failed to login')
+        self.info_log('LoginByGuest suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
-
-class LoginByWechat(BaseLogin):
-    """ 微信登陆（公众号、小程序、微信APP） """
+class LoginByWechatMiniProgram(BaseLogin):
+    """ 微信MG登陆 """
     decorators = []
 
     async def post(self, req: Request):
@@ -221,66 +215,112 @@ class LoginByWechat(BaseLogin):
         # 获取客户端code
         server_info = await self.whether_through()
         code = req.json.get('code')
-        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
-        dev_ident = req.json.get('device_id') or req.headers.get('device_id')
-        (not code or not dev_ident) and self.answer(StaCode.ERR_ARG, hint='Failed to login')
+        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
 
-        errcode, req_data = await WeChat.wechat_login(code, platform)
-        self.log_info('Wechat wechat_app_login result:', errcode, req_data)
+        errcode, req_data = await WeChat.wechat_mini_game_login(code)
+        self.info_log('Wechat mini_program_login result:', errcode, req_data)
         if errcode > 0:
-            data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(StaCode.EXTERNAL_ERR, data, hint=req_data)
+            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
 
-        # 通过open_id查询数据库用户信息
+        # 通过union_id查询数据库用户信息
         openid = req_data.get('openid')
+        platform = PlatForm.WECHAT_MINI_GAME
         q_params = {
             "openid": openid,
             "platform": platform
         }
-        unique_key = BaseUserRC.KEY_OPENID
-        if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
-            # 微信公众号、微信APP为同一账号
-            req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
-            if not req_sta:
-                self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
-            q_params = {
-                "unionid": req_data.get('unionid'),
-                "platform__in": [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP],
-            }
-            unique_key = BaseUserRC.KEY_UNION_ID
-        u_info = await BaseUserRC.cache_by_unique(q_params, unique_key)
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_OPENID)
         login_info = await self.get_login_info(req, LoginWay.WECHAT)
 
         # 新用户 注册
         if not u_info:
-            req_data["avatar"] = req_data.get('headimgurl') if platform == PlatForm.WECHAT_MP else f"avatar/avatar_{random.randint(1, 7)}.png"
-            req_data["wechat"] = 1
-            req_data["unionid"] = req_data.get('unionid')
             u_info = await self.create_new_user(
                 req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
-            self.log_info('Wechat Reg u_info:', u_info)
+            self.info_log('WechatMG Reg u_info:', u_info)
         # 老用户 登录
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('Wechat Login u_info:', u_info)
+            self.info_log('WechatMG Login u_info:', u_info)
 
-        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
-        if platform == PlatForm.WECHAT_MINI_GAME:
-            session_key = req_data.get("session_key")
-            await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
-        self.log_info('LoginByWechat suc:', u_info.get("uid"))
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO, hint='Failed to login')
+        # 保存session key (有效期不知) 用户登录态凭证
+        session_key = req_data.get("session_key")
+        await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
+        self.info_log('LoginByWechatMiniProgram suc:', u_info.get('uid'))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
+
+class LoginByWechat(BaseLogin):
+    """ 微信登陆 """
+    decorators = []
+
+    async def post(self, req: Request):
+        """ 通过code登录 """
+        # 获取客户端code
+        server_info = await self.whether_through()
+        code = req.json.get('code')
+        dev_ident = req.json.get('device_id') or req.headers.get('device_id')
+        (not code or not dev_ident) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
+
+        errcode, req_data = await WeChat.wechat_app_login(code)
+        self.info_log('Wechat wechat_app_login result:', errcode, req_data)
+        if errcode > 0:
+            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+
+        return await self.__after_get_token_by_code(req, req_data, server_info, dev_ident)
+
+    async def __after_get_token_by_code(self, req, data, server_info, dev_ident):
+        # 获取access_token、open_id等信息
+        access_token = data.get('access_token')
+        open_id = data.get('openid')
+        url = "https://api.weixin.qq.com/sns/userinfo?access_token={0}&openid={1}&connect_redirect=1"
+        url = url.format(access_token, open_id)
+
+        # 通过access_token和open_id获取用户个人信息（UnionID机制）
+        req_get = await http_get(url)
+        req_data = json_parse(req_get)
+        self.info_log('Wechat userinfo result:', req_data)
+        errcode = req_data.get("errcode", 0)
+        if errcode > 0:
+            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+
+        # 通过union_id查询数据库用户信息
+        union_id = req_data.get('unionid')
+        platform = PlatForm.WECHAT_MINI_GAME
+        q_params = {
+            "unionid": union_id,
+            "platform": platform
+        }
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_UNION_ID)
+        login_info = await self.get_login_info(req_get, LoginWay.WECHAT)
+
+        # 新用户 注册
+        if not u_info:
+            u_info = await self.create_new_user(
+                req, 'unionid', login_info, req_data, BaseUserRC.KEY_UNION_ID, platform=platform)
+            self.info_log('Wechat Reg u_info:', u_info)
+        # 老用户 登录
+        else:
+            u_info = await self.update_user_login_info(req, u_info, login_info)
+            self.info_log('Wechat Login u_info:', u_info)
+
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        self.info_log('LoginByWechat suc:', u_info.get("uid"))
+        return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
 class LoginByToken(BaseLogin):
     """ 通过token登录 """
+
     async def post(self, req: Request, **kwargs):
         server_info = await self.whether_through()
         u_info = kwargs.get("u_info")
         login_info = await self.get_login_info(req, LoginWay.TOKEN)
         u_info = await self.update_user_login_info(req, u_info, login_info)
-        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
         jwt_info = kwargs.get("jwt_info")
         issued = False
         if jwt_info.get('exp') - tool_dt.cur_time() <= 43200:
@@ -290,158 +330,106 @@ class LoginByToken(BaseLogin):
             # 这里不签发新的
             u_info.update({'token': req.headers.get("Authorization")})
 
-        self.log_info('LoginByToken suc:', u_info.get("uid"), issued)
+        self.info_log('LoginByToken suc:', u_info.get("uid"), issued)
         return await self.format_login_info(u_info, server_info, issued=issued)
 
 
-class SendCode(BaseLogin):
-    """ 发送验证码 """
+class LoginByAlipayGame(BaseLogin):
+    """ 支付宝MG登录 """
     decorators = []
-    async def post(self, req: Request):
-        # 获取客户手机号
-        phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
-        scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
-        sta, e = await AliVerification.send_code(phone_number, scene)
-        if sta is False:
-            return self.answer(StaCode.FAIL, hint=e)
-        return self.answer()
 
-
-class LoginByPhone(BaseLogin):
-    """ 通过手机号登录 """
-    decorators = []
     async def post(self, req: Request):
-        phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
-        scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
-        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
-        code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
-        dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
-        device_id = self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
-        sta, e = await AliVerification.verify_code(phone_number, code, scene)
-        if sta is False:
-            return self.answer(StaCode.FAIL, hint=e)
-        # 通过手机号查询数据库用户信息
-        user_data = {
-            "phone": phone_number
+        """ 通过code登录 """
+        # 获取客户端code
+        server_info = await self.whether_through()
+        code = req.json.get('code')
+        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
+
+        results, req_data = await Alipay.ali_get_access_token(code, AliGrantType.GET_TOKEN)
+        self.info_log('Ali get_access_token result:', results, req_data)
+        if not results:
+            data = PbS2CExternalReturn.pb_model(
+                **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+            self.answer(self.sta_code.EXTERNAL_ERR, data)
+
+        return await self.__after_get_token_by_code(req, req_data, server_info)
+
+    async def __after_get_token_by_code(self, req, at_data, server_info):
+        """非静默授权"""
+        open_id = at_data.get('open_id')
+        # 通过access_token、open_id获取授权和个人信息（非静默授权再用）
+        # results, req_data = await Alipay.ali_get_user_auth_info(open_id, access_token)
+        # self.info_log('Ali login_by_code results:', results, 'req_data:', req_data)
+        # if not results:
+        #     data = PbS2CExternalReturn.pb_model(
+        #         **{"errcode": int(req_data.get('code')), "errmsg": req_data.get('sub_msg')})
+        #     self.answer(self.sta_code.EXTERNAL_ERR, data)
+        """静默授权"""
+        platform = PlatForm.ALI_MINI_GAME
+        req_data = {
+            "openid": open_id,
+            "platform": platform
         }
-        u_info = await BaseUserRC.cache_by_unique(user_data, BaseUserRC.KEY_PHONE_CACHE)
-        login_info = await self.get_login_info(req, LoginWay.PHONE)
+
+        # 通过open_id和platform 查询数据库用户信息
+        u_info = await BaseUserRC.cache_by_unique(req_data, BaseUserRC.KEY_OPENID)
+        login_info = await self.get_login_info(req, LoginWay.ALIPAY)
+
+        # 新用户 注册
         if not u_info:
-            # 手机号注册
-            req_user = await BaseUserRC.get_default_user_info("phone", phone=phone_number, device_id=device_id, platform=platform)
             u_info = await self.create_new_user(
-                req, 'phone', login_info, req_user, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform)
-            self.log_info('phone number Reg u_info:', u_info)
+                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
+            self.info_log('Ali Reg u_info:', u_info)
+        # 老用户 登录
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('DouYinMG Login u_info:', u_info)
+            self.info_log('Ali Login u_info:', u_info)
 
-        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
-        server_info = await self.whether_through()
-        self.log_info('LoginByPhone suc:', u_info.get("uid"))
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        self.info_log('LoginByAlipayGame suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
-class LoginByApple(BaseLogin):
-    """Apple 登录"""
+class LoginByDouYinGame(BaseLogin):
+    """ 抖音MG登录 """
     decorators = []
 
     async def post(self, req: Request):
-        # 1. 获取请求参数
-        name = self.check_str(req.json.get('name'), require=False,  p_name="昵称")
-        email = self.check_str(req.json.get('email'), require=False,  p_name="邮箱")
-        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
-        device_id = self.check_str(req.json.get('device_id'), require=True, maxlen=18, p_name="设备ID")
-        apple_id = self.check_str(req.json.get('apple_id'), require=True, p_name="苹果用户ID")
-        if not apple_id:
-            return self.answer(StaCode.ERR_ARG, hint="缺少必要参数")
-        u_info = await BaseUserRC.cache_by_unique({'apple_id': apple_id, "platform": platform}, BaseUserRC.KEY_APPLE_ID)
-        # 2. 获取服务器信息
+        """ 通过code登录 """
+        # 获取客户端code
         server_info = await self.whether_through()
+        code = req.json.get('code')
+        (not code) and self.answer(self.sta_code.ERR_ARG, hint='Failed to login')
 
-        # 3. 使用 code 获取 token 和用户信息
-        # success, user_info = await ios_service.get_apple_user_info(code)
-        # if not success:
-        #     return self.answer(StaCode.TOKEN_INVALID, hint=user_info)
-
-        # 查询用户是否已存在
-        # u_info = await BaseUserRC.get_user_by_apple(apple_id)
-        login_info = await self.get_login_info(req, LoginWay.APPLE, device_id)
-
-        # 5. 新用户注册或老用户登录
-        if not u_info:
-            # 新用户注册
-            nickname = f"Ios{apple_id[:3]}" if not name else name  # 默认昵称
-
-            # 创建用户
-            u_info = await self.create_new_user(
-                req,
-                'apple_id',
-                login_info,
-                {
-                    'apple_id': apple_id,
-                    "device_id": device_id,
-                    'email': email,
-                    'nickname': nickname,
-                },
-                'apple_id',
-                platform=PlatForm.NATIVE_APP
-            )
-            self.log_info('Apple Reg u_info:', u_info)
-        else:
-            # 老用户登录
-            u_info = await self.update_user_login_info(req, u_info, login_info)
-            self.log_info('Apple Login u_info:', u_info)
-
-        if not u_info:
-            return self.answer(StaCode.FAIL, hint="用户登录失败")
-
-        self.log_info('LoginByApple success:', u_info.get("uid"))
-        return await self.format_login_info(u_info, server_info, JWType.USER)
-
-class BindByWechat(BaseLogin):
-    """ 绑定微信 """
-    async def post(self, req: Request, **kwargs):
-        code = self.check_str(req.json.get('code'), require=True, p_name="微信code")
-        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
-        user = kwargs.get("u_info")
-        if not user or user.get("wechat"):
-            return self.answer(StaCode.NO_PLAYER_INFO)
-        if user.get("wechat"):
-            return self.answer(StaCode.FAIL, hint="微信已绑定")
-        errcode, req_data = await WeChat.wechat_login(code, platform)
-        self.log_info('Wechat wechat_app_login result:', errcode, req_data)
+        errcode, req_data = await DouYin.douyin_mini_game_login(code)
+        self.info_log('DouYin mini_game_login result:', code, req_data)
         if errcode > 0:
-            data = {"errcode": errcode, "errmsg": req_data}
-            self.answer(StaCode.EXTERNAL_ERR, data, hint=req_data)
-        req_sta, data = await WeChat.wechat_userinfo(req_data.get('access_token'), req_data.get('openid'))
-        if not req_sta:
-            self.answer(StaCode.EXTERNAL_ERR, data=data)
-        unionid = data.get('unionid')
-        q_params = {
-            "unionid": unionid,
+            data = PbS2CExternalReturn.pb_model(**{"errcode": errcode, "errmsg": req_data})
+            self.answer(self.sta_code.EXTERNAL_ERR, data, hint=req_data)
+
+        # 通过union_id查询数据库用户信息
+        union_id = req_data.get('unionid')
+        platform = PlatForm.DOUYIN_MINI_GAME
+        user_data = {
+            "unionid": union_id,
+            "platform": platform
         }
-        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_UNION_ID)
-        if u_info:
-            return self.answer(StaCode.FAIL, hint="微信已绑定其他账号，请直接使用微信登录")
-        updated = {
-            'valid_key': self.rng.mk_str(16),
-            'ip': self.ori_ip(req),
-            'openid': data.get('openid'),
-            'unionid': unionid,
-            'wechat': 1,
-            'name': data.get('nickname'),
-        }
-        if data.get('nickname'):
-            updated['name'] = data.get('nickname')
-            updated['sex'] = data.get('sex') or 0
-        if data.get('headimgurl'):
-            updated['avatar'] = data.get('headimgurl')
-        u_info = await BaseUserRC.update_info(user, updated)
-        (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
-        return self.answer()
+        u_info = await BaseUserRC.cache_by_unique(user_data, BaseUserRC.KEY_UNION_ID)
+        login_info = await self.get_login_info(req, LoginWay.WECHAT)
 
+        # 新用户 注册
+        if not u_info:
+            u_info = await self.create_new_user(
+                req, 'unionid', login_info, req_data, BaseUserRC.KEY_UNION_ID, platform=platform)
+            self.info_log('DouYinMG Reg u_info:', u_info)
+        # 老用户 登录
+        else:
+            u_info = await self.update_user_login_info(req, u_info, login_info)
+            self.info_log('DouYinMG Login u_info:', u_info)
 
-
-
-
+        (not u_info) and self.answer(self.sta_code.NO_PLAYER_INFO)
+        # 保存会话密钥，如果请求时有 code 参数才会返回
+        session_key = req_data.get('session_key')
+        await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
+        self.info_log('LoginByDouYinGame suc:', u_info.get("uid"))
+        return await self.format_login_info(u_info, server_info, JWType.USER)

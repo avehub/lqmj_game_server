@@ -8,5 +8,3 @@ common/public/conf.py
 __pycache__/
 restart.sh
 test.py
-luck_proto/
-.python-version
