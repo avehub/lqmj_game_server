@@ -11,7 +11,7 @@ from tortoise.transactions import in_transaction
 
 from c_services.const.cs_enum_const import CmdRoom
 from common.public.conf import C_SERVICE_SECRET_KEY
-from common.public.enum_const import ServiceEnum, DbKey
+from common.public.enum_const import ServiceEnum, DbKey, CacheKey
 from lucky_game.const import ActivityType, ActivitySta, AwardType, PayType, ReasonCostGold, OrderStatus, GoodsSku, \
     PlatForm
 from lucky_game.config import conf_srv, ConfSrv
@@ -686,7 +686,8 @@ class FirstCharge(Base):
         explain = ""
         if activity.get("act_type") == ActivityType.RETURN_GIFT:
             # 返还礼包额外金币
-            return_gold = await BaseServer.get_play_gold(uid)
+            return_gold = await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, str(uid), jsparse=True)
+            # return_gold = await BaseServer.get_play_gold(uid)
             extra = {'return_gold': return_gold.get("gold", 0)}
             explain = json_encode(extra)
         act_order, msg = await PaymentLogic().create_order(uid, express, pay_mode, platform, explain=explain,
