@@ -50,7 +50,7 @@ class BaseCardRoom(BaseRoom):
         else:
             self.__deal_cards_count = 13
 
-        # DelayCall(120, self.close_room_time_out).loop_start()
+        DelayCall(120, self.close_room_time_out).loop_start()
 
     @property
     def extra_score_map(self):
@@ -152,10 +152,15 @@ class BaseCardRoom(BaseRoom):
                     return await self.force_dismiss()
                 await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, "房主不能退出")
                 return
+            sta,e = await GameRoomsRC.leave_room(self.tid, player.uid)
+            if not sta:
+                self.log_info("离开房间失败",e)
+                await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, e)
+                return
             one_of_model = s2c_one_of_model()
             one_of_model.seat_id = player.seat_id
             await self.inner_broadcast(CmdRoom.QUIT_ROOM, one_of_model)
-            await GameRoomsRC.leave_room(self.tid, player.uid)
+
             self.seats[player.seat_id - 1] = None
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             self.service.release_player(player)
@@ -375,7 +380,9 @@ class BaseCardRoom(BaseRoom):
             if not sta:
                 self.log_info("扣费失败",e,"入参",self.tid, uid_list)
                 return
-            record_info = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
+            record_info,e = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
+            if not record_info:
+                self.log_info("战绩创建失败",e,"入参",self.tid, tool_dt.cur_time())
             self.__record_id = record_info[0].record_rid
         self.call_flow(2, self.round_start)
 

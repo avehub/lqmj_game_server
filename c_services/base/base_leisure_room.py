@@ -86,8 +86,6 @@ class BaseLeisureRoom(BaseRoom):
             await self.update_player_bag_prop_used()  # 更新道具使用
 
         seat2uid = {}
-        gold_info = await self.service.get_play_gold(self.seats[0].uid)
-        self.log_info("入场金币",self.seats[0].uid,gold_info)
         for p in self.seats:
             self.__record_ori_gold[p.seat_id] = p.gold
             seat2uid[p.seat_id] = p.uid
