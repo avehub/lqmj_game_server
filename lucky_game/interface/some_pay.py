@@ -435,8 +435,7 @@ class MiniGameQueryOrder(BaseSomePay):
         self.log_info(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"主动查询，本地结果 {order_info}")
 
         # 2.查询微信小游戏订单
-        access_token = await self.wechat_get_access_token()
-        errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, access_token, order_id)
+        errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, order_id)
         self.log_info(uid, "MiniGameQueryOrder 解析查询数据：", req_data, errcode)
         if errcode:
             data = {"errcode": errcode, "errmsg": req_data}

@@ -354,8 +354,8 @@ class Stores(DBModel):
     img = fields.CharField(max_length=256, null=True, default='', description='图片')
     desc = fields.CharField(max_length=256, null=True, default='', description='描述')
     status = fields.SmallIntField(max_length=2, null=True, description='状态：0隐藏 1显示')
-    start_time = fields.DatetimeField(null=True, default=None, description='有效期开始时间')
-    end_time = fields.DatetimeField(null=True, default=None, description='有效期结束时间')
+    start_time = fields.BigIntField(null=True, default=None, description='有效期开始时间')
+    end_time = fields.BigIntField(null=True, default=None, description='有效期结束时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
 
@@ -378,8 +378,8 @@ class Goods(DBModel):
     desc = fields.CharField(max_length=256, null=True, default='', description='商品描述')
     content = fields.JSONField(null=True, description='商品内容：JSON存储')
     status = fields.SmallIntField(max_length=2, null=True, description='状态：0下架 1上架')
-    up_time = fields.DatetimeField(null=True, default=None, description='上架时间')
-    down_time = fields.DatetimeField(null=True, default=None, description='下架时间')
+    up_time = fields.BigIntField(null=True, default=None, description='上架时间')
+    down_time = fields.BigIntField(null=True, default=None, description='下架时间')
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
     bag_type = fields.SmallIntField(max_length=2, null=True, default=0, description='背包类型：0常规 1延时')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')

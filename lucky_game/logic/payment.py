@@ -401,7 +401,15 @@ class PaymentLogic:
         return True, data
 
     async def order_3(self, order_no: str):
-        pass
+        order, msg = await OrderRC.get_order_info(order_no=order_no)
+        u_info = await BaseUserRC.cache_by_pk(order["uid"])
+        sta, msg, req_res = await WeChat.wechat_mini_game_query_order(u_info["uid"], u_info["openid"], order_no)
+        NLogger.info(f"微信小程序平台订单查询: order_no {order_no} 状态: {sta} 结果: {msg} {req_res}")
+        # 特殊处理：复活礼包且支付成功直接领取奖励and发送消息给游戏服务
+        if sta and req_res.get("trade_status") == OrderStatus.PAID and order["sku"] in [GoodsSku.SKU_REVIVE_1,
+                                                GoodsSku.SKU_REVIVE_2, GoodsSku.SKU_REVIVE_3, GoodsSku.SKU_REVIVE_4]:
+            await FirstCharge().charge_order(order)
+        return sta, msg, req_res
 
 
     async def pay_4(self, order, return_url: str = None):
