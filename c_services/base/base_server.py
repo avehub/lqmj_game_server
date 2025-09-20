@@ -200,17 +200,19 @@ class BaseServer(BasePubService, CommonApi):
             "gold":gold
         }
         await self.conf.rds.set_hash(CacheKey.PLAYER_GOLD, uid, info)
+        self.log_info(f"{uid} 存储待返还金币: {gold}")
 
     async def get_play_gold(self, uid):
         try:
             gold = await self.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
         except Exception as e:
             gold = {"gold": 0}
+        self.log_info(f"{uid} 获取待返还金币: {gold}")
         return gold
 
     async def del_play_gold(self, uid):
         await self.conf.rds.drop_hash(CacheKey.PLAYER_GOLD, uid)
-
+        self.log_info(f"{uid} 清空待返还金币")
     async def on_signal_stop(self, *args):
         """ 服务关闭时触发 """
         self.log_info(f"{self.service_name} 服务关闭")
