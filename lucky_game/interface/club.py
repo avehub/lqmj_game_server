@@ -21,8 +21,8 @@ class BaseClub(GameAuthApi):
         other_dict = await self.json_by_dict(other)
         if not isinstance(other_dict, dict):
             return self.answer(StaCode.FAIL, hint="other参数格式错误")
-        self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
-        self.check_int(other_dict.get("host_power_room"), require=True, minval=0, maxval=3,  p_name="host_power_room")
+        self.check_int(other_dict.get("pay_type"), require=True, p_name="pay_type")
+        self.check_int(other_dict.get("host_power_room"), require=True, p_name="host_power_room")
         return other_dict
 
 
