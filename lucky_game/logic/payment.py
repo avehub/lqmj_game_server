@@ -190,7 +190,7 @@ class PaymentLogic:
             PayMode.WECHAT_PAY.val: self.order_3,
             PayMode.VIVO_PAY.val: self.order_4,
             PayMode.APPLE_PAY.val: self.order_5,
-            PayMode.ALIPAY_APP.val: self.order_2,
+            PayMode.ALIPAY_APP.val: self.order_6,
         }
         func = map_func.get(pay_mode)
         NLogger.info(f"order_method 查询平台订单状态", func)
@@ -382,8 +382,14 @@ class PaymentLogic:
         return True, data
 
     async def order_2(self, order_no: str):
-        """支付宝订单查询"""
+        """支付宝订单查询(H5)"""
         sta, msg, req_res = AlipayPayment().query_trade_status(out_trade_no=order_no)
+        NLogger.info(f"支付宝平台订单查询: order_no {order_no} 状态: {sta} 结果: {msg} {req_res}")
+        return sta, msg, req_res
+
+    async def order_6(self, order_no: str):
+        """支付宝订单查询(APP)"""
+        sta, msg, req_res = AlipayPayment("APP").query_trade_status(out_trade_no=order_no)
         NLogger.info(f"支付宝平台订单查询: order_no {order_no} 状态: {sta} 结果: {msg} {req_res}")
         return sta, msg, req_res
 
@@ -401,6 +407,7 @@ class PaymentLogic:
         return True, data
 
     async def order_3(self, order_no: str):
+        """微信小程序道具直购订单查询"""
         order, msg = await OrderRC.get_order_info(order_no=order_no)
         u_info = await BaseUserRC.cache_by_pk(order["uid"])
         sta, msg, req_res = await WeChat.wechat_mini_game_query_order(u_info["uid"], u_info["openid"], order_no)
@@ -450,12 +457,11 @@ class PaymentLogic:
             return False, f"VIVO支付异常: {str(e)}"
 
     async def order_4(self, order_no: str):
-        pass
+        return False, "OK", {"trade_status": None}
 
 
     async def pay_5(self, order, return_url: str = None):
         """苹果支付"""
-        good = await GoodRC.get_good_info(order.sku)
         suc, general_data = await self.deal_order_general(order)
         data = {
             "order": general_data,
@@ -464,7 +470,8 @@ class PaymentLogic:
         return True, data
 
     async def order_5(self, order_no: str):
-        pass
+        # 苹果的订单查询走苹果的订单校验接口：CallbackIos
+        return False, "OK", {"trade_status": None}
 
 
 
