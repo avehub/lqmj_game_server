@@ -238,6 +238,7 @@ class LoginByWechat(BaseLogin):
             "platform": platform
         }
         unique_key = BaseUserRC.KEY_OPENID
+        h5_app = [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP]
         if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
             # 微信公众号、微信APP为同一账号
             req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
@@ -245,7 +246,7 @@ class LoginByWechat(BaseLogin):
                 self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
                 "unionid": req_data.get('unionid'),
-                "platform__in": [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP],
+                "platform__in": h5_app,
             }
             unique_key = BaseUserRC.KEY_UNION_ID
         u_info = await BaseUserRC.cache_by_unique(q_params, unique_key)
@@ -253,7 +254,7 @@ class LoginByWechat(BaseLogin):
 
         # 新用户 注册
         if not u_info:
-            req_data["avatar"] = req_data.get('headimgurl') if platform == PlatForm.WECHAT_MP else f"avatar/avatar_{random.randint(1, 7)}.png"
+            req_data["avatar"] = req_data.get('headimgurl') if platform in h5_app else f"avatar/avatar_{random.randint(1, 7)}.png"
             req_data["wechat"] = 1
             req_data["unionid"] = req_data.get('unionid')
             u_info = await self.create_new_user(
