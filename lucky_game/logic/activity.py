@@ -709,7 +709,7 @@ class FirstCharge(Base):
         result = {}
         act_type = None
         u_info = await BaseUserRC.cache_by_pk(order_info["uid"])
-        if order_info["sku"] == GoodsSku.SKU_FIRST:
+        if order_info["sku"] in [GoodsSku.SKU_FIRST, GoodsSku.SKU_FIRST_MINI]:
             # 首充
             act_type = ActivityType.FIRST_CHARGE
         elif order_info["sku"] in [GoodsSku.SKU_REPLENISH_1, GoodsSku.SKU_REPLENISH_2, GoodsSku.SKU_REPLENISH_3,
