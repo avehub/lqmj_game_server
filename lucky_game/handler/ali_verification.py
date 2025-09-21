@@ -75,8 +75,7 @@ class AliVerification:
                 "verified": 0,  # 0:未验证 1:已验证
                 "attempts": 0  # 验证尝试次数
             })
-            # TODO 测试期间不设置过期
-            # await cls.conf.rds.expired(redis_key, expire_seconds)
+            await cls.conf.rds.expired(redis_key, expire_seconds)
 
             return True, '验证码发送成功'
         else:
