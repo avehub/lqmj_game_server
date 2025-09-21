@@ -116,7 +116,7 @@ class CreateRoom(GameRoomAPI):
             pay_type = club["other"]["pay_type"]
         else:
             platform, play_type, club_id, max_player, rule_details, total_round, price, cs_type, is_location, is_friend = await self.verify_params(req, **kwargs)
-            pay_type = 0    # 默认房主支付
+            pay_type = self.check_int(req.json.get("pay_type"), require=False, default=0, p_name="支付方式")    # 默认房主支付
         # 创建房间前判断是否在黑名单中
         if club_id:
             is_black, e = await ClubUsersRC.is_club_user_black(creator, club_id)

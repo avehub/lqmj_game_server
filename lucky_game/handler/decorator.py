@@ -77,7 +77,7 @@ class GameChecker(BaseDecorator):
         platform = req.args.get("platform")
         self.check_str(platform, require=True, p_name="platform")
         c_uid = req.args.get("c_uid")
-        self.check_int(c_uid, require=True, minval=1, p_name="c_uid")
+        self.check_int(c_uid, require=True, p_name="c_uid")
         c_ver = req.args.get("c_ver")
         self.check_str(c_ver, require=True, p_name="c_ver")
 

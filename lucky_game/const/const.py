@@ -492,6 +492,7 @@ class GoodsItem(BaseEnum):
 class GoodsSku(StrEnum):
     """特定商品SKU"""
     SKU_FIRST = "NOMYLPAA"  #首充
+    SKU_FIRST_MINI = "NOMYLPAB"  #微信小游戏首充
     SKU_FREE = "XXOLQQTL"   #免费
     SKU_REPLENISH_1 = "OCNMZOAS"    #金币补足初级场礼包
     SKU_REPLENISH_2 = "AAIAHTGS"    #金币补足中级场礼包

@@ -33,8 +33,8 @@ class GetWeChatShareData(SpecialApi):
         share_url = urlunparse(url_parts)
         if not share_url:
             return self.answer(StaCode.FAIL, hint="分享地址错误")
-        access_token_status, access_token = await WeChat.wechat_get_access_token_stable(WeChatConf.WE_CHAT_GZH_APP_ID,
-                                                                                        WeChatConf.WE_CHAT_GZH_APP_SECRET)
+        access_token_status, access_token = await WeChat.wechat_get_access_token_stable(app_id=WeChatConf.WE_CHAT_GZH_APP_ID,
+                                                                                        app_secret=WeChatConf.WE_CHAT_GZH_APP_SECRET)
         if access_token_status != 0 or not access_token:
             return self.answer(StaCode.FAIL, hint="获取微信access_token失败")
         ticket_status, jsapi_ticket = await WeChat.wechat_get_ticket(access_token)
@@ -79,7 +79,9 @@ class GetAppVersion(SpecialApi):
 
 
 class GetWechatCode(SpecialApi):
-    """ 微信授权转发 """
+    """ 微信授权转发
+    文档：https://developers.weixin.qq.com/doc/oplatform/Third-party_Platforms/2.0/api/Before_Develop/Official_Accounts/official_account_website_authorization.html
+    """
     decorators = []
     async def get(self, req: Request):
         redirect_url = self.check_str(req.args.get('redirect_url'), require=True, p_name="redirect_url")
