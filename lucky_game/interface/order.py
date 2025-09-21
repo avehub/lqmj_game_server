@@ -92,9 +92,10 @@ class CallbackAli(SpecialApi):
 
     async def post(self, req: Request, **kwargs):
         form = req.get_form()
-        signature = req.json.get("sign", "")
-        self.loginfo(f"支付宝回调参数signature: {signature}")
         self.loginfo(f"支付宝回调参数form: {form}")
+        signature = req.json.get("sign", "")
+
+        self.loginfo(f"支付宝回调参数signature: {signature}")
         sta, data = AlipayPayment().verify_callback(form)
         err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
         if not sta:

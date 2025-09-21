@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameTotal
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from tortoise.transactions import in_transaction
@@ -26,7 +27,7 @@ class RecordsGameTotalRC(BaseCommonRC):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
-                price = await cls.get_settle_price(record_rid, uid)
+                price = await cls.get_settle_price(record, uid, final_status)
                 record_data = {
                     "record_rid": record["record_rid"],
                     "room_id": record["room_id"],
@@ -240,38 +241,28 @@ class RecordsGameTotalRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_settle_info(cls, record_rid: int):
+    async def get_settle_info(cls, record: dict, uid: int, final_status: int):
         """获取结算信息"""
-        record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
-        result_total, e = await cls.query_record_total_by_sql(
-            record_rid=record_rid,
-            filtration="uid, final_status, price"
-        )
+        room_uid = await cls.conf.rds.smembers(f"{GameRoomsRC.SESSION_DISK_KEY}:{record['room_id']}")
         # 默认茶馆基金支付
-        uid = 0
+        price_uid = 0
         price = record["price"]
         club_id = record.get("club_id", 0)
         # 房主支付
         if record["pay_type"] == 0:
-            uid = record["creator"]
-            price = record["price"]
+            price_uid = record["creator"]
         # 冠军支付
-        elif record["pay_type"] == 1:
-            for item in result_total:
-                if item["final_status"] == 1:
-                    uid = item["uid"]
-                    price = item["price"]
-                    break
+        elif record["pay_type"] == 1 and final_status == 1:
+            price_uid = uid
         # AA支付
         elif record["pay_type"] == 3:
-            uid = [item["uid"] for item in result_total]
-            price = record["price"] / len(result_total)
-        return {"uid": uid, "club_id": club_id, "price": price}
+            price = record["price"] / len(room_uid)
+        return {"uid": price_uid, "club_id": club_id, "price": price}
 
     @classmethod
-    async def get_settle_price(cls, record_rid: int, uid: int):
+    async def get_settle_price(cls, record: dict, uid: int, final_status: int):
         """获取结算费用"""
-        settle_info = await cls.get_settle_info(record_rid)
+        settle_info = await cls.get_settle_info(record, uid, final_status)
         price = settle_info["price"]
         if settle_info["uid"] == 0 or settle_info["uid"] != uid:
             price = 0
