@@ -383,7 +383,7 @@ class BaseCardRoom(BaseRoom):
             record_info,e = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
             if not record_info:
                 self.log_info("战绩创建失败",e,"入参",self.tid, tool_dt.cur_time())
-            self.__record_id = record_info[0].record_rid
+            self.__record_id = record_info.record_rid
         self.call_flow(2, self.round_start)
 
     async def game_over(self, over_type=OverType.DEFAULT):
