@@ -425,6 +425,9 @@ class RoomFCZJ(BaseLeisureRoom):
     async def player_give_up(self, player: PlayerFCZJ):
         if player.is_out or player.seat_id == -1:  # 防止超时延时走到这里再次执行
             return
+        if player.gold > 0:
+            self.log_info("玩家金币不为零，不能认输", player.uid)
+            return
         player.is_out = True
         m = s2c_one_of_model()
         m.seat_id = player.seat_id
@@ -2758,7 +2761,7 @@ class RoomFCZJ(BaseLeisureRoom):
             await asyncio.gather(*update_task)
         round_data["seats"] = self.room_win_lose_data()
         round_data["winner"] = self.__win_seat_list
-        self.log_info("结算数据",round_data)
+        self.log_info("结算数据", round_data)
         result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
         self.log_info("一轮结束战绩插入", result_data)
         if over_type != OverType.OTHERS_GIVE_UP:
