@@ -88,7 +88,7 @@ class MainBp(BaseBlue):
         Urls("/ClubDismiss/", ClubDismiss),  # 解散茶馆
         Urls("/ClubRoomCard/", ClubRoomCard),  # 茶馆基金
         Urls("/ClubRoomCardList/", ClubRoomCardList),  # 茶馆基金记录列表
-        Urls("/RoomDetail/", RoomDetail),  # 茶馆基金记录列表
+        Urls("/RoomDetail/", RoomDetail),  # 房间详情
 
         # 用户数据相关
         Urls("/ModifyGeneralUserInfo/", UpdateUserInfo),  # 更新用户必要信息
