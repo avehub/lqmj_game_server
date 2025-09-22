@@ -33,7 +33,7 @@ from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
 from lucky_game.model_db.main import Mails, Orders
 from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
     CompleteSta, EventTracking, OrderStatus, GoodsSku
-from lucky_game.logic.activity import act_count, Base, Package, FirstCharge
+from lucky_game.logic.activity import act_count, Base, Package, FirstCharge, InfinitePlay
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -260,11 +260,12 @@ class WorkersServer(JsonBaseServer):
         if u_info.get("gold", 0) < conf_data.get("min_gold"):
             act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.INFINITE_PLAY)
             sta, msg, progress, _ = await Base().act_progress(act, u_info)
-            num = 0
-            if sta and progress:
-                num = act.get("join_limit_day") - progress.get("current_value", 0)
-            result = num > 0 or not progress
-            self.red_dot_log(uid, "救济红点查询", result)
+            status = -1
+            if sta:
+                result = await InfinitePlay().progress_data(act, progress, u_info)
+                status = result.get("gains").get("status")
+            result = status == 0
+            self.red_dot_log(uid, "救济金红点查询", result)
             if result:
                 await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
 

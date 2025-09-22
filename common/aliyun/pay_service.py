@@ -1,8 +1,8 @@
+import base64
 import time
 
 from alipay.aop.api.AlipayClientConfig import AlipayClientConfig
 from alipay.aop.api.DefaultAlipayClient import DefaultAlipayClient
-from alipay.aop.api.domain.AlipayTradeCreateModel import AlipayTradeCreateModel
 from alipay.aop.api.domain.AlipayTradeAppPayModel import AlipayTradeAppPayModel
 from alipay.aop.api.domain.AlipayTradeQueryModel import AlipayTradeQueryModel
 from alipay.aop.api.domain.AlipayTradeRefundModel import AlipayTradeRefundModel
@@ -12,18 +12,12 @@ from alipay.aop.api.request.AlipayTradeQueryRequest import AlipayTradeQueryReque
 from alipay.aop.api.request.AlipayTradeRefundRequest import AlipayTradeRefundRequest
 from alipay.aop.api.request.AlipayTradeCloseRequest import AlipayTradeCloseRequest
 from alipay.aop.api.request.AlipayTradeWapPayRequest import AlipayTradeWapPayRequest
-from alipay.aop.api.response.AlipayResponse import AlipayResponse
-from alipay.aop.api.response.AlipayTradeAppPayResponse import AlipayTradeAppPayResponse
-from alipay.aop.api.response.AlipayTradeQueryResponse import AlipayTradeQueryResponse
-from alipay.aop.api.response.AlipayTradeRefundResponse import AlipayTradeRefundResponse
-from alipay.aop.api.response.AlipayTradeCloseResponse import AlipayTradeCloseResponse
 from alipay.aop.api.exception.Exception import AopException
 from alipay.aop.api.util.SignatureUtils import get_sign_content, verify_with_rsa
 from nsanic.libs.tool import json_parse
 
 from common.public.common_class import CommonApi
 from common.public.conf import AliPayConf, SERVER_ADDR
-from datetime import datetime
 from nsanic.libs.mult_log import NLogger
 from alipay.aop.api.util import EncryptUtils
 
@@ -53,7 +47,6 @@ class AlipayPayment:
         self.client_config.timeout = 30
         # 根据支付类型设置不同的配置
         self.type_conf = AliPayConf.PLATFORM.get(payment_type)
-        NLogger.info(f"支付宝支付配置信息: type_conf {type(self.type_conf)} {self.type_conf}")
         self.client_config.app_id = self.type_conf.get("APP_ID")
         self.client_config.app_private_key = self.type_conf.get("PRIVATE_KEY")
         # self.client_config.return_url = AliPayConf.RETURN_URL
@@ -142,15 +135,15 @@ class AlipayPayment:
         try:
             # 获取签名内容
             sign_content = get_sign_content(data)
-            NLogger.info(f"验证支付通知: sign_content {str(sign_content)}")
             # 使用支付宝公钥验证签名
             if sign_content:
-                return verify_with_rsa(self.client_config.alipay_public_key, sign_content, signature)
+                return verify_with_rsa(self.client_config.alipay_public_key, sign_content.encode("utf-8"), signature)
             else:
                 return False
         except AopException as e:
             NLogger.error(f"支付通知验证失败: {str(e)}")
             return None
+
 
     def verify_aes(self, data):
         """
@@ -251,40 +244,45 @@ class AlipayPayment:
             NLogger.error(f"关闭订单失败: {str(e)}")
             raise
 
-    def verify_callback(self, request_data):
+    def verify_callback(self, request_data, sign):
         """
         验证支付宝回调通知
         :param request_data: 回调请求数据
+        :param sign: 回调请求签名
         :return: 验证结果和支付信息
         """
         try:
             # 获取请求参数
             params = request_data.copy()
-            sign_type = params.get('sign_type', None)
-            encrypt_type = params.pop('encrypt_type', None)
             # 移除签名参数
-            sign = params.pop('sign', None)
-            data = self.verify_payment(params, sign)
-            
+            params.pop('sign_type', None)
+            params.pop('sign', None)
+            clean_params = {}
+            for k, v in params.items():
+                if k == "fund_bill_list":
+                    clean_params[k] = v[0]
+                else:
+                    if isinstance(v, list):
+                        clean_params[k] = v[0]
+                    else:
+                        clean_params[k] = v
+            data = self.verify_payment(clean_params, sign)
             # 验证签名
             if not data:
                 NLogger.error("支付宝回调签名验证失败")
                 return False, None
-            if encrypt_type == 'AES':
-                data = self.verify_aes(data)
-                
+
             # 获取支付信息
-            trade_status = params.get('trade_status')
-            out_trade_no = params.get('out_trade_no')
-            trade_no = params.get('trade_no')
-            total_amount = params.get('total_amount')
+            trade_status = clean_params.get('trade_status')
+            out_trade_no = clean_params.get('out_trade_no')
+            trade_no = clean_params.get('trade_no')
             data = {
-                "order_no": params.get('out_trade_no'),
-                "trade_no": params.get('trade_no'),
+                "order_no": clean_params.get('out_trade_no'),
+                "trade_no": clean_params.get('trade_no'),
             }
             # 验证支付状态
             order_status = OrderStatus.FAIL
-            if trade_status == 'TRADE_SUCCESS':
+            if trade_status in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
                 NLogger.info(f"支付成功: out_trade_no={out_trade_no}, trade_no={trade_no}")
                 order_status = OrderStatus.PAID
             else:
