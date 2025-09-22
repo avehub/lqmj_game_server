@@ -87,6 +87,9 @@ class Base:
             pi = u_info.get("pi")
             if not pi:
                 return False, "请先认证", {}
+            sta, act_progress = await UserActivityProgressRC.get_activity_progress_once(uid=uid, act_id=act_id)
+            if sta and act_progress:
+                return False, "已领取实名认证礼包", {}
             sta, msg, data = await Common().handler(activity, uid, award_type)
             return sta, msg, {"award": data, "pay_info": {}}
 
