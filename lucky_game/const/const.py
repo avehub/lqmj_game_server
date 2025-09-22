@@ -598,7 +598,7 @@ class ReasonCostGold(BaseEnum):
     OPEN_TREASURE_BOX = 32, "开启宝盒"
     SKIN_EQUIP_EFFECT = 33, "皮肤装备打出效果"
     MONOPOLY_AWARDS = 34, "玩大富翁奖励"
-    CONVERT_AWARDS = 35, "兑换/折现奖励"
+    CONVERT_AWARDS = 35, "兑换/充值礼包"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
     CHECK_OUT_MAHJONG = 37, "麻将结算"
     ACTIVITY_GIFT = 38, "活动礼包"

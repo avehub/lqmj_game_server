@@ -513,9 +513,7 @@ class PaymentLogic:
 
     async def return_gold_order(self, order: dict):
         """返还金币订单"""
-        explain = order["explain"]
-        if not explain or not isinstance(explain, dict):
-            return False, "无返还信息"
+        explain = json_parse(order["explain"])
         return_gold = explain.get("return_gold", 0)
         if return_gold:
             add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
