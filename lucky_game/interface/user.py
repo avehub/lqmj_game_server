@@ -29,7 +29,7 @@ class UserInfo(GameAuthApi):
         q_uid = self.check_int(req.args.get("uid"), require=False, p_name="uid")
         if q_uid:
             uid = q_uid
-        if uid > R_UID_THRESHOLD:
+        if uid >= R_UID_THRESHOLD:
             data = await BaseUserRC.cache_by_uid(uid)
             # vip_info = await UserVipRC.get_vip_conf_by_uid(uid)
             # ur_data = await UserRankingRC.cache_by_unique(uid, u_info=user_info) or {}
