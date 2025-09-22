@@ -9,7 +9,7 @@ from nsanic.libs.mult_log import NLogger
 from nsanic.libs.tool import json_parse
 
 from common.utils.kit_dt import KitDt
-from common.public.conf import WeChatConf, HuiFuConf, SERVER_ADDR, LIVE_SERVER, AliPayConf
+from common.public.conf import WeChatConf, HuiFuConf, SERVER_ADDR, LIVE_SERVER
 from lucky_game.const import OrderStatus, GainStatus, PlatForm
 
 RESPONSE_CODE = {
@@ -120,7 +120,7 @@ class DouGongPay:
 
         # 准备extend_infos，包括所有需要额外传递的参数
         extend_infos = {
-            "notify_url": SERVER_ADDR + AliPayConf.NOTIFY_URL,  # 交易异步通知地址
+            "notify_url": SERVER_ADDR + HuiFuConf.NOTIFY_URL,  # 交易异步通知地址
             "wx_data": wx_data
         }
         # 异步请求
