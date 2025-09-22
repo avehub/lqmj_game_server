@@ -77,7 +77,6 @@ class ConfActivityRC(BaseRC):
                 query["act_id"] = act_id
             if act_level:
                 query["act_level"] = act_level
-            print(query)
             info = await cls.db_model.filter(**query).first().values()
             if not info:
                 return None, "暂时没找到这类型的活动哦"

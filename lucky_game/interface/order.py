@@ -2,12 +2,14 @@
 订单相关
 """
 import traceback
+from urllib.parse import unquote_plus
+
 from sanic import Request, response
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
 
-from common.public.conf import WeChatConf
+from common.public.conf import WeChatConf, AliPayConf
 from common.public.enum_const import DbKey, StaCode
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi, SpecialApi
@@ -91,23 +93,27 @@ class CallbackAli(SpecialApi):
     """支付宝订单回调"""
 
     async def post(self, req: Request, **kwargs):
-        form = req.get_form()
-        self.loginfo(f"支付宝回调参数form: {form}")
-        signature = req.json.get("sign", "")
-
-        self.loginfo(f"支付宝回调参数signature: {signature}")
-        sta, data = AlipayPayment().verify_callback(form)
-        err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}, "sign": signature})
+        form = req.args
+        app_id = form.get("app_id", "")
+        sign = form.get("sign", "")
+        if not sign or not app_id:
+            return response.json({"response": {"code": '40001', "msg": 'Param Error'}}, status=500)
+        pay_platform = "APP" if app_id == AliPayConf.PLATFORM.get("APP").get("APP_ID") else "H5"
+        if hasattr(form, 'get'):
+            form = dict(form)
+        sta, data = AlipayPayment(pay_platform).verify_callback(form, sign)
+        self.loginfo(f"支付宝回调验证结果: {sta}, {data}")
+        err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}}, status=500)
         if not sta:
             return err_result
-        order_no = data.get("out_trade_no")
+        order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)
         if not sta:
             return err_result
-        return response.json({"response": {"code": '10000', "msg": 'Success'}, "sign": signature})
+        return response.json({"response": {"code": '10000', "msg": 'Success'}})
 
 
 class CallbackHf(SpecialApi):
