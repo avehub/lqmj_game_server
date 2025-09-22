@@ -328,9 +328,9 @@ class PaymentLogic:
             }
             req_res = await DouGongPay.dou_gong_js_pay(**info)
             NLogger.info('HuiFuGetPayInfo DouGong res:', req_res)
-            if not req_res or not hasattr(req_res, "resp_code"):
+            if not req_res or not isinstance(req_res, dict):
                 return False, 'HuiFuGetPayInfo DouGong error.'
-            resp_code = req_res.get('resp_code')
+            resp_code = req_res.get('resp_code', None)
             if resp_code != '00000100':  # 下单成功
                 return False, req_res.get("bank_message")
             await BaseUserRC.cache_user_pay_info(uid, order_no, req_res)
