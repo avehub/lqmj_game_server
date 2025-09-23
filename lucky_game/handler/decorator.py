@@ -166,14 +166,16 @@ class SysMaintain(BaseDecorator):
     @classmethod
     async def sys_verify(cls, req: Request, **kwargs):
         uid = 0
-        verify_status = False
+        verify_status = True
         u_info = kwargs.get("u_info")
         if u_info and isinstance(u_info, dict):
             uid = u_info.get("uid")
         maintain = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_MAINTAIN)
-        cls.conf.log.info("系统维护性检查:", maintain)
-        if maintain.get("status") and uid in maintain.get("special_uid"):
-            verify_status = True
+        cls.conf.log.info("系统维护性检查:", type(maintain), maintain)
+        if maintain.get("status"):
+            verify_status = False
+            if uid in maintain.get("special_uid"):
+                verify_status = True
         return verify_status, "游戏正在维护升级中，请稍后"
 
 
