@@ -246,7 +246,7 @@ class ClubRanks(GameAuthApi):
             order_field=order_field,
             order_type=order_type,
             group_field="uid",
-            filtration="uid, record_rid, club_id, COUNT(final_status) AS total_status, SUM(final_score) AS total_score, SUM(final_grade) AS total_grade, SUM(price) AS total_price"
+            filtration="uid, record_rid, club_id, COUNT(final_status) AS total_status, SUM(final_score) AS total_score, SUM(final_grade) AS total_grade, SUM(price) AS total_price, final_result"
         )
         return self.answer(data=data, hint=e)
 
