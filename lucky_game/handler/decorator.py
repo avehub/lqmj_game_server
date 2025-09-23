@@ -89,7 +89,7 @@ class GameChecker(BaseDecorator):
         if not u_info:
             self.answer(self.sta_code.FAIL, hint=data)
         maintain = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_MAINTAIN)
-        if maintain.get("status") and u_info.get("uid") not in maintain.get("special_uid"):
+        if maintain.get("status") and u_info.get("uid") in maintain.get("special_uid"):
             self.answer(self.sta_code.FAIL, hint="游戏正在维护升级中，请稍后")
         ban_time = u_info.get("ban_time") or 0
         if ban_time == -1 or ban_time > tool_dt.cur_time():
