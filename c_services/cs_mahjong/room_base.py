@@ -969,6 +969,7 @@ class Room(BaseCardRoom):
             return
 
         self.set_flow_status(FlowStatus.T_IN_PUBLIC_OPRATE)
+        self.__player_actions.clear() # 防止两个玩家，一个过、另个一碰后可杠同时触发导致过的玩家操作没有清除
         chu_pai_player = self.curr_player()
         chu_pai_player.operates = []
         self.log_info("玩家", chu_pai_player.seat_id, "出牌", self.__curr_card)
