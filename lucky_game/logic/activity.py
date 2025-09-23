@@ -702,9 +702,15 @@ class FirstCharge(Base):
         return True, msg, act_order
 
     async def pay_count(self, uid: int):
-        act_total, msg = await OrderRC.get_order_filter(uid=uid, status=OrderStatus.PAID, currency=PayType.BY_RMB,
-                                                        count=True)
-        return act_total
+        total = 0
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.FIRST_CHARGE)
+        if act:
+            sta, act_progress = await UserActivityProgressRC.get_activity_progress(uid=uid, act_id=act["act_id"])
+            if sta and act_progress:
+                for pro in act_progress:
+                    if pro.get("status") > 0:
+                        total += 1
+        return total
 
     async def charge_order(self, order_info: dict):
         sta = False
