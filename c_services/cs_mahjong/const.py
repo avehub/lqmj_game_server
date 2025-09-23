@@ -169,7 +169,7 @@ class TimerDelay(IntEnum):
     CHU_PAI_TIME = 16  # 出牌时间
     READY_TIME = 15  # 准备时间
     CHONG_ZHI_TIME = 30  # 充值时间
-    KOU_FEI_TIME = 2  # 及时结算等待
+    KOU_FEI_TIME = 3  # 及时结算等待
     TUO_GUAN_TIME = 2  # 托管时间
     TUO_GUAN_TIME_PENG = 2  # 托管时间
     TUO_GUAN_TIME_GANG = 10  # 托管时间
