@@ -193,7 +193,7 @@ class BaseRecordsGameRC(BaseCommonRC):
             record_rids = [item["record_rid"] for item in result_temp]
             result_total, e = await RecordsGameTotalRC.query_record_total_by_sql(
                 record_rid=record_rids,
-                filtration="uid, record_tid, record_rid, final_score, final_grade, final_ranking, final_status"
+                filtration="uid, record_tid, record_rid, final_score, final_grade, final_ranking, final_status, final_result"
             )
             result_room, e = await RecordsGameRoomRC.get_record_room_by_filter(
                 record_rid=record_rids,
