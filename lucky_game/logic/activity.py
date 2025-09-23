@@ -704,11 +704,12 @@ class FirstCharge(Base):
     async def pay_count(self, uid: int):
         total = 0
         act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.FIRST_CHARGE)
+
         if act:
             sta, act_progress = await UserActivityProgressRC.get_activity_progress(uid=uid, act_id=act["act_id"])
             if sta and act_progress:
                 for pro in act_progress:
-                    if pro.get("status") > 0:
+                    if pro.get("status") == UserActivityProgressRC.STATUS_FINISH:
                         total += 1
         return total
 
