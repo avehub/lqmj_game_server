@@ -88,9 +88,6 @@ class GameChecker(BaseDecorator):
         u_info, data = await self.verify_token(req)
         if not u_info:
             self.answer(self.sta_code.FAIL, hint=data)
-        maintain = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_MAINTAIN)
-        if maintain.get("status") and u_info.get("uid") in maintain.get("special_uid"):
-            self.answer(self.sta_code.FAIL, hint="游戏正在维护升级中，请稍后")
         ban_time = u_info.get("ban_time") or 0
         if ban_time == -1 or ban_time > tool_dt.cur_time():
             self.answer(self.sta_code.FAIL, hint="玩家已处于被封禁中！")
@@ -174,6 +171,7 @@ class SysMaintain(BaseDecorator):
         if u_info and isinstance(u_info, dict):
             uid = u_info.get("uid")
         maintain = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_MAINTAIN)
+        cls.conf.log.info("系统维护性检查:", maintain)
         if maintain.get("status") and uid in maintain.get("special_uid"):
             verify_status = True
         return verify_status, "游戏正在维护升级中，请稍后"

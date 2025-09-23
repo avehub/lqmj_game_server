@@ -283,6 +283,9 @@ class LoginByToken(BaseLogin):
         login_info = await self.get_login_info(req, LoginWay.TOKEN)
         u_info = await self.update_user_login_info(req, u_info, login_info)
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
+        maintain, msg = await SysMaintain.sys_verify(req, u_info=u_info)
+        if not maintain:
+            return self.answer(StaCode.FAIL, hint=msg)
         jwt_info = kwargs.get("jwt_info")
         issued = False
         if jwt_info.get('exp') - tool_dt.cur_time() <= 43200:
