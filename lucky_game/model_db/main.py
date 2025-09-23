@@ -268,7 +268,7 @@ class RecordsGameTotal(DBModel):
     uid = fields.IntField(index=True, description='玩家ID', )
     cs_type = fields.IntField(description='子服务类型', )
     play_type = fields.SmallIntField(description='玩法类型', )
-    price = fields.SmallIntField(description='费用', )
+    price = fields.BigIntField(description='费用', )
     final_status = fields.SmallIntField(description='输赢状态：0输 1赢', )
     final_score = fields.BigIntField(description='最终分数', )
     final_ranking = fields.IntField(description='最终名次', )
@@ -290,7 +290,7 @@ class RecordsGameSegment(DBModel):
     round_score = fields.BigIntField(description='当局分数', )
     round_ranking = fields.IntField(description='当局名次', )
     round_result = fields.JSONField(null=True, description='详细结果：JSON存储', )
-    replay_label = fields.CharField(unique=True, max_length=32, description='回放标签', )
+    replay_label = fields.CharField(unique=True, default=None, max_length=32, description='回放标签', )
     replay_msg = fields.TextField(null=True, description='回放数据', )
     cs_type = fields.IntField(description='子服务类型', )
 

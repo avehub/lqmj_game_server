@@ -9,7 +9,7 @@ from typing import List, Dict
 
 from c_services.const.cs_enum_const import CmdWorkers
 from lucky_game.base_api import GameAuthApi
-from lucky_game.handler.decorator import LimitTestCall
+from lucky_game.handler.decorator import LimitTestCall, SysMaintain
 from lucky_game.handler.douyin import DouYin
 from lucky_game.handler.ios_pay import ios_service
 from lucky_game.model_db.log import RecordsGameUserLogin
@@ -89,8 +89,6 @@ class BaseLogin(GameAuthApi):
         if platform == PlatForm.NATIVE_APP:
             unique = dev_ident + user_info.get("apple_id", "")
 
-        print("login_info", login_info)
-        print("user_info", user_info)
         info = {
             'name': name,
             'safe_key': safe_key,
@@ -250,6 +248,9 @@ class LoginByWechat(BaseLogin):
             }
             unique_key = BaseUserRC.KEY_UNION_ID
         u_info = await BaseUserRC.cache_by_unique(q_params, unique_key)
+        maintain, msg = await SysMaintain.sys_verify(req, u_info=u_info)
+        if not maintain:
+            return self.answer(StaCode.FAIL, hint=msg)
         login_info = await self.get_login_info(req, LoginWay.WECHAT)
 
         # 新用户 注册
@@ -326,6 +327,9 @@ class LoginByPhone(BaseLogin):
             "phone": phone_number
         }
         u_info = await BaseUserRC.cache_by_unique(user_data, BaseUserRC.KEY_PHONE_CACHE)
+        maintain, msg = await SysMaintain.sys_verify(req, u_info=u_info)
+        if not maintain:
+            return self.answer(StaCode.FAIL, hint=msg)
         login_info = await self.get_login_info(req, LoginWay.PHONE)
         if not u_info:
             # 手机号注册
@@ -357,6 +361,9 @@ class LoginByApple(BaseLogin):
         if not apple_id:
             return self.answer(StaCode.ERR_ARG, hint="缺少必要参数")
         u_info = await BaseUserRC.cache_by_unique({'apple_id': apple_id, "platform": platform}, BaseUserRC.KEY_APPLE_ID)
+        maintain, msg = await SysMaintain.sys_verify(req, u_info=u_info)
+        if not maintain:
+            return self.answer(StaCode.FAIL, hint=msg)
         # 2. 获取服务器信息
         server_info = await self.whether_through()
 

@@ -15,7 +15,7 @@ class ConfSrv(BaseConf):
     RUN_PORT = 8989
     HOST = '0.0.0.0'
     DEBUG_MODE = DEBUG_MODE
-    ACCESS_LOG = True
+    ACCESS_LOG = False
 
     RUN_FAST = RUN_FAST
     VER_CODE = None
