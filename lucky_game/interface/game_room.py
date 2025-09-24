@@ -6,6 +6,7 @@ from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from nsanic.libs.tool import json_encode, json_parse
 
 from lucky_game.const import PlatForm
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -40,6 +41,11 @@ class GameRoomAPI(RoomTemplateBase):
         if cs_info:
             cs_info["exist"] = True
             self.answer(self.sta_code.FAIL, data=cs_info, hint="已有加入的游戏房间")
+        # 判断是否维护
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
+        if conf and conf.get("status"):
+            return self.answer(StaCode.FAIL, hint="喝杯茶, 休息一下")
+
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
             # 校验茶馆成员身份信息
@@ -204,6 +210,10 @@ class JoinRoom(GameRoomAPI):
             return self.answer(StaCode.FAIL, hint="房间不存在")
         if u_info.get("platform") == PlatForm.WECHAT_MINI_GAME and room_data["platform"] != u_info.get("platform"):
             return self.answer(StaCode.FAIL, hint="房间不存在")
+        # 判断是否维护
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
+        if conf and conf.get("status"):
+            return self.answer(StaCode.FAIL, hint="喝杯茶, 休息一下")
         if room_data["pay_type"] == 3:
             price_key = "room_card"
             hint_key = "房卡"
