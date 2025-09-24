@@ -29,10 +29,6 @@ class MainBp(BaseBlue):
         Urls("/GetAllItemsHandler", GetAllItemsHandler),  # 获取所有子物品
         Urls("/GetAllStoresHandler", GetAllStoresHandler),  # 获取所有商品/充值
 
-        # 赛季相关
-        Urls("/SeasonInfoHandler", SeasonInfoHandler),  # 赛季信息处理
-        Urls("/SeasonRankingHandler", SeasonRankingHandler),  # 赛季修为处理
-
         # 通知相关
         Urls("/AnnouncementsHandler", AnnouncementsHandler),
         Urls("/BanHandler", BanHandler),

@@ -163,9 +163,10 @@ class UserAggregateRanks(GameAuthApi):
                     win += 1
                 else:
                     fail += 1
-                max_multiple = max(max_multiple, item["final_result"].get("max_multiple", 0))
-                if item["final_result"].get("max_hu_type"):
-                    max_hu_type, max_hu_name = RoomFCZJ.compare_hu_type(max_hu_type, item["final_result"].get("max_hu_type"))
+                if item.get("final_result"):
+                    max_multiple = max(max_multiple, item["final_result"].get("max_multiple", 0))
+                    if item["final_result"].get("max_hu_type"):
+                        max_hu_type, max_hu_name = RoomFCZJ.compare_hu_type(max_hu_type, item["final_result"].get("max_hu_type"))
         result = {
             "total": total,
             "score": score,
