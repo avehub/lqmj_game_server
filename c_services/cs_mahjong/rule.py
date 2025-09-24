@@ -909,7 +909,7 @@ class Rule(metaclass=NoInstances):
 
 
     @staticmethod
-    def can_an_gang(cards: list, card=0):
+    def can_an_gang(cards: list, card=0 ,que = 0):
         """ 判断是否能暗杠 """
         card_to_count = Rule.get_card_to_count(cards)
         if card > 0:
@@ -918,7 +918,8 @@ class Rule(metaclass=NoInstances):
         can_gang_list = []
         for card, count in card_to_count.items():
             if count >= 4:
-                can_gang_list.append(card)
+                if card // 10 != que:
+                    can_gang_list.append(card)
         if can_gang_list:
             return True, can_gang_list
         return False, can_gang_list

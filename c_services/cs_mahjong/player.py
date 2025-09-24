@@ -332,7 +332,7 @@ class Player(BaseLeisurePlayer):
         if self.__que > 0:
             if (card or 0) // 10 == self.__que:
                 return False, [0]
-        return rule.can_an_gang(self.cards, card)
+        return rule.can_an_gang(self.cards, card,self.__que)
 
     @property
     def tui_zhang_ke_kai(self):

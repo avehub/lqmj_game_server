@@ -1751,6 +1751,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
+        if self.room_status == RoomStatus.T_IDLE: #游戏解散后防止机器人复活走到这
+            return
         self.log_info(player.uid, player.seat_id, "玩家复活")
         player.cancel_timer()
         rm = s2c_recharge_model(player.seat_id, str(player.gold))
@@ -2123,7 +2125,7 @@ class RoomFCZJ(BaseLeisureRoom):
             return result, can_gang_list
         else:
             is_zhuan_wan_gang, gang_card = self.zhuan_wan_gang_de_qi(p)  # 提前验证是否能杠
-            is_an_gang, gang_card_list = p.can_an_gang(RuleFc)  # 提前验证是否能暗杠
+            is_an_gang, gang_card_list = p.can_an_gang(RuleFc,p.mo_pai)  # 提前验证是否能暗杠
             if p.card_is_lock():
                 if is_zhuan_wan_gang:
                     if gang_card == p.mo_pai:
