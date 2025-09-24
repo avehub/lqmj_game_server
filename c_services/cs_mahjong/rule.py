@@ -678,7 +678,7 @@ class Rule(metaclass=NoInstances):
         if allow_hu_map.get(HuType.DI_LONG_QI):
             flag, path = Rule.is_di_long_qi(table_cards, cards, CardsType.LAI_ZI, is_gy, cal_ting_pai=True)
             if flag:
-                if table_cards[0][1] == card:  # 必须摸的是碰的那张
+                if table_cards[0][1] == card or card == 0:  # 必须摸的是碰的那张或者是癞子
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         if is_wu_dui:
             flag, path = Rule.is_wu_dui(cards, lai_zi=CardsType.LAI_ZI)

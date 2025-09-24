@@ -1058,7 +1058,13 @@ class S2CManyHuInfo:
             hu_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
         return obj
 
-
+class S2CChangeConnect:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CChangeConnect()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.offline = kwargs.get("offline") or False
+        return obj
 
 # ################################## 麻将 ##################################
 

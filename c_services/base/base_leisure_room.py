@@ -133,6 +133,8 @@ class BaseLeisureRoom(BaseRoom):
                 continue
             if not (player.is_out and player.offline):
                 return  # 但凡有真实玩家 没有 破产和离线则不解散房间
+        if self.room_status == RoomStatus.T_IDLE:
+            return
         self.log_info("房间内已经没有真人玩家，enter force_dismiss")
         await self.delay_func(0.5, self.force_dismiss)
 
