@@ -571,6 +571,14 @@ class Room(BaseCardRoom):
 
         data = {}
         cards_count = {}
+
+        for p in self.seats:
+            cards_len = len(p.cards)
+            if p.seat_id == self.dealer_id:
+                cards_len += 1
+            cards_count[p.seat_id] = cards_len
+        data["cards_count"] = cards_count
+
         c = self.poker.pop()  # 庄占起手，再摸一张
         for p in self.seats:
             data["mo_pai"] = 0
@@ -582,9 +590,7 @@ class Room(BaseCardRoom):
                 data["mo_pai"] = c
             data["hand_cards"] = p.cards
             data["seat_id"] = p.seat_id
-            cards_count[p.seat_id] = p.cards_len
             data["left_count"] = self.poker.left_count
-            data["cards_count"] = cards_count
             self.log_info(self.tid, p.uid, "补牌发牌：", p.cards, p.mo_pai)
             data_model = S2CDealCardsMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
