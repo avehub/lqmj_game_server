@@ -5,14 +5,14 @@ from nsanic.base_conf import BaseConf
 from c_services.base.rmq_client import Rmq
 from common.public.enum_const import StaCode, DbKey
 from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, RUN_FAST, WeChatConf, SERVER_SECRET_KEY, \
-    C_SERVICE_SECRET_KEY
+    C_SERVICE_SECRET_KEY, FileUploadConf
 from lucky_game.handler.sensitive_words import SensitiveWords
 
 
 class ConfSrv(BaseConf):
-    SERVER_NAME = 'promising_game'
+    SERVER_NAME = 'lucky_game'
     SERVER_ID = 'G0001'
-    RUN_PORT = 8988
+    RUN_PORT = 8989
     HOST = '0.0.0.0'
     DEBUG_MODE = DEBUG_MODE
     ACCESS_LOG = False
@@ -24,6 +24,7 @@ class ConfSrv(BaseConf):
     ALLOW_HEADER = ['Authorization', 'Content-Type']
     RESP_TYPE = 'JSON'
 
+    # FALLBACK_ERROR_FORMAT = "auto"
     SECRET_KEY = C_SERVICE_SECRET_KEY  # 子游戏密钥（消息验证）
     SERVER_SECRET_KEY = SERVER_SECRET_KEY  # 服务器密钥（加密使用）
     STA_CODE = StaCode
@@ -39,6 +40,14 @@ class ConfSrv(BaseConf):
     SW_FILE: str = os.path.join(os.getcwd(), SERVER_NAME, 'const', 'sensitive_words.txt')
     sw: SensitiveWords = None
 
+    # 文件上传配置
+    FILE_UPLOAD = FileUploadConf
+    # 添加上传目录路径
+    RESOURCE_PATH = "resource"
+    RESOURCE_CHAIN_PATH = "uploaded"
+    UPLOAD_ROOT_PATH = os.path.join(os.getcwd(), RESOURCE_PATH, RESOURCE_CHAIN_PATH)
+    STATIC_ROOT = os.path.join(os.getcwd(), RESOURCE_PATH)
+
     @classmethod
     def set_conf(cls):
         super().set_conf()
@@ -48,6 +57,10 @@ class ConfSrv(BaseConf):
         if cls.SW_FILE:
             cls.sw = SensitiveWords()
             cls.sw.init_ac(sw_file=cls.SW_FILE)
+        # 确保上传目录存在
+        if cls.FILE_UPLOAD.LOCAL_STORAGE['enable']:
+            os.makedirs(cls.UPLOAD_ROOT_PATH, exist_ok=True)
+
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
@@ -65,15 +78,3 @@ class ConfSrv(BaseConf):
     @classmethod
     def log_conf(cls):
         return
-
-    @classmethod
-    def info_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.info(*data)
-
-    @classmethod
-    def error_log(cls, *data):
-        if cls.DEBUG_MODE:
-            return print(*data)
-        cls.log.error(*data)

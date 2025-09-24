@@ -110,22 +110,30 @@ class BasePlayer():
         for c in cards:
             self.__cards.remove(c)
 
+    def ex_cards(self,card,idx):
+        self.__cards[idx] = card
+
+    def sort_cards(self):
+        self.__cards.sort()
+
     @property
     def cards_len(self):
         return len(self.__cards)
 
-    def player_info(self):
+    def player_info(self,contain_cards = True):
         """ 玩家信息：子类必须实现 """
         data = {
             "uid": self.__uid,
             "seat_id": self.__seat_id,
             "is_trustee": self.__trustee,
             "offline": self.__offline,
-            "cards": self.__cards,
+            # "cards": self.__cards,
             "round_score": self.__round_score,
             "cards_len": self.cards_len,
             # "gold": self.__gold,
         }
+        if contain_cards:
+            data["cards"] = self.__cards
         return data
 
     def clear_data_round_over(self):

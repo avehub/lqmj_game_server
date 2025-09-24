@@ -1,54 +1,32 @@
 # coding=utf-8
+from nsanic.exception import JsonFinish
+from nsanic.libs.consts import Code
+from nsanic.orm.rc_model import RCModel
 from sanic.request import Request
 from nsanic.handler_http import BaseHttpApi
 from nsanic.base_ws import BaseWebsocket
 from nsanic.libs.manager import WsConnector
 from common.public.common_class import CommonApi
 from common.public.enum_const import StaCode
-from lucky_admin.model_rc.conf_announcements import ConfAnnouncementsRC
 from lucky_game.config import conf_srv, ConfSrv
 from lucky_game.handler.decorator import GameChecker
 from lucky_game.handler.exception import RealJsonFinish
-from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
-from lucky_game.model_rc.base_ads import BaseAds
-from lucky_game.model_rc.base_award import ConfAwardRC, UserAwardRC
-from lucky_game.model_rc.base_bag import UserBagRC
-from lucky_game.model_rc.base_chat import ChatRecordRC
-from lucky_game.model_rc.base_friend import UserFriendshipRC
-from lucky_game.model_rc.base_goods import ItemsBaseRC
-from lucky_game.model_rc.base_cosmetic import ItemsCosmeticRC, UserCosmeticRC
-from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_monopoly import MonopolyMapRC, MonopolyEventRC, UserMonopolyRC
-from lucky_game.model_rc.base_prop import ItemsPropRC
-from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
-from lucky_game.model_rc.goods_manager import GoodsManagerRC
-from lucky_game.model_rc.base_interaction import InteractionRC
-from lucky_game.model_rc.base_mails import MailsRC
-from lucky_game.model_rc.base_ranking import ConfRankingRC, UserRankingRC, ConfSeasonRC
-from lucky_game.model_rc.base_robot import BaseRobotRC, ConfRobotRC
-from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-from lucky_game.model_rc.base_store import ConfStoreRC, ConfMonopolyStoreRC
-from lucky_game.model_rc.base_user import BaseUserRC, BaseBanRC
-from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.conf_leisure import LeisureConfRC
-from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
-from lucky_game.model_rc.vip_level import ConfVipRC, UserVipRC
+from lucky_game.model_rc.base_user import BaseUserRC
+from nsanic.libs.mult_log import NLogger
+import json
+from cgitb import handler
+from typing import Callable, Awaitable, Dict, Any
+from sanic import Request, HTTPResponse
+from sanic.response import json as sanic_json
+from nsanic.libs.component import ConfMeta
 
 
 class BaseApi(BaseHttpApi, CommonApi):
     conf: ConfSrv = conf_srv
-    init_model = [
-        BaseUserRC, BaseRobotRC, LeisureConfRC, InteractionRC, ConfStoreRC, ConfAwardRC, UserBehaviorsRC,
-        PlayerGameTimesRC, MailsRC, UserBagRC, ConfJsonRC, ConfTaskRC, UserTaskRC, ConfVipRC, UserVipRC,
-        ConfActivityRC, UserActivityRC, UserSafeBoxRC, ConfSeasonRC, UserRankingRC, ConfRankingRC,
-        UserCosmeticRC, ItemsCosmeticRC, GoodsManagerRC, ItemsBaseRC, UserAwardRC, ItemsPropRC, ItemsSkinRC, UserSkinRC,
-        ConfMonopolyStoreRC, MonopolyMapRC, MonopolyEventRC, UserMonopolyRC, ConfRobotRC, ConfAnnouncementsRC, BaseAds,
-        UserFriendshipRC, ConfQuickChatRC, ChatRecordRC, BaseBanRC
-    ]
-    for m in init_model:
-        m.conf = conf
+    RCModel.set_conf(conf)
+
+    async def __call__(self, request: Request, handler: Callable[[Request], Awaitable[HTTPResponse]]):
+        await BaseHttpApi.__call__(self, request, handler)
 
     async def check_solid_params(self, req: Request):
         """ 检查固有参数 """
@@ -71,8 +49,11 @@ class BaseApi(BaseHttpApi, CommonApi):
         通常情况下第一个IP地址是最接近用户的，但这并不总是绝对安全或准确的，因为X-Forwarded-For头可以被伪造。
         因此，在处理涉及安全性的事务时，不能仅依赖于X-Forwarded-For来判断用户的真实性。
         """
-        ip_list = req.headers.get("x-forwarded-for")
-        # cls.info_log("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
+        if "x-forwarded-for" in req.headers:
+            ip_list = req.headers.get("x-forwarded-for")
+        else:
+            ip_list = req.remote_addr
+        # cls.log_info("ip_list: ", ip_list, "real_ip: ", cls.real_ip(req), "remote ip: ", req.remote_addr, "ip: ", req.ip)
         if ip_list:
             return ip_list.split(',')[0]
         return cls.real_ip(req) or req.client_ip
@@ -96,6 +77,30 @@ class BaseApi(BaseHttpApi, CommonApi):
             code = self.sta_code.PASS
         raise RealJsonFinish(code, data, total, hint, headers)
 
+    def answer(
+            self, code: Code = None,
+            data: (dict, object, list) = None,
+            total: int = 0,
+            hint: str = '',
+            headers: dict = None):
+        """
+        公共JSON响应函数
+
+        :param code: 响应码,请参照StaCode中取值, 默认响应成功状态
+        :param data: 响应数据, 可以是任意符合JSON规范类型的数据模型
+        :param total: 针对于分页响应的总数量
+        :param hint: 响应消息, 字符串, 设置值后会采取设置的值，否则会使用响应码映射的默认值
+        :param headers: 附加响应头
+        """
+        if not code:
+            code = self.sta_code.PASS
+        result = {
+            "code": code,
+            "data": data,
+            "msg": hint,
+        }
+        NLogger.info(f"Response : headers={headers} total={total} result={result}")
+        raise JsonFinish(code, data, total, hint, headers)
 
 class GameAuthApi(BaseApi):
     decorators = [GameChecker]
@@ -104,3 +109,7 @@ class GameAuthApi(BaseApi):
 class BaseWS(BaseWebsocket):
     conf = conf_srv
     conn_manager = WsConnector
+
+
+class SpecialApi(BaseApi):
+    decorators = []

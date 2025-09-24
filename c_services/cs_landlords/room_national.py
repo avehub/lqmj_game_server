@@ -57,7 +57,7 @@ class NationalRoom(Room):
             player.do_double()
 
         player.has_doubled = True
-        self.info_log(player.uid, "do 加倍", score)
+        self.log_info(player.uid, "do 加倍", score)
 
         do_redouble_model.seat_id = player.seat_id
         do_redouble_model.score = score
