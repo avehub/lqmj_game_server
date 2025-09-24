@@ -589,7 +589,7 @@ class Room(BaseCardRoom):
             data_model = S2CDealCardsMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
-        if self.is_exchange_three():
+        if not self.__four_card_bao_ting and self.is_exchange_three():
             return await self.start_exchange_three()
         await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
