@@ -240,7 +240,6 @@ class BaseService(BaseServer, SessionManager):
         注意顺序
         """
         func = self.cmd2func.get(cmd)
-        self.log_info(cmd, uid)
         if not func or not callable(func):
             return
         c_enum = CmdRoom.find_member_by_val(cmd)

@@ -174,6 +174,9 @@ class BaseCardRoom(BaseRoom):
                         online_group_user_set.update(uid_list)
                 self.online_group_user = list(online_group_user_set)
                 await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.QUIT_ROOM))  # 通知茶馆创建房间
+        else:
+            self.log_info("游戏开始了，不能离开",player.uid)
+            return
         super(BaseCardRoom, self).player_quit_room(player, data)
 
     def game_began(self):
