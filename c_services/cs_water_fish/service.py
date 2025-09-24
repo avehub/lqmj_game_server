@@ -12,9 +12,6 @@ class WaterFishServer(BaseLeisureService):
 
     def __init__(self):
         super().__init__()
-
-        self.register_rc_model(
-        )
         self.add_handlers({
             CmdRoom.BET.val: self.__on_player_bet,
             CmdRoom.SA_PU.val: self.__on_player_sa_pu,

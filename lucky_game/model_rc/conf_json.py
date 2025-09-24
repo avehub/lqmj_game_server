@@ -13,17 +13,13 @@ class ConfJsonRC(RCModel):
 
     """ 配置ID """
     CONF_VIP = 'CONF_VIP'  # VIP通用配置
-    CONF_SAFE_BOX = 'CONF_SAFE_BOX'  # 保险箱配置
     CONF_NEW_USER_GIFT = 'CONF_NEW_USER_GIFT'  # 新人礼包配置
     CONF_RELIEF = 'CONF_RELIEF'  # 救济通用配置
-    CONF_SING_IN = 'CONF_SING_IN'  # 签到通用配置
-    CONF_ACTIVE_SCORE = 'CONF_ACTIVE_SCORE'  # 每日活跃配置
-    CONF_STORE = 'CONF_STORE'  # 商店通用配置
-    CONF_LIFETIME_CARD = 'CONF_LIFETIME_CARD'  # 终生卡配置
-    CONF_RANKING = 'CONF_RANKING'  # 排位通用配置
-    CONF_FIRST_CHARGE = 'CONF_FIRST_CHARGE'  # 首充通用配置
-    CONF_SWITCH = 'CONF_SWITCH'  # 开关配置：如内购等
-    CONF_ADS_AWARDS = 'CONF_ADS_AWARDS'  # 大厅看广告领奖几率
+    CONF_LUCK = "CONF_LUCK"  # 今日运势
+    CONF_KF = "CONF_KF"  # 客服信息
+    CONF_SWITCH = "CONF_SWITCH" # 开关配置，如内购等
+    CONF_NOTICE = "CONF_NOTICE"  # 系统公告
+    CONF_MAINTAIN = "CONF_MAINTAIN"  # 维护配置
 
     @classmethod
     async def cache_conf_data_by_pk(cls, pk_val) -> dict:

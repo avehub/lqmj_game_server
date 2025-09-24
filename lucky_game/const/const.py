@@ -12,8 +12,7 @@ from common.public.base_enum import BaseEnum
 
 class PlatForm(BaseEnum):
     """ 平台 """
-    DEFAULT = 0, "default", ''
-    TEST = 1, "test", ''
+    WEBPAGE = 1, "webpage", '网页'
     WECHAT_MP = 2, "wechat_mp", '微信公众号平台'
     NATIVE_APP = 3, "native_app", '原生app'
     WECHAT_MINI_GAME = 4, "minigame_wechat", '微信小游戏'
@@ -33,6 +32,19 @@ class OperatingSystem(StrEnum):
     Android = "android"
     IOS = "ios"
     PC = "pc"
+    VIVO = "vivo"
+
+
+class PlayTemplate(BaseEnum):
+    """ 游戏玩法类型 """
+    MJ_XTMJ = 1, "玄筒麻将"
+    MJ_JLXL = 2, "捡漏血流"
+    MJ_MHXL = 3, "闷胡血流"
+    MJ_GZZJ = 4, "贵州捉鸡"
+    MJ_SDG = 5, "三丁拐"
+    MJ_EDG = 6, "二丁拐"
+    MJ_BJMJ = 7, "毕节麻将"
+    PK_PDK = 8, "跑得快"
 
 
 @unique
@@ -44,32 +56,53 @@ class AliGrantType(StrEnum):
 
 class PayMode(BaseEnum):
     """支付方式"""
-    NO_MODE = 0, ""
-    WECHAT_MINI_GAME = 1, "微信小游戏支付"
-    ALIPAY_MINI_GAME = 2, "支付宝小游戏支付"
-    DOUYIN_MINI_GAME = 3, "抖音小游戏支付"
-    IOS_TO_H5 = 4, "IOS转H5支付"
+    DEFAULT_MODE = 0, "免费领取"
+    HUI_FU_PAY = 1, "汇付天下(App_Android、H5、微信小程序_IOS)"
+    ALIPAY = 2, "支付宝支付(H5)"
+    WECHAT_PAY = 3, "微信(微信小程序_Android)"
+    VIVO_PAY = 4, "VIVO支付"
+    APPLE_PAY = 5, "苹果支付"
+    ALIPAY_APP = 6, "支付宝支付(App)"
 
 
 class PayType(BaseEnum):
     """ 支付类型 """
-    BY_FREE = 0, "免费兑换"
-    BY_RMB = 1, "充值兑换"
-    BY_DIAMOND = 2, "仙玉兑换"
-    BY_GOLD = 3, "灵石兑换"
-    BY_DY_DIAMOND = 4, "抖音钻石兑换"
-    BY_FIVE_AGGREGATES = 5, "五蕴丹兑换"
-    BY_WATCH_AD = 6, "看广告兑换"
+    BY_FREE = 0, "免费领取"
+    BY_GOLD = 1, "金币兑换"
+    BY_DIAMOND = 2, "钻石兑换"
+    BY_ROOM_CARD = 3, "房卡兑换"
+    BY_YELLOW_DIAMOND = 4, "黄钻兑换"
+    BY_RMB = 5, "人民币"
+    BY_WATCH_AD = 6, "看广告领取"
+    BY_DY_DIAMOND = 7, "抖音钻石"
+
+
+class CurrencyType(BaseEnum):
+    """ 货币类型 """
+    DEFAULT = 0, "免费"
+    BY_GOLD = 1, "金币"
+    BY_DIAMOND = 2, "钻石"
+    BY_ROOM_CARD = 3, "房卡"
+    BY_YELLOW_DIAMOND = 4, "黄钻"
+    BY_RMB = 5, "人民币"
+    BY_WATCH_AD = 6, "看广告"
 
 
 @unique
 class OrderStatus(BaseEnum):
     """充值订单的状态"""
-    DEFAULT = 0, "默认"
-    WAIT_PAY = 1, "等待支付"
-    PAID = 2, "已支付"
-    OVERDUE = 3, "订单已过期"
-    REFUND = 4, "已退款"
+    WAIT_PAY = 0, "等待支付"
+    FAIL = 1, "支付失败"
+    CLOSED = 2, "订单关闭"
+    REFUND = 3, "已退款"
+    PAID = 99, "支付成功"
+
+
+class GainStatus(BaseEnum):
+    """领取状态"""
+    DEFAULT = 0, "未发放"
+    GAINED = 1, "已发放"
+    RECEIVED = 99, "已领取"
 
 
 @unique
@@ -83,7 +116,7 @@ class DeliverStatus(BaseEnum):
 class RandType(BaseEnum):
     """商品返利类型"""
     NONE = 0, "不返利"
-    BACK_AND_DISCOUNT = 1, "反还灵石并打折"
+    BACK_AND_DISCOUNT = 1, "反还金币并打折"
 
 
 @unique
@@ -136,10 +169,10 @@ class GamePropType(BaseEnum):
 class StoreType(BaseEnum):
     """商品类型"""
     DEFAULT = 0, "默认", ''
-    DIAMOND = 1, "仙玉", 'diamond'
-    GOLD = 2, "灵石", 'gold'
-    PROP = 3, "道具", ''
-    SKIN = 4, "皮肤", ''
+    DIAMOND = 1, "道具", ''
+    GOLD = 2, "金币", 'gold'
+    PROP = 3, "钻石", 'diamond'
+    SKIN = 4, "房卡", 'room_card'
     S_MAGIC = 5, "法宝", ''
     S_PACKAGE = 6, "礼包", ''
 
@@ -185,33 +218,35 @@ class GotType(BaseEnum):
 
 @unique
 class AwardType(BaseEnum):
-    """获奖类型（和动作有关）"""
+    """参与类型（和动作有关）"""
     DEFAULT = 0, "默认"
     LOGIN = 1, "登录"
-    SIGN_IN = 2, "签到"
-    ADVERT = 3, "看广告"
+    SIGN_IN_RF = 2, "抽奖签到"
+    ADVERT_RF = 3, "广告抽奖"
     SHARE = 4, "分享"
-    RAFFLE_LUCK = 5, "运势抽奖"
-    SIGN_IN_RF = 6, "抽奖签到"
-    LUCK = 7, "运势"
-    ACTIVE = 8, "活跃"
-    OPEN_TREASURE_BOX = 9, "开启宝盒"
-    MONOPOLY_RAND_AWARD = 10, "大富翁随机奖励"
-    SIGN_IN_WK = 11, "每周七日签到"
+    ACTIVE = 5, "活跃"
+    OPEN_TREASURE_BOX = 6, "开启宝盒"
+    MONOPOLY_RAND_AWARD = 7, "大富翁随机奖励"
+    TOP_UP = 8, "充值"
 
 
 @unique
 class ActivityType(BaseEnum):
-    """充值活动类型"""
+    """活动类型"""
     DEFAULT = 0, "默认"
     MONTH_CARD = 1, "月卡"
     FIRST_CHARGE = 2, "首充"
     WEEK_CARD = 3, "周卡"
     LIFETIME_CARD = 4, "终生卡"
     WAR_ORDER = 5, "战令"
-    PACKAGE = 6, "礼包"
-    DISCOUNT = 7, "幸运折扣"
-    INFINITE_PLAY = 8, "无限畅玩"
+    PACKAGE = 6, "限时登录"
+    SHARE = 7, "分享"
+    INFINITE_PLAY = 8, "救济金"
+    LUCK_SIGN_IN = 9, "抽奖签到"
+    AUTHENTICATION = 10, "实名认证"
+    REPLENISH_GIFT = 11, "金币补足礼包"
+    REVIVE_GIFT = 12, "复活礼包"
+    RETURN_GIFT = 13, "返还礼包"
 
 
 @unique
@@ -219,7 +254,15 @@ class ActivitySta(BaseEnum):
     """活动参与状态"""
     ACT_NOT_JOIN = 0, "未参与"
     ACT_INCOMPLETE = 1, "未完结"
-    ACT_COMPLETED = 2, "已完结"
+    ACT_COMPLETED = 99, "已完结"
+
+
+@unique
+class ActivityStatus(BaseEnum):
+    """活动状态"""
+    ACT_NOT_BEGUN = 0, "未开始"
+    ACT_UNDER_WAY = 1, "进行中"
+    ACT_FINISHED = -1, "已结束"
 
 
 @unique
@@ -290,6 +333,7 @@ class MailSta(BaseEnum):
 @unique
 class MailType(BaseEnum):
     """邮件类型"""
+    DEFAULT = 0, "默认"
     SYS = 1, "系统邮件"
     SEASON_SETTLE = 2, "赛季结算邮件"
 
@@ -437,18 +481,37 @@ class ActivityItem(BaseEnum):
 @unique
 class GoodsItem(BaseEnum):
     """物品统计key"""
-    DIAMOND = 1001, "仙玉", 'diamond'
-    GOLD = 1002, "灵石", 'gold'
+    DIAMOND = 1001, "钻石", 'diamond'
+    GOLD = 1002, "金币", 'gold'
     RELICS = 1013, "法相舍利", ''
     DICE = 1014, "骰子", ''
     FIVE_AGGREGATES = 1018, "五蕴丹", ''
     RAND_MAGIC = 1019, "随机法宝", ''
 
 
+class GoodsSku(StrEnum):
+    """特定商品SKU"""
+    SKU_FIRST = "NOMYLPAA"  #首充
+    SKU_FIRST_MINI = "NOMYLPAB"  #微信小游戏首充
+    SKU_FREE = "XXOLQQTL"   #免费
+    SKU_REPLENISH_1 = "OCNMZOAS"    #金币补足初级场礼包
+    SKU_REPLENISH_2 = "AAIAHTGS"    #金币补足中级场礼包
+    SKU_REPLENISH_3 = "IGBEZPJS"    #金币补足高级场礼包
+    SKU_REPLENISH_4 = "YPKOBVLR"    #金币补足王者场礼包
+    SKU_REVIVE_1 = "UJFPSNTT"   #复活初级场礼包
+    SKU_REVIVE_2 = "LUYTHXES"   #复活中级场礼包
+    SKU_REVIVE_3 = "YSYNBZFC"   #复活高级场礼包
+    SKU_REVIVE_4 = "LGYUEJAX"   #复活王者场礼包
+    SKU_RETURN_1 = "DPUWCOBL"   #返还初级场礼包
+    SKU_RETURN_2 = "NSPEJTCZ"   #返还中级场礼包
+    SKU_RETURN_3 = "MWSZUWJK"   #返还高级场礼包
+    SKU_RETURN_4 = "TIAOJRKA"   #返还王者场礼包
+
+
 @unique
 class StoreItem(BaseEnum):
     """商品统计key"""
-    FREE_GOLD = 2000, "免费灵石"
+    FREE_GOLD = 2000, "免费金币"
     FREE_DICE = 2100, "免费骰子"
 
 
@@ -456,11 +519,11 @@ class StoreItem(BaseEnum):
 class AdSlotItem(BaseEnum):
     """广告奖励位，对应award_id或store_id"""
     DY_RAFFLE_LUCK = 4000, "每日看广告运势抽奖", 't_raffle_luck'
-    DY_AWARD = 4001, "每日看广告获得灵石", 't_award'
+    DY_AWARD = 4001, "每日看广告获得金币", 't_award'
     DY_RELIEF = 4002, "每日看广告救济翻倍", 't_relief'
     DY_DICE = 2127, "看广告免费获得骰子", 't_dice'
-    DY_GOLD_NOT_ENOUGH_FIRST = 3015, "看广告领取灵石不足礼包（上篇）", 't_gold_not_enough_first'
-    DY_GOLD_NOT_ENOUGH_SECOND = 3023, "看广告领取灵石不足礼包（下篇）", 't_gold_not_enough_second'
+    DY_GOLD_NOT_ENOUGH_FIRST = 3015, "看广告领取金币不足礼包（上篇）", 't_gold_not_enough_first'
+    DY_GOLD_NOT_ENOUGH_SECOND = 3023, "看广告领取金币不足礼包（下篇）", 't_gold_not_enough_second'
     DY_SIGN_WK = 4003, "看广告每周七日签到", 't_sign_in_wk'
 
 
@@ -492,39 +555,38 @@ class LvDefendType(BaseEnum):
 
 
 RED_DOTS_OPPORTUNITY_MAP = {
-    # red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_RELIEF, RedDotType.RD_BAG],
-    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_BAG],
-    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS],
+    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN, RedDotType.RD_RELIEF],
+    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN, RedDotType.RD_RELIEF],
 }
 
 
 ################ 资产流水原因短语 ################
 @unique
 class ReasonCostGold(BaseEnum):
-    """ 灵石流水原因 """
+    """ 金币流水原因 """
     QUICK_CHAT = 1, "游戏内快捷聊天"
     TEST_ADD = 2, "测试修改资产"
     TICKETS_LEISURE = 3, "休闲场门票"
     CHECK_OUT_MONSTER_FIRST = 4, "打妖怪上结算"
     CHECK_OUT_MONSTER_SECOND = 5, "打妖怪下结算"
     CHECK_OUT_LANDLORDS = 6, "斗地主结算"
-    DIAMOND_EX_GOLD = 7, "仙玉兑换灵石"
+    DIAMOND_EX_GOLD = 7, "钻石兑换金币"
     RELIEF_GET = 8, "救济金领取"
     STORE_SHOPPING_GIFT = 9, "商店购物赠品"
     ACT_PACKAGE = 10, "游戏礼包"
     ACT_FIRST_CHARGE = 11, "首充礼包"
     ACT_WEEK_CARD = 12, "开通周卡"
     ACT_LIFETIME_CARD = 13, "开通终生卡"
-    STORE_FREE_GOLD = 14, "商店免费灵石"
+    STORE_FREE_GOLD = 14, "商店免费金币"
     WEEK_CARD_AWARDS = 15, "周卡日奖"
     LIFETIME_CARD_AWARDS = 16, "终生卡日奖"
     VIP_LEVEL_AWARDS = 17, "VIP等级奖"
     VIP_DAILY_AWARDS = 18, "VIP日奖"
     ROOKIE_TASK = 19, "新手引导任务"
-    GOLD_EXCHANGE = 20, "商店灵石兑换"
+    GOLD_EXCHANGE = 20, "商店金币兑换"
     DAILY_TASK = 21, "每日任务完成"
     DAILY_ACTIVE = 22, "每日活跃达成"
-    AD_FREE_GOLD = 23, "每日看广告获得灵石"
+    AD_FREE_GOLD = 23, "每日看广告获得金币"
     RAFFLE_LUCK = 24, "每日运势抽奖"
     SIGN_IN_TOTAL = 25, "累计签到天数达成"
     MAILS_GIFT = 26, "邮件赠品"
@@ -536,8 +598,18 @@ class ReasonCostGold(BaseEnum):
     OPEN_TREASURE_BOX = 32, "开启宝盒"
     SKIN_EQUIP_EFFECT = 33, "皮肤装备打出效果"
     MONOPOLY_AWARDS = 34, "玩大富翁奖励"
-    CONVERT_AWARDS = 35, "兑换/折现奖励"
+    CONVERT_AWARDS = 35, "兑换/充值礼包"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
+    CHECK_OUT_MAHJONG = 37, "麻将结算"
+    ACTIVITY_GIFT = 38, "活动礼包"
+    ACTIVITY_PACKAGE = 39, "限时登录"
+    ACTIVITY_SHARE = 40, "分享奖励"
+    CLUB_ROOM_CARD = 41, "茶馆房卡变更"
+    CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
+    CLUB_ROOM_CARD_TICKETS = 43, "游戏房卡门票"
+    CLUB_YELLOW_DIAMOND_TICKETS = 44, "游戏黄钻门票"
+    ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
+    WECHAT_STORE_SHOPPING = 46, "微信商店购物"
 
     # 100 - 200留给管理员使用
     ADMIN_MODIFY_GOLD = 100, ""
@@ -545,9 +617,9 @@ class ReasonCostGold(BaseEnum):
 
 @unique
 class ReasonCostDiamond(BaseEnum):
-    """ 仙玉流水原因 """
-    DIAMOND_EXCHANGE = 1, "商店仙玉兑换"
-    STORE_BUY_DIAMOND = 2, "商店仙玉礼包"
+    """ 钻石流水原因 """
+    DIAMOND_EXCHANGE = 1, "商店钻石兑换"
+    STORE_BUY_DIAMOND = 2, "商店钻石礼包"
     STORE_SHOPPING_GIFT = 3, "商店购物赠品"
     ACT_FIRST_CHARGE = 4, "首充礼包"
     ACT_WEEK_CARD = 5, "开通周卡"

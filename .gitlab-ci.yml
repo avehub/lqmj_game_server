@@ -1,0 +1,20 @@
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+  - deploy
+
+variables:
+  BASE_DIR: "/data/programs/lucky_game"
+
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+    - echo "开始执行重启脚本"
+    - cd ${BASE_DIR}
+    - ssh restart.sh
+    - echo "重启脚本执行结束"
+  only:
+    - dve_测试服
+  when: always
+
+

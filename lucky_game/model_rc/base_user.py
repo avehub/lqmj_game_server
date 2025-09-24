@@ -2,11 +2,11 @@
 用户相关
 """
 import asyncio
+import decimal
 from typing import Union, Iterable
 from datetime import datetime, date
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
-from nsanic.orm.rc_model import RCModel
 from c_services.const.cs_enum_const import CmdWorkers
 from common.public.enum_const import BaseEnum, CacheKey, BanType
 from common.utils.kit_dt import KitDt
@@ -15,6 +15,10 @@ from lucky_game.const import GoodsItem, ReasonCostGold, ReasonCostDiamond
 from lucky_game.model_db.log import RecordsUserBan
 from lucky_game.model_db.main import User
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from common.public.conf import SERVER_ADDR
+from lucky_game.handler.random_utils import generate_natural_random
+from common.utils.utils import UtilsTool
+from nsanic.libs.mk_random import RngMaker
 
 
 class BaseUserRC(BaseCommonRC):
@@ -30,6 +34,7 @@ class BaseUserRC(BaseCommonRC):
     KEY_UNION_ID = 'union_id'
     KEY_OPENID = 'open_id'
     KEY_SESSION = "session_key"
+    KEY_APPLE_ID = 'apple_id'
     KEY_USER_PAY_INFO = "user_pay_info"  # 已下单的支付信息
     KEY_USER_PAID_ORDER = "user_paid_order"  # 已支付订单
 
@@ -40,7 +45,7 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def cache_session_key(cls, uid, session_key):
-        await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{uid}", session_key, ex_time=7 * 86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{uid}", session_key, ex_time=7 * 86400)
 
     @classmethod
     async def get_session_key(cls, uid):
@@ -49,7 +54,7 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
         """缓存平台的支付信息"""
-        await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
 
     @classmethod
     async def get_user_pay_info(cls, uid, order_id):
@@ -146,19 +151,21 @@ class BaseUserRC(BaseCommonRC):
         return {}
 
     @classmethod
-    async def cache_count_buy_limit(cls, uid, trade_item, data):
+    async def cache_count_buy_limit(cls, uid, sku, data):
         """ 缓存短期限购次数（通用） """
         # 从 data 中获取周期类型，例如：{"times": 5, "limit_period": 1}
-        buy_limit = data.get("buy_limit")
-        limit_period = buy_limit.get("limit_period", 0)
-        cur_time = tool_dt.cur_time()
+        sta = False
+        if data:
+            buy_limit = data.get("buy_limit")
+            limit_period = buy_limit.get("limit_period", 0)
+            cur_time = tool_dt.cur_time()
 
-        # 计算周期结束时间
-        time_node = KitDt.cal_period_deadline(limit_period, cur_time)
-        data["time_node"] = time_node
-
-        return await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{trade_item}", json_encode(data),
-                                           ex_time=cls.expired_sec)
+            # 计算周期结束时间
+            time_node = KitDt.cal_period_deadline(limit_period, cur_time)
+            data["time_node"] = time_node
+            sta = await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{sku}", json_encode(data),
+                                               ex_time=cls.expired_sec)
+        return sta
 
     @classmethod
     async def cache_by_pk(cls, pk_val: Union[bytes, int, str], **kwargs):
@@ -193,7 +200,7 @@ class BaseUserRC(BaseCommonRC):
         else:
             info = await cls.cache_by_pk(uid)
         if info:
-            info["gold"] = int(info.get("gold", 0))
+            info["gold"] = float(info.get("gold", 0))
         return info
 
     @classmethod
@@ -201,7 +208,7 @@ class BaseUserRC(BaseCommonRC):
             cls, unique: dict, suffix: str, split: Union[str, int, float, datetime, date] = None, **kwargs):
         info = await cls.cache_by_unique_inner(unique, suffix, split, **kwargs)
         if info:
-            info["gold"] = int(info.get("gold", 0))
+            info["gold"] = float(info.get("gold", 0))
         return info
 
     @classmethod
@@ -240,7 +247,7 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def update_cache(cls, pk_val, new_info: dict):
-        new_info["gold"] = str(new_info.get("gold", 0))
+        new_info["gold"] = float(new_info.get("gold", 0))
         if cls.expired_mode:
             key = f"{cls.tb_name}:{pk_val}"
             await cls.conf.rds.set_item(key, json_encode(new_info), ex_time=cls.expired_sec)
@@ -407,6 +414,60 @@ class BaseUserRC(BaseCommonRC):
         key = f"{cls.KEY_REQ_LIMIT}:{wait_key}:{uid}"
         return await cls.conf.rds.set_item(key, 1, cool_down_time)
 
+    @classmethod
+    async def update_user_int_field(cls, uid: int, field_name: str, value: [int | decimal.Decimal], operation: str = 'add'):
+        try:
+            user, e = await cls.update_int_field(uid, field_name, value, operation)
+            if not user:
+                return False, e
+            # 更新缓存
+            userinfo = await cls.db_model.get_by_pk(uid)
+            await cls.update_cache(uid, userinfo)
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+        return True, "更新成功"
+
+    @classmethod
+    async def get_default_user_info(cls, register_type: str = None, **kwargs):
+        """
+        获取默认用户信息
+        :param register_type: 注册类型
+        :param kwargs: 其他参数
+        :return: 用户信息
+        """
+        union = kwargs.get(register_type)
+        name = kwargs.get("nickname")
+        dev_ident = kwargs.get("dev_ident")
+        phone = kwargs.get("phone")
+        if register_type == cls.KEY_PHONE_CACHE:
+            name = ''.join(list(union)[-4:])
+        elif register_type in [cls.KEY_UNION_ID, cls.KEY_OPENID]:
+            if name:
+                name = UtilsTool.filter_emoji(name[:20])
+            else:
+                name = RngMaker.mk_str(6)
+        else:
+            name = generate_natural_random(4)
+        return {
+            "nickname": name,
+            "sex": 0,
+            "phone": phone,
+            "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('phone_openid', union, extra_str=phone)),
+            "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('phone_unionid', union, extra_str=phone)),
+            # "safe_key": RngMaker.mk_str(18),
+            # "valid_key": RngMaker.mk_str(16),
+            # "dev_ident": dev_ident,
+            # "country": "CN",
+            # "tst_mark": False,
+        }
+
+    @classmethod
+    async def get_user_by_apple(cls, apple_id: str):
+        """通过 Apple ID 获取用户信息"""
+        sql = f"SELECT * FROM {cls.tb_name} WHERE apple_id = {apple_id} AND status = 1 LIMIT 1"
+        result = await cls.db_model.exec_query(sql)
+        return dict(result) if result else None
+
 
 class BaseBanRC(BaseCommonRC):
     db_model = RecordsUserBan
@@ -449,12 +510,14 @@ class BaseBanRC(BaseCommonRC):
                     await cls.conf.rds.set_item(key, json_encode(db_info), ex_time=cls.expired_sec)
                     return db_info
             except OperationalError:
-                cls.conf.info_log("cache_ban_records 暂无表")
+                cls.log_info("cache_ban_records 暂无表")
                 return []
             return []
 
-        key = f'{cls.db_model.sheet_name()}:{uid}'
+        key = f"{cls.db_model.sheet_name()}:{uid}"
         info = await cls.conf.rds.get_item(key)
         if info:
-            return json_parse(info, cls.conf.error_log)
+            return json_parse(info, cls.log_err)
         return await cls.conf.rds.locked(key, fun=from_db)
+
+

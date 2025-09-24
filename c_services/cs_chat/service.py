@@ -18,7 +18,6 @@ class ChatServer(JsonBaseServer):
         self.add_handlers({
             CmdChat.RECEIVE_CHAT_MSG: self.__recv_chat_message,
         })
-        self.register_rc_model(ChatRecordRC)
 
     async def __recv_chat_message(self, to_uid, msg: dict):
         """ 接收聊天消息 """
@@ -50,4 +49,4 @@ class ChatServer(JsonBaseServer):
         m.from_uid = msg.get("from_uid")
         m.content = msg.get("content")
         m.created = msg.get("created") or tool_dt.cur_time()
-        await self.chat_ws_by_rmq(CmdChat.RECEIVE_CHAT_MSG, uid=recv_uid, msg=m)
+        await self.send_msg_to_player(self.service_type, CmdChat.RECEIVE_CHAT_MSG, uid=recv_uid, msg=m)

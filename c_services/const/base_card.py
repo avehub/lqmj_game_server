@@ -24,7 +24,8 @@ class BaseCard(IntEnum):
         """是否包含指定值"""
         return cls._value2member_map_.get(value)
 
-    def all_cards(self):
+    @classmethod
+    def all_cards(cls,extra_count = 0):
         raise NotImplementedError
 
     @staticmethod

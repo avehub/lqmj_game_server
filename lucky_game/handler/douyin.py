@@ -1,4 +1,6 @@
 from nsanic.libs import tool_dt
+from nsanic.libs.component import LogMeta
+
 from common.public.conf import DouYinConf
 from common.utils.utils import UtilsTool
 from lucky_game.config import conf_srv, ConfSrv
@@ -6,7 +8,7 @@ from nsanic.libs.tool import http_get, http_post, json_parse
 from lucky_game.const import PayType, PlatForm
 
 
-class DouYin:
+class DouYin(LogMeta):
     """ 抖音相关 """
     conf: ConfSrv = conf_srv
     DOUYIN_ACCESS_TOKEN = "douyin_access_token"  # access_token
@@ -35,7 +37,7 @@ class DouYin:
         res = json_parse(req_data)
         err_no = res.get("err_no") or 0
         if err_no != 0:
-            cls.conf.error_log(f'DouYin get_access_token failed: {res}')
+            cls.log_err(f'DouYin get_access_token failed: {res}')
             return err_no, res.get("err_tips")
 
         data = res.get("data") or {}
@@ -70,7 +72,7 @@ class DouYin:
 
         error_code = data.get("error_code") or 0
         if error_code != 0:
-            cls.conf.error_log(f'DouYin get_client_token failed: {res}')
+            cls.log_err(f'DouYin get_client_token failed: {res}')
             return error_code, data.get("message")
 
         client_token = data.get("access_token")
@@ -176,7 +178,7 @@ class DouYin:
         res = json_parse(req_data)
         err_no = res.get("err_no") or 0
         if err_no != 0:
-            cls.conf.error_log(f'DouYin query_pay_status failed: {res}')
+            cls.log_err(f'DouYin query_pay_status failed: {res}')
             return err_no, res.get("message")
         return err_no, res.get("data")
 
