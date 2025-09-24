@@ -74,7 +74,6 @@ class ClubServer(BaseServer):
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
 
     async def __club_notice(self,uid,data):
-        print("茶馆公告",data)
         notice = data.get("notice")
         club_id = data.get("id")
         room = await self.check_in_room(CmdClub.CLUB_NOTICE, uid, club_id)

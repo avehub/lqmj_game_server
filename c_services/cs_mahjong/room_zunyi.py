@@ -90,7 +90,6 @@ class RoomZY(RoomBJ):
                 pai_xing_score_map=self.pai_xing_score_map, extra_score_map=self.extra_score_map)
             p.jiao_pai = hu_type
             p.hu_path = hu_path or []
-        print("hu_type:", hu_type, "p.hu_path", p.hu_path)
         if not hu_type:
             return {}, False, []
 
