@@ -678,7 +678,7 @@ class Rule(metaclass=NoInstances):
         if allow_hu_map.get(HuType.DI_LONG_QI):
             flag, path = Rule.is_di_long_qi(table_cards, cards, CardsType.LAI_ZI, is_gy, cal_ting_pai=True)
             if flag:
-                if table_cards[0][1] == card:  # 必须摸的是碰的那张
+                if table_cards[0][1] == card or card == 0:  # 必须摸的是碰的那张或者是癞子
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         if is_wu_dui:
             flag, path = Rule.is_wu_dui(cards, lai_zi=CardsType.LAI_ZI)
@@ -909,7 +909,7 @@ class Rule(metaclass=NoInstances):
 
 
     @staticmethod
-    def can_an_gang(cards: list, card=0):
+    def can_an_gang(cards: list, card=0 ,que = 0):
         """ 判断是否能暗杠 """
         card_to_count = Rule.get_card_to_count(cards)
         if card > 0:
@@ -918,7 +918,8 @@ class Rule(metaclass=NoInstances):
         can_gang_list = []
         for card, count in card_to_count.items():
             if count >= 4:
-                can_gang_list.append(card)
+                if card // 10 != que:
+                    can_gang_list.append(card)
         if can_gang_list:
             return True, can_gang_list
         return False, can_gang_list

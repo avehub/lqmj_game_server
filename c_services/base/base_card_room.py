@@ -6,7 +6,7 @@ from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, Ext
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo, S2CChangeConnect
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
@@ -174,7 +174,17 @@ class BaseCardRoom(BaseRoom):
                         online_group_user_set.update(uid_list)
                 self.online_group_user = list(online_group_user_set)
                 await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.QUIT_ROOM))  # 通知茶馆创建房间
+        else:
+            self.log_info("游戏开始了，不能离开",player.uid)
+            return
         super(BaseCardRoom, self).player_quit_room(player, data)
+
+    async def player_change_connect(self, player,data):
+        data_connect = {"seat_id":player.seat_id,"offline":data}
+        print("data_connect",data_connect)
+        data_model = S2CChangeConnect.pb_model(**data_connect)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model,exclude_uid =player.uid)
+
 
     def game_began(self):
         return self.round_idx != 1 or self.room_status != RoomStatus.T_IDLE

@@ -59,6 +59,8 @@ class BaseService(BaseServer, SessionManager):
             # if room.room_status == RoomStatus.T_RECHARGE_ING:
             #     return
             await room.player_quit_room(player,player.uid)
+        else:
+            await room.player_change_connect(player,player.offline)
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
     @staticmethod
@@ -143,7 +145,8 @@ class BaseService(BaseServer, SessionManager):
         self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
-        await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
+        await room.player_change_connect(player,player.offline)
+        # await room.inner_broadcast(player, CmdRoom.ENTER_ROOM, req_id=req_id)
         if player.trustee:
             await room.do_trustee(player)
 
@@ -240,7 +243,6 @@ class BaseService(BaseServer, SessionManager):
         注意顺序
         """
         func = self.cmd2func.get(cmd)
-        self.log_info(cmd, uid)
         if not func or not callable(func):
             return
         c_enum = CmdRoom.find_member_by_val(cmd)
