@@ -176,7 +176,7 @@ class SysMaintain(BaseDecorator):
             verify_status = False
             if uid in maintain.get("special_uid"):
                 verify_status = True
-        return verify_status, "游戏正在维护升级中，请稍后"
+        return verify_status, "游戏维护中，暂时无法进入！详情请联系客服"
 
 
 
