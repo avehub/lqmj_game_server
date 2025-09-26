@@ -120,7 +120,7 @@ class PaymentLogic:
                 express["content"] = express["content"][random.randint(0, len(express["content"]) - 1)]
             else:
                 express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
-        express["price"] = price
+        express["price"] = decimal.Decimal(price)
         order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num, purchase_uid=purchase_uid)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
@@ -172,6 +172,8 @@ class PaymentLogic:
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
         if deal_func and callable(deal_func):
+            # 避免decimal出现科学计数形态直接给到客户端
+            new_order.amount = format(new_order.amount, '.2f')
             sta, order_info = await deal_func(new_order, return_url=return_url)
             NLogger.info(f"create_order uid: {new_order.uid} 订单创建状态 : {sta} 订单创建结果：", order_info)
             if not sta:
@@ -274,7 +276,6 @@ class PaymentLogic:
             sku=express.get("sku"),
             platform=platform,
             amount=express.get("price"),
-            # amount=express.get("price") if ENV == "prod" else decimal.Decimal(0.01),
             currency=express.get("currency"),
             pay_mode=pay_mode,
             num=num,
@@ -490,10 +491,10 @@ class PaymentLogic:
         explain = kwargs.get("explain")
         order_info, e = await OrderRC.get_order_info(order_no=order_no)
         if not order_info:
-            NLogger.error("completed_order 无此待领取订单", order_no)
+            NLogger.info("completed_order 无此待领取订单", order_no)
             return False, e, {}
         if order_info.get("status") == OrderStatus.PAID:
-            NLogger.error("completed_order 订单已处理", order_no)
+            NLogger.info("completed_order 订单已处理", order_no)
             return True, "订单已处理", {}
         up_data = {
             "status": order_status,
