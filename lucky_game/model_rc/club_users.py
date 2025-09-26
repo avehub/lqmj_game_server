@@ -226,10 +226,10 @@ class ClubUsersRC(BaseCommonRC):
                 count = await cls.db_model.get_count(query)
                 if count > 0:
                     offset = (page - 1) * page_size
-                    data = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
+                    data = await cls.db_model.filter(**query).order_by("-role").offset(offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, count, data)
             else:
-                result = data = await cls.db_model.filter(**query).values()
+                result = data = await cls.db_model.filter(**query).order_by("-role").values()
             if not data:
                 return result, "暂无数据"
         except OperationalError as e:
