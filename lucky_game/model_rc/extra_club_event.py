@@ -90,7 +90,7 @@ class ExtraClubEventRC(BaseCommonRC):
             if event_type is not None:
                 query["event_type"] = event_type
             if order_field is None:
-                order_field = "id"
+                order_field = "-id"
             if page and page_size:
                 total, _ = await cls.count_record_total(**query)
                 records = []
@@ -102,7 +102,7 @@ class ExtraClubEventRC(BaseCommonRC):
             else:
                 result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
-                return result, "暂无战绩"
+                return result, "暂无记录"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"
