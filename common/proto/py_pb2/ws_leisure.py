@@ -1095,6 +1095,7 @@ class S2CClubRoomInfo:
         obj.msg_type = kwargs.get("msg_type") or 0
         obj.round_num = kwargs.get("round_num") or 1
         obj.online_group_user.extend(kwargs.get("online_group_user") or [])
+        obj.status =  kwargs.get("status") or 0
         return obj
 
 class S2CClubNotice:

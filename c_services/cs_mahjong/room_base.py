@@ -1139,7 +1139,8 @@ class Room(BaseCardRoom):
             self.remove_player_action(tian_ting=True)
             return await self.check_tian_ting_end()
 
-        return await self.__mo_pai()  # 继续摸牌
+        return self.call_flow(0,self.__mo_pai)
+        # return await self.__mo_pai()  # 继续摸牌
 
     async def check_tian_ting_end(self):
         for p in self.seats:
