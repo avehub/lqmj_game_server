@@ -1093,7 +1093,7 @@ class S2CClubRoomInfo:
         obj.total_round = kwargs.get("total_round") or 0
         obj.updated = kwargs.get("updated") or 0
         obj.msg_type = kwargs.get("msg_type") or 0
-        obj.round_idx = kwargs.get("round_idx") or 1
+        obj.round_num = kwargs.get("round_num") or 1
         obj.online_group_user.extend(kwargs.get("online_group_user") or [])
         return obj
 

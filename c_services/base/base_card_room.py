@@ -726,7 +726,7 @@ class BaseCardRoom(BaseRoom):
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
             "online_group_user": self.__online_group_user,
-            "round_idx": self.round_idx,
+            "round_num": self.round_idx,
             "updated": self.__create_time,
             "msg_type": msg_type,
             "secret": C_SERVICE_SECRET_KEY,
