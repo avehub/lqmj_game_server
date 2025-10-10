@@ -67,6 +67,7 @@ class ClubServer(BaseServer):
     async def __leave_club(self, uid, data):
         leave_club_model.ParseFromString(data)
         club_id = leave_club_model.club_id or 0
+        self.log_info("离开茶馆信息",uid,club_id)
         room = await self.check_in_room(CmdClub.LEAVE_CLUB, uid, club_id)
         if room:
             room.player_quit_room(uid)
