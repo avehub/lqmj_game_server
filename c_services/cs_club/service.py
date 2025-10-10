@@ -137,13 +137,13 @@ class ClubServer(BaseServer):
             return
         c_enum = CmdClub.find_member_by_val(cmd)
         check_inner = c_enum.desc == CallCheck.INNER
+        self.log_info("茶馆收到消息", uid, cmd,check_inner)
         if check_inner:
             data = self.check_inner_call(data)
             if not data:
                 return
             data.pop("secret")
             return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
-
         return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
 
 
