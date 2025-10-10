@@ -123,7 +123,7 @@ class ClubServer(BaseServer):
         if not room:
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='茶馆不存在')
         elif not room.check_player_in_club(uid):
-            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在服務')
+            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在茶馆服務')
         return room
 
 
@@ -134,6 +134,7 @@ class ClubServer(BaseServer):
         """
         func = self.cmd2func.get(cmd)
         if not func or not callable(func):
+            self.log_info("not func",func)
             return
         c_enum = CmdClub.find_member_by_val(cmd)
         check_inner = c_enum.desc == CallCheck.INNER
