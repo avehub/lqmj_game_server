@@ -124,6 +124,7 @@ class ClubServer(BaseServer):
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='茶馆不存在')
         elif not room.check_player_in_club(uid):
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在茶馆服務')
+        self.log_info("检查茶馆信息",room,room.members,uid,club_id)
         return room
 
 
