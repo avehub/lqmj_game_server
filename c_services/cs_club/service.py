@@ -29,6 +29,7 @@ class ClubServer(BaseServer):
     def create_room(self, cid, owner):
         room = ClubRoom(cid, owner, self)
         self.__rooms[cid] = room
+        self.log_info("创建茶馆房间",cid,owner)
         return room
 
     def remove_room(self, cid):
@@ -46,15 +47,13 @@ class ClubServer(BaseServer):
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
         room = self.get_or_create_room(club_id, uid)
-        self.log_info("茶馆房间",room ,room.members)
         if not room:
             self.log_info("进入茶馆房间为空")
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
-        self.log_info("club_id",club_id,"玩家进入茶馆", uid)
-        room.player_join_room(uid)
-        self.log_info("茶馆房间11", room, room.members)
+        self.log_info("club_id",club_id,"玩家进入茶馆", uid,room, room.members)
+        room.player_join_club_room(uid)
         return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid)
 
     async def __quit_club(self, uid, data):
@@ -63,7 +62,7 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid, StaCode.FAIL)
-        room.player_quit_room(uid)
+        room.player_quit_club_room(uid)
         self.log_info("club_id", club_id, "玩家退出茶馆", uid)
         return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid)
 
@@ -73,7 +72,7 @@ class ClubServer(BaseServer):
         self.log_info("离开茶馆信息",uid,club_id)
         room = await self.check_in_room(CmdClub.LEAVE_CLUB, uid, club_id)
         if room:
-            room.player_quit_room(uid)
+            room.player_quit_club_room(uid)
             self.log_info("club_id", club_id, "玩家离开茶馆", uid)
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
 
