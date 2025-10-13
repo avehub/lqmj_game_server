@@ -1066,6 +1066,13 @@ class S2CChangeConnect:
         obj.offline = kwargs.get("offline") or False
         return obj
 
+class S2CRoomDismissInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CRoomDismissInfo()
+        obj.game_begin = kwargs.get("game_begin") or False
+        return obj
+
 # ################################## 麻将 ##################################
 
 # ################################## 茶馆通知 ##################################

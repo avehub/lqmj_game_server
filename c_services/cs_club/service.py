@@ -9,6 +9,9 @@ from common.public.enum_const import StaCode
 
 
 class ClubServer(BaseServer):
+
+    SUBSCRIBE_FANOUT = None
+
     def __init__(self):
         super().__init__()
         self.add_handlers({
@@ -47,8 +50,6 @@ class ClubServer(BaseServer):
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
         room = self.get_or_create_room(club_id, uid)
-        if not room:
-            self.log_info("进入茶馆房间为空")
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
@@ -92,7 +93,6 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return
-        print("room.owner",room.owner)
         data_model = S2CClubRoomInfo.pb_mode(**data)
         await room.inner_broadcast(CmdClub.ROOM_INFO_CHANGE, data_model)
         self.log_info("club_id",club_id,"茶馆房间改变",data.get("msg_type"))
@@ -126,10 +126,7 @@ class ClubServer(BaseServer):
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='茶馆不存在')
         elif not room.check_player_in_club(uid):
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在茶馆服務')
-        if room:
-            self.log_info("检查茶馆信息",room,room.members,uid,club_id)
-        else:
-            self.log_info("茶馆房间不存在",uid, club_id)
+            return None
         return room
 
 
@@ -140,11 +137,9 @@ class ClubServer(BaseServer):
         """
         func = self.cmd2func.get(cmd)
         if not func or not callable(func):
-            self.log_info("not func",func)
             return
         c_enum = CmdClub.find_member_by_val(cmd)
         check_inner = c_enum.desc == CallCheck.INNER
-        self.log_info("茶馆收到消息", uid, cmd,check_inner)
         if check_inner:
             data = self.check_inner_call(data)
             if not data:

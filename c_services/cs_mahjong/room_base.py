@@ -4434,7 +4434,9 @@ class Room(BaseCardRoom):
         self.log_info("force_dismiss", self.not_playing_dismiss)
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             if self.not_playing_dismiss:
-                await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
+                data = {"game_begin": self.room_status == RoomStatus.T_DISMISS and self.record_id > 0}
+                data_model = S2CRoomDismissInfo.pb_model(**data)
+                await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
                 if self.room_status == RoomStatus.T_DISMISS and self.record_id > 0:
