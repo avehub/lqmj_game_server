@@ -49,16 +49,35 @@ class GameRoomsRC(BaseCommonRC):
         "shang_ga": {0, 1},  #估卖选项 0未选 1选
         "gu_mai_score": {0, 1, 2, 3, 4, 5},  #所选卖分 0自由分 1-5对应1-5分
         "suo_de_jia_1": {0, 1},  #所得加1选项 0未选 1选
-        "hu_pai_ti_shi": {0, 1},  #胡牌提示  捡漏血流才有选项 0未选 1选  闷胡血流固定是1
         "huang_zhuang_bu_huang_ji": {0, 1},  #黄庄不黄鸡杠 0未选 1选
         "four_card_bao_ting": {0, 4},  #四张报听 0未选 4选
-        "xiao_pai_bi_men": {0, 1},  #小牌必闷  闷胡血流才有 0未选 1选  捡漏血流固定是1
-        "tui_zhang_can_hu": {0, 1},  #退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
-        "bao_ting_bi_men": {0, 1},  #报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
         "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
         "exchange_cards_type": {0, 1, 2},  # 换三张方式  1任意牌 2同色牌
         "exchange_first": {0, 1},  # 是否换三张优先 0否 1是
     }
+
+    # 捡漏血流
+    RULE_DETAILS_JLXL = RULE_DETAILS | {
+        "xiao_pai_bi_men": {1},   #小牌必闷 固定是1
+        "tui_zhang_can_hu": {0},  #退张可开 固定是0
+        "bao_ting_bi_men": {0},   #报听必闷 固定是0
+        "hu_pai_ti_shi": {0, 1},  #胡牌提示 选项 0未选 1选
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
+    }
+
+    # 闷胡血流
+    RULE_DETAILS_MHXL = RULE_DETAILS | {
+        "xiao_pai_bi_men": {0, 1},   #小牌必闷   0未选 1选
+        "tui_zhang_can_hu": {0, 1},  #退张可开  0未选 1选
+        "bao_ting_bi_men": {0, 1},   #报听必闷   0未选 1选
+        "hu_pai_ti_shi": {1},     #胡牌提示  固定是1
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
+    }
+
     # 毕节麻将
     RULE_DETAILS_BJMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
@@ -66,12 +85,17 @@ class GameRoomsRC(BaseCommonRC):
         "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
         "lian_zhuang": {0, 1},  #连庄 0未勾选 1勾选
     }
+
     # 贵阳麻将（两丁拐、三丁拐）
     RULE_DETAILS_GYMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
         "shu_zi_ji": {0, 1},  #数字鸡 0未勾选 1勾选
         "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
     }
+
     # 遵义麻将（玄同麻将）
     RULE_DETAILS_ZYMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
@@ -84,8 +108,10 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def get_play_rule(cls, play_type: int):
-        if play_type in [PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN]:
-            return cls.RULE_DETAILS
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return cls.RULE_DETAILS_JLXL
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return cls.RULE_DETAILS_MHXL
         elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
             return cls.RULE_DETAILS_GYMJ
         elif PlayType.BI_JIE_MJ == play_type:
@@ -223,7 +249,6 @@ class GameRoomsRC(BaseCommonRC):
     async def settle_room_card(cls, room_data):
         """结算房卡"""
         key = "room_card"
-        userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
         price = room_data['price']
         if room_data["club_id"] and room_data["club_id"] > 0:
             # 扣除茶馆基金
@@ -248,10 +273,7 @@ class GameRoomsRC(BaseCommonRC):
             # 记录茶馆事件
             event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
             event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                name=userinfo["name"],
-                uid=userinfo["uid"],
                 price=price,
-                play_type=room_data["play_type"],
                 room_id=room_data["room_id"],
             )
             add_club_behavior, _ = await ExtraClubEventRC.create_event(
@@ -291,7 +313,6 @@ class GameRoomsRC(BaseCommonRC):
         key = "room_card"
         if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
             key = "yellow_diamond"
-        userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
         price = room_data['price']
         async with in_transaction(connection_name=DbKey.DEFAULT):
             # 茶馆
@@ -306,10 +327,7 @@ class GameRoomsRC(BaseCommonRC):
                 # 记录茶馆事件
                 event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
                 event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                    name=userinfo["name"],
-                    uid=userinfo["uid"],
                     price=price,
-                    play_type=room_data["play_type"],
                     room_id=room_data["room_id"],
                 )
                 add_club_behavior, _ = await ExtraClubEventRC.create_event(
@@ -532,7 +550,7 @@ class GameRoomsRC(BaseCommonRC):
             if not room_data:
                 return False, e
             if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
-                return False, "离开房间状态异常"
+                return False, "房间正在游戏中"
             sta = await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
             if sta == 0:
                 return False, "用户已离开房间或离开房间失败"
