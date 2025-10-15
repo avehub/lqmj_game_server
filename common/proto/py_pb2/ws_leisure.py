@@ -1112,6 +1112,14 @@ class S2CClubNotice:
         obj.notice = kwargs.get("notice") or ""
         return obj
 
+class S2CClubRoomSetInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CClubRoomSetInfo()
+        obj.rank_members_only = kwargs.get("rank_members_only") or 0
+        return obj
+
+
 # ################################## 茶馆通知 ##################################
 
 
