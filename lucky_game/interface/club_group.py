@@ -12,7 +12,7 @@ class CreatGroup(GameAuthApi):
     """创建隔离组"""
     async def post(self, req: Request, **kwargs):
         uid = kwargs.get("u_info").get("uid")
-        u_ids = self.check_str(req.json.get("u_ids"), require=True, p_name="被隔离用户ID")
+        u_ids = self.check_str(req.json.get("u_ids"), require=False, p_name="被隔离用户ID")
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         name = self.check_str(req.json.get("name"), maxlen=16, require=True, p_name="隔离组名")
         gid, e = await ClubGroupRC.creat_club_group(
