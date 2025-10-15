@@ -118,6 +118,7 @@ class Clubs(DBModel):
     other = fields.JSONField(null=True, description='其他设置：JSON存储')
     notice = fields.TextField(null=True, description='公告')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态：0正常')
+    record_status = fields.SmallIntField(max_length=2, null=True, default=0, description='战绩状态：0隐藏 1显示')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
 

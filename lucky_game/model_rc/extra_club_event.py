@@ -15,12 +15,14 @@ class ExtraClubEventRC(BaseCommonRC):
     EVENT_TYPE = {
         'FUND_RECHARGE': 1,  # 基金充值
         'FUND_CONSUME': 2,   # 基金消耗
-        'APPROVAL_LOG': 3    # 入馆审批
+        'APPROVAL_LOG': 3,    # 入馆审批
+        'CLOSE_LOG': 4    # 茶馆解散
     }
     EVENT_MSG = {
-        1: "{name}玩家（ID：{uid}）为茶馆充值基金{price}",
-        2: "{name}玩家（ID：{uid}）消耗{price}基金创建了{play_type}玩法（房间号：{room_id}）",
-        3: "记录{check_name}管理员（ID：{check_uid}）通过{name}玩家（ID：{uid}）加入茶馆",
+        1: "茶馆基金充值 {price}",
+        2: "茶馆基金消耗 {price}, 创建房间（ID: {room_id}）",
+        3: "管理员（ID：{check_uid}）审批（ID：{uid}）加入茶馆",
+        4: "茶馆基金消耗 {price}, 解散茶馆",
     }
 
     @classmethod
