@@ -18,11 +18,19 @@ async def verify_rule_detail(rule_details, play_type) -> dict:
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
     play_rule = await GameRoomsRC.get_play_rule(play_type)
+    own_play_field = await GameRoomsRC.own_default_play_field(play_type)
+    own_play_value = await GameRoomsRC.own_default_play_value(play_type)
     for k, v in play_rule.items():
+        require = True
+        default = None
+        if own_play_field and k in own_play_field:
+            require = False
+            default = own_play_value[k]
         await decorator.check_inner(
             val=rule.get(k),
-            require=True,
+            require=require,
             inner_dick=v,
+            default=default,
             p_name=k
         )
     return rule
