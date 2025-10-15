@@ -173,10 +173,10 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
-                    data = await cls.db_model.filter(**query).order_by("status").offset(offset).limit(page_size).values()
+                    data = await cls.db_model.filter(**query).order_by("-id").offset(offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, total, data)
             else:
-                result = data = await cls.db_model.filter(**query).order_by("status").values()
+                result = data = await cls.db_model.filter(**query).order_by("-id").values()
             if not data:
                 return result, "暂无数据"
         except OperationalError as e:

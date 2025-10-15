@@ -3,6 +3,7 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from c_services.const.cs_enum_const import CmdClub
 from common.public.enum_const import StaCode, ServiceEnum
@@ -104,5 +105,11 @@ class GetClubUser(GameAuthApi):
             page=page,
             page_size=page_size,
         )
+        if data:
+            # 处理用户在线离线状态
+            if page and data["total"] > 0:
+                data["list"] = await BaseUserRC.handel_online_status(data["list"])
+            else:
+                data = await BaseUserRC.handel_online_status(data)
         return self.answer(data=data, hint=e)
 

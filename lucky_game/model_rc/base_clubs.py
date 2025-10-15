@@ -104,7 +104,8 @@ class BaseClubRC(BaseCommonRC):
         return club, "成功"
 
     @classmethod
-    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None, notice: str = None):
+    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None, notice: str = None,
+                          record_status: int = None):
         """更新茶馆信息"""
         try:
             club, e = await cls.get_club_by_id(club_id)
@@ -115,10 +116,12 @@ class BaseClubRC(BaseCommonRC):
                 up_data["name"] = name
             if other:
                 up_data["other"] = other
-            if status:
+            if status is not None:
                 up_data["status"] = status
             if notice:
                 up_data["notice"] = notice
+            if record_status is not None:
+                up_data["record_status"] = record_status
             if up_data:
                 sta = await cls.db_model.update_by_pk(club_id, up_data)
                 if not sta:
@@ -218,18 +221,12 @@ class BaseClubRC(BaseCommonRC):
                 if operation == "add":
                     event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]
                     event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        name=u_info.get("name"),
-                        uid=u_info.get("uid"),
                         price=num,
                     )
                 elif operation == "sub":
-                    event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
+                    event_type = ExtraClubEventRC.EVENT_TYPE["CLOSE_LOG"]
                     event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        name=u_info.get("name"),
-                        uid=u_info.get("uid"),
                         price=num,
-                        play_type="解散茶馆",
-                        room_id=0,
                     )
                 sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, u_info.get("uid"), event_msg)
                 if not sta:

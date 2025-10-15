@@ -172,7 +172,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                                         end_time: int = None, cs_type: any = None, final_score: int = None,
                                         order_field: str = None, page: int = None, page_size: int = None,
                                         group_field: str = None, order_type: str = None, play_type: any = None,
-                                        filtration: str = "*"):
+                                        filtration: str = "*", final_grade: int = None):
         """战绩查询原生SQL"""
         try:
             where = " 1=1 "
@@ -203,13 +203,21 @@ class RecordsGameTotalRC(BaseCommonRC):
                     where += f" AND record_tid = {record_tid}"
             if play_type is not None:
                 if isinstance(play_type, list):
+                    # if len(play_type) == 1:
+                    #     where += f" AND play_type = {play_type[0]}"
+                    # else:
                     where += f" AND play_type in ({','.join(map(str, play_type))})"
+
+                    # play_types = ','.join([str(p) for p in play_type])
+                    # where += f" AND play_type in ({play_types})"
+
+                    # where += f" AND play_type in ({','.join(map(str, play_type))})"
                 else:
                     where += f" AND play_type = {play_type}"
             if start_time is not None:
                 where += f" AND created >= {start_time}"
             if end_time is not None:
-                where += f" AND created < {end_time}"
+                where += f" AND created <= {end_time}"
             if cs_type is not None:
                 if isinstance(cs_type, list):
                     where += f" AND cs_type in ({','.join(map(str, cs_type))})"
@@ -223,9 +231,10 @@ class RecordsGameTotalRC(BaseCommonRC):
                 group_field = "record_tid"
             if order_type is None:
                 order_type = "DESC"
+            if final_grade == 1:
+                where += f" AND final_grade = {final_grade}"
             total = 0
             sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
-            print(sql)
             if page and page_size:
                 total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} {order_type}")
                 if isinstance(total, list):

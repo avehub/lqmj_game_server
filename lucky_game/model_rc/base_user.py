@@ -364,6 +364,22 @@ class BaseUserRC(BaseCommonRC):
         return set()
 
     @classmethod
+    async def handel_online_status(cls, handle_data: list):
+        """
+        处理用户数据，并在数据中添加在线离线状态
+        handle_data：需要处理的用户数据列表，每个元素必须包含"uid"字段
+        """
+        u_ids = [item["uid"] for item in handle_data]
+        on_line_ids = await cls.get_online_uid(u_ids)
+        for i in handle_data:
+            # 过滤隔离组内在线用户
+            is_online = 0
+            if i["uid"] in on_line_ids:
+                is_online = 1
+            i["is_online"] = is_online
+        return handle_data
+
+    @classmethod
     async def deal_user_update_goods(cls, uid, id_list=None, is_del=False, key_name='user_new_bag'):
         """
         用户新获得/可升级物品缓存goods_id或者其他id集合用于通知
