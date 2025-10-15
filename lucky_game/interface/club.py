@@ -54,14 +54,15 @@ class ClubUpdate(BaseClub):
         other = self.check_str(req.json.get("other"), require=False, p_name="配置内容")
         name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="茶馆名称")
         notice = self.check_str(req.json.get("notice"), require=False, p_name="茶馆公告")
+        record_status = self.check_int(req.json.get("record_status"), require=False, minval=0, maxval=1, p_name="战绩状态")
         check_sta, e = await BaseClubRC.check_club_name(name, club_id)
         if not check_sta:
             return self.answer(StaCode.FAIL, hint=e)
-        if name or other or notice:
+        if name or other or notice or record_status is not None:
             other_dict = {}
             if other:
                 other_dict = await self._check_other_params(other)
-            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict, notice=notice)
+            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict, notice=notice, record_status=record_status)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
             if notice:

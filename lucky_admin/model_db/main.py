@@ -9,8 +9,6 @@ class Admins(DBModel):
     """ 后台管理员 """
     username = fields.CharField(max_length=20, unique=True, default='', description='玩家昵称')
     password = fields.CharField(max_length=64, default='', description='密码')
-    # phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
-    # email = fields.CharField(max_length=128, null=True, index=True, description='邮箱')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
     safe_key = fields.CharField(max_length=18, null=True, default='', description='安全密钥（不能泄密）')
     valid_key = fields.CharField(max_length=16, null=True, default='', description='验证密钥')
