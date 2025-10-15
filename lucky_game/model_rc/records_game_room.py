@@ -82,7 +82,7 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
                                         , end_time: any = None, play_type: any = None, cs_type: any = None,
                                         creator: any = None, record_rid: any = None, order_field: any = None,
-                                        page: int = None, page_size: int = None):
+                                        page: int = None, page_size: int = None, field: any = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -119,7 +119,7 @@ class RecordsGameRoomRC(BaseCommonRC):
             if start_time is not None:
                 query["start_time__gte"] = start_time
             if end_time is not None:
-                query["end_time__lt"] = end_time
+                query["end_time__lte"] = end_time
             if order_field is None:
                 order_field = "-record_rid"
             if page and page_size:
@@ -130,7 +130,10 @@ class RecordsGameRoomRC(BaseCommonRC):
                     records = await cls.db_model.filter(**query).order_by(order_field).limit(page_size).offset(offset).values()
                 result = await cls.page_result(page, page_size, total, records)
             else:
-                result = records = await cls.db_model.filter(**query).order_by(order_field).values()
+                if field:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values(*field)
+                else:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
                 return result, "暂无战绩"
         except OperationalError as e:
