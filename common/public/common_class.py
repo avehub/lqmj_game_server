@@ -61,8 +61,6 @@ class CommonApi(LogMeta):
         通过rmq推送消息到网关
         该方法默认消息不持久化
         """
-
-        cls.loginfo(f"cs2cs_by_rmq: {cs_type}, {c_code}, {uid}, {msg}, {r_key}, {exp}, {delivery_mode}")
         await cls.conf.rmq.cs2cs_rmp(cs_type, c_code, uid, msg, r_key, exp, delivery_mode)
 
     @classmethod
