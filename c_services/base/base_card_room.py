@@ -34,6 +34,7 @@ class BaseCardRoom(BaseRoom):
         self.__cur_round = room_conf.get("cur_round") or 1
         self.__timeout_idle_time = 60 * 60 * 12
         self.__timer_dismiss = None
+        self.__timer_loop = None
         self.__round_msg_records = []
         self.__winner_list = []
         self.__online_group_user = []
@@ -50,7 +51,7 @@ class BaseCardRoom(BaseRoom):
         else:
             self.__deal_cards_count = 13
 
-        DelayCall(120, self.close_room_time_out).loop_start()
+        self.__timer_loop = DelayCall(120, self.close_room_time_out).loop_start()
 
     @property
     def extra_score_map(self):
@@ -181,7 +182,6 @@ class BaseCardRoom(BaseRoom):
 
     async def player_change_connect(self, player,data):
         data_connect = {"seat_id":player.seat_id,"offline":data}
-        print("data_connect",data_connect)
         data_model = S2CChangeConnect.pb_model(**data_connect)
         await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model,exclude_uid =player.uid)
 
@@ -395,6 +395,9 @@ class BaseCardRoom(BaseRoom):
                 self.log_info("战绩创建失败",e,"入参",self.tid, tool_dt.cur_time())
             self.__record_id = record_info.record_rid
         self.call_flow(2, self.round_start)
+        if self.club_id > 0:
+            await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.UPDATE_ROOM))
+            await GameRoomsRC.update_game_room(self.tid, round_num=self.round_idx)
 
     async def game_over(self, over_type=OverType.DEFAULT):
         if self.room_status_is_equal(RoomStatus.T_DISMISS):
@@ -475,8 +478,10 @@ class BaseCardRoom(BaseRoom):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
         self.__timer_dismiss = None
+        self.__timer_loop.cancel()
+        self.__timer_loop = None
         self.__agree_dismiss_seats = set()
-        self.__timeout_idle_time = 60 * 60 * 30
+        self.__timeout_idle_time = 60 * 60 * 12
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):
@@ -721,7 +726,7 @@ class BaseCardRoom(BaseRoom):
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
             "online_group_user": self.__online_group_user,
-            "round_idx": self.round_idx,
+            "round_num": self.round_idx,
             "updated": self.__create_time,
             "msg_type": msg_type,
             "secret": C_SERVICE_SECRET_KEY,

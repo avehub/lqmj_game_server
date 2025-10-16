@@ -77,7 +77,6 @@ class BaseCardService(BaseService):
             "total_time":120,
             "left_seconds":room.dismiss_left_seconds(),
         }
-        print("data",data)
         if room.in_room_count > 1:
             data_model = S2CReqDismissRoom.pb_model(**data)
             await room.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
@@ -90,7 +89,6 @@ class BaseCardService(BaseService):
             return await room.force_dismiss(OverType.FORCE)
 
     async def __club_owner_dismiss(self, _, data):
-        print("解散",data)
         tid = data.get("room_id")
         room = self.get_room(tid)
         if not room:
