@@ -909,6 +909,8 @@ class Room(BaseCardRoom):
             action[0] == p.seat_id and action[1] == ActionType.ACTION_TYPE_TIAN_TING
             for action in self.__player_actions
         )
+        if contains_tian_ting:
+            self.remove_player_action(tian_ting=True)
         if contains_tian_ting and ActionType.ACTION_TYPE_MEN in p.operates:
             self.log_info("天听后可以闷")
         else:
@@ -917,7 +919,7 @@ class Room(BaseCardRoom):
 
         if after_peng:
             self.__after_peng = after_peng
-        self.log_info("轮到玩家出牌: ", p.uid, "手牌", p.cards)
+        self.log_info("轮到玩家出牌: ", p.uid, "手牌", p.cards,p.tian_ting,contains_tian_ting)
         self.curr_seat_id = p.seat_id
 
         seconds = TimerDelay.CALL_SECONDS
@@ -929,7 +931,7 @@ class Room(BaseCardRoom):
             data["lock_cards"] = p.lock_cards
             data_model = S2CTurnToMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5):
+            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting):
                 return self.call_flow(0.5, self.robot_play_card_by_suo_pai, p)
         else:
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
@@ -1136,8 +1138,8 @@ class Room(BaseCardRoom):
         elif self.flow_status_is_equal(FlowStatus.T_IN_TIAN_HU):
             return await self.turn_to_player_chu_pai(p)
         elif self.flow_status in (FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_FOUR_BAO_TING):
-            self.remove_player_action(tian_ting=True)
             return await self.check_tian_ting_end()
+
 
         return self.call_flow(0,self.__mo_pai)
         # return await self.__mo_pai()  # 继续摸牌
