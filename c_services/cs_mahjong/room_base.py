@@ -275,7 +275,7 @@ class Room(BaseCardRoom):
 
     def serialize_room_info(self):
         room_info = self.room_info()
-        if self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status in (RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             room_info["last_card"] = self.__curr_card
             room_info['last_seat_id'] = self.__before_seat_id
             room_info["left_count"] = self.poker.left_count
