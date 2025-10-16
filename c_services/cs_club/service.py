@@ -3,12 +3,16 @@ import asyncio
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CmdClub, CallCheck
 from c_services.cs_club.room import ClubRoom
-from common.proto.py_pb2.ws_c2s import leave_club_model
-from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice
+from common.proto.py_pb2.ws_c2s import leave_club_model, club_room_set_model
+from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice, S2CClubRoomSetInfo
 from common.public.enum_const import StaCode
+from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class ClubServer(BaseServer):
+
+    SUBSCRIBE_FANOUT = None
+
     def __init__(self):
         super().__init__()
         self.add_handlers({
@@ -19,6 +23,7 @@ class ClubServer(BaseServer):
             CmdClub.PLAYER_READY_EXCEPT_OWNER: self.__player_ready_except_owner,
             CmdClub.LEAVE_CLUB: self.__leave_club,
             CmdClub.CLUB_NOTICE: self.__club_notice,
+            CmdClub.UPDATE_ROOM_SET:self.__update_room_set,
         })
 
         self.__rooms = {}
@@ -29,6 +34,7 @@ class ClubServer(BaseServer):
     def create_room(self, cid, owner):
         room = ClubRoom(cid, owner, self)
         self.__rooms[cid] = room
+        self.log_info("创建茶馆房间",cid,owner)
         return room
 
     def remove_room(self, cid):
@@ -49,9 +55,8 @@ class ClubServer(BaseServer):
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
-        self.log_info("club_id",club_id,"玩家进入茶馆", uid)
-        if not room.check_player_in_club(uid):
-            room.player_join_room(uid)
+        self.log_info("club_id",club_id,"玩家进入茶馆", uid,room, room.members)
+        room.player_join_club_room(uid)
         return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid)
 
     async def __quit_club(self, uid, data):
@@ -60,16 +65,17 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid, StaCode.FAIL)
-        room.player_quit_room(uid)
+        room.player_quit_club_room(uid)
         self.log_info("club_id", club_id, "玩家退出茶馆", uid)
         return await self.cs2ws_by_rmq(CmdClub.QUIT_CLUB, uid)
 
     async def __leave_club(self, uid, data):
         leave_club_model.ParseFromString(data)
         club_id = leave_club_model.club_id or 0
+        self.log_info("离开茶馆信息",uid,club_id)
         room = await self.check_in_room(CmdClub.LEAVE_CLUB, uid, club_id)
         if room:
-            room.player_quit_room(uid)
+            room.player_quit_club_room(uid)
             self.log_info("club_id", club_id, "玩家离开茶馆", uid)
             return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
 
@@ -82,6 +88,20 @@ class ClubServer(BaseServer):
             data_model = S2CClubNotice.pb_model(**data)
             await room.inner_broadcast(CmdClub.CLUB_NOTICE, data_model)
 
+    async def __update_room_set(self,uid,data):
+
+        club_room_set_model.ParseFromString(data)
+        club_id = club_room_set_model.club_id or 0
+        rank_members_only = club_room_set_model.rank_members_only or 0
+        self.log_info("收到房间设置更新",uid,club_id,rank_members_only)
+        room = await self.check_in_room(CmdClub.LEAVE_CLUB, uid, club_id)
+        if room:
+            await BaseClubRC.update_club(club_id, record_status=rank_members_only)
+            set_data = {"rank_members_only":rank_members_only}
+            data_model = S2CClubRoomSetInfo.pb_model(**set_data)
+            await room.inner_broadcast(CmdClub.UPDATE_ROOM_SET, data_model)
+
+
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """
         self.log_info("房间改变下发数据",data)
@@ -89,7 +109,6 @@ class ClubServer(BaseServer):
         room = self.get_room(club_id)
         if not room:
             return
-        print("room.owner",room.owner)
         data_model = S2CClubRoomInfo.pb_mode(**data)
         await room.inner_broadcast(CmdClub.ROOM_INFO_CHANGE, data_model)
         self.log_info("club_id",club_id,"茶馆房间改变",data.get("msg_type"))
@@ -112,9 +131,6 @@ class ClubServer(BaseServer):
         room = await self.check_in_room(CmdClub.PLAYER_READY_EXCEPT_OWNER, uid, club_id)
         if not room:
             return
-        if not room.check_player_in_club(uid):
-            return
-
         return await self.cs2ws_by_rmq(CmdClub.PLAYER_READY_EXCEPT_OWNER, uid)
 
     async def check_in_room(self,cmd, uid, club_id):
@@ -122,7 +138,8 @@ class ClubServer(BaseServer):
         if not room:
             await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='茶馆不存在')
         elif not room.check_player_in_club(uid):
-            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在服務')
+            await self.cs2ws_by_rmq(cmd, uid, StaCode.FAIL, hint='玩家未在茶馆服務')
+            return None
         return room
 
 
@@ -142,7 +159,6 @@ class ClubServer(BaseServer):
                 return
             data.pop("secret")
             return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
-
         return await func(uid, data) if asyncio.iscoroutinefunction(func) else func(uid, data)
 
 

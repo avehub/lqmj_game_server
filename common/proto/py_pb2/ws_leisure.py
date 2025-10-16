@@ -1066,6 +1066,13 @@ class S2CChangeConnect:
         obj.offline = kwargs.get("offline") or False
         return obj
 
+class S2CRoomDismissInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CRoomDismissInfo()
+        obj.game_begin = kwargs.get("game_begin") or False
+        return obj
+
 # ################################## 麻将 ##################################
 
 # ################################## 茶馆通知 ##################################
@@ -1093,8 +1100,9 @@ class S2CClubRoomInfo:
         obj.total_round = kwargs.get("total_round") or 0
         obj.updated = kwargs.get("updated") or 0
         obj.msg_type = kwargs.get("msg_type") or 0
-        obj.round_idx = kwargs.get("round_idx") or 1
+        obj.round_num = kwargs.get("round_num") or 1
         obj.online_group_user.extend(kwargs.get("online_group_user") or [])
+        obj.status =  kwargs.get("status") or 0
         return obj
 
 class S2CClubNotice:
@@ -1103,6 +1111,14 @@ class S2CClubNotice:
         obj = ws_leisure_pb2.S2CClubNotice()
         obj.notice = kwargs.get("notice") or ""
         return obj
+
+class S2CClubRoomSetInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CClubRoomSetInfo()
+        obj.rank_members_only = kwargs.get("rank_members_only") or 0
+        return obj
+
 
 # ################################## 茶馆通知 ##################################
 

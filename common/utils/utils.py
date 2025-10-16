@@ -241,7 +241,7 @@ class UtilsTool(metaclass=NoInstances):
         return int(math.log10(num) + 1)
 
     @staticmethod
-    def parse_msg_by_bytes(msg: bytes, log_fun=None) -> (int, int, bytes):
+    def parse_msg_by_bytes_old(msg: bytes, log_fun=None) -> (int, int, bytes):
         """ 解析字节消息 """
         # 长度标识固定用1位
         # 长度标识：标识cmd占用多少字节长度
@@ -255,7 +255,49 @@ class UtilsTool(metaclass=NoInstances):
             return (0, 0), b''
 
     @staticmethod
-    def pack_msg_by_bytes(c_type: int, c_code: int, msg: bytes) -> bytes:
+    def parse_msg_by_bytes(msg: bytes, log_fun=None) -> tuple[tuple[int, int], bytes]:
+        """
+        解析内部消息格式：
+          [cmd_len:1B][cmd:cmd_len B][uid_len:1B][uid:uid_len B][payload...]
+
+        返回: ((code, uid), payload)
+        """
+        if len(msg) < 1:  # 至少需要 cmd_len + uid_len 两个字节
+            err = "Message too short (<2 bytes)"
+            if log_fun:
+                log_fun(f"{msg!r} 消息解析出错：{err}")
+            else:
+                print(f"{msg!r} 消息解析出错：{err}")
+            return (0, 0), b''
+
+        mv = memoryview(msg)
+        try:
+            # 1. 读取 cmd 长度（1字节）
+            cmd_len = mv[0]
+            if cmd_len == 0:
+                raise ValueError("cmd length cannot be zero")
+            # 可选：限制最大长度（如 8 或 16），防止恶意数据
+            if cmd_len > 16:
+                raise ValueError(f"cmd length too large: {cmd_len}")
+            # 2. 检查是否有足够字节读取 cmd
+            cmd_end = 1 + cmd_len
+            # 3. 读取 cmd 并转为 int
+            cmd = int.from_bytes(mv[1:cmd_end], 'big')
+
+            # 7. 剩余为 payload
+            payload = bytes(mv[cmd_end:])  # 转回 bytes（必要时）
+            return UtilsTool.explode_command(cmd), payload
+
+        except (ValueError, IndexError) as e:
+            err_msg = f"Parse error: {e}"
+            if log_fun:
+                log_fun(f"{msg!r} 消息解析出错：{err_msg}")
+            else:
+                print(f"{msg!r} 消息解析出错：{err_msg}")
+            return (0, 0), b''
+
+    @staticmethod
+    def pack_msg_by_bytes_old(c_type: int, c_code: int, msg: bytes) -> bytes:
         """ 解析字节消息 """
         # 长度标识固定用1位
         # 长度标识：标识cmd占用多少字节长度
@@ -268,7 +310,24 @@ class UtilsTool(metaclass=NoInstances):
         return cmd_len_bytes + cmd_bytes + msg
 
     @staticmethod
-    def pack_inner_msg(cmd: int, uid: int, msg: bytes) -> bytes:
+    def pack_msg_by_bytes(c_type: int, c_code: int, msg: bytes) -> bytes:
+        cmd = UtilsTool.packet_command(c_type, c_code)
+        if cmd < 0:
+            raise ValueError("cmd and uid must be non-negative")
+        # 1. 转换 cmd 为最小 big-endian bytes
+        cmd_bytes = cmd.to_bytes((cmd.bit_length() + 7) // 8 or 1, 'big')
+        cmd_len = len(cmd_bytes)
+        if cmd_len > 255:
+            raise ValueError("cmd too large (exceeds 255 bytes)")
+        # 2. 构造消息：长度用单字节表示
+        return (
+                bytes([cmd_len]) +
+                cmd_bytes +
+                msg
+        )
+
+    @staticmethod
+    def pack_inner_msg_old(cmd: int, uid: int, msg: bytes) -> bytes:
         """
         内部消息频道传输
         解析字节消息
@@ -294,7 +353,37 @@ class UtilsTool(metaclass=NoInstances):
         return cmd_len_bytes + cmd_bytes + uid_len_bytes + uid_bytes
 
     @staticmethod
-    def parse_inner_msg(msg: bytes, log_fun=None) -> (int, int, bytes):
+    def pack_inner_msg(cmd: int, uid: int, msg: bytes) -> bytes:
+        """
+        打包内部消息：
+          [cmd_len:1B][cmd:cmd_len B][uid_len:1B][uid:uid_len B][payload]
+        """
+        if cmd < 0 or uid < 0:
+            raise ValueError("cmd and uid must be non-negative")
+
+        # 1. 转换 cmd 为最小 big-endian bytes
+        cmd_bytes = cmd.to_bytes((cmd.bit_length() + 7) // 8 or 1, 'big')
+        cmd_len = len(cmd_bytes)
+        if cmd_len > 255:
+            raise ValueError("cmd too large (exceeds 255 bytes)")
+
+        # 2. 转换 uid 为最小 big-endian bytes
+        uid_bytes = uid.to_bytes((uid.bit_length() + 7) // 8 or 1, 'big')
+        uid_len = len(uid_bytes)
+        if uid_len > 255:
+            raise ValueError("uid too large (exceeds 255 bytes)")
+
+        # 3. 构造消息：长度用单字节表示
+        return (
+                bytes([cmd_len]) +
+                cmd_bytes +
+                bytes([uid_len]) +
+                uid_bytes +
+                msg
+        )
+
+    @staticmethod
+    def parse_inner_msg_old(msg: bytes, log_fun=None) -> (int, int, bytes):
         """
         内部消息频道传输
         解析字节消息
@@ -316,6 +405,68 @@ class UtilsTool(metaclass=NoInstances):
             return (code, uid), msg
         except Exception as err:
             log_fun(f'{msg}消息解析出错：{err}') if log_fun else print(f'{msg}消息解析出错：{err}')
+            return (0, 0), b''
+
+    @staticmethod
+    def parse_inner_msg(msg: bytes, log_fun=None) -> tuple[tuple[int, int], bytes]:
+        """
+        解析内部消息格式：
+          [cmd_len:1B][cmd:cmd_len B][uid_len:1B][uid:uid_len B][payload...]
+
+        返回: ((code, uid), payload)
+        """
+        if len(msg) < 2:  # 至少需要 cmd_len + uid_len 两个字节
+            err = "Message too short (<2 bytes)"
+            if log_fun:
+                log_fun(f"{msg!r} 消息解析出错：{err}")
+            else:
+                print(f"{msg!r} 消息解析出错：{err}")
+            return (0, 0), b''
+
+        mv = memoryview(msg)
+        try:
+            # 1. 读取 cmd 长度（1字节）
+            cmd_len = mv[0]
+            if cmd_len == 0:
+                raise ValueError("cmd length cannot be zero")
+            # 可选：限制最大长度（如 8 或 16），防止恶意数据
+            if cmd_len > 16:
+                raise ValueError(f"cmd length too large: {cmd_len}")
+
+            # 2. 检查是否有足够字节读取 cmd
+            cmd_end = 1 + cmd_len
+            if len(mv) < cmd_end + 1:  # +1 是为了至少有 uid_len 字节
+                raise ValueError("Message too short for cmd and uid_len")
+
+            # 3. 读取 cmd 并转为 int
+            code = int.from_bytes(mv[1:cmd_end], 'big')
+
+            # 4. 读取 uid 长度
+            uid_len = mv[cmd_end]
+            if uid_len == 0:
+                raise ValueError("uid length cannot be zero")
+            if uid_len > 16:
+                raise ValueError(f"uid length too large: {uid_len}")
+
+            # 5. 检查是否有足够字节读取 uid
+            uid_end = cmd_end + 1 + uid_len
+            if len(mv) < uid_end:
+                raise ValueError("Message too short for uid")
+
+            # 6. 读取 uid 并转为 int
+            uid = int.from_bytes(mv[cmd_end + 1:uid_end], 'big')
+
+            # 7. 剩余为 payload
+            payload = bytes(mv[uid_end:])  # 转回 bytes（必要时）
+
+            return (code, uid), payload
+
+        except (ValueError, IndexError) as e:
+            err_msg = f"Parse error: {e}"
+            if log_fun:
+                log_fun(f"{msg!r} 消息解析出错：{err_msg}")
+            else:
+                print(f"{msg!r} 消息解析出错：{err_msg}")
             return (0, 0), b''
 
     @staticmethod

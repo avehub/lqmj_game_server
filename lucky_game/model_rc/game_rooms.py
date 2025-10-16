@@ -120,6 +120,29 @@ class GameRoomsRC(BaseCommonRC):
             return cls.RULE_DETAILS_ZYMJ
 
     @classmethod
+    async def own_default_play_field(cls, play_type: int):
+        """非必传玩法字段及默认值"""
+        default_fields = ["four_card_no_near", "four_card_tian_hu", "eight_card_tian_hu"]
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return default_fields
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return default_fields
+        elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
+            return default_fields
+
+    @classmethod
+    async def own_default_play_value(cls, play_type: int):
+        """非必传玩法字段及默认值"""
+        default_values = {"four_card_no_near": 0, "four_card_tian_hu": 0, "eight_card_tian_hu": 0}
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return default_values
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return default_values
+        elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
+            return default_values
+
+
+    @classmethod
     async def cache_room_player_up(cls, room_id, value=1):
         return await cls.conf.rds.incr(f"{cls.SESSION_KEY}:{room_id}", value)
 
