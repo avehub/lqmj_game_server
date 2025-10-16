@@ -20,6 +20,8 @@ from lucky_game.handler.random_utils import generate_natural_random
 from common.utils.utils import UtilsTool
 from nsanic.libs.mk_random import RngMaker
 
+from lucky_game.model_rc.records_user_login import RecordsAdEventRC
+
 
 class BaseUserRC(BaseCommonRC):
     db_model = User
@@ -54,7 +56,8 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
         """缓存平台的支付信息"""
-        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info),
+                                           ex_time=86400)
 
     @classmethod
     async def get_user_pay_info(cls, uid, order_id):
@@ -164,7 +167,7 @@ class BaseUserRC(BaseCommonRC):
             time_node = KitDt.cal_period_deadline(limit_period, cur_time)
             data["time_node"] = time_node
             sta = await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{sku}", json_encode(data),
-                                               ex_time=cls.expired_sec)
+                                              ex_time=cls.expired_sec)
         return sta
 
     @classmethod
@@ -370,6 +373,8 @@ class BaseUserRC(BaseCommonRC):
         handle_data：需要处理的用户数据列表，每个元素必须包含"uid"字段
         """
         u_ids = [item["uid"] for item in handle_data]
+        # last_login_data, msg = await RecordsAdEventRC.get_uid_login_last(u_ids)
+        # last_data = {item["uid"]: item for item in last_login_data}
         on_line_ids = await cls.get_online_uid(u_ids)
         for i in handle_data:
             # 过滤隔离组内在线用户
@@ -377,6 +382,7 @@ class BaseUserRC(BaseCommonRC):
             if i["uid"] in on_line_ids:
                 is_online = 1
             i["is_online"] = is_online
+            # i["last_time"] = last_data.get(i["uid"], {}).get("created", 0)
         return handle_data
 
     @classmethod
@@ -431,7 +437,8 @@ class BaseUserRC(BaseCommonRC):
         return await cls.conf.rds.set_item(key, 1, cool_down_time)
 
     @classmethod
-    async def update_user_int_field(cls, uid: int, field_name: str, value: [int | decimal.Decimal], operation: str = 'add'):
+    async def update_user_int_field(cls, uid: int, field_name: str, value: [int | decimal.Decimal],
+                                    operation: str = 'add'):
         try:
             user, e = await cls.update_int_field(uid, field_name, value, operation)
             if not user:
@@ -535,5 +542,3 @@ class BaseBanRC(BaseCommonRC):
         if info:
             return json_parse(info, cls.log_err)
         return await cls.conf.rds.locked(key, fun=from_db)
-
-
