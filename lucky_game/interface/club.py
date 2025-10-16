@@ -110,6 +110,10 @@ class ClubHall(BaseClub):
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
             status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
+        # 茶馆信息
+        club, e = await BaseClubRC.get_club_by_id(club_id)
+        if club is None or club["status"] != 0:
+            return self.answer(StaCode.FAIL, hint=e)
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id, play_type=play_type)
         # 游戏房间
@@ -131,7 +135,7 @@ class ClubHall(BaseClub):
                 room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
-        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "uid": uid}
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "club_uid": club["uid"], "uid": uid}
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdClub.ENTER_CLUB,
