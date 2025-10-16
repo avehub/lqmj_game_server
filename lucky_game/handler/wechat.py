@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from nsanic.libs.component import LogMeta
 
 from common.public.base_enum import BaseEnum
@@ -241,7 +243,7 @@ class WeChat(LogMeta):
 
 
     @classmethod
-    async def wechat_mini_game_return_order(cls, uid, trade_amount: int, order_id: str, product_id: str,
+    async def wechat_mini_game_return_order(cls, uid, trade_amount: int | Decimal | float, order_id: str, product_id: str,
                                             method="requestMidasPaymentGameItem"):
         """
         小游戏创建订单返回（道具直购专用）
@@ -266,7 +268,7 @@ class WeChat(LogMeta):
             "platform": 'android',
             "zoneId": '1',
             "productId": product_id or '',
-            "goodsPrice": int(trade_amount * cls.WECHAT_COIN_RATE),  # 单位（分）
+            "goodsPrice": int(Decimal(str(trade_amount)) * cls.WECHAT_COIN_RATE),  # 单位（分）
             "outTradeNo": order_id,
         }
         encode_data = json_encode(sign_data)
