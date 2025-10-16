@@ -6,7 +6,7 @@ from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_mode
 from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjong, S2CPlayerInfo05Mahjong, S2CRoundStartMahjong, \
     S2CShangGaMahjong, S2CShangGaBeginMahjong, S2CDealCardsMahjong, s2c_one_of_model, S2CPublicOperatesMahjong, S2CTurnToMahjong, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
-    S2CHuBaseInfo, S2CExchangeCardsInfo, S2CTianTingInfo, S2CStartDingQueInfo, S2CNotifyPosition, S2CStartExchangeCards
+    S2CHuBaseInfo, S2CExchangeCardsInfo, S2CTianTingInfo, S2CStartDingQueInfo, S2CNotifyPosition, S2CStartExchangeCards, S2CRoomDismissInfo
 from common.utils import earth_position
 from . import const
 from .player import Player
@@ -275,7 +275,7 @@ class Room(BaseCardRoom):
 
     def serialize_room_info(self):
         room_info = self.room_info()
-        if self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status in (RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             room_info["last_card"] = self.__curr_card
             room_info['last_seat_id'] = self.__before_seat_id
             room_info["left_count"] = self.poker.left_count
@@ -909,6 +909,8 @@ class Room(BaseCardRoom):
             action[0] == p.seat_id and action[1] == ActionType.ACTION_TYPE_TIAN_TING
             for action in self.__player_actions
         )
+        if contains_tian_ting:
+            self.remove_player_action(tian_ting=True)
         if contains_tian_ting and ActionType.ACTION_TYPE_MEN in p.operates:
             self.log_info("天听后可以闷")
         else:
@@ -917,7 +919,7 @@ class Room(BaseCardRoom):
 
         if after_peng:
             self.__after_peng = after_peng
-        self.log_info("轮到玩家出牌: ", p.uid, "手牌", p.cards)
+        self.log_info("轮到玩家出牌: ", p.uid, "手牌", p.cards,p.tian_ting,contains_tian_ting)
         self.curr_seat_id = p.seat_id
 
         seconds = TimerDelay.CALL_SECONDS
@@ -929,7 +931,7 @@ class Room(BaseCardRoom):
             data["lock_cards"] = p.lock_cards
             data_model = S2CTurnToMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5):
+            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting):
                 return self.call_flow(0.5, self.robot_play_card_by_suo_pai, p)
         else:
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
@@ -1136,10 +1138,11 @@ class Room(BaseCardRoom):
         elif self.flow_status_is_equal(FlowStatus.T_IN_TIAN_HU):
             return await self.turn_to_player_chu_pai(p)
         elif self.flow_status in (FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_FOUR_BAO_TING):
-            self.remove_player_action(tian_ting=True)
             return await self.check_tian_ting_end()
 
-        return await self.__mo_pai()  # 继续摸牌
+
+        return self.call_flow(0,self.__mo_pai)
+        # return await self.__mo_pai()  # 继续摸牌
 
     async def check_tian_ting_end(self):
         for p in self.seats:
@@ -4433,7 +4436,9 @@ class Room(BaseCardRoom):
         self.log_info("force_dismiss", self.not_playing_dismiss)
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
             if self.not_playing_dismiss:
-                await self.inner_broadcast(CmdRoom.ROOM_DISMISS)
+                data = {"game_begin": self.room_status == RoomStatus.T_DISMISS and self.record_id > 0}
+                data_model = S2CRoomDismissInfo.pb_model(**data)
+                await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
                 if self.room_status == RoomStatus.T_DISMISS and self.record_id > 0:
