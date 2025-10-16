@@ -46,16 +46,16 @@ class ClubServer(BaseServer):
 
     async def __enter_club(self, uid, data):
         """ 进入 """
-        self.log_info("玩家进入茶馆",uid,data)
+        self.log_info("进入茶馆信息",uid,data)
         club_id = data.get("club_id")
+        owner = data.get("club_uid")
         # todo: 1.检验club_id 是否有对应茶馆
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
-        room = self.get_or_create_room(club_id, uid)
+        room = self.get_or_create_room(club_id, owner)
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
-        self.log_info("club_id",club_id,"玩家进入茶馆", uid,room, room.members)
         room.player_join_club_room(uid)
         return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid)
 
