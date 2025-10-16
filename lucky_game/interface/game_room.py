@@ -32,6 +32,17 @@ async def make_again_room_msg(room_data):
     return data
 
 
+async def clone_rule_detail(rule_details, play_type):
+    """克隆房间规则详情"""
+    own_play_field = await GameRoomsRC.own_default_play_field(play_type)
+    own_play_value = await GameRoomsRC.own_default_play_value(play_type)
+    if own_play_field:
+        for k, v in rule_details.items():
+            if k in own_play_field:
+                rule_details[k] = own_play_value[k]
+    return rule_details
+
+
 class GameRoomAPI(RoomTemplateBase):
 
     async def _before_create_room(self, creator, price, club_id, u_info, pay_type, platform, max_player):
@@ -87,7 +98,7 @@ class GameRoomAPI(RoomTemplateBase):
         max_player = template["max_player"]
         price = template["price"]
         total_round = template["total_round"]
-        rule_details = template["rule_details"]
+        rule_details = await clone_rule_detail(template["rule_details"], play_type)
         cs_type = template["cs_type"]
         is_location = template["is_location"]
         is_friend = template["is_friend"]
