@@ -282,8 +282,10 @@ class BaseCommonRC(RCModel, CommonApi):
             "list": data,
             "page": page,
             "page_size": page_size,
-            "total": math.ceil(total / page_size) if total else 0,
+            # "total": math.ceil(total / page_size) if total else 0,
+            "total": total,
         }
+
         return result
 
     @classmethod
