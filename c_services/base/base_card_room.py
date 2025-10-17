@@ -332,6 +332,7 @@ class BaseCardRoom(BaseRoom):
             return await self.game_over(over_type)
         else:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
+            self.__replay_msg_data = []
             self.log_info("一轮结束战绩插入", result_data)
             await self.next_round_ready()
 
@@ -418,9 +419,17 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
 
         #游戏结束后在这里更新战绩以及回放数据
+
         if self.__replay_msg_data:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
             self.log_info("游戏结束一轮结束战绩插入", result_data)
+        else:
+            for p in self.seats:
+                if p:
+                    up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(self.__record_id,p.uid,
+                                                                                          replay_msg=self.__round_msg_records)
+                    if not up_segment_sta:
+                        self.log_info("玩家",p.uid,p.seat_id,"战绩更新失败",e)
 
         for idx, p in enumerate(self.seats):
             if not p:
