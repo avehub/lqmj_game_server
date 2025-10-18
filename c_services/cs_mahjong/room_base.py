@@ -2519,7 +2519,7 @@ class Room(BaseCardRoom):
                     p.mo_pai = p.cards[-1]
                     self.__curr_card =  p.mo_pai
                     self.log_info(self.tid, "换牌后庄改变摸的牌", p.uid, p.cards[-1])
-
+                result["seat_id"] = p.seat_id
                 result["hand_cards"] = p.cards
                 result["get_cards"] = get_cards
                 data_model = S2CExchangeCardsInfo.pb_model(**result)
