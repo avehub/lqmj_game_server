@@ -38,6 +38,7 @@ class BaseCardRoom(BaseRoom):
         self.__round_msg_records = []
         self.__winner_list = []
         self.__online_group_user = []
+        self.__replay_msg_data = []
         self.__agree_dismiss_seats = set()
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
@@ -202,6 +203,7 @@ class BaseCardRoom(BaseRoom):
     def clear_room_round_start(self):
         """ 小局开始清理 """
         self.__round_msg_records = []
+        self.__replay_msg_data = []
         self.__add_room_info_msg()
         self.__add_player_info_msg()
 
@@ -290,7 +292,7 @@ class BaseCardRoom(BaseRoom):
         account = kwargs.pop("account")
         data = kwargs
 
-        new_data = []
+        self.__replay_msg_data = []
         score_rank_map = self.get_player_ranking(account, True)
         round_over_time = tool_dt.cur_time()
         for p in self.seats:
@@ -317,20 +319,21 @@ class BaseCardRoom(BaseRoom):
             record_data["round_score"] = score
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
-            new_data.append(record_data)
+            self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         # if over_type != OverType.FORCE:
         data_model = S2CRoundOverInfo.pb_model(**data)
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
-        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-        self.log_info("一轮结束战绩插入", result_data)
 
 
         if not self.has_next_round() or over_type == OverType.FORCE:
             return await self.game_over(over_type)
         else:
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
+            self.__replay_msg_data = []
+            self.log_info("一轮结束战绩插入", result_data)
             await self.next_round_ready()
 
     async def next_round_ready(self):
@@ -410,8 +413,28 @@ class BaseCardRoom(BaseRoom):
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
-            num = 1 if idx == 0 else 0
             result["seats"].append(p.game_over_data)
+
+        data_model = S2CGameOverInfo.pb_model(**result)
+        await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
+
+        #游戏结束后在这里更新战绩以及回放数据
+
+        if self.__replay_msg_data:
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
+            self.log_info("游戏结束一轮结束战绩插入", result_data)
+        else:
+            for p in self.seats:
+                if p:
+                    up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(self.__record_id,p.uid,
+                                                                                          replay_msg=self.__round_msg_records)
+                    if not up_segment_sta:
+                        self.log_info("玩家",p.uid,p.seat_id,"战绩更新失败",e)
+
+        for idx, p in enumerate(self.seats):
+            if not p:
+                continue
+            num = 1 if idx == 0 else 0
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
             if self.__record_id > 0:
@@ -428,9 +451,6 @@ class BaseCardRoom(BaseRoom):
             if not up_room_sta:
                 self.log_info("更新战绩时间失败", up_result)
 
-
-        data_model = S2CGameOverInfo.pb_model(**result)
-        await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
         for p in self.seats:
@@ -477,6 +497,7 @@ class BaseCardRoom(BaseRoom):
     def clear_room(self):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = [] #存入战绩数据
         self.__timer_dismiss = None
         self.__timer_loop.cancel()
         self.__timer_loop = None
@@ -497,6 +518,7 @@ class BaseCardRoom(BaseRoom):
         self.__cur_round = room_conf.get("cur_round") or 1
 
         self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = []
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
 

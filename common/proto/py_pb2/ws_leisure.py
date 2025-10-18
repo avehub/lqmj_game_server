@@ -811,6 +811,7 @@ class S2CExchangeCardsInfo:
         obj = ws_leisure_pb2.S2CExchangeCardsInfo()
         obj.hand_cards.extend(kwargs.get("hand_cards")or [])
         obj.get_cards.extend(kwargs.get("get_cards")or [])
+        obj.seat_id = kwargs.get("seat_id") or 0
         return obj
 
 class S2CTianTingInfo:
