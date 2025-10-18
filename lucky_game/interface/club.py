@@ -241,6 +241,10 @@ class ClubApply(BaseClub):
                                                                   uid=uid, club_id=club_id,
                                                                   status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
         if not has:
+            # 是否为茶馆成员
+            is_member, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
+            if is_member:
+                return self.answer(StaCode.FAIL, hint="您已经是茶馆成员，无需申请")
             sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
