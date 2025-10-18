@@ -77,6 +77,7 @@ class RoomFCZJ(BaseLeisureRoom):
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
         await super().round_start()
+        self.__recharge_wait = 0
         record_info = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
         self.__record_id = record_info[0].record_rid
         self.__dice_num = RuleFc.random_dice(2)

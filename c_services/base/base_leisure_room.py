@@ -6,7 +6,7 @@ from nsanic.libs.tool import json_encode
 from c_services.base.base_room import BaseRoom
 from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement
 from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CChangeConnect
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
 from common.utils.kit_async import DelayCall
@@ -249,6 +249,11 @@ class BaseLeisureRoom(BaseRoom):
 
         if update_task:
             await asyncio.gather(*update_task)
+
+    async def player_change_connect(self, player,data):
+        data_connect = {"seat_id":player.seat_id,"offline":data}
+        data_model = S2CChangeConnect.pb_model(**data_connect)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model,exclude_uid =player.uid)
 
     async def game_over(self, is_force=False):
         """ 游戏结束 """
