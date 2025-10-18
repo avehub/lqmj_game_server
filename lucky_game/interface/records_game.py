@@ -243,7 +243,7 @@ class ClubRanks(GameAuthApi):
             cs_type=cs_type,
             start_time=start_time,
             end_time=end_time,
-            filtration="uid, record_rid, room_id, club_id, final_status, final_score, final_grade, price, final_result"
+            filtration="uid, record_rid, room_id, club_id, final_status, final_score, final_grade, price, final_result, final_ranking"
         )
         result = []
         if data:
@@ -257,7 +257,7 @@ class ClubRanks(GameAuthApi):
                 field=("room_id", "price", "creator", "room_status")
             )
             for item in data:
-                final_grade = 1 if item["final_score"] >= final_score and item["final_status"] else 0
+                final_grade = 1 if item["final_score"] >= final_score and item["final_ranking"] == 1 else 0
                 if item["uid"] in tmp.keys():
                     tmp[item["uid"]]["total_status"] += 1
                     tmp[item["uid"]]["total_score"] += item["final_score"]
@@ -272,7 +272,9 @@ class ClubRanks(GameAuthApi):
                         "total_result": item["final_result"],
                     }
                     for room_tmp in room_data:
-                        if room_tmp["creator"] == item["uid"] and not room_tmp["room_status"]:
+                        # 不考虑中途解散房间
+                        # if room_tmp["creator"] == item["uid"] and not room_tmp["room_status"]:
+                        if room_tmp["creator"] == item["uid"]:
                             tmp[item["uid"]]["total_price"] += room_tmp["price"]
 
             result = sorted(tmp.values(), key=lambda x: x[order_field], reverse=order_type)
