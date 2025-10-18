@@ -257,7 +257,7 @@ class ClubRanks(GameAuthApi):
                 field=("room_id", "price", "creator", "room_status")
             )
             for item in data:
-                final_grade = 1 if item["final_score"] >= final_score and item["final_grade"] else 0
+                final_grade = 1 if item["final_score"] >= final_score and item["final_status"] else 0
                 if item["uid"] in tmp.keys():
                     tmp[item["uid"]]["total_status"] += 1
                     tmp[item["uid"]]["total_score"] += item["final_score"]
