@@ -2485,10 +2485,11 @@ class Room(BaseCardRoom):
             return StaCode.RULE_ERR, "没有可交换位置"
         ex_cards_index = self.find_index_need_exchange_cards(player, ex_cards)
         if not ex_cards_index:
+            self.log_info("换牌数据有误",ex_cards,player.seat_id)
             return StaCode.RULE_ERR, "数据错误"
 
         if self.exchange_cards_is_end() or player.seat_id in self.__exchange_cards_info:
-            self.log_info(self.tid, player.uid, "当前玩家是否选择换牌了", player.seat_id in self.__exchange_cards_info,
+            self.log_info(player.uid, "当前玩家是否选择换牌了", player.seat_id in self.__exchange_cards_info,
                           "exchange_cards_info_count:", len(self.__exchange_cards_info))
             return StaCode.RULE_ERR, "已经换过牌了"
 
@@ -2950,6 +2951,8 @@ class Room(BaseCardRoom):
             except ValueError:
                 return None
             if c_index + count - 1 >= len(cards):
+                return None
+            if cards.count(card) < count:
                 return None
             ex_cards_index.append(c_index)
             for i in range(1, count):
