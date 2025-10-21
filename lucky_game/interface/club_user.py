@@ -5,7 +5,7 @@ from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.club_users import ClubUsersRC
-from c_services.const.cs_enum_const import CmdClub
+from c_services.const.cs_enum_const import CmdClub, RedDotType
 from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.base_clubs import BaseClubRC
@@ -84,6 +84,10 @@ class KickRelation(GameAuthApi):
             CmdClub.QUIT_CLUB,
             data,
             relation_info["uid"],
+        )
+        await self.send_red_dot(
+            e.get("uid"),
+            RedDotType.RD_CLUB_KICK,
         )
         return self.answer()
 
