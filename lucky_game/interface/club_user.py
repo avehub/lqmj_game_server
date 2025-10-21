@@ -86,8 +86,8 @@ class KickRelation(GameAuthApi):
             relation_info["uid"],
         )
         await self.send_red_dot(
-            e.get("uid"),
             relation_info["uid"],
+            RedDotType.RD_CLUB_KICK,
         )
         return self.answer()
 
