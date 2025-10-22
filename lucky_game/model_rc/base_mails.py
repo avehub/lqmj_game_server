@@ -1,7 +1,10 @@
 """
 邮件相关
 """
+from datetime import datetime
+
 from .base_rc import BaseRC
+from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import Mails
 from nsanic.libs import tool_dt
 from lucky_game.const import MailSta
@@ -59,4 +62,24 @@ class MailsRC(BaseRC):
                         if i_award:
                             i['attachment']['awards'].extend(i_award.get("content")["rewards"])
         return mail_list
+
+
+    @classmethod
+    async def create_mail(cls, mail_type, sender, receiver, title, content, attachment, exp_time: int = None):
+        """创建邮件"""
+        try:
+            now = int(datetime.now().timestamp())
+            mail = await cls.db_model.add_one({
+                "mail_type": mail_type,
+                "sender": sender,
+                "receiver": receiver,
+                "title": title,
+                "content": content,
+                "attachment": attachment,
+                "receive_time": now,
+                "exp_time": exp_time if exp_time else now + 86400 * 30,
+            })
+        except OperationalError as e:
+            return False, e
+        return True, mail
 

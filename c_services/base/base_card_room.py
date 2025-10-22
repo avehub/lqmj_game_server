@@ -431,14 +431,17 @@ class BaseCardRoom(BaseRoom):
                     if not up_segment_sta:
                         self.log_info("玩家",p.uid,p.seat_id,"战绩更新失败",e)
 
+        is_dismiss = over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
             num = 1 if idx == 0 else 0
             final_ranking = score_rank_map[p.total_score]
             final_grade = 1 if final_ranking == 1 else 0
+            if final_ranking == 1 and p.total_score == 0:
+                final_grade = 0
             if self.__record_id > 0:
-                if over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE:
+                if is_dismiss:
                     room_status = 1
                 else:
                     room_status = 0
@@ -446,7 +449,7 @@ class BaseCardRoom(BaseRoom):
                                                                                 , final_ranking, final_grade, p.game_over_data, num,room_status)
                 self.log_info("总结算战绩插入", over_record)
 
-        if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
+        if is_dismiss:
             up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=self.round_idx)
             if not up_room_sta:
                 self.log_info("更新战绩时间失败", up_result)
@@ -469,7 +472,8 @@ class BaseCardRoom(BaseRoom):
         score_rank_map = {}
 
         for idx, score in enumerate(sorted_scores):
-            score_rank_map[score] = idx + 1
+            if idx == 0 or score != sorted_scores[idx - 1]:
+                score_rank_map[score] = idx + 1
         return score_rank_map
 
     def room_info(self):
