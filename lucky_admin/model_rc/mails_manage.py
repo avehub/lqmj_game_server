@@ -4,13 +4,12 @@ from tortoise.expressions import Q
 
 from lucky_admin.const import MailSta
 from lucky_admin.handler.decorator import filter_not_out_of_date_data
-from lucky_admin.model_db.main import RecordsAdminMails
+
 
 
 class RecordsAdminMailsRC(RCModel):
     """ 邮件记录 """
-    db_model = RecordsAdminMails
-    tb_name = db_model.sheet_name()
+
 
     @classmethod
     async def get_active_mails(cls):
