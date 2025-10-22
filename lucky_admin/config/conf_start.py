@@ -8,7 +8,7 @@ from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, SERVER_
 class ConfSrv(BaseConf):
     SERVER_NAME = 'lucky_admin'
     SERVER_ID = 'A0001'
-    RUN_PORT = 8999
+    RUN_PORT = 8990
     HOST = '0.0.0.0'
     DEBUG_MODE = DEBUG_MODE
     ACCESS_LOG = False
