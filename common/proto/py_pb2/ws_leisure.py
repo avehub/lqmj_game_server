@@ -630,6 +630,9 @@ class S2CPlayerInfo05Mahjong:
             p_info.lock_cards.extend(one_data.get("lock_cards") or [])
             p_info.que = one_data.get("que") or 0
             p_info.total_score = one_data.get("total_score") or 0
+            p_info.recharge_sta = one_data.get("recharge_sta") or 0
+            p_info.seconds = one_data.get("seconds") or 0
+            p_info.is_out = one_data.get("is_out") or False
             pack_table_cards(p_info, **one_data)
             men_cards = one_data.get("men_cards") or []
             for men_data in men_cards:

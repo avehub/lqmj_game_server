@@ -116,6 +116,9 @@ class HuType(BaseEnum):
     DA_KUAN_ZHANG = 141, "大宽张"
     QING_DA_KUAN_ZHANG = 142, "清大宽张"
 
+    FOUR_CARD_NO_NEAR = 151,"四张不挨"
+    FOUR_CARD_IS_SAME = 152,"四张天胡"
+
 @unique
 class SuitType(BaseEnum):
     """ 花色类型 """
@@ -152,6 +155,12 @@ class FlowStatus(BaseEnum):
     T_IN_HUI_TOU_YI_XIAO = 20, "回头一笑流程"
     T_IN_DING_JING = 21, "定精牌流程"
     T_IN_RECHARGE = 22, "充值中"
+    T_IN_EIGHT_TIAN_HU = 23,"八张天胡中"
+
+class PlayerRechargeSta(BaseEnum):
+    IDLE = 0,"常态"
+    WAIT_RECHARGE = 1,"等待复活"
+    RECHARGE_ING = 2,"复活中"
 
 
 class TimerDelay(IntEnum):
@@ -220,6 +229,7 @@ class ExtraHuPai(IntEnum):
     QIANG_GANG_HU = 206  # 抢杠胡
     GANG_SHANG_PAO = 207  # 杠上炮（热炮）
 
+
     # 2.特殊牌型
     BAO_TING_QING_QI_DUI = 208  # 报听清七对
     BAO_TING_QING_LONG_QI_DUI = 209  # 报听清龙七对
@@ -231,6 +241,18 @@ class ExtraHuPai(IntEnum):
     COMMON_SHA_BAO = 213  # 普通杀报
     SEA_MOON = 214  # todo:海底捞月
     GAN_KOU = 215 # 干扣
+
+    #八张天胡牌型
+    TIAN_HU_BY_QING_YI_SE = 216 #天胡清一色
+    TIAN_HU_BY_QI_DUI = 217 #天胡小七对
+    TIAN_HU_BY_QING_QI_DUI = 218 #天胡清七对
+    TIAN_HU_BY_DA_DUI_ZI = 219 #天胡大对子
+    TIAN_HU_BY_QING_DA_DUI = 220 #天胡清大对
+    TIAN_HU_BY_LONG_QI_DUI = 221 #天胡龙七对
+    TIAN_HU_BY_QING_LONG_QI = 222 #天胡清龙七
+
+    TIAN_HU_BY_FOUR_CARD = 223 #四张天胡
+
 
     # 4.返分key
     AN_GANG = 301  # 暗杠
@@ -377,6 +399,15 @@ EXTRA_SCORE_MAP = {
     ActionType.ACTION_TYPE_MING_GANG: 3,
     ActionType.ACTION_TYPE_ZHUAN_WAN_GANG: 3,
     ActionType.ACTION_TYPE_AN_GANG: 3,
+
+    ExtraHuPai.TIAN_HU_BY_QING_YI_SE: 20,  # 天胡清一色
+    ExtraHuPai.TIAN_HU_BY_QI_DUI: 15,  # 天胡小七对
+    ExtraHuPai.TIAN_HU_BY_QING_QI_DUI: 25,  # 天胡清七对
+    ExtraHuPai.TIAN_HU_BY_DA_DUI_ZI: 15,  # 天胡大对子
+    ExtraHuPai.TIAN_HU_BY_QING_DA_DUI: 25,  # 天胡清大对
+    ExtraHuPai.TIAN_HU_BY_LONG_QI_DUI: 30,  # 天胡龙七对
+    ExtraHuPai.TIAN_HU_BY_QING_LONG_QI: 40,  # 天胡清龙七
+    ExtraHuPai.TIAN_HU_BY_FOUR_CARD:30, #四张天胡
 }
 
 # 特殊胡牌类型(元组，外部不可变)
@@ -394,6 +425,16 @@ SPECIAL_HU_TYPE1 = (
     ExtraHuPai.DI_HU,
     ExtraHuPai.TIAN_TING,
 )
+# 八张天胡牌型
+SPECIAL_HU_TYPE_BY_EIGHT = (
+    ExtraHuPai.TIAN_HU_BY_QING_YI_SE,  # 天胡清一色
+    ExtraHuPai.TIAN_HU_BY_QI_DUI,  # 天胡小七对
+    ExtraHuPai.TIAN_HU_BY_QING_QI_DUI,  # 天胡清七对
+    ExtraHuPai.TIAN_HU_BY_DA_DUI_ZI,  # 天胡大对子
+    ExtraHuPai.TIAN_HU_BY_QING_DA_DUI,  # 天胡清大对
+    ExtraHuPai.TIAN_HU_BY_LONG_QI_DUI,  # 天胡龙七对
+    ExtraHuPai.TIAN_HU_BY_QING_LONG_QI,  # 天胡清龙七
+)
 
 PAI_XING_SCORE_MAP = {
     # 基础牌型
@@ -409,6 +450,8 @@ PAI_XING_SCORE_MAP = {
     HuType.QING_DI_LONG: 30,
     HuType.QING_LONG_BEI: 30,
     HuType.QING_JIN_GOU: 20,
+    HuType.FOUR_CARD_NO_NEAR: 20,
+    HuType.FOUR_CARD_IS_SAME: 10,
 }
 
 # 动作优先级（仅房卡场）
