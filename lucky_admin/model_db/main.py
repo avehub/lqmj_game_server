@@ -89,19 +89,3 @@ class RecordsAdminTimedTask(DBModel):
         return await cls.add_one(data)
 
 
-class RecordsAdminMails(DBModel):
-    """ 记录后台邮件 """
-    mail_type = fields.IntEnumField(enum_type=MailType, index=True, default=MailType.SYS, description='邮件类型')
-    title = fields.CharField(max_length=64, default='', description="主题/标题")
-    content = fields.CharField(max_length=255, default='', description="邮件内容")
-    attachment = fields.JSONField(null=True, description="附件信息：如奖励ID和数量等")
-    sender = fields.CharField(max_length=28, default='', description="发送者")
-    start_time = fields.BigIntField(null=True, index=True, default=0, description='开始时间')
-    end_time = fields.BigIntField(
-        null=True, index=True, default=0, description='结束时间 0只发在开始时间时的所有显存玩家，大于0一段时间内的现存玩家')
-    status = fields.IntEnumField(enum_type=MailSta, index=True, description="管理邮件状态")
-    job_id = fields.CharField(max_length=32, unique=True, null=True, description='任务id')
-
-    class Meta:
-        table = "records_admin_mails"
-        indexes = (("start_time", "end_time"),)
