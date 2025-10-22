@@ -13,6 +13,7 @@ from lucky_admin.interface.test_api import TestApi
 #     ModifyPassword, RoomPlayerHandler
 # from lucky_admin.interface.inform import AnnouncementsHandler, BanHandler, MailsManagerSend, \
 #     BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
+from lucky_admin.interface.mail import MailAddOne
 
 
 class MainBp(BaseBlue):
@@ -22,6 +23,9 @@ class MainBp(BaseBlue):
         Urls("/testapi", TestApi),
         Urls("/LoginByAccount", LoginByAccount),
         Urls("/LoginByToken", LoginByToken),
+
+        # 邮件相关
+        Urls("/MailAddOne", MailAddOne),
 
         # 玩家模块
 
