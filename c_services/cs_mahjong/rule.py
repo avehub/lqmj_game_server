@@ -694,13 +694,13 @@ class Rule(metaclass=NoInstances):
             return HuType.PING_HU, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         return 0, []
 
-
     @staticmethod
     def only_can_hu(table_cards, cards, card, lai_zi=CardsType.LAI_ZI):
         cards = list(cards)
         cards_len = len(cards)
         if Rule.is_card(card) and cards_len % 3 != 2:
             cards.append(card)
+            cards_len +=1
 
         flag, _ = Rule.is_jin_gou_diao(cards, lai_zi)
         if flag:

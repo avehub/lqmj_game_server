@@ -377,9 +377,8 @@ class Room(BaseCardRoom):
         self.log_info("开始发牌")
         self.set_flow_status(FlowStatus.T_IN_DEAL_CARDS)
         await self.async_set_room_status(RoomStatus.T_PLAYING)
-        if self.__four_card_bao_ting and not self.__exchange_first:
+        if self.__four_card_bao_ting:
             return await self.start_bao_ting_by_four_cards()
-
         all_cards = self.poker.deal_cards(self.max_player_count, self.deal_cards_count)
         data = {}
         c = self.poker.pop()  # 庄占起手，再摸一张
@@ -473,7 +472,7 @@ class Room(BaseCardRoom):
         if self.__exchange_three == ChangeThreeType.PER_ROUND:
             return True
         if self.__exchange_three == ChangeThreeType.SAME_POINT:
-            return self.__dice_num[0] == self.__dice_num[1]
+            return self.__dice_num[0] == self.__dice_num[1] or all(item in self.__dice_num for item in [1, 6])
         if self.__exchange_three == ChangeThreeType.LIU_JU:
             return self.__over_type == OverType.LIU_JU
         return False
@@ -481,7 +480,7 @@ class Room(BaseCardRoom):
     def can_four_card_bao_ting(self):
         if self.__exchange_three == ChangeThreeType.PER_ROUND:
             return False
-        if self.__exchange_three == ChangeThreeType.SAME_POINT and self.__dice_num[0] == self.__dice_num[1]:
+        if self.__exchange_three == ChangeThreeType.SAME_POINT and (self.__dice_num[0] == self.__dice_num[1] or all(item in self.__dice_num for item in [1, 6])):
             return False
         if self.__exchange_three == ChangeThreeType.LIU_JU and self.__over_type == OverType.LIU_JU:
             return False
@@ -507,7 +506,7 @@ class Room(BaseCardRoom):
 
             p.operates = operates
 
-        if self.can_operates():  # 有人可以胡，则需要等待
+        if self.can_four_card_bao_ting() and self.can_operates():  # 有人可以胡，则需要等待
             self.log_info("有人可以四张报听")
             data = {
                 "left_count": self.poker.left_count,
@@ -561,9 +560,10 @@ class Room(BaseCardRoom):
         self.set_flow_status(FlowStatus.T_IN_DEAL_CARDS)
         seat_id_list = [p.seat_id for p in self.seats if not p.tian_ting]
         self.poker.not_set_cards_ordered(seat_id_list, self.__four_card_bao_ting)
-
+        has_player_tian_ting = False
         for p in self.seats:
             if p.tian_ting:
+                has_player_tian_ting = True
                 continue
             for i in range(self.__card_count - self.__four_card_bao_ting):
                 c = self.poker.pop()
@@ -595,7 +595,7 @@ class Room(BaseCardRoom):
             data_model = S2CDealCardsMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
-        if not self.__four_card_bao_ting and self.is_exchange_three():
+        if not has_player_tian_ting and self.is_exchange_three():
             return await self.start_exchange_three()
         await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
 
@@ -2485,10 +2485,11 @@ class Room(BaseCardRoom):
             return StaCode.RULE_ERR, "没有可交换位置"
         ex_cards_index = self.find_index_need_exchange_cards(player, ex_cards)
         if not ex_cards_index:
+            self.log_info("换牌数据有误",ex_cards,player.seat_id)
             return StaCode.RULE_ERR, "数据错误"
 
         if self.exchange_cards_is_end() or player.seat_id in self.__exchange_cards_info:
-            self.log_info(self.tid, player.uid, "当前玩家是否选择换牌了", player.seat_id in self.__exchange_cards_info,
+            self.log_info(player.uid, "当前玩家是否选择换牌了", player.seat_id in self.__exchange_cards_info,
                           "exchange_cards_info_count:", len(self.__exchange_cards_info))
             return StaCode.RULE_ERR, "已经换过牌了"
 
@@ -2519,7 +2520,7 @@ class Room(BaseCardRoom):
                     p.mo_pai = p.cards[-1]
                     self.__curr_card =  p.mo_pai
                     self.log_info(self.tid, "换牌后庄改变摸的牌", p.uid, p.cards[-1])
-
+                result["seat_id"] = p.seat_id
                 result["hand_cards"] = p.cards
                 result["get_cards"] = get_cards
                 data_model = S2CExchangeCardsInfo.pb_model(**result)
@@ -2950,6 +2951,8 @@ class Room(BaseCardRoom):
             except ValueError:
                 return None
             if c_index + count - 1 >= len(cards):
+                return None
+            if cards.count(card) < count:
                 return None
             ex_cards_index.append(c_index)
             for i in range(1, count):
