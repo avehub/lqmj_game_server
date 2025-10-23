@@ -103,7 +103,11 @@ class Base:
         if not once_item and not condition_item:
             return once_item, condition_item
         if act_type == ActivityType.LUCK_SIGN_IN:
-            once_awards = await SignIn().get_random_rewards(uid, act_type, once_item, False)
+            refresh = False
+            sta, act_total = await act_count(uid, activity.get("act_id"), period="day")
+            if sta and act_total > 0:
+                refresh = True
+            once_awards = await SignIn().get_random_rewards(uid, act_type, once_item, refresh=refresh)
         else:
             once_awards = once_item
 
