@@ -263,7 +263,7 @@ class WorkersServer(JsonBaseServer):
             status = -1
             if sta:
                 result = await InfinitePlay().progress_data(act, progress, u_info)
-                status = result.get("gains").get("status")
+                status = result.get("gains")[0].get("status")
             result = status == 0
             self.red_dot_log(uid, "救济金红点查询", result)
             if result:
