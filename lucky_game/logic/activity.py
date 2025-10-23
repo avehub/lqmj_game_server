@@ -103,7 +103,11 @@ class Base:
         if not once_item and not condition_item:
             return once_item, condition_item
         if act_type == ActivityType.LUCK_SIGN_IN:
-            once_awards = await SignIn().get_random_rewards(uid, act_type, once_item, False)
+            refresh = False
+            sta, act_total = await act_count(uid, activity.get("act_id"), period="day")
+            if sta and act_total > 0:
+                refresh = True
+            once_awards = await SignIn().get_random_rewards(uid, act_type, once_item, refresh=refresh)
         else:
             once_awards = once_item
 
@@ -648,6 +652,7 @@ class InfinitePlay(Base):
         conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
         for award_id in award_ids:
             status = 0 if u_info.get("gold", 0) < conf_data.get("min_gold") else -1
+            NLogger.info(f"查询用户救济金领取状态：status = {status}")
             gain.append({"award_id": award_id, "status": status if progress["today_surplus"] > 0 else -1})
         data = {
             "gains": gain,
