@@ -652,6 +652,7 @@ class InfinitePlay(Base):
         conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
         for award_id in award_ids:
             status = 0 if u_info.get("gold", 0) < conf_data.get("min_gold") else -1
+            NLogger.info(f"查询用户救济金领取状态：status = {status}")
             gain.append({"award_id": award_id, "status": status if progress["today_surplus"] > 0 else -1})
         data = {
             "gains": gain,
