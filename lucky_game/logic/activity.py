@@ -104,9 +104,9 @@ class Base:
             return once_item, condition_item
         if act_type == ActivityType.LUCK_SIGN_IN:
             refresh = False
-            sta, act_total = await act_count(uid, activity.get("act_id"), period="day")
-            if sta and act_total > 0:
-                refresh = True
+            # sta, act_total = await act_count(uid, activity.get("act_id"), period="day")
+            # if sta and act_total > 0:
+            #     refresh = True
             once_awards = await SignIn().get_random_rewards(uid, act_type, once_item, refresh=refresh)
         else:
             once_awards = once_item
@@ -332,14 +332,14 @@ class SignIn(Base):
         # 自动领取
         await self.give_awards(uid, awards["award_id"], act_id, reason=ReasonCostGold.RAFFLE_LUCK)
         # 累计签到检查并发放奖励
+        once_awards, condition_awards = await self.atc_awards(once_awards=activity["once_awards"], condition_awards=activity["condition_awards"])
         if award_type == AwardType.SIGN_IN_RF:
             sta, current_value = await self.sign_progress(uid, act_id)
-            _, condition_awards = await self.atc_awards(condition_awards=activity["condition_awards"])
             await self.gain_condition_awards(condition_awards, uid, act_id, current_value)
         # 更新记录
         await atc_behavior(uid, act_id, act_type, award_type, pay_type)
-        once_item, _ = await self.act_by_awards(uid, activity)
-        return True, "成功", {"gain_awards": [awards], "once_awards": once_item}
+        once_item = await self.get_random_rewards(uid, act_type, once_awards, refresh=True)
+        return True, "成功", {"gain_awards": [awards], "once_awards": once_item["rewards"]}
 
     async def check_today_sign(self, uid: int) -> dict:
         """ 检查用户今日是否已签到 """
