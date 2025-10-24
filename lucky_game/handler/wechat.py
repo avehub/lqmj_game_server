@@ -306,7 +306,7 @@ class WeChat(LogMeta):
                 {
                     "title": '点我充值',
                     "description": f'{trade_amount}元\n支付完成请返回游戏查看',
-                    "url": f'{H5_SERVER_ADDR}/mahjong_main/gzh_pay/hjmj_wxpay_new/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}&payData={json_encode(pay_info)}',
+                    "url": f'{H5_SERVER_ADDR}/mahjong_main/static/gzh_pay/hjmj_wxpay_new/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}&payData={json_encode(pay_info)}',
                     # 微信商户后台配置没位了，只能暂用他们的
                     "thumb_url": 'https://ddzres.lpyqp.com/pay2.png'  # 图片地址
                 }
