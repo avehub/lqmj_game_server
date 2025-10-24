@@ -41,6 +41,7 @@ class ActionType(BaseEnum):
     ACTION_TYPE_ZHA_HU = 13, "炸胡"
     ACTION_TYPE_ZHA_JIAN = 14, "炸捡"
     ACTION_TYPE_ZHA_MEN = 15, "炸闷"
+    ACTION_TYPE_CHU_PAI = 16,"出牌(服务端用)"
 
 
 class CardsType(IntEnum):
