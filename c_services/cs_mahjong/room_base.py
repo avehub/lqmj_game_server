@@ -2236,7 +2236,7 @@ class Room(BaseCardRoom):
         if player.cards_len % 3 != 2:
             return StaCode.RULE_ERR, "手牌数不对，不可出"
         if player.can_hu_men_jian() and self.play_type < 3:
-            if self.__left_three_bi_hu and self.poker.left_count <= 3:
+            if self.__left_three_bi_hu and self.poker.left_count < 3:
                 return StaCode.RULE_ERR, '尾三必开'
 
             self.set_tui_zhang_ke_kai(player)
