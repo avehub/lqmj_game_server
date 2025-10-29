@@ -72,6 +72,7 @@ class RecordsGameSegmentRC(BaseCommonRC):
             record_tid = kwargs.get("record_tid")
             replay_label = kwargs.get("replay_label")
             replay_msg = kwargs.get("replay_msg")
+            round_num = kwargs.get("round_num")
             if record_tid:
                 up_data["record_tid"] = record_tid
             if replay_label:
@@ -82,6 +83,8 @@ class RecordsGameSegmentRC(BaseCommonRC):
                 "record_rid": record_rid,
                 "uid": uid,
             }
+            if round_num:
+                query["round_num"] = round_num
             if up_data:
                 count, _ = await cls.count_record_segment(**query)
                 up_sta = await cls.db_model.update_by_cond(
