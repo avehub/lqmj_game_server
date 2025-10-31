@@ -424,10 +424,12 @@ class BaseCardRoom(BaseRoom):
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
             self.log_info("游戏结束一轮结束战绩插入", result_data)
         else:
+            round_idx = self.round_idx -1
+            self.log_info("战绩更新局数", round_idx)
             for p in self.seats:
                 if p:
                     up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(self.__record_id,p.uid,
-                                                                                          replay_msg=self.__round_msg_records)
+                                                                                          replay_msg=self.__round_msg_records,round_num=round_idx)
                     if not up_segment_sta:
                         self.log_info("玩家",p.uid,p.seat_id,"战绩更新失败",e)
 

@@ -329,9 +329,9 @@ class Player(BaseLeisurePlayer):
             self.ex_cards(cards[-i], idx)
 
     def can_an_gang(self, rule, card=0):
-        if self.__que > 0:
-            if (card or 0) // 10 == self.__que:
-                return False, [0]
+        # if self.__que > 0:
+        #     if (card or 0) // 10 == self.__que:
+        #         return False, [0]
         return rule.can_an_gang(self.cards, card,self.__que)
 
     @property
