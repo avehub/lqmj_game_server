@@ -1,4 +1,4 @@
 [tool.aerich]
-tortoise_orm = "lucky_game.config.migrate_db"
+tortoise_orm = "lucky_admin.config.migrate_db"
 location = "./migrations"
 src_folder = "./."

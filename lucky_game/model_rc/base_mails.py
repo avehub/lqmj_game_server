@@ -83,3 +83,30 @@ class MailsRC(BaseRC):
             return False, e
         return True, mail
 
+    @classmethod
+    async def update_mail(cls, mail_id, mail_type: int = None, sender: str = None, receiver: int =None, title: str = None,
+                          content: str = None, attachment: str = None, exp_time: int = None):
+        """更新邮件"""
+        try:
+            up_data = {}
+            if mail_type:
+                up_data["mail_type"] = mail_type
+            if sender:
+                up_data["sender"] = sender
+            if title is not None:
+                up_data["title"] = title
+            if attachment:
+                up_data["attachment"] = attachment
+            if content is not None:
+                up_data["content"] = content
+            if receiver is not None:
+                up_data["receiver"] = receiver
+            if up_data:
+                now = int(datetime.now().timestamp())
+                up_data["exp_time"] = exp_time if exp_time else now + 86400 * 30
+
+            mail = await cls.db_model.update_by_pk(mail_id, up_data)
+        except OperationalError as e:
+            return False, e
+        return True, mail
+
