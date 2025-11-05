@@ -491,6 +491,37 @@ class BaseUserRC(BaseCommonRC):
         result = await cls.db_model.exec_query(sql)
         return dict(result) if result else None
 
+    @classmethod
+    async def get_user_filter(cls, uid: any = None, is_vip: bool = None, vip: int = None, phone: str = None,
+                              id_card: str = None, start_time: int = None, end_time: int = None, count: bool = False):
+        """获取用户列表"""
+        try:
+            query = {}
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lte"] = end_time
+            if is_vip and vip is not None:
+                query["vip"] = vip
+            if phone is not None:
+                query["phone"] = phone
+            if id_card is not None:
+                query["id_card"] = id_card
+            if count:
+                data = await cls.db_model.filter(**query).count()
+            else:
+                data = await cls.db_model.filter(**query).order_by("-uid").values()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, data
+
+
+
 
 class BaseBanRC(BaseCommonRC):
     db_model = RecordsUserBan
@@ -542,3 +573,5 @@ class BaseBanRC(BaseCommonRC):
         if info:
             return json_parse(info, cls.log_err)
         return await cls.conf.rds.locked(key, fun=from_db)
+
+

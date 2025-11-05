@@ -281,7 +281,14 @@ class Room(BaseCardRoom):
             room_info["left_count"] = self.poker.left_count
             room_info["dice_num"] = self.__dice_num
             room_info["ding_que_list"] = self.__que_list
-            room_info["exchange_seats"] = list(self.__exchange_cards_info)
+            exchange_data = []
+            for seat_id, c_info in self.__exchange_cards_info.items():
+                info = {
+                    "ex_cards":c_info.get("ex_cards"),
+                    "seat_id":seat_id
+                }
+                exchange_data.append(info)
+            room_info["exchange_seats"] = exchange_data
             room_info["operate_seats"] = self.get_operate_seats()
             room_info["shang_ga_list"] = self.__shang_ga_list
         room_info["lai_zi"] = self.__lai_zi

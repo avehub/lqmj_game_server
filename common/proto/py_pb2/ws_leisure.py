@@ -582,7 +582,11 @@ class S2CRoomInfo04Mahjong:
         obj.last_seat_id = kwargs.get("last_seat_id") or 0
         obj.dice_num.extend(kwargs.get("dice_num") or [])
         obj.ding_que_list.extend(kwargs.get("ding_que_list") or [])
-        obj.exchange_seats.extend(kwargs.get("exchange_seats") or [])
+        exchange_seats = kwargs.get("exchange_seats") or []
+        for info in exchange_seats:
+            ex_cards = obj.exchange_seats.add()
+            ex_cards.seat_id = info.get("seat_id") or 0
+            ex_cards.ex_cards.extend(info.get("ex_cards") or [])
         obj.operate_seats.extend(kwargs.get("operate_seats") or [])
         obj.shang_ga_list.extend(kwargs.get("shang_ga_list") or [])
         pack_rule_details(obj, **kwargs)
