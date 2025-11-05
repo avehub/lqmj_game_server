@@ -178,7 +178,7 @@ class CreateRoom(GameRoomAPI):
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         if not cs_enum:
-            await GameRoomsRC.delete_game_room(new_room)
+            await GameRoomsRC.delete_game_room(new_room, True)
             return self.answer(StaCode.FAIL, hint="非法服务")
         rmq_data = room_data
         rmq_data["secret"] = C_SERVICE_SECRET_KEY
