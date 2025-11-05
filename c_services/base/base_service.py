@@ -142,6 +142,9 @@ class BaseService(BaseServer, SessionManager):
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
         reenter = enter_room_model.reenter or False
+        if not player.receive_enter_room:
+            reenter = False
+        player.receive_enter_room = 1
         self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线

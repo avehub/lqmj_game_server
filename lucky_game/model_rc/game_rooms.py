@@ -447,7 +447,6 @@ class GameRoomsRC(BaseCommonRC):
                     sta, _ = await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
                 if not sta:
                     return False, cls.NULL_MEG
-                # TODO 游戏战绩标记
 
                 # 删除缓存
                 uids = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
@@ -578,10 +577,8 @@ class GameRoomsRC(BaseCommonRC):
             if sta == 0:
                 return False, "用户已离开房间或离开房间失败"
             if room_data['creator'] == uid:
-                # 关闭房间
-                await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
-                await cls.conf.rds.srem(cls.SESSION_ROOM_NUMBER_KEY, room_id)
-                await cls.cache_room_drop(room_id)
+                # 删除房间
+                await cls.delete_game_room(room_id, True)
             await cls.conf.rds.srem(cls.SESSION_ROOM_USER_KEY, uid)
             await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
             await cls.conf.rds.srem(cls.SESSION_USER_JOIN_ROOM_KEY, uid)
@@ -643,7 +640,7 @@ class GameRoomsRC(BaseCommonRC):
             # 退还房卡
             await cls.refund_room_card(room_id)
             # 关闭房间
-            await cls.delete_game_room(room_id)
+            await cls.delete_game_room(room_id, True)
             # 记录日志
             # cls.conf.info_log(msg + f"房间ID: {room_id}")
         except OperationalError as e:

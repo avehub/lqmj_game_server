@@ -471,8 +471,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.remove_chong_feng_ji(p, all_ji_pai)
 
         if all_ji_pai:
-            p.ji_pai.extend(all_ji_pai)
-
             # 5.鸡牌分类处理
             for fan_ji in set(all_ji_pai):
                 repeat_count = count_list.get(fan_ji, 1)
