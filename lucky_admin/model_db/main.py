@@ -18,24 +18,6 @@ class Admins(DBModel):
         enum_type=AdminPermission, defualt=AdminPermission.P1, description='管理员权限')
 
 
-class ConfAnnouncements(DBModel):
-    """ 公告表 """
-    title = fields.CharField(max_length=64, default='', description="主题/标题")
-    content = fields.CharField(max_length=255, default='', description='公告内容')
-    start_time = fields.IntField(max_length=28, null=False, default=0, description='公告开始时间')
-    end_time = fields.IntField(max_length=28, null=False, default=0, description='公告结束时间')
-    target_group = fields.IntEnumField(
-        enum_type=UserGroup, default=UserGroup.USER_ALL, description='目标用户群, 如普通用户、VIP用户等')
-    carousel_count = fields.SmallIntField(default=1, description='轮播次数')
-    status = fields.IntEnumField(
-        enum_type=AnnouncementsStatus, index=True, default=1, description='状态, 例如: 草稿、已发布、已过期')
-    weight = fields.IntEnumField(enum_type=WeightEnum, default=WeightEnum.W2, description="权重")
-
-    class Meta:
-        table = "conf_announcements"
-        indexes = (('start_time', 'end_time'),)
-
-
 class RecordsAdminOperates(DBModel):
     """ 后台操作记录 """
     # _SPLIT_TYPE = 2
