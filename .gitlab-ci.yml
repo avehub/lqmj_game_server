@@ -36,7 +36,6 @@ deploy_prod:
     - /opt/deploy/lucky_game_deploy.sh main
   only:
     - main
-  when: manual
 #  tags:
 #    - ssh
 #    - prod  # 生产环境的 Runner
