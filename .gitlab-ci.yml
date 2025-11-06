@@ -13,8 +13,6 @@ deploy_test:
   before_script:
     - echo "=========================================="
     - echo "部署到测试环境"
-    - echo "当前用户: $(whoami)"
-    - echo "当前主机: $(hostname)"
     - echo "=========================================="
   script:
     # SSH Executor 已经在目标服务器上了，直接执行脚本
@@ -33,14 +31,11 @@ deploy_prod:
   before_script:
     - echo "=========================================="
     - echo "部署到生产环境"
-    - echo "当前用户: $(whoami)"
-    - echo "当前主机: $(hostname)"
     - echo "=========================================="
   script:
     - /opt/deploy/lucky_game_deploy.sh main
   only:
     - main
-  when: manual
 #  tags:
 #    - ssh
 #    - prod  # 生产环境的 Runner
