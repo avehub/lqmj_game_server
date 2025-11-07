@@ -553,16 +553,15 @@ class WorkersServer(JsonBaseServer):
     async def start_server(self):
         """ 重写启动服务 """
         if self.server_id == 1:
-            # print("启动定时服务>>>")
-            # from .timed_service import TimedService
-            # self.__timed_server = TimedService(self.conf, self)
+            from .timed_service import TimedService
+            self.__timed_server = TimedService(self.conf, self)
             try:
-                # self.__timed_server.start()
+                self.__timed_server.start()
                 await super().start_server()
             except asyncio.CancelledError:
                 pass
-            # finally:
-            #     self.__timed_server.close()  # 关闭scheduler
+            finally:
+                self.__timed_server.close()  # 关闭scheduler
             return
         await super().start_server()
 

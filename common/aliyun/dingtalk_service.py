@@ -168,15 +168,10 @@ class DingTalkRobotService:
         title = f"{emoji} {alert_type}告警"
 
         content = f"""## {title}
-
 **告警级别：** {level.value}
-
 **告警时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 **告警内容：** {message}
-
 请及时处理！"""
-
         return self.send_markdown_message(title, content)
 
     def send_exception_alert(self, service_name: str, exception_message: str,
@@ -192,14 +187,10 @@ class DingTalkRobotService:
         Returns:
             发送结果
         """
-        content = f"""## 🚨 系统异常告警
-
+        content = f"""## 系统异常告警
 **服务名称：** {service_name}
-
 **异常时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 **异常信息：** {exception_message}
-
 """
 
         if stack_trace:
@@ -222,18 +213,12 @@ class DingTalkRobotService:
         Returns:
             发送结果
         """
-        title = "💰 余额不足告警"
-
+        title = "余额不足告警"
         content = f"""## {title}
-
 **账户类型：** {account_type}
-
 **当前余额：** {current_balance}
-
 **告警阈值：** {threshold}
-
 **告警时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 请及时充值！"""
 
         return self.send_markdown_message(title, content)
@@ -348,9 +333,11 @@ class DingTalkNotifier:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+        if DINGTALK_WEBHOOK and DINGTALK_SECRET:
+            cls._instance.initialize()
         return cls._instance
 
-    def initialize(self, webhook_url: str, secret: str, timeout: int = 30):
+    def initialize(self, webhook_url: str = DINGTALK_WEBHOOK, secret: str = DINGTALK_SECRET, timeout: int = 30):
         """
         初始化钉钉通知器
 
