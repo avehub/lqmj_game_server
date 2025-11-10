@@ -1,26 +1,20 @@
 import asyncio
+import time
 from datetime import datetime, timedelta
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
-from common.public.conf import LIVE_SERVER
+from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier
+from common.public.conf import LIVE_SERVER, CertificationConf
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
 from lucky_admin.model_db.main import RecordsAdminTimedTask
-from lucky_game.const import SeasonStatus
 from lucky_admin.handler.stats_expert import StatsExpert
-from lucky_game.handler.douyin import DouYin
-# from lucky_game.model_db.main import RecordsUserRankingHistory
-# from lucky_game.model_rc.base_ads import BaseAds, JuLiangAdsRC
-# from lucky_game.model_rc.base_ranking import ConfSeasonRC, UserRankingRC
-from lucky_game.model_rc.base_robot import BaseRobotRC
-from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.script.timed_task import BaseTimed
 
 
-class TimedService():
+class TimedService:
     """ 定时任务服务 """
     conf: BaseConf
 
@@ -102,6 +96,17 @@ class TimedService():
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, hour=0, minute=0)  # 每天执行一次
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, minute='*/3')  # 每5分钟执行一次 测试
 
+        # 每日一次任务
+        print("写入待执行任务")
+        self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
+
+    async def __every_day_tasks(self):
+        """ 每日一次任务 """
+        now_time = datetime.now()
+        self.log_info(f"每日一次任务开始 {now_time}")
+        # 防沉迷过期时间检查
+        self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
+
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
         now_time = datetime.now()
@@ -128,69 +133,6 @@ class TimedService():
         # 20分钟后执行邮件发奖
         self.__scheduler.add_date_job(self.__season_check_out, run_date=now_time + timedelta(minutes=20))
 
-    @classmethod
-    @UtilsTool.cal_time()
-    async def __refresh_ranking_list(cls):
-        """
-        刷新排行榜
-        严格从0点，半小时执行一次
-        """
-        # 1.休赛期排行榜不刷新了
-        curr_season = await ConfSeasonRC.get_current_season()
-        if curr_season.get("status") != SeasonStatus.ACTIVE_SEASON:
-            cls.log_info(f"非开赛期，刷新排行榜失败: {curr_season.get('status')}")
-            return
-        cls.log_info("刷新世界、地区排行榜")
-        season_id = curr_season.get("season_id")
-        await UserRankingRC.refresh_ranking_list_group_by_region(season_id)  # 地区排行榜
-
-    @classmethod
-    @UtilsTool.cal_time()
-    async def __reset_ranking_score(cls):
-        """
-        重置排位分
-        ◆1601以上，全部扣除
-        ◆851~1600部分，扣除75%
-        ◆351~850部分，扣除50%
-        ◆350以下，不扣除
-        COALESCE返回参数列表中的第一个非NULL表达式。如果所有参数都是NULL，那么将返回NULL。
-        重置分需要在写入历史数据后面
-        """
-        curr_season = await cls.__check_season_status(SeasonStatus.OFF_SEASON)
-        if not curr_season:
-            # cls.log_info("非休赛期，无法重置排位分数")
-            return
-
-        next_season_conf = await ConfSeasonRC.db_model.filter(status=SeasonStatus.NEXT_SEASON).first()
-        if not next_season_conf:
-            # cls.log_info("下个赛季还未配置，暂不重置玩家排位分数")
-            return
-        cur_time = tool_dt.cur_time()
-        diff_time = next_season_conf.start_time - cur_time
-        if diff_time >= 60 * 10:  # 默认10分钟
-            cls.log_info(f"下个赛季开始时间还差{diff_time}s, 不重置玩家修为！")
-            return
-
-        curr_season_id = curr_season.get('season_id')
-        data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
-        # if not data or not data.season_achieved:
-        if not data:
-            cls.log_info(f"历史数据还未迁移，此时不能重置玩家修为分")
-            return
-        # 2.将user_ranking的分数按公式递减
-        # 3.更新user_ranking的ranking_id
-        try:
-            async with in_transaction(connection_name=DbKey.DEFAULT):
-                await UserRankingRC.ranking_reset_before_next_season(next_season_conf.season_id)
-                await BaseRobotRC.ranking_reset_before_next_season()
-
-            await BaseRobotRC.refresh_robot_cache()
-            await cls.scan_all_string_key_del(f'{UserRankingRC.tb_name}:*')
-            await ConfSeasonRC.update_season_info(
-                curr_season_id, {'status': SeasonStatus.DAN_RESET}, curr_season)
-            cls.log_info("重置玩家排位分数")
-        except Exception as e:
-            cls.log_info(f"事务执行失败，原因：{e}")
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -217,6 +159,19 @@ class TimedService():
         except Exception as e:
             cls.log_info("del_string_all_key fail", e)
 
+    def check_certification_useful_time(self):
+        """ 检查实名认证secret key是否过期 """
+        useful_life = datetime.strptime(CertificationConf.USEFUL_TIME, "%Y-%m-%d %H:%M:%S")
+        useful_time = int(useful_life.timestamp()) - 86400 * 7
+        if int(datetime.now().timestamp()) > useful_time:
+            ding_server = DingTalkNotifier().get_service()
+            ding_server.send_link_message(
+                title="防沉迷实名认证系统SecretKey过期",
+                text=f"过期时间：{CertificationConf.USEFUL_TIME} 请及时登录网络游戏防沉迷实名认证系统进行更新，否则将无法使用实名认证功能。",
+                message_url=CertificationConf.DOMAIN,
+            )
+
+
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
         """ 从0点每个多少分钟执行一次 """
@@ -230,159 +185,7 @@ class TimedService():
             next_run_time = start_time
         return next_run_time
 
-    @classmethod
-    @UtilsTool.cal_time()
-    async def __move_to_ranked_history(cls):
-        """ 排位数据写入历史表 """
-        curr_season = await cls.__check_season_status(SeasonStatus.OFF_SEASON)
-        if not curr_season:
-            cls.log_info("非休赛期，无法开始迁移到历史表")
-            return
-        curr_season_id = curr_season.get("season_id")
-        data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
-        if data:
-            cls.log_info(f"S{curr_season_id}赛季历史数据已写入，不再重复迁移")
-            return
 
-        cls.log_info(f"S{curr_season_id}赛季主表迁移到历史表开始")
-        # 事务：1.将user_ranking数据写入新表
-        current_season_data = await UserRankingRC.query_all()
-
-        curr_time = tool_dt.cur_time()
-        # 准备新的记录列表
-        new_records = []
-        for user_ranking in current_season_data:
-            # 创建新的记录对象
-            user_ranking["season_id"] = curr_season_id
-            user_ranking["created"] = curr_time
-            user_ranking["uid"] = user_ranking.pop("user_id", 0)
-            new_records.append(
-                RecordsUserRankingHistory(
-                    **user_ranking
-                )
-            )
-        # 批量插入新的记录
-        if new_records:
-            sta = await RecordsUserRankingHistory.bulk_create(new_records, batch_size=1000)
-            cls.log_info("迁移主表到历史表 结果: ", sta)
-
-    @classmethod
-    @UtilsTool.cal_time()
-    async def __refresh_robot_ranking_info(cls):
-        """ 刷新机器人排位分 """
-        curr_season = await ConfSeasonRC.get_current_season()
-        if not curr_season:
-            return
-        season_id = curr_season.get("season_id")
-        all_data_list, _ = await UserRankingRC.get_ranking_list_group_by_region_by_player(season_id)
-        all_data_list.sort(key=lambda d: d['cur_score'])
-        if len(all_data_list) >= 2:
-            # todo 最高/最低 排行玩家总场|胜场
-            min_uid = all_data_list[0].get("uid")
-            max_uid = all_data_list[-1].get("uid")
-            _, min_uid_data = await PlayerGameTimesRC.get_game_time_info(min_uid, ServiceEnum.C_MONSTER)
-            _, max_uid_data = await PlayerGameTimesRC.get_game_time_info(max_uid, ServiceEnum.C_MONSTER)
-            min_game_count = min_uid_data.get("total_count") or 0
-            max_game_count = max_uid_data.get("total_count") or 500
-            min_game_win_count = min_uid_data.get("win_count") or 0
-            max_game_win_game_count = max_uid_data.get("win_count") or 300
-        else:
-            min_game_count = 1
-            max_game_count = 100
-            min_game_win_count = 1
-            max_game_win_game_count = 60
-
-        if curr_season.get("status") == SeasonStatus.ACTIVE_SEASON:
-            r_info = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RANKING)
-            init_score = r_info.get("initial_score") or 100
-            defend_score = r_info.get("defend_score") or 850
-
-            if len(all_data_list) >= 2:
-                max_r_score = 0  # 平均值
-                for data in all_data_list:
-                    max_r_score += data.get("cur_score")
-                max_r_score = max_r_score // len(all_data_list) or 200
-                min_r_score = max(init_score, int(max_r_score * 0.7))  # 平均值最低的70%
-            else:
-                min_r_score = init_score
-                max_r_score = init_score * 2
-            await BaseRobotRC.refresh_ranking_info(
-                min_r_score,
-                max_r_score,
-                defend_score,
-                min_game_count,
-                max_game_count,
-                min_game_win_count,
-                max_game_win_game_count,
-            )
-            cls.log_info(
-                "刷新机器人排位分数！",
-                curr_season.get("status"),
-                min_r_score,
-                max_r_score,
-                min_game_count,
-                max_game_count,
-                min_game_win_count,
-                max_game_win_game_count
-            )
-        else:
-            await BaseRobotRC.refresh_game_count_info(
-                min_game_count,
-                max_game_count,
-                min_game_win_count,
-                max_game_win_game_count,
-            )
-
-            cls.log_info(
-                "刷新机器人游戏局数",
-                min_game_count,
-                max_game_count,
-                min_game_win_count,
-                max_game_win_game_count
-            )
-        await BaseRobotRC.refresh_robot_cache()
-
-    @classmethod
-    async def __check_season_status(cls, status):
-        curr_season = await ConfSeasonRC.get_current_season()
-        if curr_season:
-            if curr_season.get("status") != status:
-                return None
-            return curr_season
-        return None
-
-    async def __season_check_out(self):
-        """ 赛季结算 邮件发奖 / 更新领奖状态 """
-        curr_season = await self.__check_season_status(SeasonStatus.OFF_SEASON)
-        if not curr_season:
-            self.log_info("非休赛期，无法开始赛季结算")
-            return
-
-        curr_season_id = curr_season.get("season_id")
-        data = await RecordsUserRankingHistory.filter(season_id=curr_season_id).first()
-        if not data:
-            self.log_info(f"S{curr_season_id}赛季历史数据还未迁移，无法颁奖")
-            return
-        if data.season_achieved:
-            self.log_info(f"S{curr_season_id}赛季已经结算过，无法重复颁奖")
-            return
-
-        self.log_info(f"S{curr_season_id}赛季结算正式开始")
-        # 颁奖、起草邮件、更新状态
-        await self.__main_service.season_settle_mails(..., data=curr_season)
-        self.log_info(f"赛季结算已完成")
-
-    async def __stats_juliang_ads_data(self):
-        """ 统计抖音小游戏巨量平台用户信息（每小时） """
-        self.log_info(f"{tool_dt.cur_time()} 即将开始统计抖音小游戏巨量平台投流用户信息")
-        errcode, access_token = await DouYin.douyin_get_access_token()
-        if errcode:
-            return
-
-        res_code, res_data = await JuLiangAdsRC.juliang_get_ecpm(access_token)
-        self.log_info(f"{tool_dt.cur_time()} 巨量平台投流用户信息查询结果：{res_code}, 数据列表：{res_data}")
-        if res_data and res_code == 0:
-            await BaseAds.stats_and_update_ad_revenue(res_data)
 
     def start(self):
         self.__scheduler = BaseTimed.new()
