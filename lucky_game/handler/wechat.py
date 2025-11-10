@@ -145,6 +145,24 @@ class WeChat(LogMeta):
         return await cls.__return_access_token(req_data, app_id)
 
     @classmethod
+    async def wechat_check_access_token(cls, login_info):
+        """微信公众号用户登录access_token过期检查"""
+        url = f"https://api.weixin.qq.com/sns/auth?access_token={login_info.get('access_token')}&openid={login_info.get('openid')}"
+        req_data = await http_get(url)
+        return cls.__return_req_data(req_data)
+
+    @classmethod
+    async def wechat_refresh_access_token(cls, uid, login_info):
+        """微信公众号用户登录access_token刷新"""
+        url = f"https://api.weixin.qq.com/sns/oauth2/refresh_token?appid={WeChatConf.WE_CHAT_GZH_APP_ID}&grant_type=refresh_token&refresh_token={login_info.get('refresh_token')}"
+        req_content = await http_get(url)
+        req_sta, req_data = cls.__return_req_data(req_content)
+        if req_sta != 0:
+            return req_sta, req_data
+        await BaseUserRC.cache_wechat_access_token_info(uid, req_data)
+        return 0, req_data
+
+    @classmethod
     async def wechat_get_ticket(cls, access_token):
         """ 获得jsapi_ticket """
         cache_at = await cls.conf.rds.get_item(cls.WECHAT_TICKET)
@@ -346,7 +364,7 @@ class WeChat(LogMeta):
         req_data = json_parse(req_get)
         cls.log_info('Wechat userinfo result:', req_data)
         errcode = req_data.get("errcode", 0)
-        if errcode > 0:
+        if errcode != 0:
             data = {"errcode": errcode, "errmsg": req_data}
             return False, data
         return True, req_data

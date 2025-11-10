@@ -14,7 +14,7 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, Room
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
-    WriteOff
+    WriteOff, UpWechatUserInfo
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -89,6 +89,9 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomCard/", ClubRoomCard),  # 茶馆基金
         Urls("/ClubRoomCardList/", ClubRoomCardList),  # 茶馆基金记录列表
         Urls("/RoomDetail/", RoomDetail),  # 房间详情
+        Urls("/UpWechatUserInfo/", UpWechatUserInfo),  # 更新用户信息
+
+
 
         # 用户数据相关
         Urls("/ModifyGeneralUserInfo/", UpdateUserInfo),  # 更新用户必要信息
