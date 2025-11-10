@@ -282,6 +282,8 @@ class LoginByWechat(BaseLogin):
         if platform == PlatForm.WECHAT_MINI_GAME:
             session_key = req_data.get("session_key")
             await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
+        else:
+            await BaseUserRC.cache_wechat_access_token_info(u_info.get('uid'), req_data)
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 

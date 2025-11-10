@@ -36,6 +36,7 @@ class BaseUserRC(BaseCommonRC):
     KEY_UNION_ID = 'union_id'
     KEY_OPENID = 'open_id'
     KEY_SESSION = "session_key"
+    KEY_WECHAT_LOGIN = "wechat_login"
     KEY_APPLE_ID = 'apple_id'
     KEY_USER_PAY_INFO = "user_pay_info"  # 已下单的支付信息
     KEY_USER_PAID_ORDER = "user_paid_order"  # 已支付订单
@@ -52,6 +53,15 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def get_session_key(cls, uid):
         return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{uid}")
+
+    @classmethod
+    async def cache_wechat_access_token_info(cls, uid, wechat_access_token_info):
+        # refresh_token有效期为30天
+        return await cls.conf.rds.set_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}", wechat_access_token_info, ex_time=30 * 86400 - 5)
+
+    @classmethod
+    async def get_wechat_access_token_info(cls, uid):
+        return await cls.conf.rds.get_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
 
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
