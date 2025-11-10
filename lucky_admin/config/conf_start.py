@@ -51,15 +51,26 @@ class ConfSrv(BaseConf):
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
+        # server_name = "lucky_game"
+        # return {
+        #     'apps': {
+        #         server_name: {'models': model_list},
+        #         f'{server_name}_log': {'models': [f'{server_name}.model_db.log'], 'default_connection': DbKey.LOG}
+        #     },
+        #     'connections': cls.CONF_DB,
+        #     'use_tz': False,
+        #     'timezone': "UTC"
+        # }
         server_name = "lucky_game"
         return {
             'apps': {
                 server_name: {'models': model_list},
-                f'{server_name}_log': {'models': [f'{server_name}.model_db.log'], 'default_connection': DbKey.LOG}
+                f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
+                                           'default_connection': DbKey.LOG}
             },
             'connections': cls.CONF_DB,
-            'use_tz': False,
-            'timezone': "UTC"
+            'use_tz': cls.USE_TZ,
+            'timezone': cls.TIME_ZONE
         }
         # server_name = "lucky_game"
         # return {

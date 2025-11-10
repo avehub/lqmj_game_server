@@ -471,8 +471,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.remove_chong_feng_ji(p, all_ji_pai)
 
         if all_ji_pai:
-            p.ji_pai.extend(all_ji_pai)
-
             # 5.鸡牌分类处理
             for fan_ji in set(all_ji_pai):
                 repeat_count = count_list.get(fan_ji, 1)
@@ -803,7 +801,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if self.__recharge_wait == 0:
             await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_ZHUAN_WAN_GANG, self.__curr_card])
 
-    async def kou_fen_notify(self, p: PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None,many_hu = False):
+    async def kou_fen_notify(self, p: PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None,many_hu = False,card = 0):
         if loser_seats is None:
             loser_seats = []
         win_total_gold = 0
@@ -819,11 +817,13 @@ class RoomFCZJ(BaseLeisureRoom):
             "lose_to": [p.seat_id],
             "relation": 0,
         }
-
+        curr_card = self.__curr_card
+        if act == CheckType.CHECK_AN_GANG:
+            curr_card = card
         common_data = {
             "gold": 0,
             "multiple": multiple,
-            "curr_card": self.__curr_card,
+            "curr_card": curr_card,
             "act": act,
             "hu_type": hu_type
         }
@@ -1572,7 +1572,7 @@ class RoomFCZJ(BaseLeisureRoom):
             else:
                 total_score = self.__extra_score_map.get(ActionType.ACTION_TYPE_AN_GANG)
                 await self.kou_fen_notify(p, total_score, [], CheckType.CHECK_AN_GANG,
-                                          [], RechargeType.WAIT_RECHARGE_AN_GANG)
+                                          [], RechargeType.WAIT_RECHARGE_AN_GANG,card = card)
 
             self.log_info(self.tid, "somebody_an_gang end1")
         if flag and self.__recharge_wait == 0:

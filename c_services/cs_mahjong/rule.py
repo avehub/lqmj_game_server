@@ -907,13 +907,15 @@ class Rule(metaclass=NoInstances):
         card = next((c for c in check_cards if c in peng_cards), None)
         return (True, card) if card else (False, 0)
 
-
     @staticmethod
-    def can_an_gang(cards: list, card=0 ,que = 0):
+    def can_an_gang(cards: list, card=0, que=0):
         """ 判断是否能暗杠 """
         card_to_count = Rule.get_card_to_count(cards)
         if card > 0:
             if card_to_count.get(card, 0) >= 4:
+                if que> 0:
+                    if card // 10 == que:
+                        return False, [0]
                 return True, [card]
         can_gang_list = []
         for card, count in card_to_count.items():

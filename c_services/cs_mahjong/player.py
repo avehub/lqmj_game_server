@@ -59,6 +59,8 @@ class Player(BaseLeisurePlayer):
         self.__shao_tong_xing_zheng = 0  # 烧通行证
         self.__hu_path = []
         self.__dian_pao_no_hu = 0  # 点炮未胡
+        self.__eight_card_tian_hu = 0
+        self.__receive_enter_room = 0 #是否收到过客户端发送的03消息
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
@@ -231,6 +233,14 @@ class Player(BaseLeisurePlayer):
     def dian_pao_no_hu(self, value):
         self.__dian_pao_no_hu = value
 
+    @property
+    def receive_enter_room(self):
+        return self.__receive_enter_room
+
+    @receive_enter_room.setter
+    def receive_enter_room(self,value):
+        self.__receive_enter_room = value
+
     def gang_in_operates(self):
         if ActionType.ACTION_TYPE_AN_GANG in self.__operates:
             return ActionType.ACTION_TYPE_AN_GANG
@@ -329,9 +339,9 @@ class Player(BaseLeisurePlayer):
             self.ex_cards(cards[-i], idx)
 
     def can_an_gang(self, rule, card=0):
-        if self.__que > 0:
-            if (card or 0) // 10 == self.__que:
-                return False, [0]
+        # if self.__que > 0:
+        #     if (card or 0) // 10 == self.__que:
+        #         return False, [0]
         return rule.can_an_gang(self.cards, card,self.__que)
 
     @property
@@ -880,6 +890,7 @@ class Player(BaseLeisurePlayer):
     def clear_player(self):
         self.on_round_over_clear()
         self.__clear_game_data()
+        self.__receive_enter_room = 0
         super().clear_player()
 
     def jiao_di_long(self):
