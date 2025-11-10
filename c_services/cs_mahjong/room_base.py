@@ -281,7 +281,14 @@ class Room(BaseCardRoom):
             room_info["left_count"] = self.poker.left_count
             room_info["dice_num"] = self.__dice_num
             room_info["ding_que_list"] = self.__que_list
-            room_info["exchange_seats"] = list(self.__exchange_cards_info)
+            exchange_data = []
+            for seat_id, c_info in self.__exchange_cards_info.items():
+                info = {
+                    "ex_cards":c_info.get("ex_cards"),
+                    "seat_id":seat_id
+                }
+                exchange_data.append(info)
+            room_info["exchange_seats"] = exchange_data
             room_info["operate_seats"] = self.get_operate_seats()
             room_info["shang_ga_list"] = self.__shang_ga_list
         room_info["lai_zi"] = self.__lai_zi
@@ -745,7 +752,7 @@ class Room(BaseCardRoom):
             self.log_info("mo_pai_call", curr_player.seat_id, "当前玩家可操作")
             data = {"seat_id": curr_player.seat_id, "seconds": seconds, "in_flow": self.flow_status}
             data_model = S2CTurnToMahjong.pb_model(**data)
-            await self.inner_send(curr_player, CmdRoom.TURN_TO, data_model)
+            await self.inner_broadcast(CmdRoom.TURN_TO, data_model)
             if not self.__decision_sec:
                 return
             return
@@ -2228,6 +2235,8 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, desc
         if self.curr_seat_id != player.seat_id:
             return StaCode.NOT_YOUR_TURN, "没有轮到你"
+        if self.has_do_by_action(player, ActionType.ACTION_TYPE_CHU_PAI):  # 不允许再次操作
+            return StaCode.RULE_ERR, "已经操作过出牌了"
         if player.card_is_lock():
             if card not in player.get_out_not_lock_card():
                 return StaCode.RULE_ERR, "出牌在锁定范围内，不可出"
@@ -2243,7 +2252,7 @@ class Room(BaseCardRoom):
             if len(player.men_cards) > 0 or player.tian_ting == 1:
                 self.log_info(self.tid, player.uid, "玩家出牌漏胡, 闷牌后不能改牌", len(player.men_cards), player.operates)
                 self.record_lou_hu(player, "出牌")
-
+        self.save_player_action(player, ActionType.ACTION_TYPE_CHU_PAI, data)
         player.chu_pai(card)
         player.mo_pai = 0
         self.__curr_card = card
@@ -2276,6 +2285,8 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前流程不在可碰流程"
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_PENG):
             return StaCode.RULE_ERR, "没有可碰操作"
+        if self.has_do_by_action(player, [ActionType.ACTION_TYPE_PENG]):  # 不能再次操作
+            return StaCode.RULE_ERROR, "已经操作过碰了"
 
         if self.play_type < 3 and ActionType.ACTION_TYPE_HU in player.operates or ActionType.ACTION_TYPE_JIAN in player.operates:
             self.set_tui_zhang_ke_kai(player)
@@ -2297,6 +2308,10 @@ class Room(BaseCardRoom):
         gang_act = player.gang_in_operates()
         if not gang_act:
             return StaCode.RULE_ERR, "没有可杠操作"
+
+        if self.has_do_by_action(player, [ActionType.ACTION_TYPE_MING_GANG,ActionType.ACTION_TYPE_ZHUAN_WAN_GANG,
+                                          ActionType.ACTION_TYPE_AN_GANG]):  # 不能再次操作
+            return StaCode.RULE_ERROR, "已经操作过杠了"
 
         if self.play_type < 3 and player.can_hu_men_jian():
             self.set_tui_zhang_ke_kai(player)
