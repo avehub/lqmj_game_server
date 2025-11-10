@@ -41,13 +41,13 @@ class ConfSrv(BaseConf):
     def log_conf(cls):
         return
 
-    # @classmethod
-    # def db_conf(cls):
-    #     """数据库配置"""
-    #     models = cls.MODEL_LIST + cls.MODEL_EXTRA
-    #     model_list = [f'lucky_game.model_db.{item}' for item in models]
-    #     db_conf = cls.makeup_db_conf(model_list) if cls.CONF_DB else None
-    #     return db_conf
+    @classmethod
+    def db_conf(cls):
+        """数据库配置"""
+        models = cls.MODEL_LIST + cls.MODEL_EXTRA
+        model_list = [f'lucky_game.model_db.{item}' for item in models]
+        db_conf = cls.makeup_db_conf(model_list) if cls.CONF_DB else None
+        return db_conf
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
@@ -72,3 +72,14 @@ class ConfSrv(BaseConf):
             'use_tz': cls.USE_TZ,
             'timezone': cls.TIME_ZONE
         }
+        # server_name = "lucky_game"
+        # return {
+        #     'apps': {
+        #         server_name: {'models': model_list},
+        #         f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
+        #                                    'default_connection': DbKey.LOG}
+        #     },
+        #     'connections': cls.CONF_DB,
+        #     'use_tz': cls.USE_TZ,
+        #     'timezone': cls.TIME_ZONE
+        # }

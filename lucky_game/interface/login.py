@@ -46,10 +46,15 @@ class BaseLogin(GameAuthApi):
             data["isp"] = ip_info.get("isp") or ""
         return data
 
-    async def update_user_login_info(self, req, u_info, login_info):
+    async def update_user_login_info(self, req, u_info, login_info, wechat_info: dict = None):
         """ 更新玩家表登录数据 """
         updated = await self.request_get_ip_geo(req)
         updated['valid_key'] = self.rng.mk_str(16)
+        if wechat_info:
+            updated["unionid"] = wechat_info.get('unionid')
+            updated["avatar"] = wechat_info.get('avatar')
+            updated["name"] = wechat_info.get('name')
+            updated["wechat"] = 1
         u_info = await BaseUserRC.update_info(u_info, updated)
         login_info.update({'uid': u_info.get('uid')})
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
@@ -264,7 +269,13 @@ class LoginByWechat(BaseLogin):
             self.log_info('Wechat Reg u_info:', u_info)
         # 老用户 登录
         else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
+            wechat_info = {
+                "unionid": req_data.get('unionid'),
+                "name": req_data.get('nickname'),
+            }
+            if platform in h5_app:
+                wechat_info["avatar"] = req_data.get('headimgurl')
+            u_info = await self.update_user_login_info(req, u_info, login_info, wechat_info)
             self.log_info('Wechat Login u_info:', u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
