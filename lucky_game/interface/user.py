@@ -11,6 +11,7 @@ from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.logic.activity import Base
+from lucky_game.handler.wechat import WeChat
 
 
 class BaseUserInfo(GameAuthApi):
@@ -224,3 +225,36 @@ class WebUpUserResource(SpecialApi):
             return self.answer(code=self.sta_code.FAIL, hint=e)
         p_info = await BaseUserRC.cache_by_pk(uid)
         return self.format_response_info(p_info)
+
+class UpWechatUserInfo(GameAuthApi):
+    """ 更新微信用户信息 """
+
+    async def post(self, req: Request, **kwargs):
+        uid = self.check_int(
+            req.json.get("uid"),
+            require=True,
+            p_name="uid"
+        )
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        # 获取微信登录信息
+        login_info = await BaseUserRC.get_wechat_access_token_info(uid)
+        if not login_info:
+            return self.answer(code=self.sta_code.FAIL, hint="用户登录信息已过期")
+        # 检查access_token是否过期
+        errcode, _ = await WeChat.wechat_check_access_token(login_info)
+        if errcode == -1:
+            # 过期，刷新access_token
+            sta, data = await WeChat.wechat_refresh_access_token(uid, login_info)
+            if sta != 0:
+                return self.answer(code=self.sta_code.FAIL, hint="微信登录过期，请重新登录")
+            login_info = data
+        u_sta, u_data = await WeChat.wechat_userinfo(login_info.get("access_token"), login_info.get("openid"))
+        if not u_sta:
+            return self.answer(code=self.sta_code.FAIL, hint=u_data.get("errmsg", "更新用户信息失败"))
+        new_data = {
+            "nickname": u_data.get("nickname"),
+            "avatar": u_data.get("headimgurl"),
+            "sex": u_data.get("sex"),
+        }
+        data = await BaseUserRC.update_info(u_info, new_data)
+        return self.answer(data=data)
