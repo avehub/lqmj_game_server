@@ -61,7 +61,10 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def get_wechat_access_token_info(cls, uid):
-        return await cls.conf.rds.get_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        data = await cls.conf.rds.get_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
