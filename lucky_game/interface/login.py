@@ -237,6 +237,8 @@ class LoginByWechat(BaseLogin):
 
         # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
+        access_token = req_data.get('access_token')
+        refresh_token = req_data.get('refresh_token')
         q_params = {
             "openid": openid,
             "platform": platform
@@ -245,7 +247,7 @@ class LoginByWechat(BaseLogin):
         h5_app = [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP]
         if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
             # 微信公众号、微信APP为同一账号
-            req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
+            req_sta, req_data = await WeChat.wechat_userinfo(access_token, openid)
             if not req_sta:
                 self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
@@ -283,6 +285,8 @@ class LoginByWechat(BaseLogin):
             session_key = req_data.get("session_key")
             await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
         else:
+            req_data["access_token"] = access_token
+            req_data["refresh_token"] = refresh_token
             await BaseUserRC.cache_wechat_access_token_info(u_info.get('uid'), req_data)
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
