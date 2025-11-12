@@ -57,6 +57,7 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def cache_wechat_access_token_info(cls, uid, wechat_access_token_info):
         # refresh_token有效期为30天
+        await cls.conf.rds.drop_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
         return await cls.conf.rds.set_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}", wechat_access_token_info, ex_time=30 * 86400 - 5)
 
     @classmethod
