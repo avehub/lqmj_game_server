@@ -62,8 +62,9 @@ class OrderRC(BaseCommonRC):
 
     @classmethod
     async def get_order_filter(cls, uid: any = None, sku: any = None, good_id: any = None, status: int = None,
-                               platform: any = None, start_time: int = None, end_time: int = None,
-                               order_no: str = None, currency: int = None, gain_status: int = None, count: bool = False):
+                               platform: any = None, start_time: int = None, end_time: int = None, pay_mode: int = None,
+                               order_no: str = None, currency: int = None, gain_status: int = None, count: bool = False,
+                               page: int = None, page_size: int = None):
         """获取订单记录"""
         try:
             query = {}
@@ -99,14 +100,27 @@ class OrderRC(BaseCommonRC):
                 query["created__lte"] = end_time
             if order_no is not None:
                 query["order_no"] = order_no
-            cls.conf.log.info(f"查询订单表信息: {query}")
+            if pay_mode is not None:
+                query["pay_mode"] = pay_mode
+            order_field = "-id"
             if count:
-                data = await cls.db_model.filter(**query).count()
+                result = await cls.db_model.filter(**query).count()
             else:
-                data = await cls.db_model.filter(**query).order_by("-id").values()
+                if page and page_size:
+                    total = await cls.db_model.filter(**query).count()
+                    data = []
+                    if total > 0:
+                        offset = (page - 1) * page_size
+                        data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                            offset).limit(page_size).values()
+                    result = await cls.page_result(page, page_size, total, data)
+                else:
+                    result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+                if not data:
+                    return result, "暂无数据"
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return data, "成功"
+        return result, "成功"
 
     @classmethod
     async def get_order_info(cls, order_no: str):
@@ -119,3 +133,8 @@ class OrderRC(BaseCommonRC):
         if data:
             result = data[0]
         return result, msg
+
+
+    # @classmethod
+    # async def statistics(cls, start_time: int, end_time: int):
+        """统计订单"""

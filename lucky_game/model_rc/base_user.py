@@ -506,7 +506,8 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def get_user_filter(cls, uid: any = None, is_vip: bool = None, vip: int = None, phone: str = None,
-                              id_card: str = None, start_time: int = None, end_time: int = None, count: bool = False):
+                              id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
+                              page: int = None, page_size: int = None, order_field: str = "-uid"):
         """获取用户列表"""
         try:
             query = {}
@@ -525,14 +526,32 @@ class BaseUserRC(BaseCommonRC):
                 query["phone"] = phone
             if id_card is not None:
                 query["id_card"] = id_card
-            if count:
-                data = await cls.db_model.filter(**query).count()
+            if id_card is not None:
+                query["address"] = address
+            if page and page_size:
+                total, _ = await cls.count_user_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
             else:
-                data = await cls.db_model.filter(**query).order_by("-uid").values()
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+            if not data:
+                return False, result
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return True, data
+        return True, result
 
+    @classmethod
+    async def count_user_total(cls, **kwargs):
+        """统计用户总数"""
+        try:
+            total = await cls.db_model.filter(**kwargs).count()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, total
 
 
 
