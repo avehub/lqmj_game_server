@@ -41,6 +41,7 @@ class BasePoker:
     def shuffle_cards(self, card_count):
         """ 洗牌 """
         self.__cursor = 0
+        self.__not_set_cards = []
         if self.__set_cards_list:
             self.__set_cards_ordered(card_count)
         else:
@@ -260,11 +261,13 @@ class BasePoker:
         self.__cards = order_cards
         self.__set_cards_list.clear()  # 清除当前设牌
 
-    def not_set_cards_ordered(self,seats,card_count):
+    def not_set_cards_ordered(self,seats,card_count,bu_card_count,is_clear = True):
         not_set_cards = []
+        not_set_cards_list = []
         for i ,cards in enumerate(self.__not_set_cards):
             if i+1 in seats:
                 not_set_cards.extend(cards[card_count:])
+                not_set_cards_list.append(cards[card_count:])
 
         count_no = Counter(not_set_cards)
         count_remain = Counter(self.__cards[self.__cursor:])
@@ -283,10 +286,19 @@ class BasePoker:
             else:
                 temp.append(card)  # 保留非匹配元素
         print("remain_cards",self.__cards[self.__cursor:])
-
-        new_remain = not_set_cards + temp  # 前 N 位 = no_set_cards，后续 = 剩余元素
+        new_remain = []
+        remain_set_cards = []
+        for cards in not_set_cards_list:
+            if not cards:
+                new_remain = new_remain + temp[:bu_card_count]
+                temp = temp[bu_card_count:]
+            else:
+                new_remain = new_remain + cards[:bu_card_count]
+                remain_set_cards.extend(cards[bu_card_count:])
+        new_remain = new_remain + temp + remain_set_cards
         self.__cards[self.__cursor:] = new_remain  # 同步修改原列表
-        self.__not_set_cards = []
+        if is_clear:
+            self.__not_set_cards = []
         print("new_remain",self.__cards[self.__cursor:])
 
 
