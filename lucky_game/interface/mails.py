@@ -17,10 +17,10 @@ from lucky_game.logic.activity import Base
 class MailsListHandler(GameAuthApi):
     """获取邮件列表"""
 
-    async def get(self, _, **kwargs):
+    async def get(self, req, **kwargs):
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        sta, mail_list = await MailsRC.get_mails_list(uid=uid)
+        sta, mail_list = await MailsRC.get_mails_list(uid=uid, mail_sta=[MailSta.UNREAD, MailSta.READ])
         if sta:
             mail_list = await MailsRC.get_mail_awards(mail_list)
         return self.answer(data=mail_list)
