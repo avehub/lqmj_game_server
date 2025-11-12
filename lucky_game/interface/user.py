@@ -242,7 +242,7 @@ class UpWechatUserInfo(GameAuthApi):
             return self.answer(code=self.sta_code.FAIL, hint="用户登录信息已过期")
         # 检查access_token是否过期
         errcode, _ = await WeChat.wechat_check_access_token(login_info)
-        if errcode == -1:
+        if errcode != 0:
             # 过期，刷新access_token
             sta, data = await WeChat.wechat_refresh_access_token(uid, login_info)
             if sta != 0:

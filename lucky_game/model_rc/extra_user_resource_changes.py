@@ -157,3 +157,41 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"批量创建失败: {str(e)}"
 
+    @classmethod
+    async def get_resource_changes_filter(cls, uid: any = None, status: int = None, start_time: int = None, end_time: int = None,
+                               currency: int = None, count: bool = False, page: int = None, page_size: int = None):
+        """获取订单记录"""
+        try:
+            query = {}
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if status is not None:
+                query["status"] = status
+            if currency is not None:
+                query["currency"] = currency
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lte"] = end_time
+            order_field = "-id"
+            if count:
+                result = await cls.db_model.filter(**query).count()
+            else:
+                if page and page_size:
+                    total = await cls.db_model.filter(**query).count()
+                    data = []
+                    if total > 0:
+                        offset = (page - 1) * page_size
+                        data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                            offset).limit(page_size).values()
+                    result = await cls.page_result(page, page_size, total, data)
+                else:
+                    result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+                if not data:
+                    return False, result
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, result
