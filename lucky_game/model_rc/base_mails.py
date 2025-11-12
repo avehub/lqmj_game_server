@@ -23,7 +23,7 @@ class MailsRC(BaseCommonRC):
 
     @classmethod
     async def get_mails_list(cls, uid: int = None, start_time: int = None, end_time: int = None, page: int = None,
-                             page_size: int = None, order_field: str = None,):
+                             page_size: int = None, order_field: str = None, exp_time: int = None):
         """获取邮件列表"""
         try:
             query = {}
@@ -35,6 +35,11 @@ class MailsRC(BaseCommonRC):
                 query["created__lt"] = end_time
             if order_field is None:
                 order_field = "-mail_id"
+
+            if exp_time is None:
+                query["exp_time__gte"] = int(datetime.now().timestamp())
+            else:
+                query["exp_time__gte"] = exp_time
             if page and page_size:
                 total, _ = await cls.count_mail_total(**query)
                 mails = []
