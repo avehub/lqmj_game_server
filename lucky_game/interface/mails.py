@@ -115,8 +115,8 @@ class MailsOperateOneClick(GameAuthApi):
         uid = user.get("uid")
 
         # 2.查询标准邮件列表
-        mail_data = await MailsRC.get_mails_list(uid=uid)
-        (not mail_data) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
+        sta, mail_data = await MailsRC.get_mails_list(uid=uid)
+        (not sta) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
 
         map_func = {
             MailOpType.PULL.val: self.mails_pull_auto,
