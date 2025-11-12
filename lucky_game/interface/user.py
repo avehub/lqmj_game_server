@@ -257,4 +257,6 @@ class UpWechatUserInfo(GameAuthApi):
             "sex": u_data.get("sex"),
         }
         data = await BaseUserRC.update_info(u_info, new_data)
+        if not data:
+            return self.answer(code=self.sta_code.FAIL, hint=u_data.get("errmsg", "已是最新用户信息，无需更新"))
         return self.answer(data=data)

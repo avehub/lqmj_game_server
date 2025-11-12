@@ -35,7 +35,7 @@ async def make_again_room_msg(room_data):
 async def clone_rule_detail(rule_details, play_type):
     """克隆房间规则详情"""
     own_play_field = await GameRoomsRC.own_default_play_field(play_type)
-    own_play_value = await GameRoomsRC.own_default_play_value(play_type)
+    own_play_value = await GameRoomsRC.own_default_play_value(play_type, rule_details)
     if own_play_field:
         for k, v in rule_details.items():
             if k in own_play_field:
@@ -98,6 +98,7 @@ class GameRoomAPI(RoomTemplateBase):
         max_player = template["max_player"]
         price = template["price"]
         total_round = template["total_round"]
+        # 考虑到后期兼容 这里对旧模版数据需要处理
         rule_details = await clone_rule_detail(template["rule_details"], play_type)
         cs_type = template["cs_type"]
         is_location = template["is_location"]
