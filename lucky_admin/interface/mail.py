@@ -48,9 +48,9 @@ class Email(AdminAuthApi):
 
     async def get(self, req: Request):
         uid = self.check_int(req.args.get('uid'), require=False, p_name='玩家ID')
-        page = self.check_int(req.args.get('page'), require=False, p_name='页码')
-        page_size = self.check_int(req.args.get('page_size'), require=False, p_name='每页数量')
-        sta, email = await MailsRC.get_mails_list(uid=uid, page=page, page_size=page_size)
+        page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
+        page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
+        sta, email = await MailsRC.get_mails_list(uid=uid, page=page,  page_size=page_size)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=email)
 
