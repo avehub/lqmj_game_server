@@ -113,9 +113,14 @@ class MailsOperateOneClick(GameAuthApi):
         (not ot_enum) and self.answer(code=self.sta_code.ERR_ARG, hint="不支持的操作类型")
         user = kwargs.get("u_info")
         uid = user.get("uid")
-
+        mail_sta = None
+        attachment_sta = None
+        if opt_type == MailOpType.READ:
+            mail_sta = MailSta.UNREAD
+        elif opt_type == MailOpType.PULL:
+            attachment_sta = PullSta.UN_PULL
         # 2.查询标准邮件列表
-        sta, mail_data = await MailsRC.get_mails_list(uid=uid)
+        sta, mail_data = await MailsRC.get_mails_list(uid=uid, mail_sta=mail_sta, attachment_sta=attachment_sta)
         (not sta) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
 
         map_func = {
