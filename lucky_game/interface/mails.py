@@ -20,8 +20,8 @@ class MailsListHandler(GameAuthApi):
     async def get(self, _, **kwargs):
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        mail_list = await MailsRC.get_mails_list(uid)
-        if mail_list:
+        sta, mail_list = await MailsRC.get_mails_list(uid=uid)
+        if sta:
             mail_list = await MailsRC.get_mail_awards(mail_list)
         return self.answer(data=mail_list)
 
@@ -115,7 +115,7 @@ class MailsOperateOneClick(GameAuthApi):
         uid = user.get("uid")
 
         # 2.查询标准邮件列表
-        mail_data = await MailsRC.get_mails_list(uid)
+        mail_data = await MailsRC.get_mails_list(uid=uid)
         (not mail_data) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
 
         map_func = {
