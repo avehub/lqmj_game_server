@@ -28,7 +28,7 @@ class MailsRC(BaseCommonRC):
         try:
             query = {}
             if uid is not None:
-                query["uid"] = uid
+                query["receiver"] = uid
             if start_time is not None:
                 query["created__gte"] = start_time
             if end_time is not None:
