@@ -131,9 +131,13 @@ class GameRoomsRC(BaseCommonRC):
             return default_fields
 
     @classmethod
-    async def own_default_play_value(cls, play_type: int):
+    async def own_default_play_value(cls, play_type: int, rule_details: dict = None):
         """非必传玩法字段及默认值"""
         default_values = {"four_card_no_near": 0, "four_card_tian_hu": 0, "eight_card_tian_hu": 0}
+        if rule_details:
+            for k, v in rule_details.items():
+                if k in default_values:
+                    default_values[k] = v
         if PlayType.JIAN_LOU_XUE_LIU == play_type:
             return default_values
         elif PlayType.AN_LONG_XUE_ZHAN == play_type:
