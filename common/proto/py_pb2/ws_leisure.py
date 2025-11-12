@@ -557,6 +557,9 @@ def pack_rule_details(obj, **kwargs):
     obj.rule_details.yuan_bao = rule_details.get("yuan_bao") or 0
     obj.rule_details.yin_ji = rule_details.get("yin_ji") or 0
     obj.rule_details.lian_zhuang = rule_details.get("lian_zhuang") or 0
+    obj.rule_details.four_card_no_near = rule_details.get("four_card_no_near") or 0
+    obj.rule_details.eight_card_tian_hu = rule_details.get("eight_card_tian_hu") or 0
+    obj.rule_details.four_card_tian_hu = rule_details.get("four_card_tian_hu") or 0
 
 
 class S2CReady07Mahjong:

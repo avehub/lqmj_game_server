@@ -118,7 +118,7 @@ class HuType(BaseEnum):
     QING_DA_KUAN_ZHANG = 142, "清大宽张"
 
     FOUR_CARD_NO_NEAR = 151,"四张不挨"
-    FOUR_CARD_IS_SAME = 152,"四张天胡"
+    FOUR_CARD_IS_SAME = 152,"四张一样"
 
 @unique
 class SuitType(BaseEnum):
