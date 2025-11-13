@@ -1,6 +1,7 @@
 """
 邮件相关
 """
+import json
 from datetime import datetime
 
 from tortoise.transactions import in_transaction
@@ -12,6 +13,7 @@ from lucky_game.model_db.main import Mails
 from nsanic.libs import tool_dt
 from lucky_game.const import MailSta
 from lucky_game.model_rc.base_award import AwardRC
+from nsanic.libs.tool import json_parse, json_encode
 
 
 class MailsRC(BaseCommonRC):
@@ -117,24 +119,29 @@ class MailsRC(BaseCommonRC):
 
 
     @classmethod
-    async def create_mail(cls, mail_type, sender, receiver, title, content, attachment, exp_time: int = None):
+    async def create_mail(cls, mail_type: int, sender: str, receiver: str, title: str, content: str, attachment: str, exp_time: int = None):
         """创建邮件"""
         try:
+            receiver_list = json_parse(receiver)
+            attachment_data = json_parse(attachment)
             now = int(datetime.now().timestamp())
-            if isinstance(receiver, list):
+            if isinstance(receiver_list, list):
                 data_list = []
-                for val in receiver.values():
+                for val in receiver_list:
                     data_list.append({
                         "mail_type": mail_type,
                         "sender": sender,
                         "receiver": val,
                         "title": title,
                         "content": content,
-                        "attachment": attachment,
+                        "attachment": attachment_data,
                         "receive_time": now,
+                        "created": now,
                         "exp_time": exp_time if exp_time else now + 86400 * 30,
                     })
-                mail = await cls.bulk_create_mails(data_list)
+                sta, mail = await cls.bulk_create_mails(data_list)
+                if not sta:
+                    return False, mail
             else:
                 mail = await cls.db_model.add_one({
                     "mail_type": mail_type,
@@ -142,7 +149,7 @@ class MailsRC(BaseCommonRC):
                     "receiver": receiver,
                     "title": title,
                     "content": content,
-                    "attachment": attachment,
+                    "attachment": attachment_data,
                     "receive_time": now,
                     "exp_time": exp_time if exp_time else now + 86400 * 30,
                 })
