@@ -8,7 +8,6 @@ from common.utils.utils import UtilsTool
 
 class Email(AdminAuthApi):
     """ 新增单条邮件 """
-    decorators = []
 
     async def post(self, req: Request):
         title = self.check_str(req.json.get('title'), require=True, maxlen=64, p_name='标题')
@@ -24,7 +23,7 @@ class Email(AdminAuthApi):
         if not sta:
             self.answer(self.sta_code.FAIL, hint='创建邮件失败')
 
-        self.answer(data={'mail_id': email.mail_id})
+        self.answer(data=email)
 
     async def put(self, req: Request):
         title = self.check_str(req.json.get('title'), require=False, maxlen=64, p_name='标题')
@@ -36,15 +35,15 @@ class Email(AdminAuthApi):
         if not sta:
             self.answer(self.sta_code.FAIL, hint='更新邮件失败')
 
-        self.answer(data={'mail_id': email.mail_id})
+        self.answer()
 
     async def delete(self, req: Request):
         mail_id = self.check_str(req.json.get('mail_id'), require=True, p_name='邮件ID')
-        email = await MailsRC.del_mail(mail_id)
-        if not email:
-            self.answer(self.sta_code.FAIL, hint='邮件不存在')
+        sta, email = await MailsRC.del_mail(mail_id)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint='删除邮件失败')
 
-        self.answer(data=email)
+        self.answer()
 
     async def get(self, req: Request):
         uid = self.check_int(req.args.get('uid'), require=False, p_name='玩家ID')
@@ -52,6 +51,6 @@ class Email(AdminAuthApi):
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         sta, email = await MailsRC.get_mails_list(uid=uid, page=page,  page_size=page_size)
         if not sta:
-            self.answer(self.sta_code.FAIL, hint=email)
+            self.answer(self.sta_code.FAIL, hint='获取邮件列表失败')
 
-        self.answer(data=email)
+        self.answer()

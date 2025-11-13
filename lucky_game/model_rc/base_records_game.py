@@ -54,8 +54,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         return start_time, end_time
 
     @classmethod
-    async def get_record_list(cls, uid: int, club_id: int, start_time: int = None, end_time: int = None, cs_type: int = None,
-                         page_size: int = None, page: int = None):
+    async def get_record_list(cls, uid: int = None, club_id: int = None, start_time: int = None, end_time: int = None, cs_type: int = None,
+                         page_size: int = None, page: int = None, room_id: int = None):
         """根据用户ID获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
@@ -67,6 +67,8 @@ class BaseRecordsGameRC(BaseCommonRC):
                 cs_type=cs_type,
                 page_size=page_size,
                 page=page,
+                room_id=room_id,
+                club_id=club_id,
             )
             if data.get("total") > 0:
                 room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
