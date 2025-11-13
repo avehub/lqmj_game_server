@@ -554,6 +554,19 @@ class BaseUserRC(BaseCommonRC):
             return None, f"查询失败:{e}"
         return True, total
 
+    @classmethod
+    async def get_data_user_info(cls, data):
+        """
+        获取用户数据
+        :param data: 用户相关数据
+        :return: 带用户数据的相关数据
+        """
+        u_ids = [data.get("uid") for data in data if data.get("uid")]
+        users = await cls.get_user_filter(uid=u_ids)
+        users_dict = {uid: user for uid, user in users}
+        for item in data:
+            item["user_name"] = users_dict.get(item.get("uid"), {}).get("name", "")
+        return data
 
 
 class BaseBanRC(BaseCommonRC):

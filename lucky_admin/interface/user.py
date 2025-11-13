@@ -1,5 +1,6 @@
 from nsanic.libs import tool_jwt, tool_dt
 from sanic import Request
+from datetime import datetime, date
 from common.public.enum_const import JWType
 from lucky_admin.base_api import AdminAuthApi
 from lucky_admin.const import AdminPermission
@@ -75,10 +76,10 @@ class UserStatus(AdminAuthApi):
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             return self.answer(self.sta_code.FAIL, hint="用户不存在")
-        act_progress = await UserActivityProgressRC.get_activity_progress(uid=uid)
+        sta, act_progress = await UserActivityProgressRC.get_activity_progress(uid=uid)
         data = {
             "user_info": u_info,
-            "activity_progress": act_progress
+            "activity_progress": act_progress if sta else []
         }
         return self.answer(data=data)
 
@@ -109,11 +110,15 @@ class OrderStatistics(AdminAuthApi):
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         data, msg = await OrderRC.get_order_filter(start_time=start_time, status=99, end_time=end_time, page=page, page_size=page_size)
-        date_range = tool_dt.date_range(start_time, end_time)
-        tmp = []
+        start_date = tool_dt.dt_str(start_time, '%Y-%m-%d').split('-')
+        end_date = tool_dt.dt_str(end_time, '%Y-%m-%d').split('-')
+        date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
+                                        end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
+
+        tmp = {}
         result = []
-        for date in date_range:
-            date_time = tool_dt.dt_str(date, '%Y-%m-%d')
+        for item_day in date_range:
+            date_time = str(item_day)
             unit = {
                 "date_time": date_time,
                 "amount": 0,
@@ -133,46 +138,44 @@ class OrderStatistics(AdminAuthApi):
                 "yellow_diamond_amount": 0,
                 "yellow_diamond_count": 0,
             }
-            tmp[date_time] = unit
+            # tmp[date_time] = unit
             result.append(unit)
-        if data:
-            sku_list = [item['sku_id'] for item in data]
-            # 过滤掉重复的sku
-            sku_list = list(set(sku_list))
-            sku_data = await GoodRC.get_good_filter(sku=sku_list)
-            if sku_data:
-                # 类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复活礼包 12返还礼包
-                sku_dict = {item['sku']: item for item in sku_data}
-                for item in data:
-                    date = tool_dt.dt_str(item['created'], '%Y-%m-%d')
-                    tmp[date]['amount'] += item['amount']
-                    tmp[date]['count'] += 1
-                    if item['sku_id'] in sku_dict:
-                        if sku_dict[item['sku_id']]['type'] == 1:
-                            tmp[date]['first_amount'] += item['amount']
-                            tmp[date]['first_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 3:
-                            tmp[date]['diamond_amount'] += item['amount']
-                            tmp[date]['diamond_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 4:
-                            tmp[date]['room_card_amount'] += item['amount']
-                            tmp[date]['room_card_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 5:
-                            tmp[date]['yellow_diamond_amount'] += item['amount']
-                            tmp[date]['yellow_diamond_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 10:
-                            tmp[date]['replenish_gift_amount'] += item['amount']
-                            tmp[date]['replenish_gift_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 11:
-                            tmp[date]['revive_gift_amount'] += item['amount']
-                            tmp[date]['revive_gift_count'] += 1
-                        elif sku_dict[item['sku_id']]['type'] == 12:
-                            tmp[date]['return_gift_amount'] += item['amount']
-                            tmp[date]['return_gift_count'] += 1
-                    result.append(tmp[date])
-        for item in data:
-                item['time'] = tool_dt.timestamp_to_str(item['time'])
-        return self.answer(data=result[0][unit])
+        # if data and data['list']:
+        #     sku_list = [item['sku_id'] for item in data['list']]
+        #     # 过滤掉重复的sku
+        #     sku_list = list(set(sku_list))
+        #     sku_data = await GoodRC.get_good_filter(sku=sku_list)
+        #     if sku_data:
+        #         # 类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复活礼包 12返还礼包
+        #         sku_dict = {item['sku']: item for item in sku_data}
+        #         for item in data:
+        #             day = tool_dt.dt_str(item['created'], '%Y-%m-%d')
+        #             tmp[day]['amount'] += item['amount']
+        #             tmp[day]['count'] += 1
+        #             if item['sku_id'] in sku_dict:
+        #                 if sku_dict[item['sku_id']]['type'] == 1:
+        #                     tmp[day]['first_amount'] += item['amount']
+        #                     tmp[day]['first_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 3:
+        #                     tmp[day]['diamond_amount'] += item['amount']
+        #                     tmp[day]['diamond_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 4:
+        #                     tmp[day]['room_card_amount'] += item['amount']
+        #                     tmp[day]['room_card_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 5:
+        #                     tmp[day]['yellow_diamond_amount'] += item['amount']
+        #                     tmp[day]['yellow_diamond_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 10:
+        #                     tmp[day]['replenish_gift_amount'] += item['amount']
+        #                     tmp[day]['replenish_gift_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 11:
+        #                     tmp[day]['revive_gift_amount'] += item['amount']
+        #                     tmp[day]['revive_gift_count'] += 1
+        #                 elif sku_dict[item['sku_id']]['type'] == 12:
+        #                     tmp[day]['return_gift_amount'] += item['amount']
+        #                     tmp[day]['return_gift_count'] += 1
+        #             result.append(tmp[day])
+        return self.answer(data=result)
 
 
 class ResourceChanges(AdminAuthApi):
@@ -186,7 +189,7 @@ class ResourceChanges(AdminAuthApi):
         currency = self.check_int(req.args.get('currency'), require=False, p_name='类型')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
-        data, msg = await ExtraUserResourceChangesRC.get_resource_changes_filter(uid=uid, status=status,
+        sta, data = await ExtraUserResourceChangesRC.get_resource_changes_filter(uid=uid, status=status,
                                                                                  currency=currency, start_time=start_time,
                                                                                  end_time=end_time, page=page, page_size=page_size)
         return self.answer(data=data)

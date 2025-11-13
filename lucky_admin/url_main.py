@@ -14,6 +14,8 @@ from lucky_admin.interface.test_api import TestApi
 # from lucky_admin.interface.inform import AnnouncementsHandler, BanHandler, MailsManagerSend, \
 #     BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
 from lucky_admin.interface.mail import Email
+from lucky_admin.interface.club import Club, ClubEvent
+from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges
 
 
 class MainBp(BaseBlue):
@@ -27,7 +29,17 @@ class MainBp(BaseBlue):
         # 邮件相关
         Urls("/Email", Email),
 
-        # 玩家模块
+        # 用户模块
+        Urls("/User", User),
+        Urls("/UserStatus", UserStatus),
+        Urls("/OrderList", OrderList),
+        Urls("/OrderStatistics", OrderStatistics),
+        Urls("/ResourceChanges", ResourceChanges),
+
+        # 茶馆模块
+        Urls("/Club", Club),
+        Urls("/ClubEvent", ClubEvent),
+
 
 
         # 资产相关
