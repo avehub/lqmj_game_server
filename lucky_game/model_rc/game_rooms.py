@@ -131,9 +131,13 @@ class GameRoomsRC(BaseCommonRC):
             return default_fields
 
     @classmethod
-    async def own_default_play_value(cls, play_type: int):
+    async def own_default_play_value(cls, play_type: int, rule_details: dict = None):
         """非必传玩法字段及默认值"""
         default_values = {"four_card_no_near": 0, "four_card_tian_hu": 0, "eight_card_tian_hu": 0}
+        if rule_details:
+            for k, v in rule_details.items():
+                if k in default_values:
+                    default_values[k] = v
         if PlayType.JIAN_LOU_XUE_LIU == play_type:
             return default_values
         elif PlayType.AN_LONG_XUE_ZHAN == play_type:
@@ -498,7 +502,8 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def get_game_rooms_by_filter(cls, club_id: int = None, status: any = None, creator: int = None,
                                        cs_type: int = None, not_room_id: any = None, play_type: any = None,
-                                       full: bool = False):
+                                       full: bool = False, room_id: int = None, page: int = None,
+                                       page_size: int = None, order_field: str = "status"):
         """多条件查询房间列表"""
         try:
             query = {}
@@ -518,16 +523,36 @@ class GameRoomsRC(BaseCommonRC):
                     query["play_type"] = play_type
             if cs_type is not None:
                 query["cs_type"] = cs_type
+            if room_id is not None:
+                query["room_id"] = room_id
             if not_room_id is not None:
                 query["room_id__not_in"] = not_room_id
             if full:
                 query["round_num"] = F("total_round")
-            rooms = await cls.db_model.filter(**query).order_by("status").values()
-            if not rooms:
+            if page and page_size:
+                _, total = await cls.count_room_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+            if not data:
                 return [], "未找到符合条件的房间"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return rooms, "成功"
+        return result, "成功"
+
+    @classmethod
+    async def count_room_total(cls, **perms):
+        """获取房间数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return True, count
 
     @classmethod
     async def join_room(cls, room_data: dict, uid: int):

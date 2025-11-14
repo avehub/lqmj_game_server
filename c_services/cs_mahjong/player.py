@@ -120,6 +120,14 @@ class Player(BaseLeisurePlayer):
         self.__tian_hu = value
 
     @property
+    def eight_card_tian_hu(self):
+        return self.__eight_card_tian_hu
+
+    @eight_card_tian_hu.setter
+    def eight_card_tian_hu(self,value):
+        self.__eight_card_tian_hu = value
+
+    @property
     def all_chu_cards(self):
         return self.__all_chu_cards
 
@@ -302,6 +310,7 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = []
         self.__zha_hu = 0
         self.__tian_hu = 0
+        self.__eight_card_tian_hu = 0
         self.__hu_info = {}
         self.__han_dou_cards = set()
         self.__shao_tong_xing_zheng = 0

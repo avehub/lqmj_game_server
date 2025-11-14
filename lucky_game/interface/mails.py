@@ -17,11 +17,11 @@ from lucky_game.logic.activity import Base
 class MailsListHandler(GameAuthApi):
     """获取邮件列表"""
 
-    async def get(self, _, **kwargs):
+    async def get(self, req, **kwargs):
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        mail_list = await MailsRC.get_mails_list(uid)
-        if mail_list:
+        sta, mail_list = await MailsRC.get_mails_list(uid=uid, mail_sta=[MailSta.UNREAD, MailSta.READ])
+        if sta:
             mail_list = await MailsRC.get_mail_awards(mail_list)
         return self.answer(data=mail_list)
 
@@ -113,10 +113,15 @@ class MailsOperateOneClick(GameAuthApi):
         (not ot_enum) and self.answer(code=self.sta_code.ERR_ARG, hint="不支持的操作类型")
         user = kwargs.get("u_info")
         uid = user.get("uid")
-
+        mail_sta = None
+        attachment_sta = None
+        if opt_type == MailOpType.READ:
+            mail_sta = MailSta.UNREAD
+        elif opt_type == MailOpType.PULL:
+            attachment_sta = PullSta.UN_PULL
         # 2.查询标准邮件列表
-        mail_data = await MailsRC.get_mails_list(uid)
-        (not mail_data) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
+        sta, mail_data = await MailsRC.get_mails_list(uid=uid, mail_sta=mail_sta, attachment_sta=attachment_sta)
+        (not sta) and self.answer(code=self.sta_code.EMAIL_NOT_FOUND, hint="暂时没有邮件哦")
 
         map_func = {
             MailOpType.PULL.val: self.mails_pull_auto,

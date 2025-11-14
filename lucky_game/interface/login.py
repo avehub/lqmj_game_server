@@ -46,10 +46,15 @@ class BaseLogin(GameAuthApi):
             data["isp"] = ip_info.get("isp") or ""
         return data
 
-    async def update_user_login_info(self, req, u_info, login_info):
+    async def update_user_login_info(self, req, u_info, login_info, wechat_info: dict = None):
         """ 更新玩家表登录数据 """
         updated = await self.request_get_ip_geo(req)
         updated['valid_key'] = self.rng.mk_str(16)
+        if wechat_info:
+            updated["unionid"] = wechat_info.get('unionid')
+            updated["avatar"] = wechat_info.get('avatar')
+            updated["name"] = wechat_info.get('name')
+            updated["wechat"] = 1
         u_info = await BaseUserRC.update_info(u_info, updated)
         login_info.update({'uid': u_info.get('uid')})
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
@@ -232,6 +237,8 @@ class LoginByWechat(BaseLogin):
 
         # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
+        access_token = req_data.get('access_token')
+        refresh_token = req_data.get('refresh_token')
         q_params = {
             "openid": openid,
             "platform": platform
@@ -240,7 +247,7 @@ class LoginByWechat(BaseLogin):
         h5_app = [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP]
         if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
             # 微信公众号、微信APP为同一账号
-            req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
+            req_sta, req_data = await WeChat.wechat_userinfo(access_token, openid)
             if not req_sta:
                 self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
@@ -264,13 +271,23 @@ class LoginByWechat(BaseLogin):
             self.log_info('Wechat Reg u_info:', u_info)
         # 老用户 登录
         else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
+            wechat_info = {
+                "unionid": req_data.get('unionid'),
+                "name": req_data.get('nickname'),
+            }
+            if platform in h5_app:
+                wechat_info["avatar"] = req_data.get('headimgurl')
+            u_info = await self.update_user_login_info(req, u_info, login_info, wechat_info)
             self.log_info('Wechat Login u_info:', u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         if platform == PlatForm.WECHAT_MINI_GAME:
             session_key = req_data.get("session_key")
             await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
+        else:
+            req_data["access_token"] = access_token
+            req_data["refresh_token"] = refresh_token
+            await BaseUserRC.cache_wechat_access_token_info(u_info.get('uid'), req_data)
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 

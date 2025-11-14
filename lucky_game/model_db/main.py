@@ -475,6 +475,7 @@ class Mails(DBModel):
     class Meta:
         table = "mails"
         indexes = (("receiver", "mail_sta", "exp_time"),)
+        app = "lucky_game"
 
 
 class ConfServerAddr(DBModel):

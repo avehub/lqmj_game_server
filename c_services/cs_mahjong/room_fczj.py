@@ -1135,7 +1135,8 @@ class RoomFCZJ(BaseLeisureRoom):
                 result.append(ActionType.ACTION_TYPE_MING_GANG)
             if p.can_peng(self.__curr_card, RuleFc):
                 result.append(ActionType.ACTION_TYPE_PENG)
-
+        if result:
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def ming_gang_de_qi(self, p: PlayerFCZJ, card):
@@ -1411,6 +1412,8 @@ class RoomFCZJ(BaseLeisureRoom):
             operates.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
         if can_an_gang:
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
+        if operates:
+            operates.append(ActionType.ACTION_TYPE_PASS)
         return operates, gang_card_list
 
     async def check_can_gang_after_peng(self, p: PlayerFCZJ):
@@ -1467,6 +1470,9 @@ class RoomFCZJ(BaseLeisureRoom):
                         result.append(ActionType.ACTION_TYPE_PASS)
                     else:
                         result.append(ActionType.ACTION_TYPE_JIAN)
+            else:
+                if result:
+                    result.append(ActionType.ACTION_TYPE_PASS)
 
         return result
 
@@ -2158,6 +2164,8 @@ class RoomFCZJ(BaseLeisureRoom):
                     result.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
                 if is_an_gang:
                     result.append(ActionType.ACTION_TYPE_AN_GANG)
+        if result:
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
 
     def hu_de_qi(self, p: PlayerFCZJ):
