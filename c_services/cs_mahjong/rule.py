@@ -148,14 +148,15 @@ class Rule(metaclass=NoInstances):
         return False, []
 
     @staticmethod
-    def is_seven_pairs_by_eight_cards(cards):
+    def is_seven_pairs_by_eight_cards(cards,lai_zi):
         if not cards or len(cards) != 8:
             return False, []
         cards = list(cards)
+        lai_zi_count = Rule.remove_by_value(cards, lai_zi, -1)
         singles, threes, fours, _, card_to_count = Rule.search_cards_by_count(cards, 1, 3, 4)
         singles_len = len(singles)
         threes_len = len(threes)
-        if threes_len == 0 and singles_len == 0:
+        if (threes_len == 0 and singles_len == 0) or singles_len == lai_zi_count:
             result = HuType.QI_DUI
             if len(fours) > 0:
                 result = HuType.LONG_QI_DUI
@@ -688,7 +689,7 @@ class Rule(metaclass=NoInstances):
                 return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         if allow_hu_map.get(HuType.QI_DUI):
             if len(table_cards) == 0 and cards_len == 8:
-                flag, path = Rule.is_seven_pairs_by_eight_cards(cards)
+                flag, path = Rule.is_seven_pairs_by_eight_cards(cards,lai_zi)
                 if flag:
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
             else:
