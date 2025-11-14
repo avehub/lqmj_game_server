@@ -530,7 +530,7 @@ class BaseUserRC(BaseCommonRC):
             if id_card is not None:
                 query["address"] = address
             if page and page_size:
-                total, _ = await cls.count_user_total(**query)
+                _, total = await cls.count_user_total(**query)
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
