@@ -668,6 +668,7 @@ class Rule(metaclass=NoInstances):
         cards_len = len(cards)
         if Rule.is_card(card) and cards_len % 3 != 2:
             cards.append(card)
+            cards_len += 1
 
         def lai_zi_2_hong_zhong(value):
             if value == lai_zi:
