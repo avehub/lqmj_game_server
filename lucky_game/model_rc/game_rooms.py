@@ -530,7 +530,7 @@ class GameRoomsRC(BaseCommonRC):
             if full:
                 query["round_num"] = F("total_round")
             if page and page_size:
-                total, _ = await cls.count_room_total(**query)
+                _, total = await cls.count_room_total(**query)
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size

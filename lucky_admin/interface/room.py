@@ -1,6 +1,7 @@
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.base_clubs import BaseClubRC
 
@@ -28,10 +29,3 @@ class GameRecord(AdminAuthApi):
                                                             start_time=start_time, end_time=end_time)
         return self.answer(data=data, hint=msg)
 
-class RoomCard(AdminAuthApi):
-    async def get(self, req: Request, **kwargs):
-        """房间消耗"""
-        start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
-        end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
-        data = []
-        return self.answer(data=data)

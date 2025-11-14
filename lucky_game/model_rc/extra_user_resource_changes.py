@@ -160,7 +160,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     @classmethod
     async def get_resource_changes_filter(cls, uid: any = None, status: int = None, start_time: int = None, end_time: int = None,
                                currency: int = None, count: bool = False, page: int = None, page_size: int = None):
-        """获取订单记录"""
+        """获取用户资源变动记录"""
         try:
             query = {}
             if uid is not None:

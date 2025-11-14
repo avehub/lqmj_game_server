@@ -28,6 +28,9 @@ class User(AdminAuthApi):
                                                       id_card=id_card,page=page, page_size=page_size)
         if not sta:
             return self.answer(self.sta_code.FAIL, hint="暂无数据")
+        online_uid = await BaseUserRC.get_online_uid([item['uid'] for item in data['list']])
+        for item in data['list']:
+            item['is_online'] = 1 if item['uid'] in online_uid else 0
         return self.answer(data=data)
 
     async def put(self, req: Request):
@@ -192,4 +195,16 @@ class ResourceChanges(AdminAuthApi):
         sta, data = await ExtraUserResourceChangesRC.get_resource_changes_filter(uid=uid, status=status,
                                                                                  currency=currency, start_time=start_time,
                                                                                  end_time=end_time, page=page, page_size=page_size)
+        return self.answer(data=data)
+
+
+class ResourceChangeChart(AdminAuthApi):
+    async def get(self, req: Request, **kwargs):
+        """资源消耗折线图"""
+        start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
+        end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
+        currency = self.check_int(req.args.get('currency'), require=False, default=3, p_name='类型')
+        sta, data = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=start_time, end_time=end_time, currency=currency)
+        if not sta:
+            return self.answer(self.sta_code.FAIL, hint="暂无数据")
         return self.answer(data=data)
