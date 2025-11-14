@@ -54,7 +54,7 @@ class MailsRC(BaseCommonRC):
             else:
                 query["exp_time__gte"] = exp_time
             if page and page_size:
-                total, _ = await cls.count_mail_total(**query)
+                _, total = await cls.count_mail_total(**query)
                 mails = []
                 if total > 0:
                     offset = (page - 1) * page_size

@@ -280,7 +280,7 @@ class BaseClubRC(BaseCommonRC):
             if status is not None:
                 query["status"] = status
             if page and page_size:
-                total, _ = await cls.count_club_total(**query)
+                _, total = await cls.count_club_total(**query)
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
