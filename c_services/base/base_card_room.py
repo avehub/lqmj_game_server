@@ -328,7 +328,7 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
 
 
-        if not self.has_next_round() or over_type == OverType.FORCE:
+        if not self.has_next_round() or over_type in (OverType.FORCE,OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
