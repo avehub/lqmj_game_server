@@ -4623,7 +4623,7 @@ class Room(BaseCardRoom):
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
-                if self.room_status == RoomStatus.T_DISMISS and self.record_id > 0:
+                if (self.room_status == RoomStatus.T_DISMISS or over_type == OverType.CLUB_OWNER_DISMISS) and self.record_id > 0:
                     if self.not_playing_room_status != RoomStatus.T_PLAYING:
                         self.set_room_status(self.not_playing_room_status)
                         self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
