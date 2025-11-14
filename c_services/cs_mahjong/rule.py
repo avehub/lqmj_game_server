@@ -156,7 +156,7 @@ class Rule(metaclass=NoInstances):
         singles, threes, fours, _, card_to_count = Rule.search_cards_by_count(cards, 1, 3, 4)
         singles_len = len(singles)
         threes_len = len(threes)
-        if (threes_len == 0 and singles_len == 0) or singles_len == lai_zi_count:
+        if (threes_len == 0 and singles_len == 0) or (singles_len > 0 and singles_len == lai_zi_count):
             result = HuType.QI_DUI
             if len(fours) > 0:
                 result = HuType.LONG_QI_DUI
@@ -1118,6 +1118,10 @@ class Rule(metaclass=NoInstances):
             # 检查是否存在三张相同牌（龙七对）
             if Rule.get_card_list_by_count(cards, 3, True):
                 jiao_pai = HuType.LONG_QI_DUI
+
+        # 检测四张不挨、四张一样
+        elif can_hu in (HuType.FOUR_CARD_NO_NEAR,HuType.FOUR_CARD_IS_SAME):
+            return jiao_pai
 
         # 检测大对子
         elif can_hu not in (HuType.DI_LONG_QI, HuType.JIN_GOU_DIAO, HuType.RUAN_WU_DUI, HuType.YING_WU_DUI):
