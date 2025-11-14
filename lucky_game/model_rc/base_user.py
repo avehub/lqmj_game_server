@@ -36,6 +36,7 @@ class BaseUserRC(BaseCommonRC):
     KEY_UNION_ID = 'union_id'
     KEY_OPENID = 'open_id'
     KEY_SESSION = "session_key"
+    KEY_WECHAT_LOGIN = "wechat_login"
     KEY_APPLE_ID = 'apple_id'
     KEY_USER_PAY_INFO = "user_pay_info"  # 已下单的支付信息
     KEY_USER_PAID_ORDER = "user_paid_order"  # 已支付订单
@@ -52,6 +53,19 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def get_session_key(cls, uid):
         return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{uid}")
+
+    @classmethod
+    async def cache_wechat_access_token_info(cls, uid, wechat_access_token_info):
+        # refresh_token有效期为30天
+        await cls.conf.rds.drop_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        return await cls.conf.rds.set_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}", wechat_access_token_info, ex_time=30 * 86400 - 5)
+
+    @classmethod
+    async def get_wechat_access_token_info(cls, uid):
+        data = await cls.conf.rds.get_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
@@ -493,7 +507,8 @@ class BaseUserRC(BaseCommonRC):
 
     @classmethod
     async def get_user_filter(cls, uid: any = None, is_vip: bool = None, vip: int = None, phone: str = None,
-                              id_card: str = None, start_time: int = None, end_time: int = None, count: bool = False):
+                              id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
+                              page: int = None, page_size: int = None, order_field: str = "-uid"):
         """获取用户列表"""
         try:
             query = {}
@@ -512,15 +527,46 @@ class BaseUserRC(BaseCommonRC):
                 query["phone"] = phone
             if id_card is not None:
                 query["id_card"] = id_card
-            if count:
-                data = await cls.db_model.filter(**query).count()
+            if id_card is not None:
+                query["address"] = address
+            if page and page_size:
+                _, total = await cls.count_user_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
             else:
-                data = await cls.db_model.filter(**query).order_by("-uid").values()
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+            if not data:
+                return False, result
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return True, data
+        return True, result
 
+    @classmethod
+    async def count_user_total(cls, **kwargs):
+        """统计用户总数"""
+        try:
+            total = await cls.db_model.filter(**kwargs).count()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, total
 
+    @classmethod
+    async def get_data_user_info(cls, data):
+        """
+        获取用户数据
+        :param data: 用户相关数据
+        :return: 带用户数据的相关数据
+        """
+        u_ids = [data.get("uid") for data in data if data.get("uid")]
+        users = await cls.get_user_filter(uid=u_ids)
+        users_dict = {uid: user for uid, user in users}
+        for item in data:
+            item["user_name"] = users_dict.get(item.get("uid"), {}).get("name", "")
+        return data
 
 
 class BaseBanRC(BaseCommonRC):

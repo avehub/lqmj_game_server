@@ -328,7 +328,7 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
 
 
-        if not self.has_next_round() or over_type == OverType.FORCE:
+        if not self.has_next_round() or over_type in (OverType.FORCE,OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
@@ -419,7 +419,7 @@ class BaseCardRoom(BaseRoom):
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
 
         #游戏结束后在这里更新战绩以及回放数据
-
+        round_idx = self.round_idx
         if self.__replay_msg_data:
             result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
             self.log_info("游戏结束一轮结束战绩插入", result_data)
@@ -452,7 +452,7 @@ class BaseCardRoom(BaseRoom):
                 self.log_info("总结算战绩插入", over_record)
 
         if is_dismiss:
-            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=self.round_idx)
+            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=round_idx)
             if not up_room_sta:
                 self.log_info("更新战绩时间失败", up_result)
 

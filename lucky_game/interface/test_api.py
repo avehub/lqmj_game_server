@@ -6,14 +6,14 @@ from lucky_game.handler.huifu import DouGongPay
 from lucky_game.model_rc.base_records_game import RecordsGameTotalRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
+from common.aliyun.dingtalk_service import dingtalk_exception_handler
 
 
 class TestApi(GameAuthApi):
     decorators = []
 
     async def get(self, req: Request):
-        data = await GameRoomsRC.abnormal_cs_type(22)
-        return self.answer(StaCode.DEFAULT, data=data)
+        return self.answer(StaCode.DEFAULT)
 
 
 class TestCreatGameRecords(GameAuthApi):

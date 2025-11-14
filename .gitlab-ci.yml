@@ -1,20 +1,43 @@
-stages:          # List of stages for jobs, and their order of execution
-  - build
-  - test
+# GitLab CI/CD 配置 - Lucky Game 自动部署
+# 使用 SSH Executor
+
+stages:
   - deploy
 
 variables:
-  BASE_DIR: "/data/programs/lucky_game"
+  GIT_STRATEGY: none
 
-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
+# 测试环境部署
+deploy_test:
+  stage: deploy
+  before_script:
+    - echo "=========================================="
+    - echo "部署到测试环境"
+    - echo "=========================================="
   script:
-    - echo "开始执行重启脚本"
-    - cd ${BASE_DIR}
-    - ssh restart.sh
-    - echo "重启脚本执行结束"
+    # SSH Executor 已经在目标服务器上了，直接执行脚本
+    - /opt/deploy/lucky_game_deploy.sh dev_测试服
   only:
-    - dve_测试服
-  when: always
+    - dev_测试服
+#  tags:
+#    - ssh
+#    - test  # 可以用 tags 区分不同环境的 Runner
+  environment:
+    name: test
 
-
+# 生产环境部署
+deploy_prod:
+  stage: deploy
+  before_script:
+    - echo "=========================================="
+    - echo "部署到生产环境"
+    - echo "=========================================="
+  script:
+    - /opt/deploy/lucky_game_deploy.sh main
+  only:
+    - main
+#  tags:
+#    - ssh
+#    - prod  # 生产环境的 Runner
+  environment:
+    name: production
