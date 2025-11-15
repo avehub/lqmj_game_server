@@ -83,7 +83,7 @@ class Room(BaseCardRoom):
         self.__fan_ji_pai = self.rule_detail.get("fan_ji_pai", 1)  # 翻牌鸡
         self.__huang_zhuang_bu_huang_ji = self.rule_detail.get("huang_zhuang_bu_huang_ji", 0)  # 黄庄不黄鸡杠
         self.__chong_feng_ji = self.rule_detail.get("chong_feng_ji", 0)  # 冲锋鸡
-        self.__ze_ren_ji = self.rule_detail.get("ze_ren_ji", 1)  # 责任鸡
+        self.__ze_ren_ji = 1 #self.rule_detail.get("ze_ren_ji", 1)  # 责任鸡
         self.__man_tang_ji = self.rule_detail.get("man_tang_ji", 0)  # 满堂鸡
         self.__zhan_ji = self.rule_detail.get("zhan_ji", 0)  # 站鸡（手里的额外加1）
         self.__double_bao = self.rule_detail.get("double_bao", 0)  # 牌型和鸡杠都双倍包
@@ -849,7 +849,7 @@ class Room(BaseCardRoom):
                 result.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
             if is_an_gang:
                 result.append(ActionType.ACTION_TYPE_AN_GANG)
-        if result and ActionType.ACTION_TYPE_HU not in result:
+        if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
 
@@ -1060,7 +1060,7 @@ class Room(BaseCardRoom):
             operates = self.calc_operates_after_chu_pai(p)
             p.operates = operates
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(p.operates) else 0
-            if ActionType.ACTION_TYPE_JIAN in operates:
+            if ActionType.ACTION_TYPE_JIAN in operates or ActionType.ACTION_TYPE_HU in operates:
                 can_hu_or_jian = p.seat_id
             elif ActionType.ACTION_TYPE_PENG in operates or ActionType.ACTION_TYPE_MING_GANG in operates:
                 can_peng_or_gang = p.seat_id
@@ -1074,8 +1074,8 @@ class Room(BaseCardRoom):
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
             if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
-                if (can_hu_or_jian and ActionType.ACTION_TYPE_HU not in operates) or can_peng_or_gang:
-                    data["operates"].append(ActionType.ACTION_TYPE_PASS)
+                if can_hu_or_jian and  can_peng_or_gang:
+                    # data["operates"].append(ActionType.ACTION_TYPE_PASS)
                     p.add_operates(ActionType.ACTION_TYPE_PASS)
                 elif ActionType.ACTION_TYPE_PASS in self.__record_operates.get(p.seat_id, []):
                     operates.append(ActionType.ACTION_TYPE_PASS)
@@ -1181,7 +1181,6 @@ class Room(BaseCardRoom):
 
         act = max_operate_list[0]
         self.log_info(self.tid, "somebody " + str(act))
-        print()
         if act in action_map and max_operate_list[1]:
             hu_list = list(set(max_operate_list[1]))
             result = await action_map[act](hu_list)
@@ -1325,6 +1324,7 @@ class Room(BaseCardRoom):
         if flag:
             self.__curr_card_exist = 0
             self.__gang_hou_chu_pai = []  # 有人碰则连续杠被打断(因为碰牌不需要补牌，所以清除gang_hou_chu_pai)
+
             res,seat_id = self.__ze_ren_ji and self.deal_ze_ren_ji(p)
             if res:
                 data["ze_ren_ji"] = seat_id
@@ -1740,7 +1740,7 @@ class Room(BaseCardRoom):
             operates.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
         if can_an_gang:
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
-        if operates and ActionType.ACTION_TYPE_HU not in operates:
+        if operates and (ActionType.ACTION_TYPE_HU not in operates or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             operates.append(ActionType.ACTION_TYPE_PASS)
         return operates, gang_card_list
 
@@ -2104,6 +2104,7 @@ class Room(BaseCardRoom):
 
     def save_player_action(self, p, action, data=None):
         self.clear_record_operates(p.seat_id)
+        p.operates = [action]
         self.__player_actions.append([p.seat_id, action, data])
 
     def remove_player_action(self, tian_ting=False):
@@ -2154,6 +2155,8 @@ class Room(BaseCardRoom):
         if not self.__have_men_jian_hu and not p.is_robot:
             self.__record_operates.setdefault(p.seat_id, []).append(ActionType.ACTION_TYPE_PASS)  # 房卡场让玩家每次点过
 
+        if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def check_hu_by_chu_pai(self, p, result):
@@ -3203,6 +3206,8 @@ class Room(BaseCardRoom):
                     continue
             p.jiao_pai = Rule.get_round_over_jiao_pai(
                 p.table_cards, p.cards, allow_hu_map, is_gy=is_gy, lai_zi=self.__lai_zi, is_wu_dui=is_wu_dui)
+            if p.seat_id not in self.__win_seat_list and self.flow_status == FlowStatus.T_IN_EIGHT_TIAN_HU:
+                p.jiao_pai = 0
 
     def limit_lose_score(self, account: dict):
         """ 限制输分 """
@@ -4618,7 +4623,7 @@ class Room(BaseCardRoom):
                 await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
                 if self.club_id > 0:
                     await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
-                if self.room_status == RoomStatus.T_DISMISS and self.record_id > 0:
+                if (self.room_status == RoomStatus.T_DISMISS or over_type == OverType.CLUB_OWNER_DISMISS) and self.record_id > 0:
                     if self.not_playing_room_status != RoomStatus.T_PLAYING:
                         self.set_room_status(self.not_playing_room_status)
                         self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)

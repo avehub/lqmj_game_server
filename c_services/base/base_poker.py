@@ -216,10 +216,12 @@ class BasePoker:
         """
         # 设置手牌
         all_set_cards = []
+        set_cards = []
         player_count = len(self.__set_cards_list) - 1  # 在这里计算人数表示 只发设置人数
         for cards in self.__set_cards_list[:-1]:
             all_set_cards.extend(cards[:card_count]) #根据传入牌数切片处理防止设牌数量大于发牌数量,导致总的牌数量有误
-
+            set_cards.extend(cards[card_count:])
+        print("set_cards",set_cards)
         self.__not_set_cards = self.__set_cards_list[:-1]
         # 设置摸牌
         set_mo_cards = self.__set_cards_list[-1]
@@ -227,8 +229,8 @@ class BasePoker:
         all_cards_map = {}
         for c in self.all_cards:
             all_cards_map[c] = all_cards_map.get(c, 0) + 1
-        print("all_cards_map",all_cards_map)
         all_set_cards_map = {}
+
         for c in all_set_cards + set_mo_cards:
             all_set_cards_map[c] = all_set_cards_map.get(c, 0) + 1
 
@@ -236,11 +238,14 @@ class BasePoker:
             all_cards_map[card] = count - all_set_cards_map.get(card, 0)
 
         # 其余牌
+        print("all_cards_map", all_cards_map)
         remain_cards = []
         for card, count in all_cards_map.items():
             remain_cards.extend([card] * count)
 
         random.shuffle(remain_cards)
+        for card in set_cards:
+            remain_cards.remove(card)
         order_cards = []
         for i in range(card_count):
             for j in range(player_count):
@@ -254,6 +259,8 @@ class BasePoker:
 
         # 设置摸牌
         # order_cards.extend(set_mo_cards)
+        remain_cards.extend(set_cards)
+        random.shuffle(remain_cards)
         order_cards.extend(remain_cards)
         print("order_cards",order_cards)
         order_cards = [self.get_card_by_key(c) for c in order_cards]
