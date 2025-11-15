@@ -591,7 +591,8 @@ class Package(Base):
                 if gains.get(award_id):
                     gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
                 else:
-                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
+                    package_gain = await self.get_progress(award_id, uid, ac)
+                    gain.append(package_gain)
         else:
             for award_id in award_ids:
                 package_gain = await self.get_progress(award_id, uid, ac)
