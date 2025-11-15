@@ -7,7 +7,7 @@ from lucky_game.model_rc.base_store import GoodRC
 class OrderLogic:
     """ 订单逻辑 """
     @classmethod
-    async def order_sku_good(cls, order: list, type: str = None, range_tmp: dict = None):
+    async def order_sku_good(cls, order: list, type: str = None, range_tmp: list = None):
 
         if not order:
             return order
@@ -34,7 +34,7 @@ class OrderLogic:
 
 
     @classmethod
-    async def __order_statistics(cls, data: list, sku_dict: dict, range_tmp: dict) -> dict:
+    async def __order_statistics(cls, data: list, sku_dict: dict, range_tmp: list) -> dict:
         """ 订单统计 """
         tmp = {}
         for item in data:

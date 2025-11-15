@@ -15,7 +15,8 @@ from lucky_admin.interface.test_api import TestApi
 #     BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
 from lucky_admin.interface.mail import Email
 from lucky_admin.interface.club import Club, ClubEvent
-from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges
+from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges, ResourceChangeChart
+from lucky_admin.interface.room import GameRoom, GameRecord
 
 
 class MainBp(BaseBlue):
@@ -35,10 +36,15 @@ class MainBp(BaseBlue):
         Urls("/OrderList", OrderList),
         Urls("/OrderStatistics", OrderStatistics),
         Urls("/ResourceChanges", ResourceChanges),
+        Urls("/ResourceChangeChart", ResourceChangeChart),
 
         # 茶馆模块
         Urls("/Club", Club),
         Urls("/ClubEvent", ClubEvent),
+
+        # 游戏房间模块
+        Urls("/GameRoom", GameRoom),
+        Urls("/GameRecord", GameRecord),
 
 
 
