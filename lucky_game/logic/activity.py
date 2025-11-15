@@ -536,9 +536,9 @@ class Package(Base):
         pm_range_start, pm_range_end = await CommonApi.get_time_range(period="day", start_hour=self.GAIN_PM_START,
                                                                       end_hour=self.GAIN_PM_END)
         if pm_range_start <= now <= pm_range_end:
-            award_id = self.PM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_AM_AWARD_ID
+            award_id = self.PM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_PM_AWARD_ID
         if am_range_start <= now <= am_range_end:
-            award_id = self.AM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_PM_AWARD_ID
+            award_id = self.AM_AWARD_ID if platform != PlatForm.WECHAT_MINI_GAME else self.WECHAT_MG_AM_AWARD_ID
         return award_id
 
     async def get_progress(self, award_id: int, uid: int, ac: dict):
@@ -591,8 +591,7 @@ class Package(Base):
                 if gains.get(award_id):
                     gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
                 else:
-                    package_gain = await self.get_progress(award_id, uid, ac)
-                    gain.append(package_gain)
+                    gain.append({"award_id": award_id, "status": gains.get(award_id)[0]["status"]})
         else:
             for award_id in award_ids:
                 package_gain = await self.get_progress(award_id, uid, ac)
