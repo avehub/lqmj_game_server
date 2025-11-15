@@ -220,6 +220,8 @@ class JoinRoom(GameRoomAPI):
         room_data, e = await GameRoomsRC.get_game_room_by_room_id(room_id)
         if not room_data:
             return self.answer(StaCode.FAIL, hint="房间不存在")
+        if room_data["platform"] == PlatForm.WECHAT_MINI_GAME and room_data["platform"] != u_info.get("platform"):
+            return self.answer(StaCode.FAIL, hint="房间不存在")
         if u_info.get("platform") == PlatForm.WECHAT_MINI_GAME and room_data["platform"] != u_info.get("platform"):
             return self.answer(StaCode.FAIL, hint="房间不存在")
         if room_data["status"] not in [RoomStatus.T_IDLE, RoomStatus.T_READY]:

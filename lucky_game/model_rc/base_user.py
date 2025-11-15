@@ -506,7 +506,7 @@ class BaseUserRC(BaseCommonRC):
         return dict(result) if result else None
 
     @classmethod
-    async def get_user_filter(cls, uid: any = None, is_vip: bool = None, vip: int = None, phone: str = None,
+    async def get_user_filter(cls, uid: any = None, is_vip: int = None, vip: int = None, phone: str = None,
                               id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
                               page: int = None, page_size: int = None, order_field: str = "-uid"):
         """获取用户列表"""
@@ -521,16 +521,21 @@ class BaseUserRC(BaseCommonRC):
                 query["created__gte"] = start_time
             if end_time is not None:
                 query["created__lte"] = end_time
-            if is_vip and vip is not None:
+            if is_vip is not None:
+                query["vip__gte"] = is_vip
+            if vip is not None:
                 query["vip"] = vip
             if phone is not None:
                 query["phone"] = phone
             if id_card is not None:
                 query["id_card"] = id_card
-            if id_card is not None:
+            if address is not None:
+                # query["address__contains"] = address
                 query["address"] = address
+            print(query)
             if page and page_size:
                 _, total = await cls.count_user_total(**query)
+                print(f"total: {total}")
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
@@ -539,6 +544,8 @@ class BaseUserRC(BaseCommonRC):
                 result = await cls.page_result(page, page_size, total, data)
             else:
                 result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+
+            print(f"data: {data}")
             if not data:
                 return False, result
         except OperationalError as e:

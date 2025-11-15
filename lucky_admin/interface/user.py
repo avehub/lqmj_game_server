@@ -11,6 +11,7 @@ from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.base_store import GoodRC
 from common.utils.utils import UtilsTool
+from lucky_admin.logic.order_logic import OrderLogic
 
 
 class User(AdminAuthApi):
@@ -26,12 +27,10 @@ class User(AdminAuthApi):
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         sta, data = await BaseUserRC.get_user_filter(uid=uid, is_vip=is_vip, address=address, phone=phone,
                                                       id_card=id_card,page=page, page_size=page_size)
-        if not sta:
-            return self.answer(self.sta_code.FAIL, hint="暂无数据")
         online_uid = await BaseUserRC.get_online_uid([item['uid'] for item in data['list']])
         for item in data['list']:
             item['is_online'] = 1 if item['uid'] in online_uid else 0
-        return self.answer(data=data)
+        return self.answer(data=data if sta else [])
 
     async def put(self, req: Request):
         """ 更新用户信息 """
@@ -43,26 +42,26 @@ class User(AdminAuthApi):
         openid = self.check_str(req.json.get('openid'), require=False, p_name='微信授权单平台用户唯一标识')
         unionid = self.check_str(req.json.get('unionid'), require=False, p_name='微信授权多平台用户唯一标识')
         ban_time = self.check_int(req.json.get('ban_time'), require=False, p_name='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
-        discount = self.check_int(req.json.get('discount'), require=False, p_name='消费折扣')
+        discount = self.check_float(req.json.get('discount'), require=False, p_name='消费折扣')
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             return self.answer(self.sta_code.FAIL, hint="用户不存在")
         up_data = {}
-        if name:
+        if name is not None:
             up_data['name'] = name
         if real_name:
             up_data['real_name'] = real_name
-        if phone:
+        if phone is not None:
             up_data['phone'] = phone
-        if id_card:
+        if id_card is not None:
             up_data['id_card'] = id_card
-        if openid:
+        if openid is not None:
             up_data['openid'] = openid
-        if unionid:
+        if unionid is not None:
             up_data['unionid'] = unionid
-        if ban_time:
+        if ban_time is not None:
             up_data['ban_time'] = ban_time
-        if discount:
+        if discount is not None:
             up_data['discount'] = discount
         data = None
         if up_data:
@@ -101,6 +100,8 @@ class OrderList(AdminAuthApi):
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         data, msg = await OrderRC.get_order_filter(order_no=order_no, status=status, pay_mode=pay_mode, uid=uid,
                                               start_time=start_time, end_time=end_time, page=page, page_size=page_size)
+        if data and data['list']:
+            data['list'] = await OrderLogic.order_sku_good(data['list'])
         return self.answer(data=data, hint=msg)
 
 
@@ -112,13 +113,7 @@ class OrderStatistics(AdminAuthApi):
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
-        data, msg = await OrderRC.get_order_filter(start_time=start_time, status=99, end_time=end_time, page=page, page_size=page_size)
-        start_date = tool_dt.dt_str(start_time, '%Y-%m-%d').split('-')
-        end_date = tool_dt.dt_str(end_time, '%Y-%m-%d').split('-')
-        date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
-                                        end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
-
-        tmp = {}
+        date_range = await self.date_time_range(start_time, end_time)
         result = []
         for item_day in date_range:
             date_time = str(item_day)
@@ -141,43 +136,19 @@ class OrderStatistics(AdminAuthApi):
                 "yellow_diamond_amount": 0,
                 "yellow_diamond_count": 0,
             }
-            # tmp[date_time] = unit
             result.append(unit)
-        # if data and data['list']:
-        #     sku_list = [item['sku_id'] for item in data['list']]
-        #     # 过滤掉重复的sku
-        #     sku_list = list(set(sku_list))
-        #     sku_data = await GoodRC.get_good_filter(sku=sku_list)
-        #     if sku_data:
-        #         # 类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复活礼包 12返还礼包
-        #         sku_dict = {item['sku']: item for item in sku_data}
-        #         for item in data:
-        #             day = tool_dt.dt_str(item['created'], '%Y-%m-%d')
-        #             tmp[day]['amount'] += item['amount']
-        #             tmp[day]['count'] += 1
-        #             if item['sku_id'] in sku_dict:
-        #                 if sku_dict[item['sku_id']]['type'] == 1:
-        #                     tmp[day]['first_amount'] += item['amount']
-        #                     tmp[day]['first_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 3:
-        #                     tmp[day]['diamond_amount'] += item['amount']
-        #                     tmp[day]['diamond_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 4:
-        #                     tmp[day]['room_card_amount'] += item['amount']
-        #                     tmp[day]['room_card_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 5:
-        #                     tmp[day]['yellow_diamond_amount'] += item['amount']
-        #                     tmp[day]['yellow_diamond_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 10:
-        #                     tmp[day]['replenish_gift_amount'] += item['amount']
-        #                     tmp[day]['replenish_gift_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 11:
-        #                     tmp[day]['revive_gift_amount'] += item['amount']
-        #                     tmp[day]['revive_gift_count'] += 1
-        #                 elif sku_dict[item['sku_id']]['type'] == 12:
-        #                     tmp[day]['return_gift_amount'] += item['amount']
-        #                     tmp[day]['return_gift_count'] += 1
-        #             result.append(tmp[day])
+
+        data, msg = await OrderRC.get_order_filter(start_time=start_time, status=99, end_time=end_time, page=page, page_size=page_size)
+        if not data or not data['list']:
+            return self.answer(data=result)
+        tmp_dict = await OrderLogic.order_sku_good(data['list'], type='order_statistics', range_tmp=date_range)
+        if tmp_dict:
+            results = []
+            for day, item in tmp_dict.items():
+                if day in result:
+                    result[day].update(item)
+                results.append(item)
+            result = results
         return self.answer(data=result)
 
 
@@ -199,12 +170,27 @@ class ResourceChanges(AdminAuthApi):
 
 
 class ResourceChangeChart(AdminAuthApi):
+    """资源消耗折线图"""
     async def get(self, req: Request, **kwargs):
-        """资源消耗折线图"""
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         currency = self.check_int(req.args.get('currency'), require=False, default=3, p_name='类型')
-        sta, data = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=start_time, end_time=end_time, currency=currency)
-        if not sta:
-            return self.answer(self.sta_code.FAIL, hint="暂无数据")
-        return self.answer(data=data)
+        status = self.check_int(req.args.get('status'), require=False, default=0, p_name='方式')
+        date_range = await self.date_time_range(start_time, end_time)
+        sta, data = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=start_time, status=status,
+                                                                                 end_time=end_time, currency=currency)
+        result = []
+        for item_day in date_range:
+            x = str(item_day)
+            unit = {
+                "x": x,
+                "y": 0,
+            }
+            if sta and data:
+                for item in data:
+                    day = tool_dt.dt_str(item['created'], '%Y-%m-%d')
+                    if x == day:
+                        unit['y'] += item['num']
+            result.append(unit)
+
+        return self.answer(data=result)

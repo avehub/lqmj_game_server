@@ -1154,9 +1154,8 @@ class Room(BaseCardRoom):
                 operate_list.setdefault(item[1], []).append(item[0])
         if len(operate_list) == 0:
             return
-
         is_finish, max_operate_list = self.__is_player_actions_finish(operate_list)
-        if max_operate_list[0] == ActionType.ACTION_TYPE_HU:
+        if max_operate_list[0] == ActionType.ACTION_TYPE_HU and self.flow_status != FlowStatus.T_IN_FOUR_BAO_TING:
             operate_list = self.get_operate_player_max_operate()  # {seat_id1: priority or 0, ...}
             # [seat_id1, ]
             hu_list = [seat_id for seat_id, action in operate_list.items() if action == ActionType.ACTION_TYPE_HU]

@@ -51,9 +51,12 @@ class BaseLogin(GameAuthApi):
         updated = await self.request_get_ip_geo(req)
         updated['valid_key'] = self.rng.mk_str(16)
         if wechat_info:
-            updated["unionid"] = wechat_info.get('unionid')
-            updated["avatar"] = wechat_info.get('avatar')
-            updated["name"] = wechat_info.get('name')
+            if wechat_info.get('unionid'):
+                updated["unionid"] = wechat_info.get('unionid')
+            if wechat_info.get('avatar'):
+                updated["avatar"] = wechat_info.get('avatar')
+            if wechat_info.get('name'):
+                updated["name"] = wechat_info.get('name')
             updated["wechat"] = 1
         u_info = await BaseUserRC.update_info(u_info, updated)
         login_info.update({'uid': u_info.get('uid')})
@@ -273,10 +276,10 @@ class LoginByWechat(BaseLogin):
         else:
             wechat_info = {
                 "unionid": req_data.get('unionid'),
-                "name": req_data.get('nickname'),
             }
             if platform in h5_app:
                 wechat_info["avatar"] = req_data.get('headimgurl')
+                wechat_info["name"] = req_data.get('nickname')
             u_info = await self.update_user_login_info(req, u_info, login_info, wechat_info)
             self.log_info('Wechat Login u_info:', u_info)
 
