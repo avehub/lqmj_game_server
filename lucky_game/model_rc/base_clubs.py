@@ -274,7 +274,7 @@ class BaseClubRC(BaseCommonRC):
         try:
             query = {}
             if club_id:
-                query["club_id"] = club_id
+                query["id"] = club_id
             if uid:
                 query["uid"] = uid
             if status is not None:
