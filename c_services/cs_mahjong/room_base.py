@@ -1179,7 +1179,7 @@ class Room(BaseCardRoom):
         }
 
         act = max_operate_list[0]
-        self.log_info(self.tid, "somebody " + str(act))
+        self.log_info( "somebody " + str(act))
         if act in action_map and max_operate_list[1]:
             hu_list = list(set(max_operate_list[1]))
             result = await action_map[act](hu_list)
@@ -1694,6 +1694,8 @@ class Room(BaseCardRoom):
         if can_hu:
             result.append(ActionType.ACTION_TYPE_HU)
             result.append(ActionType.ACTION_TYPE_JIAN)
+            if self.play_type not in (PlayType.JIAN_LOU_XUE_LIU,PlayType.AN_LONG_XUE_ZHAN):
+                result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def can_somebody_hu(self):
