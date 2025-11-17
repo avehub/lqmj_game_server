@@ -17,6 +17,8 @@ from lucky_admin.interface.mail import Email
 from lucky_admin.interface.club import Club, ClubEvent
 from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges, ResourceChangeChart
 from lucky_admin.interface.room import GameRoom, GameRecord
+from lucky_admin.interface.award import Award
+
 
 
 class MainBp(BaseBlue):
@@ -45,6 +47,9 @@ class MainBp(BaseBlue):
         # 游戏房间模块
         Urls("/GameRoom", GameRoom),
         Urls("/GameRecord", GameRecord),
+
+        # 奖励模块
+        Urls("/Award", Award),
 
 
 
