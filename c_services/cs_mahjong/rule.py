@@ -1430,7 +1430,7 @@ class Rule(metaclass=NoInstances):
                                 else:
                                     # 看癞子作为鸡大还是作为清一色大
                                     qing_yi_se_score = pai_xing_score_map.get(HuType.QING_YI_SE) - 5
-                                    max_ji_score = max(ji_to_score.values()) * c_list_len * 3
+                                    max_ji_score = max(ji_to_score.values(), default=0) * c_list_len * 3
                                     max_ji = ji_to_score and max(ji_to_score, key=ji_to_score.get)
                                     ying_hu = max_ji == lai_zi and Rule.is_ying_hu_by_hu_path(cards, path, lai_zi)
                                     if ying_hu:
