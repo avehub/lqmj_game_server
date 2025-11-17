@@ -26,18 +26,15 @@ deploy_test:
     name: test
 
 # 生产环境部署
-deploy_prod:
-  stage: deploy
-  before_script:
-    - echo "=========================================="
-    - echo "部署到生产环境"
-    - echo "=========================================="
-  script:
-    - /opt/deploy/lucky_game_deploy.sh main
-  only:
-    - main
-#  tags:
-#    - ssh
-#    - prod  # 生产环境的 Runner
-  environment:
-    name: production
+# deploy_prod:
+#   stage: deploy
+#   before_script:
+#     - echo "=========================================="
+#     - echo "部署到生产环境"
+#     - echo "=========================================="
+#   script:
+#     - /opt/deploy/lucky_game_deploy.sh main
+#   only:
+#     - main
+#   environment:
+#     name: production
