@@ -849,6 +849,8 @@ class Room(BaseCardRoom):
                 result.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
             if is_an_gang:
                 result.append(ActionType.ACTION_TYPE_AN_GANG)
+        if self.__left_three_bi_hu and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in result:
+            result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
@@ -2155,7 +2157,8 @@ class Room(BaseCardRoom):
 
         if not self.__have_men_jian_hu and not p.is_robot:
             self.__record_operates.setdefault(p.seat_id, []).append(ActionType.ACTION_TYPE_PASS)  # 房卡场让玩家每次点过
-
+        if self.__left_three_bi_hu and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in result:
+            result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
         return result
