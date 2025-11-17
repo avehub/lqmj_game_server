@@ -1,7 +1,5 @@
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
-from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from lucky_game.model_rc.base_award import AwardRC
 
 
