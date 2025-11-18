@@ -5,6 +5,7 @@ from common.public.enum_const import JWType
 from lucky_admin.base_api import AdminAuthApi
 from lucky_admin.const import AdminPermission
 from lucky_admin.model_rc.base_admin import BaseAdminRC
+from lucky_game.const import ReasonCostGold
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.user_activity import UserActivityProgressRC
 from lucky_game.model_rc.order import OrderRC
@@ -194,3 +195,43 @@ class ResourceChangeChart(AdminAuthApi):
             result.append(unit)
 
         return self.answer(data=result)
+
+
+class UserResource(AdminAuthApi):
+    """修改用户资源"""
+
+    async def put(self, req: Request, **kwargs):
+        operation_values = await ExtraUserResourceChangesRC.change_operation()
+        field_values = await ExtraUserResourceChangesRC.change_field()
+        def is_valid_operation(x):
+            return x in operation_values
+        def is_valid_field(x):
+            return x in field_values
+
+        operation = self.check_type(
+            req.json.get("operation"),
+            query_fun=is_valid_operation,
+            require=True,
+            is_int=False,
+            p_name="operation"
+        )
+        change_field = self.check_type(
+            req.json.get("change_field"),
+            query_fun=is_valid_field,
+            is_int=False,
+            require=True,
+            p_name="change_field"
+        )
+        change_val = self.check_int(req.json.get("change_val"), require=True, minval=0, p_name="change_val")
+        uid = self.check_str(req.json.get("uid"), require=True, p_name="uid")
+        sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+            uid,
+            change_field,
+            change_val,
+            operation,
+            reason=ReasonCostGold.ADMIN_ALTER_USER
+        )
+        if not sta:
+            return self.answer(code=self.sta_code.FAIL, hint=e)
+        p_info = await BaseUserRC.cache_by_pk(uid)
+        return self.answer(data=p_info)
