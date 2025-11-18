@@ -265,10 +265,13 @@ class ClubRanks(GameAuthApi):
             )
             for item in data:
                 final_grade = 1 if item["final_score"] >= final_score and item["final_ranking"] == 1 else 0
+                if final_score > 0 and not final_grade:
+                    # 最佳分数大于0且不是最佳不统计
+                    continue
                 if item["uid"] in tmp.keys():
                     tmp[item["uid"]]["total_status"] += 1
                     tmp[item["uid"]]["total_score"] += item["final_score"]
-                    tmp[item["uid"]]["total_grade"] += final_grade if final_grade else 0
+                    tmp[item["uid"]]["total_grade"] += final_grade
                 else:
                     tmp[item["uid"]] = {
                         "uid": item["uid"],
@@ -285,6 +288,8 @@ class ClubRanks(GameAuthApi):
                             tmp[item["uid"]]["total_price"] += room_tmp["price"]
 
             result = sorted(tmp.values(), key=lambda x: x[order_field], reverse=order_type)
+            # if result and final_score > 0:
+            #     result = [item for item in result if item["total_grade"] > 0]
         return self.answer(data=result, hint=e)
 
 
