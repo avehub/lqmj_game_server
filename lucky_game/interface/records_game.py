@@ -201,11 +201,18 @@ class ClubAggregateRanks(GameAuthApi):
         room_card = total = player = 0
         creator = set()
         if data:
+            record_rid = []
             for item in data:
                 total += 1
                 creator.add(item["creator"])
                 room_card += item["price"]
-                player += item["max_player"]
+                record_rid.append(item["record_rid"])
+            total_data, e = await RecordsGameTotalRC.query_record_total_by_sql(
+                record_rid=record_rid
+            )
+            if total_data:
+                player_uid = [item["uid"] for item in total_data]
+                player = len(set(player_uid))
         result = {
             "room_card": room_card,
             "total": total,
