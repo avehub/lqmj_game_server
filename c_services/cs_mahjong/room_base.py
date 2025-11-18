@@ -343,7 +343,7 @@ class Room(BaseCardRoom):
         self.call_flow(1, self.deal_cards)
 
     async def start_player_shang_ga(self):
-        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status not in(RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             self.log_info("开始估牌分房间状态不在游戏中", self.room_status)
             return
         self.set_flow_status(FlowStatus.T_IN_GU_MAI)
@@ -1035,7 +1035,7 @@ class Room(BaseCardRoom):
 
     async def enter_chu_pai_call(self):
         self.log_info("进入chu_pai_call")
-        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status not in(RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             return
         if self.flow_status not in [FlowStatus.T_IN_CHU_PAI, FlowStatus.T_IN_DI_HU_CHU_PAI,
                                     FlowStatus.T_IN_MO_PAI_CALL]:
@@ -2738,7 +2738,7 @@ class Room(BaseCardRoom):
 
     async def start_ding_que(self):
         self.log_info("开始定缺")
-        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status not in(RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             return StaCode.FLOW_ERR, "桌子状态不可定缺"
         data = {
             "ding_que_list": self.__que_list,
@@ -3143,7 +3143,7 @@ class Room(BaseCardRoom):
 
     async def round_start(self, **kwargs):
         """ 一局开始 """
-        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
+        if self.room_status not in(RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
             return
         await super().round_start()
         self.set_flow_status(FlowStatus.T_IN_ROUND_START)
