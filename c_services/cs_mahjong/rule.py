@@ -702,11 +702,11 @@ class Rule(metaclass=NoInstances):
             if flag:
                 if table_cards[0][1] == card or card == 0:  # 必须摸的是碰的那张或者是癞子
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
-        if allow_hu_map.get(HuType.FOUR_CARD_NO_NEAR):
+        if allow_hu_map.get(HuType.FOUR_CARD_NO_NEAR) and len(table_cards) == 0:
             flag, path = Rule.is_four_card_no_near(cards, CardsType.LAI_ZI)
             if flag:
                 return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
-        if allow_hu_map.get(HuType.FOUR_CARD_IS_SAME):
+        if allow_hu_map.get(HuType.FOUR_CARD_IS_SAME) and len(table_cards) == 0:
             same, path = Rule.is_four_card_is_same(cards, lai_zi)
             if same:
                 return same, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
@@ -1430,7 +1430,7 @@ class Rule(metaclass=NoInstances):
                                 else:
                                     # 看癞子作为鸡大还是作为清一色大
                                     qing_yi_se_score = pai_xing_score_map.get(HuType.QING_YI_SE) - 5
-                                    max_ji_score = max(ji_to_score.values()) * c_list_len * 3
+                                    max_ji_score = max(ji_to_score.values(), default=0) * c_list_len * 3
                                     max_ji = ji_to_score and max(ji_to_score, key=ji_to_score.get)
                                     ying_hu = max_ji == lai_zi and Rule.is_ying_hu_by_hu_path(cards, path, lai_zi)
                                     if ying_hu:
