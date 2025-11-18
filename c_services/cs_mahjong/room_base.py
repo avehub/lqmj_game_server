@@ -849,6 +849,8 @@ class Room(BaseCardRoom):
                 result.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
             if is_an_gang:
                 result.append(ActionType.ACTION_TYPE_AN_GANG)
+        if self.__left_three_bi_hu and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in result:
+            result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
@@ -1179,7 +1181,7 @@ class Room(BaseCardRoom):
         }
 
         act = max_operate_list[0]
-        self.log_info(self.tid, "somebody " + str(act))
+        self.log_info( "somebody " + str(act))
         if act in action_map and max_operate_list[1]:
             hu_list = list(set(max_operate_list[1]))
             result = await action_map[act](hu_list)
@@ -1694,6 +1696,8 @@ class Room(BaseCardRoom):
         if can_hu:
             result.append(ActionType.ACTION_TYPE_HU)
             result.append(ActionType.ACTION_TYPE_JIAN)
+            if self.play_type not in (PlayType.JIAN_LOU_XUE_LIU,PlayType.AN_LONG_XUE_ZHAN):
+                result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def can_somebody_hu(self):
@@ -2153,7 +2157,8 @@ class Room(BaseCardRoom):
 
         if not self.__have_men_jian_hu and not p.is_robot:
             self.__record_operates.setdefault(p.seat_id, []).append(ActionType.ACTION_TYPE_PASS)  # 房卡场让玩家每次点过
-
+        if self.__left_three_bi_hu and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU and ActionType.ACTION_TYPE_HU in result:
+            result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
         return result

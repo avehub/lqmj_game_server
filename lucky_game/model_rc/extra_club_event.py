@@ -71,7 +71,7 @@ class ExtraClubEventRC(BaseCommonRC):
     @classmethod
     async def get_by_filter(cls, club_id: int = None, event_type: int = None, uid: int = None, start_time: int = None,
                             end_time: int = None,
-                            page_size: int = None, page: int = None, order_field: str = None, order_type: str = "DESC"):
+                            page_size: int = None, page: int = None, order_field: str = None):
         """根据条件获取茶馆列表"""
         try:
             query = {}
@@ -90,7 +90,7 @@ class ExtraClubEventRC(BaseCommonRC):
             if end_time is not None:
                 query["created__lt"] = end_time
             if event_type is not None:
-                query["event_type"] = event_type
+                query["type"] = event_type
             if order_field is None:
                 order_field = "-id"
             if page and page_size:

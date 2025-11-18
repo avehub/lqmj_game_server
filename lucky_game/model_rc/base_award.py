@@ -1,7 +1,7 @@
 """
 泛指免费奖励类
 """
-from .base_rc import BaseRC
+from .base_rc import BaseRC, BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ConfAward
@@ -97,14 +97,30 @@ class ConfAwardRC(BaseRC):
         return goods_map
 
 
-class AwardRC(BaseRC):
+class AwardRC(BaseCommonRC):
     db_model = Awards
     tb_name = db_model.sheet_name()
+    KEY_AWARD = "award"
 
     @classmethod
-    async def get_award_by_filter(cls, award_id: any = None, award_type: any = None, level: int = None,
-                                  name: str = None,
-                                  order_field: str = None):
+    async def cache_award_set(cls, award_id, value):
+        return await cls.conf.rds.set_item(f"{cls.KEY_AWARD}:{award_id}", value)
+
+    @classmethod
+    async def cache_award_get(cls, award_id):
+        data = await cls.conf.rds.get_item(f"{cls.KEY_AWARD}:{award_id}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
+
+    @classmethod
+    async def cache_award_drop(cls, award_id):
+        return await cls.conf.rds.drop_item(f"{cls.KEY_AWARD}:{award_id}")
+
+
+    @classmethod
+    async def get_award_by_filter(cls, award_id: any = None, award_type: any = None, level: int = None, name: str = None,
+                                  order_field: str = None, page: int = None, page_size: int = None):
         """按条件获取奖项"""
         try:
             query = {}
@@ -127,23 +143,86 @@ class AwardRC(BaseRC):
                 query["name__contains"] = name
             if order_field is None:
                 order_field = "-award_id"
-            result = await cls.db_model.filter(**query).order_by(order_field).values()
-            if not result:
-                return None, "暂无数据"
+            if page and page_size:
+                _, total = await cls.count_award_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = await cls.db_model.filter(**query).order_by(order_field).values()
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"
 
     @classmethod
+    async def count_award_total(cls, **perms):
+        """获取茶馆数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return True, count
+
+    @classmethod
     async def get_award_info(cls, award_id: int = None, is_content: bool = True):
         """按条件获取奖项"""
         try:
+            award = await cls.cache_award_get(award_id)
+            if award:
+                return award["content"] if is_content else award, "成功"
             result = await cls.db_model.get_by_pk(award_id)
             if not result:
                 return None, "暂无数据"
+            await cls.cache_award_set(award_id, result)
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result["content"] if is_content else result, "成功"
+
+    @classmethod
+    async def create_award(cls, name: str, type: int, level: int = None, content: str = None):
+        """创建奖项"""
+        try:
+            award_dick = {
+                "name": name,
+                "type": type,
+                "level": level,
+                "content": content
+            }
+            row = await cls.db_model.add_one(award_dick)
+            if not row:
+                return False, "创建失败"
+        except OperationalError as e:
+            return False, f"失败：{str(e)}"
+        return True, row
+
+    @classmethod
+    async def update_award(cls, award_id: int, name: str = None, type: int = None, level: int = None, content: str = None):
+        """更新奖项"""
+        try:
+            award, e = await cls.get_award_info(award_id, False)
+            if not award:
+                return False, e
+            up_data = {}
+            if name:
+                up_data["name"] = name
+            if type is not None:
+                up_data["type"] = type
+            if level is not None:
+                up_data["level"] = level
+            if content:
+                up_data["content"] = content
+            if up_data:
+                sta = await cls.db_model.update_by_pk(award_id, up_data)
+                if not sta:
+                    return None, "失败"
+                award.update(up_data)
+                await cls.cache_award_drop(award_id)
+        except OperationalError as e:
+            return None, f"失败：{str(e)}"
+        return True, award
 
 class UserAwardRC(BaseRC):
     """
