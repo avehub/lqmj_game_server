@@ -15,10 +15,9 @@ class IndexBaseData(AdminAuthApi):
         start_time, end_time = self.get_time_range(period="day")
         yesterday_start_time = start_time - 86400
         yesterday_end_time = end_time - 86400
-        sta, yesterday_total_user = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=yesterday_end_time, count=True)
-        sta, total_user = await BaseUserRC.get_user_filter(count=True)
-        if not sta:
-            self.answer(self.sta_code.FAIL, hint='创建邮件失败')
+        _, yesterday_total_user = await BaseUserRC.count_user_total(start_time=yesterday_start_time, end_time=yesterday_end_time)
+        _, total_user = await BaseUserRC.count_user_total()
+        
         data = {
             "today_consumer_gold": 0,
             "yesterday_consumer_gold": 0,

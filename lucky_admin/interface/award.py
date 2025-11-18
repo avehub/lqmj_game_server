@@ -6,7 +6,7 @@ from lucky_game.model_rc.base_award import AwardRC
 class Award(AdminAuthApi):
     async def post(self, req: Request, **kwargs):
         """ 创建奖励 """
-        name = self.check_str(req.json.get("name"), require=True, minlen=2, maxlen=10, p_name="奖励名称")
+        name = self.check_str(req.json.get("name"), require=True, p_name="奖励名称")
         type = self.check_int(req.json.get("type"), require=True, p_name="奖励类型")
         level = self.check_int(req.json.get("level"), require=True, p_name="奖励等级")
         content = self.check_str(req.json.get("content"), require=True, p_name="奖励内容")
@@ -18,7 +18,7 @@ class Award(AdminAuthApi):
     async def get(self, req: Request):
         """ 奖励列表 """
         award_id = self.check_int(req.args.get('award_id'), require=False, p_name='奖励ID')
-        name = self.check_str(req.args.get("name"), require=False, minlen=2, maxlen=10, p_name="奖励名称")
+        name = self.check_str(req.args.get("name"), require=False, p_name="奖励名称")
         award_type = self.check_int(req.args.get("type"), require=False, p_name="奖励类型")
         level = self.check_int(req.args.get("level"), require=False, p_name="奖励等级")
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
@@ -38,5 +38,3 @@ class Award(AdminAuthApi):
         if not sta:
             return self.answer(self.sta_code.FAIL, hint=award)
         return self.answer()
-
-
