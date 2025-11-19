@@ -265,6 +265,9 @@ class ClubRanks(GameAuthApi):
             )
             for item in data:
                 final_grade = 1 if item["final_score"] >= final_score and item["final_ranking"] == 1 else 0
+                if final_score > 0 and not final_grade:
+                    # 最佳分数大于0且不是最佳不统计
+                    continue
                 if item["uid"] in tmp.keys():
                     tmp[item["uid"]]["total_status"] += 1
                     tmp[item["uid"]]["total_score"] += item["final_score"]
