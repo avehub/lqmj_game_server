@@ -286,10 +286,10 @@ class ClubRanks(GameAuthApi):
                         # if room_tmp["creator"] == item["uid"] and not room_tmp["room_status"]:
                         if room_tmp["creator"] == item["uid"]:
                             tmp[item["uid"]]["total_price"] += room_tmp["price"]
-
             result = sorted(tmp.values(), key=lambda x: x[order_field], reverse=order_type)
-            # if result and final_score > 0:
-            #     result = [item for item in result if item["total_grade"] > 0]
+            # 最佳分数条件大于0且最佳次数大于0展示
+            if result and final_score > 0:
+                result = [item for item in result if item["total_grade"] > 0]
         return self.answer(data=result, hint=e)
 
 

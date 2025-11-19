@@ -79,21 +79,38 @@ class ClubUsersRC(BaseCommonRC):
         return True, "添加成功"
 
     @classmethod
-    async def update_club_user(cls, relation_id: int, role: int = None, status: int = None):
+    async def update_club_user(cls, relation_id: int, role: int = None, status: int = None, check_uid: int = None):
         """更新用户茶馆关系"""
         try:
-            data, e = await cls.get_club_user_by_id(relation_id)
-            if not data:
-                return False, e
-            up_data = {}
-            if role is not None:
-                up_data["role"] = role
-            if status is not None:
-                up_data["status"] = status
-            if up_data:
-                await cls.db_model.update_by_pk(relation_id, up_data)
-                await cls.cache_session_uid_drop(data["uid"])
-                await cls.cache_session_clubid_drop(data["club_id"])
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                data, e = await cls.get_club_user_by_id(relation_id)
+                if not data:
+                    return False, e
+                up_data = {}
+                if role is not None:
+                    up_data["role"] = role
+                if status is not None:
+                    up_data["status"] = status
+                if up_data:
+                    await cls.db_model.update_by_pk(relation_id, up_data)
+                    await cls.cache_session_uid_drop(data["uid"])
+                    await cls.cache_session_clubid_drop(data["club_id"])
+                # 管理员变更写入行为记录
+                if role is not None and role != data["role"]:
+                    # 管理员->普通成员
+                    status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL
+                    if role == cls.ROLE_MANAGE:
+                        # 普通成员->管理员
+                        status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
+                    sta, msg = await ExtraClubBehaviorRC.create_club_behavior(
+                        ExtraClubBehaviorRC.BEHAVIOR_MANAGE_INDEX,
+                        data["uid"],
+                        data["club_id"],
+                        check_uid,
+                        status=status
+                    )
+                    if not sta:
+                        return False, msg
         except OperationalError as e:
             return False, e
         return True, "更新成功"
@@ -301,7 +318,7 @@ class ClubUsersRC(BaseCommonRC):
                     club_user["uid"],
                     club_user["club_id"],
                     check_uid,
-                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
                     return False, e

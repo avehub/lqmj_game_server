@@ -23,6 +23,7 @@ class CreatGroup(GameAuthApi):
         )
         if not gid:
             return self.answer(StaCode.FAIL, hint=e)
+
         return self.answer(data={"gid": gid})
 
 
