@@ -49,7 +49,7 @@ class User(DBModel):
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
-        unique_together = (("platform", "openid"),)  # 联合主键
+        unique_together = (("platform", "openid"),("unionid", "platform"),)  # 联合主键
 
 
 class UserFollows(DBModel):
