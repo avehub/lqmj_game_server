@@ -123,8 +123,9 @@ class BaseLeisureRoom(BaseRoom):
             # self.__seats[player.seat_id - 1] = None
             player.tid = 0  # 清除玩家房间号 防止check in table时房间号错乱
             self.log_info(player.uid, "玩家认输退出房间", id(player))
-            await self.try_round_over()
             await self.service.del_player_in_service(player.uid)
+            await self.try_round_over()
+
 
     async def try_round_over(self):
         """ 尝试解散房间 """
@@ -136,7 +137,7 @@ class BaseLeisureRoom(BaseRoom):
         if self.room_status == RoomStatus.T_IDLE:
             return
         self.log_info("房间内已经没有真人玩家，enter force_dismiss")
-        await self.delay_func(0.5, self.force_dismiss)
+        await self.force_dismiss()
 
     async def deduct_tickets(self):
         """ 扣除门票 """

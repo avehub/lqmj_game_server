@@ -61,7 +61,7 @@ class DelGroup(GameAuthApi):
     async def post(self, req: Request, **kwargs):
         uid = kwargs.get("u_info").get("uid")
         gid = self.check_int(req.json.get("gid"), require=True, p_name="隔离组ID")
-        group, e = await ClubGroupRC.delete_group(gid)
+        group, e = await ClubGroupRC.delete_group(gid, uid=uid)
         if not group:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer()
