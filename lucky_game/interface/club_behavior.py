@@ -29,9 +29,11 @@ class GetBehaviorExtra(GameAuthApi):
             ids = [item.get("uid") for item in data["list"]]
             role_data, _ = await ClubUsersRC.get_club_user_by_filter(uid=list(set(ids)), club_id=club_id)
             data["list"] = await CommonApi.merge_by_key(data["list"], role_data, "uid", ["role"])
+            data["list"] = await ExtraClubBehaviorRC.club_behavior_explain(data["list"])
         if not page and data:
             ids = [item.get("uid") for item in data]
             role_data, _ = await ClubUsersRC.get_club_user_by_filter(uid=list(set(ids)), club_id=club_id)
             data = await CommonApi.merge_by_key(data, role_data, "uid", ["role"])
+            data = await ExtraClubBehaviorRC.club_behavior_explain(data)
         return self.answer(data=data, hint=e)
 

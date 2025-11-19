@@ -532,10 +532,8 @@ class BaseUserRC(BaseCommonRC):
             if address is not None:
                 # query["address__contains"] = address
                 query["address"] = address
-            print(query)
             if page and page_size:
                 _, total = await cls.count_user_total(**query)
-                print(f"total: {total}")
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
@@ -545,7 +543,6 @@ class BaseUserRC(BaseCommonRC):
             else:
                 result = data = await cls.db_model.filter(**query).order_by(order_field).values()
 
-            print(f"data: {data}")
             if not data:
                 return False, result
         except OperationalError as e:

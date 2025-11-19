@@ -48,7 +48,6 @@ class MailsRC(BaseCommonRC):
                     query["attachment_sta"] = attachment_sta
             if order_field is None:
                 order_field = "-mail_id"
-
             if exp_time is None:
                 query["exp_time__gte"] = int(datetime.now().timestamp())
             else:
@@ -137,7 +136,7 @@ class MailsRC(BaseCommonRC):
                         "attachment": attachment_data,
                         "receive_time": now,
                         "created": now,
-                        "exp_time": exp_time if exp_time else now + 86400 * 30,
+                        "exp_time": exp_time if exp_time else (now + 86400 * 30),
                     })
                 sta, mail = await cls.bulk_create_mails(data_list)
                 if not sta:
