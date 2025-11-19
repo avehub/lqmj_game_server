@@ -17,11 +17,15 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     BEHAVIOR_BLACK_INDEX = 2
     BEHAVIOR_ISOLATION_INDEX = 3
     BEHAVIOR_OUT_INDEX = 4
+    BEHAVIOR_MANAGE_INDEX = 5
+    BEHAVIOR_TEMPLATE_INDEX = 6
     BEHAVIOR_TYPE = {
         1: "加入茶馆申请",
         2: "小黑屋",
         3: "隔离",
-        4: "退出茶馆"
+        4: "退出茶馆",
+        5: "管理员",
+        6: "玩法"
     }
 
     BEHAVIOR_STATUS_DEFAULT = 0
