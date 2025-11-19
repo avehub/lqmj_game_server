@@ -7,6 +7,7 @@ from lucky_game.model_db.main import ExtraClubBehavior
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from lucky_game.model_rc.base_user import BaseUserRC
 
 
 class ExtraClubBehaviorRC(BaseCommonRC):
@@ -31,11 +32,13 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     BEHAVIOR_STATUS_DEFAULT = 0
     BEHAVIOR_STATUS_REFUSE = 1
     BEHAVIOR_STATUS_CANCEL = 2
+    BEHAVIOR_STATUS_ALTER = 3
     BEHAVIOR_STATUS_SUCCEED = 99
     BEHAVIOR_STATUS = {
         0: "未审批",
         1: "拒绝",
         2: "取消",
+        3: "更新",
         99: "通过"
     }
 
@@ -209,3 +212,60 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             return False, f"失败：{str(e)}"
         return True, "成功"
 
+    @classmethod
+    async def club_behavior_explain(cls, data: list):
+        """茶馆行为说明"""
+        if not data:
+            return data
+
+        for item in data:
+            explain = ""
+            u_info = await BaseUserRC.cache_by_pk(item["uid"])
+            check_info = await BaseUserRC.cache_by_pk(item["check_uid"])
+            print("u_info", u_info)
+            print("check_info", check_info)
+            if u_info and len(u_info["name"]) > 6:
+                u_info["name"] = u_info['name'][0:6] + "..."
+            if check_info and len(check_info["name"]) > 6:
+                check_info["name"] = check_info['name'][0:6] + "..."
+            # 茶馆申请
+            if item["type"] == cls.BEHAVIOR_APPLY_INDEX:
+                msg = "同意"
+                if item["status"] == cls.BEHAVIOR_STATUS_REFUSE:
+                    msg = "拒绝"
+                explain = f"{check_info['name']}{msg}了{u_info['name']}的加入申请"
+            # 黑名单
+            elif item["type"] == cls.BEHAVIOR_BLACK_INDEX:
+                msg = "加入"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "移除"
+                explain = f"{check_info['name']}将{u_info['name']}{msg}黑名单"
+            # 隔离组
+            elif item["type"] == cls.BEHAVIOR_ISOLATION_INDEX:
+                msg = "加入"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "移出"
+                if item["status"] == cls.BEHAVIOR_STATUS_ALTER:
+                    msg = "更新"
+                explain = f"{check_info['name']}将{u_info['name']}{msg}隔离组"
+            # 退出茶馆
+            elif item["type"] == cls.BEHAVIOR_OUT_INDEX:
+                msg = "退出"
+                explain = f"{u_info['name']}{msg}了茶馆"
+                if item["check_uid"]:
+                    msg = "移出"
+                    explain = f"{check_info['name']}将{u_info['name']}{msg}了茶馆"
+            elif item["type"] == cls.BEHAVIOR_MANAGE_INDEX:
+                msg = "设为了管理员"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "设为了普通成员"
+                explain = f"{check_info['name']}将{u_info['name']}{msg}"
+            elif item["type"] == cls.BEHAVIOR_TEMPLATE_INDEX:
+                msg = "新增"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "删除"
+                elif item["status"] == cls.BEHAVIOR_STATUS_ALTER:
+                    msg = "修改"
+                explain = f"{check_info['name']}{msg}了模板"
+            item["explain"] = explain
+        return data

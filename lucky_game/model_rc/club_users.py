@@ -318,7 +318,7 @@ class ClubUsersRC(BaseCommonRC):
                     club_user["uid"],
                     club_user["club_id"],
                     check_uid,
-                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
                     return False, e

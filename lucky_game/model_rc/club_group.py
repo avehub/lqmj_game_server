@@ -96,7 +96,7 @@ class ClubGroupRC(RCModel):
                             u_id,
                             group["club_id"],
                             uid,
-                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
                         )
                         if not sta:
                             return False, e
