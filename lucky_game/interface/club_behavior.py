@@ -15,13 +15,13 @@ class GetBehaviorExtra(GameAuthApi):
         creator = u_info.get("uid")
         uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
         club_id = self.check_int(req.args.get("club_id"), require=True, p_name="茶馆ID")
-        status = self.check_int(req.args.get("status"), require=False, default=99, p_name="行为状态")
+        status_range = self.check_int(req.args.get("status"), require=False, default=1, p_name="行为状态")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="分页页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
         data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
             uid=uid,
             club_id=club_id,
-            status=status,
+            status_range=status_range,
             page=page,
             page_size=page_size,
         )

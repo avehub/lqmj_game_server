@@ -160,7 +160,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
 
     @classmethod
     async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None,
-                                     page: int = None, page_size: int = None):
+                                     page: int = None, page_size: int = None, status_range: int = None):
         """多条件查询茶馆操作行为列表"""
         try:
             query = {}
@@ -171,6 +171,8 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                     query["club_id"] = club_id
             if status is not None:
                 query["status"] = status
+            if status_range is not None:
+                query["status__gte"] = status_range
             if uid is not None:
                 query["uid"] = uid
             if type is not None:
@@ -222,8 +224,6 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             explain = ""
             u_info = await BaseUserRC.cache_by_pk(item["uid"])
             check_info = await BaseUserRC.cache_by_pk(item["check_uid"])
-            print("u_info", u_info)
-            print("check_info", check_info)
             if u_info and len(u_info["name"]) > 6:
                 u_info["name"] = u_info['name'][0:6] + "..."
             if check_info and len(check_info["name"]) > 6:
