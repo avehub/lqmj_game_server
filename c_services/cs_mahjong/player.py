@@ -65,6 +65,8 @@ class Player(BaseLeisurePlayer):
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
 
+        self.__is_exchange_status = False #玩家换牌状态 防止多个玩家同一时间选择换牌导致换牌有误
+
     @property
     def has_shang_ga(self):
         return self.__has_shang_ga
@@ -323,6 +325,7 @@ class Player(BaseLeisurePlayer):
         self.__all_chu_cards.clear()
         self.__table_cards.clear()
         self.__zi_mo_cards.clear()
+        self.__is_exchange_status = False
 
     def clear_data_round_over(self):
         super().clear_data_round_over()
@@ -344,6 +347,9 @@ class Player(BaseLeisurePlayer):
         return not target_actions.isdisjoint(operates_map)
 
     def exchange_cards_seat(self, index_list, cards):
+        if self.__is_exchange_status:
+            return
+        self.__is_exchange_status = True
         for i, idx in enumerate(index_list, 1):
             self.ex_cards(cards[-i], idx)
 
@@ -435,7 +441,8 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = []
         temp_cards = deepcopy(self.cards)
         for card in lock_cards:
-            temp_cards.remove(card)
+            if card in temp_cards:
+                temp_cards.remove(card)
         self.__lock_cards = temp_cards
 
     def set_position(self, x, y):
