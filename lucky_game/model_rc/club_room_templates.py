@@ -59,9 +59,9 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                 check_uid = kwargs.get('check_uid', 0)
                 sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                     ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
-                    0,
+                    check_uid,
                     club_id,
-                    check_uid=check_uid,
+                    check_uid=0,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
@@ -78,9 +78,9 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                 await cls.db_model.filter(id=template_id).delete()
                 sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                     ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
-                    0,
+                    check_uid,
                     club_id,
-                    check_uid=check_uid,
+                    check_uid=0,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
@@ -106,9 +106,9 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                     check_uid = kwargs.get('check_uid', 0)
                     sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                         ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
-                        0,
+                        check_uid,
                         template["club_id"],
-                        check_uid=check_uid,
+                        check_uid=0,
                         status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
                     )
                     if not sta:
