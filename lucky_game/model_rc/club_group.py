@@ -17,7 +17,7 @@ class ClubGroupRC(RCModel):
     tb_name = db_model.sheet_name()
 
     @classmethod
-    async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list):
+    async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list, status: int = None):
         """批量将茶馆隔离组数据写入行为表"""
         rows = []
         date_time = int(datetime.now().timestamp())
@@ -28,7 +28,7 @@ class ClubGroupRC(RCModel):
                     "uid": u_id,
                     "club_id": club_id,
                     "check_uid": uid,
-                    "status": ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    "status": status,
                     "created": date_time,
                 }
             )
@@ -51,19 +51,9 @@ class ClubGroupRC(RCModel):
                 if not group:
                     return group, "创建失败"
                 if uid and u_ids:
-                    sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids))
+                    sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids), status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED)
                     if not sta:
                         return None, e
-                    for u_id in u_ids:
-                        sta, e = await ExtraClubBehaviorRC.create_club_behavior(
-                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                            u_id,
-                            club_id,
-                            check_uid=uid,
-                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
-                        )
-                        if not sta:
-                            return False, e
         except OperationalError as e:
             return None, f"创建失败: {str(e)}"
         return group.gid, "成功"
@@ -87,19 +77,9 @@ class ClubGroupRC(RCModel):
                 if up_data:
                     await cls.db_model.update_by_pk(gid, up_data)
                 if uid and u_ids:
-                    sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids))
+                    sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids), status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER)
                     if not sta:
                         return None, e
-                    for u_id in u_ids:
-                        sta, e = await ExtraClubBehaviorRC.create_club_behavior(
-                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                            u_id,
-                            group["club_id"],
-                            check_uid=uid,
-                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
-                        )
-                        if not sta:
-                            return False, e
         except OperationalError as e:
             return None, f"更新失败: {str(e)}"
         return gid, "成功"
