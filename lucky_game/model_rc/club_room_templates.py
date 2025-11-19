@@ -61,7 +61,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                     ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
                     0,
                     club_id,
-                    check_uid,
+                    check_uid=check_uid,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
@@ -80,7 +80,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                     ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
                     0,
                     club_id,
-                    check_uid,
+                    check_uid=check_uid,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
@@ -108,7 +108,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
                         0,
                         template["club_id"],
-                        check_uid,
+                        check_uid=check_uid,
                         status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
                     )
                     if not sta:

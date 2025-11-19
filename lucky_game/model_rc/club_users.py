@@ -106,7 +106,7 @@ class ClubUsersRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_MANAGE_INDEX,
                         data["uid"],
                         data["club_id"],
-                        check_uid,
+                        check_uid=check_uid,
                         status=status
                     )
                     if not sta:
@@ -143,7 +143,7 @@ class ClubUsersRC(BaseCommonRC):
                     ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
                     data.uid,
                     data.club_id,
-                    0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
+                    check_uid=0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                 )
                 if not sta:
