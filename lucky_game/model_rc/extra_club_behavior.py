@@ -243,11 +243,12 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             # 隔离组
             elif item["type"] == cls.BEHAVIOR_ISOLATION_INDEX:
                 msg = "加入"
-                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
-                    msg = "移出"
                 if item["status"] == cls.BEHAVIOR_STATUS_ALTER:
                     msg = "更新至"
                 explain = f"{check_info['name']}将{u_info['name']}{msg}隔离组"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "删除了"
+                    explain = f"{check_info['name']}{msg}隔离组"
             # 退出茶馆
             elif item["type"] == cls.BEHAVIOR_OUT_INDEX:
                 msg = "退出"
