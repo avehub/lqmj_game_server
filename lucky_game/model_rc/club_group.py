@@ -50,10 +50,20 @@ class ClubGroupRC(RCModel):
                 })
                 if not group:
                     return group, "创建失败"
-                if uid:
+                if uid and u_ids:
                     sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids))
                     if not sta:
                         return None, e
+                    for u_id in u_ids:
+                        sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                            u_id,
+                            club_id,
+                            uid,
+                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                        )
+                        if not sta:
+                            return False, e
         except OperationalError as e:
             return None, f"创建失败: {str(e)}"
         return group.gid, "成功"
@@ -76,10 +86,20 @@ class ClubGroupRC(RCModel):
                     up_data["u_ids"] = json_encode(u_ids)
                 if up_data:
                     await cls.db_model.update_by_pk(gid, up_data)
-                if uid:
+                if uid and u_ids:
                     sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids))
                     if not sta:
                         return None, e
+                    for u_id in u_ids:
+                        sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                            ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                            u_id,
+                            group["club_id"],
+                            uid,
+                            status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                        )
+                        if not sta:
+                            return False, e
         except OperationalError as e:
             return None, f"更新失败: {str(e)}"
         return gid, "成功"
