@@ -123,9 +123,9 @@ class BaseLeisureRoom(BaseRoom):
             # self.__seats[player.seat_id - 1] = None
             player.tid = 0  # 清除玩家房间号 防止check in table时房间号错乱
             self.log_info(player.uid, "玩家认输退出房间", id(player))
+            await self.service.del_player_in_service(player.uid)
             await self.try_round_over()
-            if self.service:
-                await self.service.del_player_in_service(player.uid)
+
 
     async def try_round_over(self):
         """ 尝试解散房间 """
