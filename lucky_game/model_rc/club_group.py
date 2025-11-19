@@ -85,12 +85,25 @@ class ClubGroupRC(RCModel):
         return gid, "成功"
 
     @classmethod
-    async def delete_group(cls, gid: int):
+    async def delete_group(cls, gid: int, uid: int = None):
         """删除茶馆隔离组"""
         try:
-            sta = await cls.db_model.del_by_pk(gid)
-            if not sta:
-                return sta, "删除失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                group = await cls.db_model.get_by_pk(gid)
+                if not group:
+                    return None, "隔离组不存在"
+                sta = await cls.db_model.del_by_pk(gid)
+                if not sta:
+                    return sta, "删除失败"
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                    0,
+                    group["club_id"],
+                    check_uid=uid,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                )
+                if not sta:
+                    return sta, "删除失败"
         except OperationalError as e:
             return None, f"删除失败: {str(e)}"
         return True, "成功"
