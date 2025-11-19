@@ -109,7 +109,7 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                         0,
                         template["club_id"],
                         check_uid,
-                        status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_REFUSE,
+                        status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
                     )
                     if not sta:
                         return False, e
