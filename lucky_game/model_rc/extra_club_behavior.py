@@ -266,6 +266,6 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                     msg = "删除"
                 elif item["status"] == cls.BEHAVIOR_STATUS_ALTER:
                     msg = "修改"
-                explain = f"{check_info['name']}{msg}了模板"
+                explain = f"{u_info['name']}{msg}了模板"
             item["explain"] = explain
         return data
