@@ -15,10 +15,6 @@ class IndexBaseData(AdminAuthApi):
         start_time, end_time = self.get_time_range(period="day")
         yesterday_start_time = start_time - 86400
         yesterday_end_time = end_time - 86400
-        sta, yesterday_total_user = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=yesterday_end_time, count=True)
-        sta, total_user = await BaseUserRC.get_user_filter(count=True)
-        if not sta:
-            self.answer(self.sta_code.FAIL, hint='创建邮件失败')
         data = {
             "today_consumer_gold": 0,
             "yesterday_consumer_gold": 0,
@@ -26,9 +22,20 @@ class IndexBaseData(AdminAuthApi):
             "yesterday_consumer_discount": 0,
             "today_online_user": 0,
             "yesterday_online_user": 0,
-            "today_total_user": total_user,
-            "yesterday_total_user": yesterday_total_user,
+            "today_total_user": 0,
+            "yesterday_total_user": 0,
         }
+        sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
+        if sta:
+            yesterday_total_user = today_total_user = 0
+            for user in user_data:
+                if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
+                    yesterday_total_user += 1
+                if user["created"] >= start_time and user["created"] <= end_time:
+                    today_total_user += 1
+            data["today_total_user"] = today_total_user
+            data["yesterday_total_user"] = yesterday_total_user
+        sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time)
         return self.answer(data=data)
 
 
