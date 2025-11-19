@@ -61,6 +61,7 @@ class UpdateRelation(GameAuthApi):
             relation_id=relation_id,
             status=status,
             role=role,
+            check_uid=creator,
         )
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)

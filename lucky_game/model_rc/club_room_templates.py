@@ -2,9 +2,14 @@
 茶馆房间模板
 """
 from tortoise.exceptions import OperationalError
+from tortoise.transactions import in_transaction
+
+from common.public.enum_const import DbKey
 from lucky_game.model_db.main import ClubRoomTemplates
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_encode, json_parse
+
+from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 
 
 class ClubRoomTemplatesRC(BaseCommonRC):
@@ -35,31 +40,51 @@ class ClubRoomTemplatesRC(BaseCommonRC):
                               rule_details: dict, max_player: int, **kwargs):
         """创建茶馆房间模板"""
         try:
-            template_data = {
-                "club_id": club_id,
-                "platform": platform,
-                "play_type": play_type,
-                "rule_details": json_encode(rule_details),
-                "max_player": max_player,
-                "total_round": kwargs.get('total_round', 0),
-                "cs_type": kwargs.get('cs_type', 0),
-                "price": kwargs.get('price', 0),
-                "is_friend": kwargs.get('is_friend', 0),
-                "is_location": kwargs.get('is_location', 0),
-            }
-
-            new_template = await cls.db_model.add_one(template_data)
-            if not new_template:
-                return False, "模板创建失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                template_data = {
+                    "club_id": club_id,
+                    "platform": platform,
+                    "play_type": play_type,
+                    "rule_details": json_encode(rule_details),
+                    "max_player": max_player,
+                    "total_round": kwargs.get('total_round', 0),
+                    "cs_type": kwargs.get('cs_type', 0),
+                    "price": kwargs.get('price', 0),
+                    "is_friend": kwargs.get('is_friend', 0),
+                    "is_location": kwargs.get('is_location', 0),
+                }
+                new_template = await cls.db_model.add_one(template_data)
+                if not new_template:
+                    return False, "模板创建失败"
+                check_uid = kwargs.get('check_uid', 0)
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
+                    0,
+                    club_id,
+                    check_uid,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                )
+                if not sta:
+                    return False, e
         except OperationalError as e:
             return False, f"模板创建失败: {str(e)}"
         return new_template.id, "成功"
 
     @classmethod
-    async def delete_template(cls, template_id: int, club_id: int):
+    async def delete_template(cls, template_id: int, club_id: int, check_uid: int = None):
         """删除房间模板"""
         try:
-            await cls.db_model.filter(id=template_id).delete()
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                await cls.db_model.filter(id=template_id).delete()
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
+                    0,
+                    club_id,
+                    check_uid,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                )
+                if not sta:
+                    return False, e
         except OperationalError as e:
             return False, f"模板删除失败: {str(e)}"
         return True, "成功"
@@ -76,7 +101,18 @@ class ClubRoomTemplatesRC(BaseCommonRC):
             if 'rule_details' in update_data:
                 update_data['rule_details'] = json_encode(update_data['rule_details'])
             if update_data:
-                await cls.db_model.filter(id=template_id).update(**update_data)
+                async with in_transaction(connection_name=DbKey.DEFAULT):
+                    await cls.db_model.filter(id=template_id).update(**update_data)
+                    check_uid = kwargs.get('check_uid', 0)
+                    sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                        ExtraClubBehaviorRC.BEHAVIOR_TEMPLATE_INDEX,
+                        0,
+                        template["club_id"],
+                        check_uid,
+                        status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_REFUSE,
+                    )
+                    if not sta:
+                        return False, e
         except OperationalError as e:
             return None, f"模板更新失败: {str(e)}"
         return True, "成功"

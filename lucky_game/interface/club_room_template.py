@@ -83,6 +83,7 @@ class RoomTemplateCreate(RoomTemplateBase):
             club_id=club_id,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -121,6 +122,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
             rule_details=rule_dick,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -165,7 +167,7 @@ class RoomTemplateDelete(RoomTemplateBase):
             return self.answer(StaCode.FAIL, hint=e)
         club_id = template["club_id"]
         await self.check_authority(uid, club_id)
-        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
+        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id, check_uid=uid)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
