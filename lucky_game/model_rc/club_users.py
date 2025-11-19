@@ -291,7 +291,7 @@ class ClubUsersRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                         uid,
                         club_id,
-                        check_uid,
+                        check_uid=check_uid,
                         status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
                     )
                     if not sta:
@@ -317,7 +317,7 @@ class ClubUsersRC(BaseCommonRC):
                     ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                     club_user["uid"],
                     club_user["club_id"],
-                    check_uid,
+                    check_uid=check_uid,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
