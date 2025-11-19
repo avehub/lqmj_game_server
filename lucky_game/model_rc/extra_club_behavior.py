@@ -54,7 +54,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     async def create_club_behavior(cls, behavior_type: int, uid: int, club_id: int, check_uid: int = 0, status: int = None):
         """新增茶馆行为"""
         try:
-            if status is not None:
+            if status is None:
                 status = await cls._type_re_status(behavior_type)
             row = await cls.db_model.add_one({
                 "uid": uid,
