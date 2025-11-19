@@ -451,7 +451,7 @@ PAI_XING_SCORE_MAP = {
     HuType.QING_DI_LONG: 30,
     HuType.QING_LONG_BEI: 30,
     HuType.QING_JIN_GOU: 20,
-    HuType.FOUR_CARD_NO_NEAR: 20,
+    HuType.FOUR_CARD_NO_NEAR: 1,
     HuType.FOUR_CARD_IS_SAME: 10,
 }
 
