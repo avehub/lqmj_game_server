@@ -59,7 +59,7 @@ class ClubGroupRC(RCModel):
                             ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
                             u_id,
                             club_id,
-                            uid,
+                            check_uid=uid,
                             status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
                         )
                         if not sta:
@@ -95,7 +95,7 @@ class ClubGroupRC(RCModel):
                             ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
                             u_id,
                             group["club_id"],
-                            uid,
+                            check_uid=uid,
                             status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER,
                         )
                         if not sta:
