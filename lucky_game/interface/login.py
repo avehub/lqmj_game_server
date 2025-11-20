@@ -327,6 +327,10 @@ class SendCode(BaseLogin):
         # 获取客户手机号
         phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
         scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
+        if scene and scene == "bind":
+            sta, data = await BaseUserRC.get_user_filter(phone=phone_number)
+            if sta and data:
+                return self.answer(StaCode.FAIL, hint="该手机号已绑定账号")
         sta, e = await AliVerification.send_code(phone_number, scene)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
@@ -473,6 +477,26 @@ class BindByWechat(BaseLogin):
         (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
         return self.answer()
 
+
+class BindByPhone(BaseLogin):
+    """ 绑定手机号 """
+    async def post(self, req: Request, **kwargs):
+        phone_number = self.check_str(req.json.get('phone_number'), require=True, p_name="手机号")
+        code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
+        scene = self.check_str(req.json.get('scene'), require=False, default="bind", p_name="验证码场景")
+        user = kwargs.get("u_info")
+        if user.get("phone"):
+            return self.answer(StaCode.FAIL, hint=f"已绑定手机号:{user.get('phone')}")
+        sta, e = await AliVerification.verify_code(phone_number, code, scene)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
+
+        updated = {
+            'phone': phone_number,
+        }
+        u_info = await BaseUserRC.update_info(user, updated)
+        (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
+        return self.answer()
 
 
 
