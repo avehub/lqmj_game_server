@@ -240,7 +240,7 @@ class GameRoomsRC(BaseCommonRC):
     async def check_user_group(cls, room_data: dict, uid: int):
         """检查用户是否与房间成员在禁止同桌配置"""
         room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
-        exist, g = await ClubUserGroupRC.check_uid_by_room(
+        exist = await ClubUserGroupRC.check_uid_by_room(
             room_data["club_id"],
             uid,
             room_uid,
