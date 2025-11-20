@@ -80,7 +80,7 @@ class ClubUserGroupRC(RCModel):
         return group, "成功"
 
     @classmethod
-    async def get_club_user_group_by_filter(cls, club_id: int, uid: int = None, status: int = None):
+    async def get_club_user_group_by_filter(cls, club_id: int, uid: int = None, status: int = None, u_ids: int = None):
         """根据条件获取茶馆禁止同桌列表"""
         try:
             query = {}
@@ -90,6 +90,8 @@ class ClubUserGroupRC(RCModel):
                 query["uid"] = uid
             if status is not None:
                 query["status"] = status
+            if u_ids is not None:
+                query["u_ids__contains"] = u_ids
             groups = await cls.db_model.filter(**query).values()
             if groups:
                 #将u_ids转化为列表
@@ -113,6 +115,10 @@ class ClubUserGroupRC(RCModel):
                     for u_id in group_u_ids:
                         if u_id in room_uid:
                             sta = True
+                            break
+            room_u_sta = False
+            if not sta:
+                pass
         except OperationalError as e:
             return False
         return sta

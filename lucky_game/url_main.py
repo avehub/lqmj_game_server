@@ -1,7 +1,7 @@
 # coding=utf-8
 from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
-from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
+from lucky_game.interface.test_api import TestApi, TestCreatGameRecords, TestLeaveRoom
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat, \
     LoginByApple, SendCode, LoginByPhone, BindByWechat, BindByPhone
 from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList, StoreBuy
@@ -37,6 +37,7 @@ class MainBp(BaseBlue):
     DEFAULT_APIS = [
         # 结构为: 接口路由地址, 接口视图处理器, 版本号(可选), 接口命名(可选)
         Urls("/testapi", TestApi),
+        Urls("/TestLeaveRoom", TestLeaveRoom),
         Urls("/TestCreatGameRecords", TestCreatGameRecords),
         Urls("/FileUpload", FileUploadHandler),
         Urls("/FileDelete", FileDeleteHandler),
