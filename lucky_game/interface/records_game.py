@@ -28,40 +28,6 @@ class UserRecords(GameAuthApi):
         return self.answer(data=data, hint=e)
 
 
-class TotalRecords(GameAuthApi):
-    """总局战绩列表"""
-
-    async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
-        room_id = self.check_int(req.args.get("room_id"), require=False, p_name="房间ID")
-        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,
-                                 p_name="子服务类型")
-        start_time = self.check_int(req.args.get("start_time"), require=False, p_name="开始时间")
-        end_time = self.check_int(req.args.get("end_time"), require=False, p_name="结束时间")
-        page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
-        page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_room_id(
-            room_id=room_id,
-            uid=uid,
-            cs_type=cs_type,
-            start_time=start_time,
-            end_time=end_time,
-            page=page,
-            page_size=page_size,
-        )
-        total = complete = score = 0
-        if data["total"] > 0:
-            for item in data["list"]:
-                total += 1
-                score += item["final_score"]
-        result = {
-            "data": data,
-            "total": total,
-            "complete": complete,
-            "score": score,
-        }
-        return self.answer(data=result, hint=e)
-
 
 class SegmentRecords(GameAuthApi):
     """子局战绩列表"""

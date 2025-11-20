@@ -13,10 +13,10 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
 from lucky_game.const.const import PlatForm, ReasonCostGold
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
 from lucky_game.model_rc.conf_game_room_rules import ConfGameRoomRulesRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
-from nsanic.libs import tool_dt
 from common.public.enum_const import CacheKey
 from lucky_game.model_rc.club_group import ClubGroupRC
 from tortoise.expressions import F
@@ -231,6 +231,19 @@ class GameRoomsRC(BaseCommonRC):
             room_data["club_id"],
             room_uid,
             uid,
+        )
+        if not exist:
+            return True, "房间可加入"
+        return False, "房间暂时被其他玩家占用"
+
+    @classmethod
+    async def check_user_group(cls, room_data: dict, uid: int):
+        """检查用户是否与房间成员在禁止同桌配置"""
+        room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
+        exist, g = await ClubUserGroupRC.check_uid_by_room(
+            room_data["club_id"],
+            uid,
+            room_uid,
         )
         if not exist:
             return True, "房间可加入"

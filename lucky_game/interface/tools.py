@@ -15,6 +15,7 @@ from lucky_game.handler.random_utils import generate_random_string
 from lucky_game.handler.wechat import WeChat
 from common.public.conf import WeChatConf
 from lucky_game.model_rc.app_versions import AppVersionsRC
+from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 
 
 class GetWeChatShareData(SpecialApi):
@@ -90,3 +91,19 @@ class GetWechatCode(SpecialApi):
             status=301,
             headers={"Cache-Control": "no-store"}
         )
+
+
+class GetGameRecord(SpecialApi):
+    """
+    获取游戏回放战绩
+    """
+    async def get(self, req: Request):
+        uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        room_id = self.check_int(req.args.get("room_id"), require=False, p_name="房间ID")
+        if not uid and not room_id:
+            return self.answer(StaCode.FAIL, hint="参数错误")
+        result, e = await BaseRecordsGameRC.get_by_game_record(
+            room_id=room_id,
+            uid=uid,
+        )
+        return self.answer(data=result, hint=e)
