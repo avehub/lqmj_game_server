@@ -5,6 +5,7 @@ from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdClub, ClubMsg
 from c_services.cs_mahjong.const import OverType
 from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
 from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 
@@ -95,11 +96,17 @@ class BaseCardService(BaseService):
             self.log_info("__club_owner_dismiss, 房间不存在")
             return
         club_id = data.get("club_id")
+        req_id = data.get("req_id")
+        uid = data.get("uid")
+        from_club = data.get("from_club") or False
         if room.club_id != club_id:
             self.log_info("__club_owner_dismiss, club id对不上", room.club_id, club_id)
             return
         room.set_not_playing_dismiss(room.room_status, True)
         await room.force_dismiss(OverType.CLUB_OWNER_DISMISS)
+        if from_club:
+            data = {"req_id":req_id,"secret":C_SERVICE_SECRET_KEY}
+            await self.cs2cs_by_rmq(ServiceEnum.C_CLUB,CmdClub.JOIN_NEW_GAME_SUC, data,uid)
 
 
     async def clear_in_service(self):
