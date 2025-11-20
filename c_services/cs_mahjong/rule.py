@@ -117,7 +117,7 @@ class Rule(metaclass=NoInstances):
         return False, []
 
     @staticmethod
-    def is_seven_pairs(cards, lai_zi):
+    def is_seven_pairs(cards, lai_zi,card):
         """判断是否7小对 只需考虑1个癞子内的情况  """
         if not cards or len(cards) != 14:
             return False, []
@@ -129,8 +129,11 @@ class Rule(metaclass=NoInstances):
         if lai_zi_count == 0:
             if threes_len == 0 and singles_len == 0:
                 result = HuType.QI_DUI
-                if len(fours) > 0:
-                    result = HuType.LONG_QI_DUI
+                if len(fours) > 0 :
+                    if card in fours:
+                        result = HuType.LONG_QI_DUI
+                    else:
+                        result = HuType.QI_DUI
                 return result, [[card] * count for card, count in card_to_count.items()]
         elif lai_zi_count > 0 and singles_len + threes_len <= lai_zi_count:  # 8对 + 癞子  一刻子 + 6对 + 1单牌 +癞子
 
@@ -694,7 +697,7 @@ class Rule(metaclass=NoInstances):
                 if flag:
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
             else:
-                flag, path = Rule.is_seven_pairs(cards, lai_zi)
+                flag, path = Rule.is_seven_pairs(cards, lai_zi, card)
                 if flag:
                     return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))  # 有癞子替换为癞子
         if allow_hu_map.get(HuType.DI_LONG_QI):
