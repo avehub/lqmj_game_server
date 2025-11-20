@@ -40,6 +40,14 @@ class CommonApi(LogMeta):
         return gold
 
     @classmethod
+    async def get_player_in_game(cls, uid):
+        try:
+            is_gaming = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            is_gaming = {"is_gaming": False}
+        return is_gaming
+
+    @classmethod
     async def get_player_ws_info(cls, uid):
         ws_info = await cls.conf.rds.get_hash(CacheKey.WS_ONLINE_INFO, uid)
         if ws_info:

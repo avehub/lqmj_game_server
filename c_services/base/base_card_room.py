@@ -138,6 +138,7 @@ class BaseCardRoom(BaseRoom):
 
     async def player_join_room(self, players: list):
         await super(BaseCardRoom, self).player_join_room(players)
+        await self.service.sava_player_in_game( players[0].uid, self.tid, self.owner, self.club_id,1)
         if self.club_id > 0:
             if self.__owner == players[0].uid:
                 await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.CREATE_ROOM))
@@ -164,6 +165,7 @@ class BaseCardRoom(BaseRoom):
             await self.inner_broadcast(CmdRoom.QUIT_ROOM, one_of_model)
             await GameRoomsRC.leave_room(self.tid, player.uid)
             self.seats[player.seat_id - 1] = None
+            await self.service.del_player_in_game(player.uid)
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             self.service.release_player(player)
             if self.club_id > 0:
@@ -398,6 +400,9 @@ class BaseCardRoom(BaseRoom):
                 self.log_info("战绩创建失败",e,"入参",self.tid, tool_dt.cur_time())
             self.__record_id = record_info.record_rid
         self.call_flow(2, self.round_start)
+        for p in self.seats:
+            if p:
+                await self.service.sava_player_in_game(p.uid,self.tid,self.owner,self.club_id,2)
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.UPDATE_ROOM))
             await GameRoomsRC.update_game_room(self.tid, round_num=self.round_idx)
