@@ -3,7 +3,7 @@ from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
 from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat, \
-    LoginByApple, SendCode, LoginByPhone, BindByWechat
+    LoginByApple, SendCode, LoginByPhone, BindByWechat, BindByPhone
 from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList, StoreBuy
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList, \
@@ -57,6 +57,9 @@ class MainBp(BaseBlue):
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序/微信APP)
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
+        Urls("/BindByPhone/", BindByPhone),  # 绑定手机号
+
+
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建

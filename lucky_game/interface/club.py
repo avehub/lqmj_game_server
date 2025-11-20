@@ -202,7 +202,7 @@ class ClubCheck(BaseClub):
         self.check_int(status, require=True, p_name="审批状态")
         behavior, e = await ExtraClubBehaviorRC.get_behavior_by_id(behavior_id)
         if not behavior or behavior.get("status") != ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT:
-            return self.answer(StaCode.FAIL, hint=f"已{ExtraClubBehaviorRC.BEHAVIOR_STATUS[behavior.get('status')]}")
+            return self.answer(StaCode.FAIL, hint=f"申请不存在或已处理")
         club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=behavior.get("club_id"))
         # 玩家自己可以取消申请
         if behavior.get('uid') != check_uid:
