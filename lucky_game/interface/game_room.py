@@ -248,6 +248,10 @@ class JoinRoom(GameRoomAPI):
             exist, msg = await GameRoomsRC.check_room_group(room_data, uid)
             if not exist:
                 return self.answer(StaCode.FAIL, hint=msg)
+            # 当前用户是否在禁止同桌组
+            exist, msg = await GameRoomsRC.check_user_group(room_data, uid)
+            if not exist:
+                return self.answer(StaCode.FAIL, hint=msg)
         sta, e = await GameRoomsRC.join_room(room_data, uid)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
