@@ -809,3 +809,15 @@ class AppVersions(DBModel):
     class Meta:
         table = "app_versions"
         unique_together = (("app_id", "version_code", "platform"), ("platform", "status"),)
+
+
+class ClubUserGroups(DBModel):
+    """茶馆用户禁止同桌表"""
+    gid = fields.IntField(max_length=10, pk=True, description='分组ID')
+    club_id = fields.IntField(max_length=10, null=True, description='茶馆ID')
+    uid = fields.IntField(max_length=28, null=True, description='玩家ID')
+    u_ids = fields.TextField(null=True, description='多个玩家ID')
+    status = fields.SmallIntField(null=True, default=1, description='状态：0失效 1生效')
+
+    class Meta:
+        table = "club_user_groups"
