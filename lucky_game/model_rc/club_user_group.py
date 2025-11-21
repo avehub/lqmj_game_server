@@ -109,16 +109,14 @@ class ClubUserGroupRC(RCModel):
             room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
             cls.conf.log.info(f"groups: {groups}")
-            sta = await cls.__check_in_group(groups, uid)
+            sta = await cls.__check_in_group(groups, uid, room_uid)
             if not sta:
                 for u_id in room_uid:
-                    group_list, _ = await cls.get_club_user_group_by_filter(club_id, u_ids=u_id)
+                    group_list, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
                     cls.conf.log.info(f"group_list: {group_list}")
-                    if group_list:
-                        for group in group_list:
-                            if group["uid"] == uid:
-                                room_u_sta = True
-                                break
+                    if await cls.__check_in_group(group_list, uid, room_uid):
+                        room_u_sta = True
+                        break
         except OperationalError as e:
             return False
         return True if sta or room_u_sta else False
@@ -136,10 +134,13 @@ class ClubUserGroupRC(RCModel):
         return True, "成功"
 
     @classmethod
-    async def __check_in_group(cls, groups, uid) -> bool:
+    async def __check_in_group(cls, groups, uid, room_uid) -> bool:
         """检查用户是否在禁止同桌组中"""
         exist = False
         if groups and groups[0]["status"] == 1:
-            if groups[0]["u_ids"] and uid in groups[0]["u_ids"]:
-                exist = True
+            if groups[0]["u_ids"]:
+                for u_id in groups[0]["u_ids"]:
+                    if u_id in room_uid:
+                        exist = True
+                        break
         return exist
