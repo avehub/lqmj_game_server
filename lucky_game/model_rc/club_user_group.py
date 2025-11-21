@@ -142,6 +142,6 @@ class ClubUserGroupRC(RCModel):
             if group["u_ids"]:
                 for u_id in group["u_ids"]:
                     if u_id in room_uid:
-                        exist = False
+                        exist = True
                         break
         return exist
