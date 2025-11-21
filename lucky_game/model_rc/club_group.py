@@ -172,6 +172,8 @@ class ClubGroupRC(RCModel):
                         if check_uid in item["u_ids"]:
                             all_exist = True
                             break
+
+        cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中结果:{all_exist}")
         return all_exist
 
     @classmethod
