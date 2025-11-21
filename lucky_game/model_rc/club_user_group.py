@@ -107,10 +107,14 @@ class ClubUserGroupRC(RCModel):
     async def check_uid_by_room(cls, club_id: int, uid: int, room_uid: list) -> bool:
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
+
+            cls.conf.log.info(f"房间内用户{type(room_uid)}{room_uid}")
             sta = room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
             if groups and groups[0]["status"] == 1:
+                cls.conf.log.info(f"原配置禁止同桌{type(groups[0]['u_ids'])}{groups[0]['u_ids']}")
                 group_u_ids = json_parse(groups[0]["u_ids"])
+                cls.conf.log.info(f"json配置禁止同桌{type(group_u_ids)}{group_u_ids}")
                 if group_u_ids:
                     for u_id in group_u_ids:
                         if u_id in room_uid:
