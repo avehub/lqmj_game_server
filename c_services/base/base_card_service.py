@@ -24,19 +24,21 @@ class BaseCardService(BaseService):
         await self.new_match(uid, data)
 
     async def new_match(self, uid, data):
+
+        player = self.get_player(uid)
+        if player:
+            old_room = self.get_room(player.tid)
+            if old_room:
+                enter_room_model.reenter = True
+                reenter = enter_room_model.SerializeToString()
+                return await self.enter_room(player, old_room, reenter)
+
         tid = data.get("room_id")
-        club_id = data.get("club_id")
         room = self.get_room(tid)
         if not room:
             room = self.create_room(self.ROOM, data,tid = tid)
             self.log_info(f"创建房间{room.tid}")
         else:
-            player = self.get_player(uid)
-            if player and player.tid == tid:
-                enter_room_model.reenter = True
-                reenter = enter_room_model.SerializeToString()
-                await self.enter_room(player, room, reenter)
-                return
             if room.in_room_count == room.max_player_count:
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint="房间已满")
             if not room.room_status_is_equal(RoomStatus.T_IDLE):
