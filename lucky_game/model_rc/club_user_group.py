@@ -19,7 +19,6 @@ class ClubUserGroupRC(RCModel):
     GROUP_STATUS_NORMAL = 1  # 生效
     GROUP_STATUS_DISABLE = 0  # 失效
 
-
     @classmethod
     async def alter_club_user_group(cls, club_id: int, uid: int, u_ids: set, status: int = None):
         """更新茶馆禁止同桌"""
@@ -107,35 +106,15 @@ class ClubUserGroupRC(RCModel):
     async def check_uid_by_room(cls, club_id: int, uid: int, room_uid: list) -> bool:
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
-
-            cls.conf.log.info(f"房间内用户{type(room_uid)}{room_uid}")
-            sta = room_u_sta = False
+            room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
-            if groups and groups[0]["status"] == 1:
-                cls.conf.log.info(f"原配置禁止同桌{type(groups[0]['u_ids'])}{groups[0]['u_ids']}")
-                group_u_ids = json_parse(groups[0]["u_ids"])
-                cls.conf.log.info(f"json配置禁止同桌{type(group_u_ids)}{group_u_ids}")
-                if group_u_ids:
-                    for u_id in group_u_ids:
-                        if u_id in room_uid:
-                            sta = True
-                            break
-            cls.conf.log.info(f"禁止同桌检查进入房用户{uid}在茶馆{club_id}禁止同桌配置{groups},房间内玩家{room_uid}，结果{sta}")
+            sta = cls.__check_in_group(groups, uid)
             if not sta:
                 for u_id in room_uid:
                     groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
-
-                    cls.conf.log.info(
-                        f"禁止同桌检查房间内用户{u_id}在茶馆{club_id}禁止同桌配置{groups},待进入用户{uid}")
-                    if groups and groups[0]["status"] == 1:
-                        group_u_ids = json_parse(groups[0]["u_ids"])
-                        if group_u_ids:
-                            if uid in group_u_ids:
-                                room_u_sta = True
-                                break
-
-                cls.conf.log.info(
-                    f"禁止同桌检查房间内用户与待进入用户{uid}结果{room_u_sta}")
+                    room_u_sta = cls.__check_in_group(groups, uid)
+                    if room_u_sta:
+                        break
         except OperationalError as e:
             return False
         return True if sta or room_u_sta else False
@@ -151,3 +130,13 @@ class ClubUserGroupRC(RCModel):
         except OperationalError as e:
             return False, e
         return True, "成功"
+
+    @classmethod
+    async def __check_in_group(cls, groups, uid) -> bool:
+        """检查用户是否在禁止同桌组中"""
+        exist = False
+        if groups and groups[0]["status"] == 1:
+            if groups[0]["u_ids"]:
+                if uid in groups[0]["u_ids"]:
+                    exist = True
+        return exist
