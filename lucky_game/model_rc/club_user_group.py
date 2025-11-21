@@ -106,16 +106,17 @@ class ClubUserGroupRC(RCModel):
     async def check_uid_by_room(cls, club_id: int, uid: int, room_uid: list) -> bool:
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
-            room_u_sta = False
+            sta = room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
-            cls.conf.log.info(f"groups: {groups}")
-            sta = await cls.__check_in_group(groups, uid, room_uid)
+            cls.conf.log.info(f"groups_1: {groups}, uid: {uid}, room_uid: {room_uid}")
+            if groups:
+                sta = await cls.__check_in_group(groups[0], uid, room_uid)
             if not sta:
                 for u_id in room_uid:
-                    group_list, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
-                    cls.conf.log.info(f"group_list: {group_list}")
-                    if await cls.__check_in_group(group_list, uid, room_uid):
-                        room_u_sta = True
+                    groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
+                    cls.conf.log.info(f"group_2: {groups}, u_id: {u_id}, room_uid: {[uid]}")
+                    if groups:
+                        room_u_sta = await cls.__check_in_group(groups[0], u_id, [uid])
                         break
         except OperationalError as e:
             return False
@@ -134,12 +135,12 @@ class ClubUserGroupRC(RCModel):
         return True, "成功"
 
     @classmethod
-    async def __check_in_group(cls, groups, uid, room_uid) -> bool:
+    async def __check_in_group(cls, group, uid, room_uid) -> bool:
         """检查用户是否在禁止同桌组中"""
         exist = False
-        if groups and groups[0]["status"] == 1:
-            if groups[0]["u_ids"]:
-                for u_id in groups[0]["u_ids"]:
+        if group and group["status"] == 1:
+            if group["u_ids"]:
+                for u_id in group["u_ids"]:
                     if u_id in room_uid:
                         exist = True
                         break
