@@ -107,7 +107,7 @@ class ClubUserGroupRC(RCModel):
     async def check_uid_by_room(cls, club_id: int, uid: int, room_uid: list) -> bool:
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
-            sta = False
+            sta = room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
             if groups and groups[0]["status"] == 1:
                 group_u_ids = json_parse(groups[0]["u_ids"])
@@ -116,12 +116,25 @@ class ClubUserGroupRC(RCModel):
                         if u_id in room_uid:
                             sta = True
                             break
-            room_u_sta = False
+            cls.conf.log.info(f"禁止同桌检查进入房用户{uid}在茶馆{club_id}禁止同桌配置{groups},房间内玩家{room_uid}，结果{sta}")
             if not sta:
-                pass
+                for u_id in room_uid:
+                    groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
+
+                    cls.conf.log.info(
+                        f"禁止同桌检查房间内用户{u_id}在茶馆{club_id}禁止同桌配置{groups},待进入用户{uid}")
+                    if groups and groups[0]["status"] == 1:
+                        group_u_ids = json_parse(groups[0]["u_ids"])
+                        if group_u_ids:
+                            if uid in group_u_ids:
+                                room_u_sta = True
+                                break
+
+                cls.conf.log.info(
+                    f"禁止同桌检查房间内用户与待进入用户{uid}结果{room_u_sta}")
         except OperationalError as e:
             return False
-        return sta
+        return True if sta or room_u_sta else False
 
     @classmethod
     async def delete_club_all(cls, club_id: int):

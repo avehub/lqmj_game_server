@@ -245,6 +245,7 @@ class GameRoomsRC(BaseCommonRC):
             uid,
             room_uid,
         )
+        cls.conf.log.info("获取用户禁止同桌用户状态", exist)
         if exist:
             return False, "房间暂时被其他玩家占用"
         return True, "房间可加入"
