@@ -7,6 +7,7 @@ from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
 from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
+from common.utils.kit_async import DelayCall
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 
 
@@ -18,25 +19,34 @@ class BaseCardService(BaseService):
             CmdRoom.CLUB_OWNER_DISMISS.val: self.__club_owner_dismiss,
         })
 
+        DelayCall(120, self.close_room_timeout_idle).loop_start()
+
+    async def close_room_timeout_idle(self):
+        # 这里遍历副本，不然会报错：dictionary changed size during iteration
+        for room in list(self.rooms.values()):
+            await room.close_room_timeout_idle()
+
     async def _on_new_match(self, uid, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
         self.log_info("匹配信息",data)
         await self.new_match(uid, data)
 
     async def new_match(self, uid, data):
+
+        player = self.get_player(uid)
+        if player:
+            old_room = self.get_room(player.tid)
+            if old_room:
+                enter_room_model.reenter = True
+                reenter = enter_room_model.SerializeToString()
+                return await self.enter_room(player, old_room, reenter)
+
         tid = data.get("room_id")
-        club_id = data.get("club_id")
         room = self.get_room(tid)
         if not room:
             room = self.create_room(self.ROOM, data,tid = tid)
             self.log_info(f"创建房间{room.tid}")
         else:
-            player = self.get_player(uid)
-            if player and player.tid == tid:
-                enter_room_model.reenter = True
-                reenter = enter_room_model.SerializeToString()
-                await self.enter_room(player, room, reenter)
-                return
             if room.in_room_count == room.max_player_count:
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint="房间已满")
             if not room.room_status_is_equal(RoomStatus.T_IDLE):
