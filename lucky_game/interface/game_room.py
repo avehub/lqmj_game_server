@@ -55,7 +55,7 @@ class GameRoomAPI(RoomTemplateBase):
         # 判断是否维护
         conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
         if conf and conf.get("status"):
-            return self.answer(StaCode.FAIL, hint="喝杯茶, 休息一下")
+            return self.answer(StaCode.FAIL, hint="游戏玩法正在维护，喝杯茶，休息一下!")
 
         # 茶馆房间特殊处理
         if club_id and club_id > 0:
@@ -229,7 +229,7 @@ class JoinRoom(GameRoomAPI):
         # 判断是否维护
         conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
         if conf and conf.get("status"):
-            return self.answer(StaCode.FAIL, hint="喝杯茶, 休息一下")
+            return self.answer(StaCode.FAIL, hint="游戏玩法正在维护，喝杯茶，休息一下!")
         if room_data["pay_type"] == 3:
             price_key = "room_card"
             hint_key = "房卡"
