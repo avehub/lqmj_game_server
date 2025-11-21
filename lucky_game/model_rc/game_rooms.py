@@ -234,7 +234,7 @@ class GameRoomsRC(BaseCommonRC):
         )
         if not exist:
             return True, "房间可加入"
-        return False, "房间暂时被其他玩家占用"
+        return False, "您与房间内用户在同一隔离组中，请联系馆主"
 
     @classmethod
     async def check_user_group(cls, room_data: dict, uid: int):
@@ -247,7 +247,7 @@ class GameRoomsRC(BaseCommonRC):
         )
         cls.conf.log.info("获取用户禁止同桌用户状态", exist)
         if exist:
-            return False, "房间暂时被其他玩家占用"
+            return False, "房间内玩家配置了禁止同桌，请换个房间"
         return True, "房间可加入"
 
 

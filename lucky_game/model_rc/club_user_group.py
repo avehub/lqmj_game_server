@@ -108,12 +108,12 @@ class ClubUserGroupRC(RCModel):
         try:
             room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
-            sta = cls.__check_in_group(groups, uid)
+            sta = await cls.__check_in_group(groups, uid)
             if not sta:
                 for u_id in room_uid:
                     groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
-                    room_u_sta = cls.__check_in_group(groups, uid)
-                    if room_u_sta:
+                    if await cls.__check_in_group(groups, uid):
+                        room_u_sta = True
                         break
         except OperationalError as e:
             return False
@@ -136,7 +136,6 @@ class ClubUserGroupRC(RCModel):
         """检查用户是否在禁止同桌组中"""
         exist = False
         if groups and groups[0]["status"] == 1:
-            if groups[0]["u_ids"]:
-                if uid in groups[0]["u_ids"]:
-                    exist = True
+            if groups[0]["u_ids"] and uid in groups[0]["u_ids"]:
+                exist = True
         return exist
