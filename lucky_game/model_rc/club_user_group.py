@@ -138,9 +138,6 @@ class ClubUserGroupRC(RCModel):
         """检查用户是否在禁止同桌组中"""
         exist = False
         if groups and groups[0]["status"] == 1:
-            if groups[0]["u_ids"]:
-                for u_id in groups[0]["u_ids"]:
-                    if u_id in room_uid:
-                        exist = True
-                        break
+            if groups[0]["u_ids"] and uid in groups[0]["u_ids"]:
+                exist = True
         return exist
