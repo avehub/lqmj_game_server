@@ -113,11 +113,12 @@ class ClubUserGroupRC(RCModel):
                 sta = await cls.__check_in_group(groups[0], uid, room_uid)
             if not sta:
                 for u_id in room_uid:
-                    groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
-                    cls.conf.log.info(f"group_2: {groups}, u_id: {u_id}, room_uid: {[uid]}")
-                    if groups:
-                        room_u_sta = await cls.__check_in_group(groups[0], u_id, [uid])
-                        break
+                    group_list, _ = await cls.get_club_user_group_by_filter(club_id, u_ids=u_id)
+                    if group_list:
+                        for groups in group_list:
+                            cls.conf.log.info(f"group_2: {groups}, u_id: {u_id}, room_uid: {[uid]}")
+                            room_u_sta = await cls.__check_in_group(groups[0], u_id, [uid])
+                            break
         except OperationalError as e:
             return False
         return True if sta or room_u_sta else False
