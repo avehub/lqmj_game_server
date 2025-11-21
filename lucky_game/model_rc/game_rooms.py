@@ -245,9 +245,11 @@ class GameRoomsRC(BaseCommonRC):
             uid,
             room_uid,
         )
-        if not exist:
-            return True, "房间可加入"
-        return False, "房间暂时被其他玩家占用"
+        cls.conf.log.info("获取用户禁止同桌用户状态", exist)
+        if exist:
+            return False, "房间暂时被其他玩家占用"
+        return True, "房间可加入"
+
 
     @classmethod
     async def create_game_room(cls, platform: int, creator: int, rule_details: dict,

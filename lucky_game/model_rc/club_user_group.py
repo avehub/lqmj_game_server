@@ -80,7 +80,7 @@ class ClubUserGroupRC(RCModel):
         return group, "成功"
 
     @classmethod
-    async def get_club_user_group_by_filter(cls, club_id: int, uid: int = None, status: int = None):
+    async def get_club_user_group_by_filter(cls, club_id: int, uid: int = None, status: int = None, u_ids: int = None):
         """根据条件获取茶馆禁止同桌列表"""
         try:
             query = {}
@@ -90,6 +90,8 @@ class ClubUserGroupRC(RCModel):
                 query["uid"] = uid
             if status is not None:
                 query["status"] = status
+            if u_ids is not None:
+                query["u_ids__contains"] = u_ids
             groups = await cls.db_model.filter(**query).values()
             if groups:
                 #将u_ids转化为列表
@@ -105,7 +107,7 @@ class ClubUserGroupRC(RCModel):
     async def check_uid_by_room(cls, club_id: int, uid: int, room_uid: list) -> bool:
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
-            sta = False
+            sta = room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
             if groups and groups[0]["status"] == 1:
                 group_u_ids = json_parse(groups[0]["u_ids"])
@@ -113,9 +115,26 @@ class ClubUserGroupRC(RCModel):
                     for u_id in group_u_ids:
                         if u_id in room_uid:
                             sta = True
+                            break
+            cls.conf.log.info(f"禁止同桌检查进入房用户{uid}在茶馆{club_id}禁止同桌配置{groups},房间内玩家{room_uid}，结果{sta}")
+            if not sta:
+                for u_id in room_uid:
+                    groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=u_id)
+
+                    cls.conf.log.info(
+                        f"禁止同桌检查房间内用户{u_id}在茶馆{club_id}禁止同桌配置{groups},待进入用户{uid}")
+                    if groups and groups[0]["status"] == 1:
+                        group_u_ids = json_parse(groups[0]["u_ids"])
+                        if group_u_ids:
+                            if uid in group_u_ids:
+                                room_u_sta = True
+                                break
+
+                cls.conf.log.info(
+                    f"禁止同桌检查房间内用户与待进入用户{uid}结果{room_u_sta}")
         except OperationalError as e:
             return False
-        return sta
+        return True if sta or room_u_sta else False
 
     @classmethod
     async def delete_club_all(cls, club_id: int):
