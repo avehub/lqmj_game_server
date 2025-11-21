@@ -108,10 +108,12 @@ class ClubUserGroupRC(RCModel):
         try:
             room_u_sta = False
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
+            cls.conf.log.info(f"groups: {groups}")
             sta = await cls.__check_in_group(groups, uid)
             if not sta:
                 for u_id in room_uid:
                     group_list, _ = await cls.get_club_user_group_by_filter(club_id, u_ids=u_id)
+                    cls.conf.log.info(f"group_list: {group_list}")
                     if group_list:
                         for group in group_list:
                             if group["uid"] == uid:
