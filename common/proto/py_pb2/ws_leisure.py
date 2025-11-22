@@ -1130,6 +1130,15 @@ class S2CClubRoomSetInfo:
         obj.rank_members_only = kwargs.get("rank_members_only") or 0
         return obj
 
+class S2CCheckInGame:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CCheckInGame()
+        obj.game_status = kwargs.get("game_status") or 0
+        obj.room_id = kwargs.get("room_id") or 0
+        obj.is_owner = kwargs.get("is_owner") or False
+        return obj
+
 
 # ################################## 茶馆通知 ##################################
 

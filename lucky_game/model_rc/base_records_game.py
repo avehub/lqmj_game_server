@@ -101,9 +101,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         return data, "成功"
 
     @classmethod
-    async def get_by_room_id(cls, room_id: int = None, uid: int = None,  start_time: int = None,
-                             end_time: int = None, cs_type: int = None, page_size: int = None,
-                             page: int = None):
+    async def get_by_game_record(cls, room_id: int = None, uid: int = None,  start_time: int = None,
+                             end_time: int = None, cs_type: int = None):
         """根据房间号获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
@@ -114,11 +113,22 @@ class BaseRecordsGameRC(BaseCommonRC):
                 start_time=start_time,
                 end_time=end_time,
                 cs_type=cs_type,
-                page_size=page_size,
-                page=page,
             )
             if not data:
                 return data, e
+            t_ids = []
+            data_dict = {}
+            for item in data:
+                t_ids.append(item["record_tid"])
+                data_dict[item["record_tid"]] = item
+            segment_data, _ = await RecordsGameSegmentRC.get_record_segment_by_filter(
+                record_tid=t_ids,
+            )
+            for item in data:
+                item["segment"] = []
+                for segment in segment_data:
+                    if item["record_tid"] in data_dict:
+                        item["segment"].append(segment)
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"

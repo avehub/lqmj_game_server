@@ -8,13 +8,16 @@ from urllib import parse
 from urllib.parse import urlparse, urlunparse
 
 from sanic import Request, response
+
+from c_services.const.cs_enum_const import CmdRoom
 from lucky_game.base_api import SpecialApi
 from nsanic.libs.tool import read_file
-from common.public.enum_const import StaCode
+from common.public.enum_const import StaCode, ServiceEnum
 from lucky_game.handler.random_utils import generate_random_string
 from lucky_game.handler.wechat import WeChat
-from common.public.conf import WeChatConf
+from common.public.conf import WeChatConf, C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.app_versions import AppVersionsRC
+from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 
 
 class GetWeChatShareData(SpecialApi):
@@ -90,3 +93,43 @@ class GetWechatCode(SpecialApi):
             status=301,
             headers={"Cache-Control": "no-store"}
         )
+
+
+class GetGameRecord(SpecialApi):
+    """
+    获取游戏回放战绩
+    """
+    async def get(self, req: Request):
+        uid = self.check_int(req.args.get("uid"), require=False, p_name="用户ID")
+        room_id = self.check_int(req.args.get("room_id"), require=False, p_name="房间ID")
+        if not uid and not room_id:
+            return self.answer(StaCode.FAIL, hint="参数错误")
+        result, e = await BaseRecordsGameRC.get_by_game_record(
+            room_id=room_id,
+            uid=uid,
+        )
+        return self.answer(data=result, hint=e)
+
+
+class DissolveRoom(SpecialApi):
+    """
+    解散房间
+    """
+    async def get(self, req: Request):
+        room_id = self.check_int(req.args.get("room_id"), require=True, p_name="房间ID")
+        cs_type = self.check_int(req.args.get("cs_type"), require=True, p_name="cs_type")
+        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        if not cs_enum:
+            return False, "非法服务"
+        data = {
+            "room_id": room_id,
+            "cs_type": cs_type,
+            "secret": C_SERVICE_SECRET_KEY
+        }
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdRoom.FORCE_DISMISS_ROOM,
+            data,
+            1,
+        )
+        return self.answer()
