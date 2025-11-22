@@ -116,8 +116,8 @@ class ClubUserGroupRC(RCModel):
                 if group_list:
                     for group in group_list:
                         cls.conf.log.info(f"group_2: {group}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
-                        if uid == group["uid"]:
-                            room_u_sta = True
+                        room_u_sta = group["uid"] in room_uid
+                        if room_u_sta:
                             break
         except OperationalError as e:
             return False
