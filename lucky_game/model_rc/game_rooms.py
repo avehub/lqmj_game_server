@@ -244,6 +244,7 @@ class GameRoomsRC(BaseCommonRC):
             return True, "房间可加入"
         return False, "您与房间内用户在同一隔离组中，请联系馆主"
 
+
     @classmethod
     async def check_user_group(cls, room_data: dict, uid: int):
         """检查用户是否与房间成员在禁止同桌配置"""
