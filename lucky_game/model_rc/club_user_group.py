@@ -107,18 +107,17 @@ class ClubUserGroupRC(RCModel):
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
             sta = room_u_sta = False
-            if isinstance(room_uid, set):
-                room_uid = list(room_uid)
+            room_u_ids = [item for item in room_uid]
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
-            cls.conf.log.info(f"groups_1: {groups}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
+            cls.conf.log.info(f"groups_1: {groups}, 待加入uid: {uid}, 房间内room_uid: {room_u_ids}")
             if groups:
-                sta = await cls.__check_in_group(groups[0], uid, room_uid)
+                sta = await cls.__check_in_group(groups[0], uid, room_u_ids)
             if not sta:
                 group_list, _ = await cls.get_club_user_group_by_filter(club_id, u_ids=uid)
                 if group_list:
                     for group in group_list:
-                        cls.conf.log.info(f"group_2: {group}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
-                        room_u_sta = group["uid"] in room_uid
+                        cls.conf.log.info(f"group_2: {group}, 待加入uid: {uid}, 房间内room_uid: {room_u_ids}")
+                        room_u_sta = group["uid"] in room_u_ids
                         if room_u_sta:
                             break
         except OperationalError as e:
