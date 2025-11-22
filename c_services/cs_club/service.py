@@ -1,11 +1,12 @@
 import asyncio
 
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdClub, CallCheck
+from c_services.const.cs_enum_const import CmdClub, CallCheck, ClubMsgType, CmdRoom
 from c_services.cs_club.room import ClubRoom
 from common.proto.py_pb2.ws_c2s import leave_club_model, club_room_set_model
-from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice, S2CClubRoomSetInfo
-from common.public.enum_const import StaCode
+from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice, S2CClubRoomSetInfo, S2CCheckInGame, one_of_model
+from common.public.conf import C_SERVICE_SECRET_KEY
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
@@ -24,6 +25,9 @@ class ClubServer(BaseServer):
             CmdClub.LEAVE_CLUB: self.__leave_club,
             CmdClub.CLUB_NOTICE: self.__club_notice,
             CmdClub.UPDATE_ROOM_SET:self.__update_room_set,
+            CmdClub.CHECK_GAME_STATUS:self.__check_game_status,
+            CmdClub.JOIN_NEW_GAME:self.__join_new_game,
+            CmdClub.JOIN_NEW_GAME_SUC:self.__join_new_game_suc,
         })
 
         self.__rooms = {}
@@ -53,6 +57,8 @@ class ClubServer(BaseServer):
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
         room = self.get_or_create_room(club_id, owner)
+        if uid in room.members:
+            return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家已在茶馆")
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")
@@ -101,6 +107,48 @@ class ClubServer(BaseServer):
             data_model = S2CClubRoomSetInfo.pb_model(**set_data)
             await room.inner_broadcast(CmdClub.UPDATE_ROOM_SET, data_model)
 
+    async def __check_game_status(self,uid,data):
+        one_of_model.ParseFromString(data)
+        req_id = one_of_model.req_id
+        info = await self.get_play_in_game(uid)
+        game_status = info.get("game_status", 0) if info else 0
+        is_owner = info and info.get("owner") == uid if info else False
+        room_id = info.get("room_id", 0) if info else 0
+        data = {
+            "game_status": game_status,
+            "room_id": room_id,
+            "is_owner": is_owner
+        }
+        data_model = S2CCheckInGame.pb_model(**data)
+        await self.cs2ws_by_rmq(CmdClub.CHECK_GAME_STATUS, uid,msg=data_model,req_id = req_id)
+
+    async def get_play_in_game(self, uid):
+        try:
+            info = await self.conf.rds.get_hash(CacheKey.PLAYER_GAME_STA, uid, jsparse=True)
+        except Exception as e:
+            info = {}
+        return info
+
+    async def __join_new_game(self,uid,data):
+        one_of_model.ParseFromString(data)
+        req_id = one_of_model.req_id
+        info = await self.get_play_in_game(uid)
+        if info:
+            creator = info.get("owner")
+            cs_type = info.get("cs_type")
+            info["secret"] = C_SERVICE_SECRET_KEY
+            info["uid"] = uid
+            info["req_id"] = req_id
+            info["from_club"] = True
+            c_enum = ServiceEnum.find_member_by_val(cs_type)
+            if creator != uid:
+                await self.cs2cs_by_rmq(c_enum, CmdRoom.CLUB_QUIT_ROOM,info , uid )
+            else:
+                await self.cs2cs_by_rmq(c_enum, CmdRoom.CLUB_OWNER_DISMISS, info)
+
+    async def __join_new_game_suc(self,uid,data):
+        req_id = data.get("req_id")
+        await self.cs2ws_by_rmq(CmdClub.JOIN_NEW_GAME, uid ,req_id = req_id)
 
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """

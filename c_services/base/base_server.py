@@ -194,6 +194,19 @@ class BaseServer(BasePubService, CommonApi):
     async def del_player_in_service(self, uid):
         await self.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
 
+    async def sava_player_in_game(self, uid, tid,owner,club_id,game_status):
+        info = {
+            "room_id": tid,
+            "cs_type": self.service_type,
+            "owner":owner,
+            "club_id":club_id,
+            "game_status":game_status
+        }
+        await self.conf.rds.set_hash(CacheKey.PLAYER_GAME_STA, uid, info)
+
+    async def del_player_in_game(self, uid):
+        await self.conf.rds.drop_hash(CacheKey.PLAYER_GAME_STA, uid)
+
     async def save_play_gold(self,uid ,gold):
         info = {
             "cs_type": self.service_type,

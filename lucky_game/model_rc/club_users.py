@@ -5,6 +5,8 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ClubUsers
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
+
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
@@ -99,9 +101,12 @@ class ClubUsersRC(BaseCommonRC):
                 if role is not None and role != data["role"]:
                     # 管理员->普通成员
                     status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL
+                    group_status = ClubUserGroupRC.GROUP_STATUS_NORMAL
                     if role == cls.ROLE_MANAGE:
                         # 普通成员->管理员
                         status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
+                        group_status = ClubUserGroupRC.GROUP_STATUS_DISABLE
+                    # 写入行为记录
                     sta, msg = await ExtraClubBehaviorRC.create_club_behavior(
                         ExtraClubBehaviorRC.BEHAVIOR_MANAGE_INDEX,
                         data["uid"],
@@ -111,6 +116,18 @@ class ClubUsersRC(BaseCommonRC):
                     )
                     if not sta:
                         return False, msg
+                    # 更新禁止同桌状态
+                    groups, e = await ClubUserGroupRC.get_club_user_group_by_filter(
+                        data["club_id"],
+                        uid=data["uid"]
+                    )
+                    if groups and groups[0]["u_ids"]:
+                        group_id, e = await ClubUserGroupRC.update_club_user_group(
+                            groups[0]["gid"],
+                            status=group_status
+                        )
+                        if not group_id:
+                            return False, msg
         except OperationalError as e:
             return False, e
         return True, "更新成功"

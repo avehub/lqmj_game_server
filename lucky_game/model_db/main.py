@@ -44,7 +44,7 @@ class User(DBModel):
     openid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     wechat = fields.SmallIntField(max_length=2, null=True, default=0, description='微信绑定标识：1已绑定 0未绑定')
-    apple_id = fields.CharField(max_length=128, null=True, default='', description='苹果平台用户授权唯一标识')
+    apple_id = fields.CharField(max_length=128, index=True, default='', description='苹果平台用户授权唯一标识')
     ban_time = fields.BigIntField(null=True, default=0, description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
@@ -809,3 +809,15 @@ class AppVersions(DBModel):
     class Meta:
         table = "app_versions"
         unique_together = (("app_id", "version_code", "platform"), ("platform", "status"),)
+
+
+class ClubUserGroups(DBModel):
+    """茶馆用户禁止同桌表"""
+    gid = fields.IntField(max_length=10, pk=True, description='分组ID')
+    club_id = fields.IntField(max_length=10, null=True, description='茶馆ID')
+    uid = fields.IntField(max_length=28, null=True, description='玩家ID')
+    u_ids = fields.TextField(null=True, description='多个玩家ID')
+    status = fields.SmallIntField(null=True, default=1, description='状态：0失效 1生效')
+
+    class Meta:
+        table = "club_user_groups"

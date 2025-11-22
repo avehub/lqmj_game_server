@@ -23,6 +23,10 @@ class SessionManager:
     async def new_match(self, *args, **kwargs):
         """ 接收新匹配 """
 
+    @property
+    def rooms(self):
+        return self.__rooms
+
     def get_room(self, tid):
         """ 获取房间 """
         return self.__rooms.get(tid)

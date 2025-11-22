@@ -97,7 +97,7 @@ class ClubGroupRC(RCModel):
                     return sta, "删除失败"
                 sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                     ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                    0,
+                    uid,
                     group["club_id"],
                     check_uid=uid,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
@@ -167,13 +167,13 @@ class ClubGroupRC(RCModel):
         cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中:uid:{uid},room_uid:{room_uid},groups:{groups}")
         if groups:
             for item in groups:
-                values_to_check = [uid]
-                target_array = json_parse(item["u_ids"])
-                for check_uid in room_uid:
-                    values_to_check.append(check_uid)
-                    if all(value in target_array for value in values_to_check):
-                        all_exist = True
-                        break
+                if item["u_ids"]:
+                    for check_uid in room_uid:
+                        if int(check_uid) in item["u_ids"]:
+                            all_exist = True
+                            break
+
+        cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中结果:{all_exist}")
         return all_exist
 
     @classmethod

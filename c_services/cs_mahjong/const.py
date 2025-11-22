@@ -216,6 +216,7 @@ class OverType(IntEnum):
     FORCE = 4  # 强制解散
     OTHERS_GIVE_UP = 5  # 其它玩家认输
     CLUB_OWNER_DISMISS = 6  # 房主解散
+    ULTIMATE_DISMISS = 7  # 终极解散(兜底)
 
 
 @unique

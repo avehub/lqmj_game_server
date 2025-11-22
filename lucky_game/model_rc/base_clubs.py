@@ -6,6 +6,8 @@ from tortoise.exceptions import OperationalError
 from lucky_game.const import ReasonCostGold
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.club_group import ClubGroupRC
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus
@@ -14,6 +16,8 @@ from common.public.enum_const import DbKey
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+
+
 
 
 class BaseClubRC(BaseCommonRC):
@@ -211,6 +215,14 @@ class BaseClubRC(BaseCommonRC):
                 # 删除茶馆房间模板
                 del_template, e = await ClubRoomTemplatesRC.delete_club_all(club_id)
                 if not del_template:
+                    return None, e
+                # 删除茶馆隔离组
+                del_group, e = await ClubGroupRC.delete_club_all(club_id)
+                if not del_group:
+                    return None, e
+                # 删除茶馆禁止同桌
+                del_user_group, e = await ClubUserGroupRC.delete_club_all(club_id)
+                if not del_user_group:
                     return None, e
                 await cls.db_model.update_by_pk(club_id, {"status": 1})
                 await cls.cache_session_drop(club_id)
