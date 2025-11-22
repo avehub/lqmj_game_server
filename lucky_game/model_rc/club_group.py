@@ -169,7 +169,7 @@ class ClubGroupRC(RCModel):
             for item in groups:
                 if item["u_ids"]:
                     for check_uid in room_uid:
-                        if check_uid in item["u_ids"]:
+                        if int(check_uid) in item["u_ids"]:
                             all_exist = True
                             break
 
