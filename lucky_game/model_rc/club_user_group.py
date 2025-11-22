@@ -107,6 +107,8 @@ class ClubUserGroupRC(RCModel):
         """检测用户是否与房间内用户在同一禁止同桌中"""
         try:
             sta = room_u_sta = False
+            if isinstance(room_uid, set):
+                room_uid = list(room_uid)
             groups, _ = await cls.get_club_user_group_by_filter(club_id, uid=uid)
             cls.conf.log.info(f"groups_1: {groups}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
             if groups:
