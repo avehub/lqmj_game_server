@@ -177,6 +177,12 @@ class GameRoomsRC(BaseCommonRC):
     async def cache_room_drop(cls, room_id):
         return await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
 
+
+    @classmethod
+    async def cache_room_in_user_get(cls, room_id):
+        data = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+        return [p.decode('utf-8') for p in data]
+
     @classmethod
     async def unique_room_id(cls, num: int = 6):
         """生成唯一房间ID"""
@@ -186,6 +192,8 @@ class GameRoomsRC(BaseCommonRC):
             if not has:
                 await cls.conf.rds.sadd(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 return room_id
+
+
 
     @classmethod
     async def before_room(cls, club_id: int, uid: int):
@@ -226,7 +234,7 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def check_room_group(cls, room_data: dict, uid: int):
         """检查将要加入房间用户是否与房间成员在隔离组"""
-        room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
+        room_uid = await cls.cache_room_in_user_get(room_data['room_id'])
         exist = await ClubGroupRC.check_uid_by_room(
             room_data["club_id"],
             room_uid,
@@ -239,9 +247,7 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def check_user_group(cls, room_data: dict, uid: int):
         """检查用户是否与房间成员在禁止同桌配置"""
-        room_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_data['room_id']}")
-        cls.conf.log.info("redis集合房间内玩家", type(room_uid), room_uid)
-        cls.conf.log.info("用户列表", [p.decode('utf-8') for p in room_uid])
+        room_uid = await cls.cache_room_in_user_get(room_data['room_id'])
         exist = await ClubUserGroupRC.check_uid_by_room(
             room_data["club_id"],
             uid,
