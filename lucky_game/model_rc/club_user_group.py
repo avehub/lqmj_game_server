@@ -116,7 +116,7 @@ class ClubUserGroupRC(RCModel):
                 if group_list:
                     for group in group_list:
                         cls.conf.log.info(f"group_2: {group}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
-                        room_u_sta = group["status"] == 1 and uid in room_uid
+                        room_u_sta = group["status"] == 1 and str(uid) in room_uid
                         if room_u_sta:
                             break
         except OperationalError as e:
@@ -145,7 +145,7 @@ class ClubUserGroupRC(RCModel):
                 for u_id in group["u_ids"]:
                     cls.conf.log.info(f"group_1:禁止同桌u_id: {type(u_id)} {u_id}")
                     cls.conf.log.info(f"group_1:禁止同桌room_uid: {type(room_uid)} {room_uid}")
-                    if u_id in room_uid:
+                    if str(u_id) in room_uid:
                         exist = True
                         break
         return exist
