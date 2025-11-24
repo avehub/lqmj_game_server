@@ -20,10 +20,10 @@ class ClubRoom:
     def owner(self):
         return self.__owner
 
-    def player_join_room(self, uid):
+    def player_join_club_room(self, uid):
         self.__members.add(uid)
 
-    def player_quit_room(self, uid):
+    def player_quit_club_room(self, uid):
         self.__members.discard(uid)
 
     def check_player_in_club(self, uid):

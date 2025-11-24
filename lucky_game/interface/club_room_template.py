@@ -18,11 +18,19 @@ async def verify_rule_detail(rule_details, play_type) -> dict:
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
     play_rule = await GameRoomsRC.get_play_rule(play_type)
+    own_play_field = await GameRoomsRC.own_default_play_field(play_type)
+    own_play_value = await GameRoomsRC.own_default_play_value(play_type)
     for k, v in play_rule.items():
+        require = True
+        default = None
+        if own_play_field and k in own_play_field:
+            require = False
+            default = own_play_value[k]
         await decorator.check_inner(
             val=rule.get(k),
-            require=True,
+            require=require,
             inner_dick=v,
+            default=default,
             p_name=k
         )
     return rule
@@ -75,6 +83,7 @@ class RoomTemplateCreate(RoomTemplateBase):
             club_id=club_id,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -113,6 +122,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
             rule_details=rule_dick,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -157,7 +167,7 @@ class RoomTemplateDelete(RoomTemplateBase):
             return self.answer(StaCode.FAIL, hint=e)
         club_id = template["club_id"]
         await self.check_authority(uid, club_id)
-        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
+        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id, check_uid=uid)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)

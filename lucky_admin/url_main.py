@@ -1,18 +1,25 @@
 # coding=utf-8
 from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
-from lucky_admin.interface.items import GetAllItemsHandler, GetAllStoresHandler
+# from lucky_admin.interface.items import GetAllItemsHandler, GetAllStoresHandler
 from lucky_admin.interface.login import LoginByAccount, LoginByToken
-from lucky_admin.interface.modify_assets import QueryAssetsEnum, ModifyUserAssets
-from lucky_admin.interface.recharge_correlation import OrderHandler, ReplenishmentOrder
-from lucky_admin.interface.season import SeasonInfoHandler, SeasonRankingHandler
+# from lucky_admin.interface.modify_assets import QueryAssetsEnum, ModifyUserAssets
+# from lucky_admin.interface.recharge_correlation import OrderHandler, ReplenishmentOrder
+# from lucky_admin.interface.season import SeasonInfoHandler, SeasonRankingHandler
 from lucky_admin.interface.test_api import TestApi
-from lucky_admin.interface.data_stats import GetFunnelAnalysis, GetUserRetentionStats, GetAdsEventStats, \
-    GetUserDataAnalysis, GetAdsUserStats, GetAdsParams
-from lucky_admin.interface.players_manager import PlayerHandler, OperatesRecordsHandler, PlayerRankingHandler, \
-    ModifyPassword, RoomPlayerHandler
-from lucky_admin.interface.inform import AnnouncementsHandler, BanHandler, MailsManagerSend, \
-    BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
+# from lucky_admin.interface.data_stats import GetFunnelAnalysis, GetUserRetentionStats, GetAdsEventStats, \
+#     GetUserDataAnalysis, GetAdsUserStats, GetAdsParams
+# from lucky_admin.interface.players_manager import PlayerHandler, OperatesRecordsHandler, PlayerRankingHandler, \
+#     ModifyPassword, RoomPlayerHandler
+# from lucky_admin.interface.inform import AnnouncementsHandler, BanHandler, MailsManagerSend, \
+#     BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
+from lucky_admin.interface.mail import Email
+from lucky_admin.interface.club import Club, ClubEvent
+from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges, ResourceChangeChart, \
+     UserResource
+from lucky_admin.interface.room import GameRoom, GameRecord
+from lucky_admin.interface.award import Award
+
 
 
 class MainBp(BaseBlue):
@@ -23,36 +30,61 @@ class MainBp(BaseBlue):
         Urls("/LoginByAccount", LoginByAccount),
         Urls("/LoginByToken", LoginByToken),
 
+        # 邮件相关
+        Urls("/Email", Email),
+
+        # 用户模块
+        Urls("/User", User),
+        Urls("/UserStatus", UserStatus),
+        Urls("/UserResource", UserResource),
+        Urls("/OrderList", OrderList),
+        Urls("/OrderStatistics", OrderStatistics),
+        Urls("/ResourceChanges", ResourceChanges),
+        Urls("/ResourceChangeChart", ResourceChangeChart),
+
+        # 茶馆模块
+        Urls("/Club", Club),
+        Urls("/ClubEvent", ClubEvent),
+
+        # 游戏房间模块
+        Urls("/GameRoom", GameRoom),
+        Urls("/GameRecord", GameRecord),
+
+        # 奖励模块
+        Urls("/Award", Award),
+
+
+
         # 资产相关
-        Urls("/QueryAssetsEnum", QueryAssetsEnum),  # 查询资产枚举
-        Urls("/ModifyUserAssets", ModifyUserAssets),  # 修改玩家资产
-        Urls("/GetAllItemsHandler", GetAllItemsHandler),  # 获取所有子物品
-        Urls("/GetAllStoresHandler", GetAllStoresHandler),  # 获取所有商品/充值
+        # Urls("/QueryAssetsEnum", QueryAssetsEnum),  # 查询资产枚举
+        # Urls("/ModifyUserAssets", ModifyUserAssets),  # 修改玩家资产
+        # Urls("/GetAllItemsHandler", GetAllItemsHandler),  # 获取所有子物品
+        # Urls("/GetAllStoresHandler", GetAllStoresHandler),  # 获取所有商品/充值
 
         # 通知相关
-        Urls("/AnnouncementsHandler", AnnouncementsHandler),
-        Urls("/BanHandler", BanHandler),
-        Urls("/MailsHandler", MailsManagerSend),
-
-        Urls("/PlayerHandler", PlayerHandler),  # 玩家管理
-        Urls("/PlayerRankingHandler", PlayerRankingHandler),  # 更新玩家修为
-        Urls("/ModifyPassword", ModifyPassword),  # 更新玩家修为
-        Urls("/RoomPlayerHandler", RoomPlayerHandler),  # 房间玩家管理（解散）
-
-        Urls("/OperatesRecordsHandler", OperatesRecordsHandler),  # 操作记录
-        Urls("/BackgroundRecordsTaskHandler", BackgroundRecordsTaskHandler),  # 后台定时任务记录
-        Urls("/GetActiveMails", GetActiveMails),  # 获取活跃邮件
-        Urls("/ItemRemovalCompensator", ItemRemovalCompensator),  # 物品下架补偿器
-
-        # 统计相关
-        Urls("/GetAdsEventStats", GetAdsEventStats),  # 获取广告事件统计
-        Urls("/GetFunnelAnalysis", GetFunnelAnalysis),  # 获取漏斗分析结果
-        Urls("/GetUserRetentionStats", GetUserRetentionStats),  # 获取用户留存统计
-        Urls("/GetUserDataAnalysis", GetUserDataAnalysis),  # 获取用户数据分析
-        Urls("/GetAdsUserStats", GetAdsUserStats),  # 获取广告用户统计（个人）
-        Urls("/GetAdsParams", GetAdsParams),  # 获取广告参数
-
-        # 订单相关
-        Urls("/OrderHandler", OrderHandler),  # 订单记录
-        Urls("/ReplenishmentOrder", ReplenishmentOrder),  # 订单记录
+        # Urls("/AnnouncementsHandler", AnnouncementsHandler),
+        # Urls("/BanHandler", BanHandler),
+        # Urls("/MailsHandler", MailsManagerSend),
+        #
+        # Urls("/PlayerHandler", PlayerHandler),  # 玩家管理
+        # Urls("/PlayerRankingHandler", PlayerRankingHandler),  # 更新玩家修为
+        # Urls("/ModifyPassword", ModifyPassword),  # 更新玩家修为
+        # Urls("/RoomPlayerHandler", RoomPlayerHandler),  # 房间玩家管理（解散）
+        #
+        # Urls("/OperatesRecordsHandler", OperatesRecordsHandler),  # 操作记录
+        # Urls("/BackgroundRecordsTaskHandler", BackgroundRecordsTaskHandler),  # 后台定时任务记录
+        # Urls("/GetActiveMails", GetActiveMails),  # 获取活跃邮件
+        # Urls("/ItemRemovalCompensator", ItemRemovalCompensator),  # 物品下架补偿器
+        #
+        # # 统计相关
+        # Urls("/GetAdsEventStats", GetAdsEventStats),  # 获取广告事件统计
+        # Urls("/GetFunnelAnalysis", GetFunnelAnalysis),  # 获取漏斗分析结果
+        # Urls("/GetUserRetentionStats", GetUserRetentionStats),  # 获取用户留存统计
+        # Urls("/GetUserDataAnalysis", GetUserDataAnalysis),  # 获取用户数据分析
+        # Urls("/GetAdsUserStats", GetAdsUserStats),  # 获取广告用户统计（个人）
+        # Urls("/GetAdsParams", GetAdsParams),  # 获取广告参数
+        #
+        # # 订单相关
+        # Urls("/OrderHandler", OrderHandler),  # 订单记录
+        # Urls("/ReplenishmentOrder", ReplenishmentOrder),  # 订单记录
     ]

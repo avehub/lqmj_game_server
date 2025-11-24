@@ -143,12 +143,14 @@ LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MAN
 class Channel(StrEnum):
     C_SERVICES = "C_SERVICES"  # 子服务频道前缀
     CHANNEL_SYSTEM_MSG = "CHANNEL_SYSTEM_MSG"  # 系统消息
+    C_SERVICES_COMMON = "C_SERVICES_COMMON" #公共广播消息
 
 
 class CacheKey(StrEnum):
     IN_SERVICE = "IN_SERVICE"  # 在子服务（在哪个子服务）
     WS_ONLINE_INFO = "WS_ONLINE_INFO"  # ws在线信息
     PLAYER_GOLD = "PLAYER_GOLD" #休闲场玩家起始金币
+    PLAYER_GAME_STA = "PLAYER_GAME_STA" #玩家游戏状态
 
 
 class DbKey(StrEnum):

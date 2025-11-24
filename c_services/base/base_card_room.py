@@ -2,11 +2,13 @@ from nsanic.libs.tool import json_encode
 from nsanic.libs import tool_dt
 from c_services.base.base_room import BaseRoom
 from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement, CmdClub, ClubMsgType
-from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, ExtraHuPai, CheckType, PAI_XING_SCORE_MAP, HuType, FlowStatus, \
+from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, ExtraHuPai, CheckType, PAI_XING_SCORE_MAP, \
+    HuType, FlowStatus, \
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo, \
+    S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
@@ -16,8 +18,6 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
-
-# from lucky_game.model_rc.base_activity import ConfActivityRC
 
 
 class BaseCardRoom(BaseRoom):
@@ -32,11 +32,12 @@ class BaseCardRoom(BaseRoom):
         self.__owner = room_conf.get("creator") or 0
         self.__create_time = room_conf.get("create_time") or tool_dt.cur_time()
         self.__cur_round = room_conf.get("cur_round") or 1
-        self.__timeout_idle_time = 60 * 60 * 12
+        self.__timeout_idle_time = 60 * 60 * 1
         self.__timer_dismiss = None
         self.__round_msg_records = []
         self.__winner_list = []
         self.__online_group_user = []
+        self.__replay_msg_data = []
         self.__agree_dismiss_seats = set()
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
@@ -50,7 +51,21 @@ class BaseCardRoom(BaseRoom):
         else:
             self.__deal_cards_count = 13
 
-        DelayCall(120, self.close_room_time_out).loop_start()
+        self.__game_began = False
+
+    async def close_room_timeout_idle(self):
+        if self.game_began:
+            return
+        idle_time = tool_dt.cur_time() - self.__create_time
+        if idle_time < self.__timeout_idle_time:
+            return
+        if self.in_room_count > 0:
+            # 有人则 x2
+            if idle_time < self.__timeout_idle_time * 2:
+                self.log_info("房间空闲超时但还有人，增加300s超时", idle_time, self.__timeout_idle_time)
+                return
+        self.log_info("超时关闭房间", self.in_room_count, self.seats)
+        await self.force_dismiss()
 
     @property
     def extra_score_map(self):
@@ -94,17 +109,6 @@ class BaseCardRoom(BaseRoom):
             self.__not_playing_dismiss = False
             self.__not_playing_room_status = RoomStatus.T_IDLE
 
-    async def close_room_time_out(self):
-        if self.game_began():
-            return
-        if tool_dt.cur_time() - self.__create_time < self.__timeout_idle_time:
-            return
-        # if self.in_room_count > 0:
-        #     self.__timeout_idle_time += 300
-        #     return
-        self.log_info("超时关闭房间",self.in_room_count,self.seats)
-        await self.force_dismiss()
-
     @property
     def timer_dismiss(self):
         return self.__timer_dismiss
@@ -132,29 +136,31 @@ class BaseCardRoom(BaseRoom):
 
     def clear_agree_dismiss(self):
         self.cancel_timer_dismiss()
-        return self.__agree_dismiss_seats.clear()
+        self.__agree_dismiss_seats.clear()
 
     async def player_join_room(self, players: list):
         await super(BaseCardRoom, self).player_join_room(players)
+        await self.service.sava_player_in_game(players[0].uid, self.tid, self.owner, self.club_id, 1)
         if self.club_id > 0:
             if self.__owner == players[0].uid:
                 await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.CREATE_ROOM))
             else:
-                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
-
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE,
+                                          self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
 
     async def player_quit_room(self, player, data):
-        self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began(), "owner:", self.owner, "tid:", self.tid)
-        if not self.game_began():
+        self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began, "owner:", self.owner, "tid:",
+                      self.tid)
+        if not self.game_began:
             if self.owner == player.uid:
                 if self.in_room_count == 1:
                     self.__not_playing_dismiss = True
                     return await self.force_dismiss()
                 await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, "房主不能退出")
                 return
-            sta,e = await GameRoomsRC.leave_room(self.tid, player.uid)
+            sta, e = await GameRoomsRC.leave_room(self.tid, player.uid)
             if not sta:
-                self.log_info("离开房间失败",e)
+                self.log_info("离开房间失败", e)
                 await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, e)
                 return
             one_of_model = s2c_one_of_model()
@@ -162,6 +168,7 @@ class BaseCardRoom(BaseRoom):
             await self.inner_broadcast(CmdRoom.QUIT_ROOM, one_of_model)
             await GameRoomsRC.leave_room(self.tid, player.uid)
             self.seats[player.seat_id - 1] = None
+            await self.service.del_player_in_game(player.uid)
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             self.service.release_player(player)
             if self.club_id > 0:
@@ -169,15 +176,69 @@ class BaseCardRoom(BaseRoom):
                 for p in self.seats:
                     if not p:
                         continue
-                    uid_list =  await GameRoomsRC.get_online_user_group(p.uid, self.club_id)
+                    uid_list = await GameRoomsRC.get_online_user_group(p.uid, self.club_id)
                     if uid_list:
                         online_group_user_set.update(uid_list)
                 self.online_group_user = list(online_group_user_set)
-                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.QUIT_ROOM))  # 通知茶馆创建房间
+                await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE,
+                                          self.club_room_info(ClubMsgType.QUIT_ROOM))  # 通知茶馆创建房间
+        else:
+            self.log_info("游戏开始了，不能离开", player.uid)
+            return
         super(BaseCardRoom, self).player_quit_room(player, data)
 
+    async def req_dismiss_room(self, player,agree):
+        if not self.timer_dismiss:
+            if agree:
+                self.call_dismiss(120, self.force_dismiss, OverType.FORCE)
+            else:
+                return StaCode.ALREADY_DO, "当前房间没有发起解散或已拒绝解散"
+        if player.seat_id in self.__agree_dismiss_seats:
+            return StaCode.FAIL, "你已经同意解散"
+
+        if not self.__agree_dismiss_seats:
+            if self.room_status not in (RoomStatus.T_DISMISS,RoomStatus.T_CLOSED):
+                self.set_not_playing_dismiss(self.room_status,True)
+                await self.async_set_room_status(RoomStatus.T_DISMISS)
+
+        if agree:
+            self.add_agree_dismiss(player.seat_id)
+        else:
+            self.clear_agree_dismiss()
+            await self.back_room_status()
+
+        data = {
+            "seat_id": player.seat_id,
+            "agree": agree,
+            "agree_seats": list(self.agree_dismiss_seats),
+            "total_time":120,
+            "left_seconds":self.dismiss_left_seconds(),
+        }
+        if self.in_room_count > 1:
+            data_model = S2CReqDismissRoom.pb_model(**data)
+            await self.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
+        self.log_info("请求解散房间",player.uid,"结果:",agree)
+        if self.agree_dismiss_count() == self.in_room_count:
+            self.clear_agree_dismiss()
+            await self.force_dismiss(OverType.FORCE)
+        if player.uid == self.owner and self.in_room_count == 1:
+            self.clear_agree_dismiss()
+            await self.force_dismiss(OverType.FORCE)
+        return StaCode.PASS, ""
+
+    async def player_change_connect(self, player,data):
+        data_connect = {"seat_id":player.seat_id,"offline":data}
+        data_model = S2CChangeConnect.pb_model(**data_connect)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model, exclude_uid=player.uid)
+
+    @property
     def game_began(self):
-        return self.round_idx != 1 or self.room_status != RoomStatus.T_IDLE
+        return self.__game_began
+
+    def set_game_began(self):
+        if self.__game_began:
+            return
+        self.__game_began = True
 
     async def round_start(self):
         self.clear_room_round_start()
@@ -192,6 +253,7 @@ class BaseCardRoom(BaseRoom):
     def clear_room_round_start(self):
         """ 小局开始清理 """
         self.__round_msg_records = []
+        self.__replay_msg_data = []
         self.__add_room_info_msg()
         self.__add_player_info_msg()
 
@@ -204,7 +266,7 @@ class BaseCardRoom(BaseRoom):
     def __add_round_log(self, cmd, data, code, hint):
         """ 对局日志 """
         # 首局并且空闲不记录
-        if not self.game_began():
+        if not self.game_began:
             return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
@@ -218,12 +280,14 @@ class BaseCardRoom(BaseRoom):
         """ 获取玩家信息 """
         self.__add_pack_msg_records(CmdRoom.PLAYER_INFO, self.serialize_player_info(self.room_player_info()))
 
-    async def inner_send(self, p, c_code, data=None, code: StaCode = StaCode.PASS, hint='', req_id="", record_round_log=True):
+    async def inner_send(self, p, c_code, data=None, code: StaCode = StaCode.PASS, hint='', req_id="",
+                         record_round_log=True):
         await super().inner_send(p, c_code, data, code, hint, req_id)
         if record_round_log:
             self.__add_round_log(c_code, data, code, hint)
 
-    async def inner_broadcast(self, c_code, data=None, code: StaCode = StaCode.PASS, hint='', exclude_uid=0, record_round_log=True):
+    async def inner_broadcast(self, c_code, data=None, code: StaCode = StaCode.PASS, hint='', exclude_uid=0,
+                              record_round_log=True):
         await super().inner_broadcast(c_code, data, code, hint, exclude_uid)
         if record_round_log:
             self.__add_round_log(c_code, data, code, hint)
@@ -280,7 +344,7 @@ class BaseCardRoom(BaseRoom):
         account = kwargs.pop("account")
         data = kwargs
 
-        new_data = []
+        self.__replay_msg_data = []
         score_rank_map = self.get_player_ranking(account, True)
         round_over_time = tool_dt.cur_time()
         for p in self.seats:
@@ -294,7 +358,7 @@ class BaseCardRoom(BaseRoom):
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
                 "replay_msg": self.__round_msg_records,
-                "replay_label":replay_label
+                "replay_label": replay_label
             }
             player_account = account.get(p.seat_id, {})
             score = player_account.get("total_score", 0)
@@ -307,20 +371,20 @@ class BaseCardRoom(BaseRoom):
             record_data["round_score"] = score
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
-            new_data.append(record_data)
+            self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         # if over_type != OverType.FORCE:
         data_model = S2CRoundOverInfo.pb_model(**data)
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
-        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-        self.log_info("一轮结束战绩插入", result_data)
 
-
-        if not self.has_next_round() or over_type == OverType.FORCE:
+        if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
+            self.log_info("一轮结束战绩插入", result_data)
+            self.__replay_msg_data = []
             await self.next_round_ready()
 
     async def next_round_ready(self):
@@ -350,7 +414,7 @@ class BaseCardRoom(BaseRoom):
     async def check_game_start(self, force=False):
         if not self.room_status_is_equal(RoomStatus.T_IDLE):
             return False
-        if self.max_player_count<2:
+        if self.max_player_count < 2:
             return False
         if force:
             if 2 > self.in_room_count:  # 手动开始人数未满2人
@@ -374,17 +438,24 @@ class BaseCardRoom(BaseRoom):
             return
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
+        self.set_game_began()
         if self.round_idx == 1:
             uid_list = [p.uid for p in self.seats if p and p.uid != self.owner]
-            sta,e = await GameRoomsRC.room_start_sub(self.tid, uid_list)
+            sta, e = await GameRoomsRC.room_start_sub(self.tid, uid_list)
             if not sta:
-                self.log_info("扣费失败",e,"入参",self.tid, uid_list)
+                self.log_info("扣费失败", e, "入参", self.tid, uid_list)
                 return
-            record_info,e = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
+            record_info, e = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
             if not record_info:
-                self.log_info("战绩创建失败",e,"入参",self.tid, tool_dt.cur_time())
+                self.log_info("战绩创建失败", e, "入参", self.tid, tool_dt.cur_time())
             self.__record_id = record_info.record_rid
         self.call_flow(2, self.round_start)
+        for p in self.seats:
+            if p:
+                await self.service.sava_player_in_game(p.uid, self.tid, self.owner, self.club_id, 2)
+        if self.club_id > 0:
+            await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.UPDATE_ROOM))
+            await GameRoomsRC.update_game_room(self.tid, round_num=self.round_idx)
 
     async def game_over(self, over_type=OverType.DEFAULT):
         if self.room_status_is_equal(RoomStatus.T_DISMISS):
@@ -397,27 +468,56 @@ class BaseCardRoom(BaseRoom):
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
-            num = 1 if idx == 0 else 0
             result["seats"].append(p.game_over_data)
-            final_ranking = score_rank_map[p.total_score]
-            final_grade = 1 if final_ranking == 1 else 0
-            if self.__record_id > 0:
-                if over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE:
-                    room_status = 1
-                else:
-                    room_status = 0
-                over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.total_score >= 0, p.total_score
-                                                                                , final_ranking, final_grade, p.game_over_data, num,room_status)
-                self.log_info("总结算战绩插入", over_record)
-
-        if over_type == OverType.FORCE or over_type == OverType.CLUB_OWNER_DISMISS:
-            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id, round_num=self.round_idx)
-            if not up_room_sta:
-                self.log_info("更新战绩时间失败", up_result)
-
 
         data_model = S2CGameOverInfo.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
+
+        # 游戏结束后在这里更新战绩以及回放数据
+        round_idx = self.round_idx
+        if self.__replay_msg_data:
+            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
+            self.log_info("游戏结束一轮结束战绩插入", result_data)
+        else:
+            if round_idx > 1:
+                round_idx = self.round_idx - 1
+            self.log_info("战绩更新局数", round_idx)
+            for p in self.seats:
+                if p:
+                    self.log_info("更新局数数据",self.__record_id,p.uid,self.__round_msg_records,round_idx)
+                    up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(self.__record_id, p.uid,
+                                                                                              replay_msg=self.__round_msg_records,
+                                                                                              round_num=round_idx)
+                    if not up_segment_sta:
+                        self.log_info("玩家", p.uid, p.seat_id, "战绩更新失败", e)
+
+        is_dismiss = over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE
+        for idx, p in enumerate(self.seats):
+            if not p:
+                continue
+            num = 1 if idx == 0 else 0
+            final_ranking = score_rank_map[p.total_score]
+            final_grade = 1 if final_ranking == 1 else 0
+            if final_ranking == 1 and p.total_score == 0:
+                final_grade = 0
+            if self.__record_id > 0:
+                if is_dismiss:
+                    room_status = 1
+                else:
+                    room_status = 0
+                self.log_info("总结算战绩插入数据", self.__record_id, p.uid, final_ranking, final_grade,p.game_over_data,num,room_status)
+                over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid,
+                                                                                p.total_score >= 0, p.total_score
+                                                                                , final_ranking, final_grade,
+                                                                                p.game_over_data, num, room_status)
+                self.log_info("总结算战绩插入", over_record)
+
+        if is_dismiss:
+            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,
+                                                                                     round_num=round_idx)
+            if not up_room_sta:
+                self.log_info("更新战绩时间失败", up_result)
+
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
         for p in self.seats:
@@ -436,7 +536,8 @@ class BaseCardRoom(BaseRoom):
         score_rank_map = {}
 
         for idx, score in enumerate(sorted_scores):
-            score_rank_map[score] = idx + 1
+            if idx == 0 or score != sorted_scores[idx - 1]:
+                score_rank_map[score] = idx + 1
         return score_rank_map
 
     def room_info(self):
@@ -464,9 +565,11 @@ class BaseCardRoom(BaseRoom):
     def clear_room(self):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = []  # 存入战绩数据
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
-        self.__timeout_idle_time = 60 * 60 * 30
+        self.__timeout_idle_time = 60 * 60 * 1
+        self.__game_began = False
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):
@@ -482,6 +585,7 @@ class BaseCardRoom(BaseRoom):
         self.__cur_round = room_conf.get("cur_round") or 1
 
         self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = []
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
 
@@ -711,8 +815,36 @@ class BaseCardRoom(BaseRoom):
             "status": self.room_status,
             "total_round": self.room_conf.get("total_round"),
             "online_group_user": self.__online_group_user,
-            "round_idx": self.round_idx,
+            "round_num": self.round_idx,
             "updated": self.__create_time,
             "msg_type": msg_type,
             "secret": C_SERVICE_SECRET_KEY,
         }
+
+    async def force_dismiss(self, over_type=OverType.DEFAULT):
+        self.log_info("force_dismiss", self.not_playing_dismiss,over_type)
+        if over_type==OverType.ULTIMATE_DISMISS:
+            return await super(BaseCardRoom, self).game_over()
+        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
+            if self.not_playing_dismiss:
+                data = {"game_begin": self.room_status == RoomStatus.T_DISMISS and self.record_id > 0}
+                data_model = S2CRoomDismissInfo.pb_model(**data)
+                await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
+                if self.club_id > 0:
+                    await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
+                if (self.room_status == RoomStatus.T_DISMISS or over_type == OverType.CLUB_OWNER_DISMISS) and self.record_id > 0:
+                    if self.not_playing_room_status != RoomStatus.T_PLAYING:
+                        self.set_room_status(self.not_playing_room_status)
+                        self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
+                        return await self.game_over(over_type)
+                    self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
+                    await self.liu_ju()
+                    return
+                self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
+                return await super(BaseCardRoom, self).game_over()
+            self.set_room_status(self.not_playing_room_status)
+            return await self.round_over(over_type,is_force=True)
+        await self.liu_ju()
+
+    async def liu_ju(self):
+        pass

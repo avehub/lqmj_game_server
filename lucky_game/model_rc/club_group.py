@@ -17,7 +17,7 @@ class ClubGroupRC(RCModel):
     tb_name = db_model.sheet_name()
 
     @classmethod
-    async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list):
+    async def _bulk_behavior(cls, club_id: int, uid: int, u_ids: list, status: int = None):
         """批量将茶馆隔离组数据写入行为表"""
         rows = []
         date_time = int(datetime.now().timestamp())
@@ -28,7 +28,7 @@ class ClubGroupRC(RCModel):
                     "uid": u_id,
                     "club_id": club_id,
                     "check_uid": uid,
-                    "status": ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    "status": status,
                     "created": date_time,
                 }
             )
@@ -50,8 +50,8 @@ class ClubGroupRC(RCModel):
                 })
                 if not group:
                     return group, "创建失败"
-                if uid:
-                    sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids))
+                if uid and u_ids:
+                    sta, e = await cls._bulk_behavior(club_id=club_id, uid=uid, u_ids=list(u_ids), status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED)
                     if not sta:
                         return None, e
         except OperationalError as e:
@@ -76,8 +76,8 @@ class ClubGroupRC(RCModel):
                     up_data["u_ids"] = json_encode(u_ids)
                 if up_data:
                     await cls.db_model.update_by_pk(gid, up_data)
-                if uid:
-                    sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids))
+                if uid and u_ids:
+                    sta, e = await cls._bulk_behavior(club_id=group["club_id"], uid=uid, u_ids=list(u_ids), status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_ALTER)
                     if not sta:
                         return None, e
         except OperationalError as e:
@@ -85,12 +85,25 @@ class ClubGroupRC(RCModel):
         return gid, "成功"
 
     @classmethod
-    async def delete_group(cls, gid: int):
+    async def delete_group(cls, gid: int, uid: int = None):
         """删除茶馆隔离组"""
         try:
-            sta = await cls.db_model.del_by_pk(gid)
-            if not sta:
-                return sta, "删除失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                group = await cls.db_model.get_by_pk(gid)
+                if not group:
+                    return None, "隔离组不存在"
+                sta = await cls.db_model.del_by_pk(gid)
+                if not sta:
+                    return sta, "删除失败"
+                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                    ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
+                    uid,
+                    group["club_id"],
+                    check_uid=uid,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
+                )
+                if not sta:
+                    return sta, "删除失败"
         except OperationalError as e:
             return None, f"删除失败: {str(e)}"
         return True, "成功"
@@ -154,13 +167,13 @@ class ClubGroupRC(RCModel):
         cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中:uid:{uid},room_uid:{room_uid},groups:{groups}")
         if groups:
             for item in groups:
-                values_to_check = [uid]
-                target_array = json_parse(item["u_ids"])
-                for check_uid in room_uid:
-                    values_to_check.append(check_uid)
-                    if all(value in target_array for value in values_to_check):
-                        all_exist = True
-                        break
+                if item["u_ids"]:
+                    for check_uid in room_uid:
+                        if int(check_uid) in item["u_ids"]:
+                            all_exist = True
+                            break
+
+        cls.conf.log.info(f"检查用户是否与房间内成员在同一隔离组中结果:{all_exist}")
         return all_exist
 
     @classmethod

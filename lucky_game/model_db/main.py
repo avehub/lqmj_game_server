@@ -44,12 +44,12 @@ class User(DBModel):
     openid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     wechat = fields.SmallIntField(max_length=2, null=True, default=0, description='微信绑定标识：1已绑定 0未绑定')
-    apple_id = fields.CharField(max_length=128, null=True, default='', description='苹果平台用户授权唯一标识')
+    apple_id = fields.CharField(max_length=128, index=True, default='', description='苹果平台用户授权唯一标识')
     ban_time = fields.BigIntField(null=True, default=0, description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
-        unique_together = (("platform", "openid"),)  # 联合主键
+        unique_together = (("platform", "openid"),("unionid", "platform"),)  # 联合主键
 
 
 class UserFollows(DBModel):
@@ -118,6 +118,7 @@ class Clubs(DBModel):
     other = fields.JSONField(null=True, description='其他设置：JSON存储')
     notice = fields.TextField(null=True, description='公告')
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='状态：0正常')
+    record_status = fields.SmallIntField(max_length=2, null=True, default=0, description='战绩状态：0隐藏 1显示')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
 
@@ -152,9 +153,9 @@ class ExtraClubBehavior(DBModel):
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID')
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1加入茶馆申请 2小黑屋 3隔离 4退出茶馆')
+                                description='类型：1加入茶馆申请 2小黑屋 3隔离 4退出茶馆 5管理员 6玩法')
     status = fields.SmallIntField(max_length=2, null=True, default=0,
-                                  description='状态，类型==1：0未审批 1拒绝 2取消 99通过')
+                                  description='状态，类型==1：0未审批 1拒绝 2取消 3更新 99通过')
     check_uid = fields.IntField(max_length=28, null=True, default=0, description='审批/操作玩家ID')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
@@ -474,6 +475,7 @@ class Mails(DBModel):
     class Meta:
         table = "mails"
         indexes = (("receiver", "mail_sta", "exp_time"),)
+        app = "lucky_game"
 
 
 class ConfServerAddr(DBModel):
@@ -807,3 +809,15 @@ class AppVersions(DBModel):
     class Meta:
         table = "app_versions"
         unique_together = (("app_id", "version_code", "platform"), ("platform", "status"),)
+
+
+class ClubUserGroups(DBModel):
+    """茶馆用户禁止同桌表"""
+    gid = fields.IntField(max_length=10, pk=True, description='分组ID')
+    club_id = fields.IntField(max_length=10, null=True, description='茶馆ID')
+    uid = fields.IntField(max_length=28, null=True, description='玩家ID')
+    u_ids = fields.TextField(null=True, description='多个玩家ID')
+    status = fields.SmallIntField(null=True, default=1, description='状态：0失效 1生效')
+
+    class Meta:
+        table = "club_user_groups"

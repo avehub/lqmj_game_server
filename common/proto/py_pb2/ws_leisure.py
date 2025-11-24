@@ -557,6 +557,9 @@ def pack_rule_details(obj, **kwargs):
     obj.rule_details.yuan_bao = rule_details.get("yuan_bao") or 0
     obj.rule_details.yin_ji = rule_details.get("yin_ji") or 0
     obj.rule_details.lian_zhuang = rule_details.get("lian_zhuang") or 0
+    obj.rule_details.four_card_no_near = rule_details.get("four_card_no_near") or 0
+    obj.rule_details.eight_card_tian_hu = rule_details.get("eight_card_tian_hu") or 0
+    obj.rule_details.four_card_tian_hu = rule_details.get("four_card_tian_hu") or 0
 
 
 class S2CReady07Mahjong:
@@ -582,7 +585,11 @@ class S2CRoomInfo04Mahjong:
         obj.last_seat_id = kwargs.get("last_seat_id") or 0
         obj.dice_num.extend(kwargs.get("dice_num") or [])
         obj.ding_que_list.extend(kwargs.get("ding_que_list") or [])
-        obj.exchange_seats.extend(kwargs.get("exchange_seats") or [])
+        exchange_seats = kwargs.get("exchange_seats") or []
+        for info in exchange_seats:
+            ex_cards = obj.exchange_seats.add()
+            ex_cards.seat_id = info.get("seat_id") or 0
+            ex_cards.ex_cards.extend(info.get("ex_cards") or [])
         obj.operate_seats.extend(kwargs.get("operate_seats") or [])
         obj.shang_ga_list.extend(kwargs.get("shang_ga_list") or [])
         pack_rule_details(obj, **kwargs)
@@ -630,6 +637,9 @@ class S2CPlayerInfo05Mahjong:
             p_info.lock_cards.extend(one_data.get("lock_cards") or [])
             p_info.que = one_data.get("que") or 0
             p_info.total_score = one_data.get("total_score") or 0
+            p_info.recharge_sta = one_data.get("recharge_sta") or 0
+            p_info.seconds = one_data.get("seconds") or 0
+            p_info.is_out = one_data.get("is_out") or False
             pack_table_cards(p_info, **one_data)
             men_cards = one_data.get("men_cards") or []
             for men_data in men_cards:
@@ -811,6 +821,7 @@ class S2CExchangeCardsInfo:
         obj = ws_leisure_pb2.S2CExchangeCardsInfo()
         obj.hand_cards.extend(kwargs.get("hand_cards")or [])
         obj.get_cards.extend(kwargs.get("get_cards")or [])
+        obj.seat_id = kwargs.get("seat_id") or 0
         return obj
 
 class S2CTianTingInfo:
@@ -1058,7 +1069,20 @@ class S2CManyHuInfo:
             hu_card.CopyFrom(S2CMenInfoMahjong.pb_model(**men_data))
         return obj
 
+class S2CChangeConnect:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CChangeConnect()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.offline = kwargs.get("offline") or False
+        return obj
 
+class S2CRoomDismissInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CRoomDismissInfo()
+        obj.game_begin = kwargs.get("game_begin") or False
+        return obj
 
 # ################################## 麻将 ##################################
 
@@ -1087,8 +1111,9 @@ class S2CClubRoomInfo:
         obj.total_round = kwargs.get("total_round") or 0
         obj.updated = kwargs.get("updated") or 0
         obj.msg_type = kwargs.get("msg_type") or 0
-        obj.round_idx = kwargs.get("round_idx") or 1
+        obj.round_num = kwargs.get("round_num") or 1
         obj.online_group_user.extend(kwargs.get("online_group_user") or [])
+        obj.status =  kwargs.get("status") or 0
         return obj
 
 class S2CClubNotice:
@@ -1097,6 +1122,23 @@ class S2CClubNotice:
         obj = ws_leisure_pb2.S2CClubNotice()
         obj.notice = kwargs.get("notice") or ""
         return obj
+
+class S2CClubRoomSetInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CClubRoomSetInfo()
+        obj.rank_members_only = kwargs.get("rank_members_only") or 0
+        return obj
+
+class S2CCheckInGame:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CCheckInGame()
+        obj.game_status = kwargs.get("game_status") or 0
+        obj.room_id = kwargs.get("room_id") or 0
+        obj.is_owner = kwargs.get("is_owner") or False
+        return obj
+
 
 # ################################## 茶馆通知 ##################################
 

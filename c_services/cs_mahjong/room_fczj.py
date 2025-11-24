@@ -23,7 +23,7 @@ from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from . import const
 from .const import FlowStatus, PlayType, TimerDelay, ActionType, HuType, CardsType, ExtraHuPai, CheckType, OverType, RechargeType, JiType, \
-    SeatRelation, JI_PAI_SCORE, PAI_XING_SCORE_MAP, EXTRA_SCORE_MAP
+    SeatRelation, JI_PAI_SCORE, PAI_XING_SCORE_MAP, EXTRA_SCORE_MAP, PlayerRechargeSta
 from .player_fczj import PlayerFCZJ
 from .poker import Poker
 from .rule_fc import RuleFc
@@ -77,6 +77,7 @@ class RoomFCZJ(BaseLeisureRoom):
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
         await super().round_start()
+        self.__recharge_wait = 0
         record_info = await RecordsGameRoomRC.create_record_game_room(self.tid, tool_dt.cur_time())
         self.__record_id = record_info[0].record_rid
         self.__dice_num = RuleFc.random_dice(2)
@@ -425,6 +426,9 @@ class RoomFCZJ(BaseLeisureRoom):
         if player.gold > 0:
             self.log_info("玩家金币不为零，不能认输", player.uid)
             return
+        if player.is_robot:
+            player.cancel_timer()
+        player.recharge_sta = PlayerRechargeSta.IDLE
         player.is_out = True
         m = s2c_one_of_model()
         m.seat_id = player.seat_id
@@ -467,8 +471,6 @@ class RoomFCZJ(BaseLeisureRoom):
         self.remove_chong_feng_ji(p, all_ji_pai)
 
         if all_ji_pai:
-            p.ji_pai.extend(all_ji_pai)
-
             # 5.鸡牌分类处理
             for fan_ji in set(all_ji_pai):
                 repeat_count = count_list.get(fan_ji, 1)
@@ -799,7 +801,7 @@ class RoomFCZJ(BaseLeisureRoom):
         if self.__recharge_wait == 0:
             await self.__mo_pai(curr_player.seat_id, [ActionType.ACTION_TYPE_ZHUAN_WAN_GANG, self.__curr_card])
 
-    async def kou_fen_notify(self, p: PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None,many_hu = False):
+    async def kou_fen_notify(self, p: PlayerFCZJ, multiple, hu_type, act, extra_hu_list, wait_type, loser_seats=None,many_hu = False,card = 0):
         if loser_seats is None:
             loser_seats = []
         win_total_gold = 0
@@ -815,11 +817,13 @@ class RoomFCZJ(BaseLeisureRoom):
             "lose_to": [p.seat_id],
             "relation": 0,
         }
-
+        curr_card = self.__curr_card
+        if act == CheckType.CHECK_AN_GANG:
+            curr_card = card
         common_data = {
             "gold": 0,
             "multiple": multiple,
-            "curr_card": self.__curr_card,
+            "curr_card": curr_card,
             "act": act,
             "hu_type": hu_type
         }
@@ -1131,7 +1135,8 @@ class RoomFCZJ(BaseLeisureRoom):
                 result.append(ActionType.ACTION_TYPE_MING_GANG)
             if p.can_peng(self.__curr_card, RuleFc):
                 result.append(ActionType.ACTION_TYPE_PENG)
-
+        if result:
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def ming_gang_de_qi(self, p: PlayerFCZJ, card):
@@ -1407,6 +1412,8 @@ class RoomFCZJ(BaseLeisureRoom):
             operates.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
         if can_an_gang:
             operates.append(ActionType.ACTION_TYPE_AN_GANG)
+        if operates:
+            operates.append(ActionType.ACTION_TYPE_PASS)
         return operates, gang_card_list
 
     async def check_can_gang_after_peng(self, p: PlayerFCZJ):
@@ -1463,6 +1470,9 @@ class RoomFCZJ(BaseLeisureRoom):
                         result.append(ActionType.ACTION_TYPE_PASS)
                     else:
                         result.append(ActionType.ACTION_TYPE_JIAN)
+            else:
+                if result:
+                    result.append(ActionType.ACTION_TYPE_PASS)
 
         return result
 
@@ -1568,7 +1578,7 @@ class RoomFCZJ(BaseLeisureRoom):
             else:
                 total_score = self.__extra_score_map.get(ActionType.ACTION_TYPE_AN_GANG)
                 await self.kou_fen_notify(p, total_score, [], CheckType.CHECK_AN_GANG,
-                                          [], RechargeType.WAIT_RECHARGE_AN_GANG)
+                                          [], RechargeType.WAIT_RECHARGE_AN_GANG,card = card)
 
             self.log_info(self.tid, "somebody_an_gang end1")
         if flag and self.__recharge_wait == 0:
@@ -1744,13 +1754,23 @@ class RoomFCZJ(BaseLeisureRoom):
         # 判断破产玩家，弹出充值，充值继续，不充值认输
         self.set_room_status(RoomStatus.T_RECHARGE_ING)
         self.log_info(player.uid, player.seat_id, "进入是否复仇")
+        player.recharge_sta = PlayerRechargeSta.WAIT_RECHARGE
         sec = 30
         if not player.is_robot:
             player.call_flow(sec, self.player_give_up, player)
+        else:
+            player.call_flow(sec, self.robot_recharge, player)
         await self.notify_buy_gift_pack(player, seconds=sec)
+
+    async def robot_recharge(self,player: PlayerFCZJ):
+        """用于机器人复活调用，给机器人启动一个延时任务，获取倒计时"""
+        pass
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
+        if self.room_status == RoomStatus.T_IDLE: #游戏解散后防止机器人复活走到这
+            return
+        player.recharge_sta = PlayerRechargeSta.IDLE
         self.log_info(player.uid, player.seat_id, "玩家复活")
         player.cancel_timer()
         rm = s2c_recharge_model(player.seat_id, str(player.gold))
@@ -1762,7 +1782,7 @@ class RoomFCZJ(BaseLeisureRoom):
     async def player_recharge_ing(self, player):
         """ 充值中回调 """
         self.log_info(player.uid, player.seat_id, "玩家选择复活，复活中。。。", self.room_status)
-
+        player.recharge_sta = PlayerRechargeSta.RECHARGE_ING
         if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
             return
         if player.is_robot:
@@ -2123,7 +2143,7 @@ class RoomFCZJ(BaseLeisureRoom):
             return result, can_gang_list
         else:
             is_zhuan_wan_gang, gang_card = self.zhuan_wan_gang_de_qi(p)  # 提前验证是否能杠
-            is_an_gang, gang_card_list = p.can_an_gang(RuleFc)  # 提前验证是否能暗杠
+            is_an_gang, gang_card_list = p.can_an_gang(RuleFc,p.mo_pai)  # 提前验证是否能暗杠
             if p.card_is_lock():
                 if is_zhuan_wan_gang:
                     if gang_card == p.mo_pai:
@@ -2144,6 +2164,8 @@ class RoomFCZJ(BaseLeisureRoom):
                     result.append(ActionType.ACTION_TYPE_ZHUAN_WAN_GANG)
                 if is_an_gang:
                     result.append(ActionType.ACTION_TYPE_AN_GANG)
+        if result:
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
 
     def hu_de_qi(self, p: PlayerFCZJ):

@@ -54,14 +54,15 @@ class ClubUpdate(BaseClub):
         other = self.check_str(req.json.get("other"), require=False, p_name="配置内容")
         name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="茶馆名称")
         notice = self.check_str(req.json.get("notice"), require=False, p_name="茶馆公告")
+        record_status = self.check_int(req.json.get("record_status"), require=False, minval=0, maxval=1, p_name="战绩状态")
         check_sta, e = await BaseClubRC.check_club_name(name, club_id)
         if not check_sta:
             return self.answer(StaCode.FAIL, hint=e)
-        if name or other or notice:
+        if name or other or notice or record_status is not None:
             other_dict = {}
             if other:
                 other_dict = await self._check_other_params(other)
-            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict, notice=notice)
+            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict, notice=notice, record_status=record_status)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
             if notice:
@@ -109,6 +110,10 @@ class ClubHall(BaseClub):
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
             status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
+        # 茶馆信息
+        club, e = await BaseClubRC.get_club_by_id(club_id)
+        if club is None or club["status"] != 0:
+            return self.answer(StaCode.FAIL, hint=e)
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id, play_type=play_type)
         # 游戏房间
@@ -130,7 +135,7 @@ class ClubHall(BaseClub):
                 room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
-        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "uid": uid}
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "club_uid": club["uid"], "uid": uid}
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdClub.ENTER_CLUB,
@@ -197,7 +202,7 @@ class ClubCheck(BaseClub):
         self.check_int(status, require=True, p_name="审批状态")
         behavior, e = await ExtraClubBehaviorRC.get_behavior_by_id(behavior_id)
         if not behavior or behavior.get("status") != ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT:
-            return self.answer(StaCode.FAIL, hint=f"已{ExtraClubBehaviorRC.BEHAVIOR_STATUS[behavior.get('status')]}")
+            return self.answer(StaCode.FAIL, hint=f"申请不存在或已处理")
         club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=behavior.get("club_id"))
         # 玩家自己可以取消申请
         if behavior.get('uid') != check_uid:
@@ -236,6 +241,10 @@ class ClubApply(BaseClub):
                                                                   uid=uid, club_id=club_id,
                                                                   status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
         if not has:
+            # 是否为茶馆成员
+            is_member, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
+            if is_member:
+                return self.answer(StaCode.FAIL, hint="您已经是茶馆成员，无需申请")
             sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)

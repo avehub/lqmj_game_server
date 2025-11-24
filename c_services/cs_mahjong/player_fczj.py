@@ -18,6 +18,7 @@ class PlayerFCZJ(Player):
         self.__max_multiple = 0
         self.__hu_type_score = 0
         self.__ji_score = []
+        self.__recharge_sta = 0
 
     @property
     def first_down(self):
@@ -89,6 +90,14 @@ class PlayerFCZJ(Player):
     def hu_type_score(self, hu_type_score):
         self.__hu_type_score = hu_type_score
 
+    @property
+    def recharge_sta(self):
+        return self.__recharge_sta
+
+    @recharge_sta.setter
+    def recharge_sta(self,value):
+        self.__recharge_sta = value
+
     def set_ji_score(self, ji_score):
         self.__ji_score = ji_score
 
@@ -138,6 +147,8 @@ class PlayerFCZJ(Player):
         p_info = super().player_info(contain_cards)
         p_info["is_out"] = self.is_out
         p_info["total_score"] = 0
+        p_info["recharge_sta"] = self.__recharge_sta
+        p_info["seconds"] = self.left_seconds()
         return p_info
 
     def clear_player(self):
@@ -147,4 +158,5 @@ class PlayerFCZJ(Player):
         self.__fan_ji = 0
         self.__hua_zhu = 0
         self.__ji_score = []
+        self.__recharge_sta = 0
         super().clear_player()

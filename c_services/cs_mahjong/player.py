@@ -59,9 +59,13 @@ class Player(BaseLeisurePlayer):
         self.__shao_tong_xing_zheng = 0  # 烧通行证
         self.__hu_path = []
         self.__dian_pao_no_hu = 0  # 点炮未胡
+        self.__eight_card_tian_hu = 0
+        self.__receive_enter_room = 0 #是否收到过客户端发送的03消息
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
+
+        self.__is_exchange_status = False #玩家换牌状态 防止多个玩家同一时间选择换牌导致换牌有误
 
     @property
     def has_shang_ga(self):
@@ -116,6 +120,14 @@ class Player(BaseLeisurePlayer):
     @tian_hu.setter
     def tian_hu(self, value):
         self.__tian_hu = value
+
+    @property
+    def eight_card_tian_hu(self):
+        return self.__eight_card_tian_hu
+
+    @eight_card_tian_hu.setter
+    def eight_card_tian_hu(self,value):
+        self.__eight_card_tian_hu = value
 
     @property
     def all_chu_cards(self):
@@ -231,6 +243,14 @@ class Player(BaseLeisurePlayer):
     def dian_pao_no_hu(self, value):
         self.__dian_pao_no_hu = value
 
+    @property
+    def receive_enter_room(self):
+        return self.__receive_enter_room
+
+    @receive_enter_room.setter
+    def receive_enter_room(self,value):
+        self.__receive_enter_room = value
+
     def gang_in_operates(self):
         if ActionType.ACTION_TYPE_AN_GANG in self.__operates:
             return ActionType.ACTION_TYPE_AN_GANG
@@ -292,6 +312,7 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = []
         self.__zha_hu = 0
         self.__tian_hu = 0
+        self.__eight_card_tian_hu = 0
         self.__hu_info = {}
         self.__han_dou_cards = set()
         self.__shao_tong_xing_zheng = 0
@@ -304,6 +325,7 @@ class Player(BaseLeisurePlayer):
         self.__all_chu_cards.clear()
         self.__table_cards.clear()
         self.__zi_mo_cards.clear()
+        self.__is_exchange_status = False
 
     def clear_data_round_over(self):
         super().clear_data_round_over()
@@ -325,14 +347,17 @@ class Player(BaseLeisurePlayer):
         return not target_actions.isdisjoint(operates_map)
 
     def exchange_cards_seat(self, index_list, cards):
+        if self.__is_exchange_status:
+            return
+        self.__is_exchange_status = True
         for i, idx in enumerate(index_list, 1):
             self.ex_cards(cards[-i], idx)
 
     def can_an_gang(self, rule, card=0):
-        if self.__que > 0:
-            if (card or 0) // 10 == self.__que:
-                return False, [0]
-        return rule.can_an_gang(self.cards, card)
+        # if self.__que > 0:
+        #     if (card or 0) // 10 == self.__que:
+        #         return False, [0]
+        return rule.can_an_gang(self.cards, card,self.__que)
 
     @property
     def tui_zhang_ke_kai(self):
@@ -416,7 +441,8 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = []
         temp_cards = deepcopy(self.cards)
         for card in lock_cards:
-            temp_cards.remove(card)
+            if card in temp_cards:
+                temp_cards.remove(card)
         self.__lock_cards = temp_cards
 
     def set_position(self, x, y):
@@ -880,6 +906,7 @@ class Player(BaseLeisurePlayer):
     def clear_player(self):
         self.on_round_over_clear()
         self.__clear_game_data()
+        self.__receive_enter_room = 0
         super().clear_player()
 
     def jiao_di_long(self):

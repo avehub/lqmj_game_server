@@ -3,7 +3,7 @@ from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
 from lucky_game.interface.test_api import TestApi, TestCreatGameRecords
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat, \
-    LoginByApple, SendCode, LoginByPhone, BindByWechat
+    LoginByApple, SendCode, LoginByPhone, BindByWechat, BindByPhone
 from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList, StoreBuy
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList, \
@@ -14,10 +14,10 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, Room
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
-    WriteOff
+    WriteOff, UpWechatUserInfo
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
-from lucky_game.interface.records_game import UserRecords, TotalRecords, SegmentRecords, ClubRanks, PastRanks, \
+from lucky_game.interface.records_game import UserRecords, SegmentRecords, ClubRanks, PastRanks, \
     UserAggregateRanks, ClubAggregateRanks, SegmentRecordsByReplayLabel
 from lucky_game.interface.club_group import CreatGroup, GetGroup, UpdateGroup, DelGroup
 from lucky_game.interface.club_behavior import GetBehaviorExtra
@@ -27,8 +27,9 @@ from lucky_game.interface.game import GetLeisureList
 from lucky_game.interface.config import GetConf
 from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder, GainOrder, CallbackHf, CallbackIos, \
     MiniProgramRecvPush
-from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode
+from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode, GetGameRecord, DissolveRoom
 from lucky_game.interface.ad_event import CreateAdRecord
+from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
 
 
 class MainBp(BaseBlue):
@@ -46,6 +47,8 @@ class MainBp(BaseBlue):
         Urls("/GetAppVersion/", GetAppVersion),  # 获取应用版本信息
         Urls("/GetWechatCode/", GetWechatCode),  # 获取微信登录code
         Urls("/CreateAdRecord/", CreateAdRecord),  # 添加广告记录
+        Urls("/GetGameRecord/", GetGameRecord),  # 获取游戏回放战绩
+        Urls("/DissolveRoom/", DissolveRoom),  # 强制解散房间
 
         # 登录/授权
         Urls("/LoginByGuest/", LoginByGuest),  # 游客登陆
@@ -55,6 +58,9 @@ class MainBp(BaseBlue):
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序/微信APP)
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
+        Urls("/BindByPhone/", BindByPhone),  # 绑定手机号
+
+
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
@@ -89,6 +95,9 @@ class MainBp(BaseBlue):
         Urls("/ClubRoomCard/", ClubRoomCard),  # 茶馆基金
         Urls("/ClubRoomCardList/", ClubRoomCardList),  # 茶馆基金记录列表
         Urls("/RoomDetail/", RoomDetail),  # 房间详情
+        Urls("/UpWechatUserInfo/", UpWechatUserInfo),  # 更新用户信息
+        Urls("/AlterUserGroup/", AlterUserGroup),  # 禁止同桌-新增、修改
+        Urls("/GetUserGroup/", GetUserGroup),  # 禁止同桌-查询
 
         # 用户数据相关
         Urls("/ModifyGeneralUserInfo/", UpdateUserInfo),  # 更新用户必要信息
@@ -102,7 +111,6 @@ class MainBp(BaseBlue):
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
         Urls("/GetLeisureList/", GetLeisureList),  # 获取休闲场列表
         # Urls("/QueryUserRecords/", UserRecords),  # 获取玩家游戏战绩
-        # Urls("/QueryTotalRecords/", TotalRecords),  # 获取总局游戏战绩
         Urls("/QuerySegmentRecords/", SegmentRecords),  # 获取子局游戏战绩
         Urls("/QuerySegmentRecordsByReplayLabel/", SegmentRecordsByReplayLabel),  # 获取游戏回放记录
         Urls("/QueryClubRanks/", ClubRanks),  # 获取茶馆战绩排行榜

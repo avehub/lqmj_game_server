@@ -263,7 +263,7 @@ class WorkersServer(JsonBaseServer):
             status = -1
             if sta:
                 result = await InfinitePlay().progress_data(act, progress, u_info)
-                status = result.get("gains").get("status")
+                status = result.get("gains")[0].get("status")
             result = status == 0
             self.red_dot_log(uid, "救济金红点查询", result)
             if result:
@@ -553,16 +553,15 @@ class WorkersServer(JsonBaseServer):
     async def start_server(self):
         """ 重写启动服务 """
         if self.server_id == 1:
-            # print("启动定时服务>>>")
-            # from .timed_service import TimedService
-            # self.__timed_server = TimedService(self.conf, self)
+            from .timed_service import TimedService
+            self.__timed_server = TimedService(self.conf, self)
             try:
-                # self.__timed_server.start()
+                self.__timed_server.start()
                 await super().start_server()
             except asyncio.CancelledError:
                 pass
-            # finally:
-            #     self.__timed_server.close()  # 关闭scheduler
+            finally:
+                self.__timed_server.close()  # 关闭scheduler
             return
         await super().start_server()
 

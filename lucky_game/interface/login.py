@@ -46,9 +46,18 @@ class BaseLogin(GameAuthApi):
             data["isp"] = ip_info.get("isp") or ""
         return data
 
-    async def update_user_login_info(self, req, u_info, login_info):
+    async def update_user_login_info(self, req, u_info, login_info, wechat_info: dict = None):
         """ 更新玩家表登录数据 """
-        updated = {'valid_key': self.rng.mk_str(16), 'ip': self.ori_ip(req)}
+        updated = await self.request_get_ip_geo(req)
+        updated['valid_key'] = self.rng.mk_str(16)
+        if wechat_info:
+            if wechat_info.get('unionid'):
+                updated["unionid"] = wechat_info.get('unionid')
+            if wechat_info.get('avatar'):
+                updated["avatar"] = wechat_info.get('avatar')
+            if wechat_info.get('name'):
+                updated["name"] = wechat_info.get('name')
+            updated["wechat"] = 1
         u_info = await BaseUserRC.update_info(u_info, updated)
         login_info.update({'uid': u_info.get('uid')})
         await RecordsGameUserLogin.split_add_one(login_info, db_key=DbKey.LOG)
@@ -231,6 +240,8 @@ class LoginByWechat(BaseLogin):
 
         # 通过open_id查询数据库用户信息
         openid = req_data.get('openid')
+        access_token = req_data.get('access_token')
+        refresh_token = req_data.get('refresh_token')
         q_params = {
             "openid": openid,
             "platform": platform
@@ -239,7 +250,7 @@ class LoginByWechat(BaseLogin):
         h5_app = [PlatForm.WECHAT_MP, PlatForm.NATIVE_APP]
         if platform == PlatForm.WECHAT_MP or platform == PlatForm.NATIVE_APP:
             # 微信公众号、微信APP为同一账号
-            req_sta, req_data = await WeChat.wechat_userinfo(req_data.get('access_token'), openid)
+            req_sta, req_data = await WeChat.wechat_userinfo(access_token, openid)
             if not req_sta:
                 self.answer(StaCode.EXTERNAL_ERR, hint=req_data)
             q_params = {
@@ -263,13 +274,23 @@ class LoginByWechat(BaseLogin):
             self.log_info('Wechat Reg u_info:', u_info)
         # 老用户 登录
         else:
-            u_info = await self.update_user_login_info(req, u_info, login_info)
+            wechat_info = {
+                "unionid": req_data.get('unionid'),
+            }
+            if platform in h5_app:
+                wechat_info["avatar"] = req_data.get('headimgurl')
+                wechat_info["name"] = req_data.get('nickname')
+            u_info = await self.update_user_login_info(req, u_info, login_info, wechat_info)
             self.log_info('Wechat Login u_info:', u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         if platform == PlatForm.WECHAT_MINI_GAME:
             session_key = req_data.get("session_key")
             await BaseUserRC.cache_session_key(u_info.get('uid'), session_key)
+        else:
+            req_data["access_token"] = access_token
+            req_data["refresh_token"] = refresh_token
+            await BaseUserRC.cache_wechat_access_token_info(u_info.get('uid'), req_data)
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
@@ -306,6 +327,10 @@ class SendCode(BaseLogin):
         # 获取客户手机号
         phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
         scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
+        if scene and scene == "bind":
+            sta, data = await BaseUserRC.get_user_filter(phone=phone_number)
+            if sta and data:
+                return self.answer(StaCode.FAIL, hint="该手机号已绑定账号")
         sta, e = await AliVerification.send_code(phone_number, scene)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
@@ -452,6 +477,26 @@ class BindByWechat(BaseLogin):
         (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
         return self.answer()
 
+
+class BindByPhone(BaseLogin):
+    """ 绑定手机号 """
+    async def post(self, req: Request, **kwargs):
+        phone_number = self.check_str(req.json.get('phone_number'), require=True, p_name="手机号")
+        code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
+        scene = self.check_str(req.json.get('scene'), require=False, default="bind", p_name="验证码场景")
+        user = kwargs.get("u_info")
+        if user.get("phone"):
+            return self.answer(StaCode.FAIL, hint=f"已绑定手机号:{user.get('phone')}")
+        sta, e = await AliVerification.verify_code(phone_number, code, scene)
+        if sta is False:
+            return self.answer(StaCode.FAIL, hint=e)
+
+        updated = {
+            'phone': phone_number,
+        }
+        u_info = await BaseUserRC.update_info(user, updated)
+        (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
+        return self.answer()
 
 
 

@@ -28,40 +28,6 @@ class UserRecords(GameAuthApi):
         return self.answer(data=data, hint=e)
 
 
-class TotalRecords(GameAuthApi):
-    """总局战绩列表"""
-
-    async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
-        room_id = self.check_int(req.args.get("room_id"), require=False, p_name="房间ID")
-        cs_type = self.check_int(req.args.get("cs_type"), require=False, minval=ServiceEnum.C_WORKERS,
-                                 p_name="子服务类型")
-        start_time = self.check_int(req.args.get("start_time"), require=False, p_name="开始时间")
-        end_time = self.check_int(req.args.get("end_time"), require=False, p_name="结束时间")
-        page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
-        page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
-        data, e = await BaseRecordsGameRC.get_by_room_id(
-            room_id=room_id,
-            uid=uid,
-            cs_type=cs_type,
-            start_time=start_time,
-            end_time=end_time,
-            page=page,
-            page_size=page_size,
-        )
-        total = complete = score = 0
-        if data["total"] > 0:
-            for item in data["list"]:
-                total += 1
-                score += item["final_score"]
-        result = {
-            "data": data,
-            "total": total,
-            "complete": complete,
-            "score": score,
-        }
-        return self.answer(data=result, hint=e)
-
 
 class SegmentRecords(GameAuthApi):
     """子局战绩列表"""
@@ -201,11 +167,18 @@ class ClubAggregateRanks(GameAuthApi):
         room_card = total = player = 0
         creator = set()
         if data:
+            record_rid = []
             for item in data:
                 total += 1
                 creator.add(item["creator"])
                 room_card += item["price"]
-                player += item["max_player"]
+                record_rid.append(item["record_rid"])
+            total_data, e = await RecordsGameTotalRC.query_record_total_by_sql(
+                record_rid=record_rid
+            )
+            if total_data:
+                player_uid = [item["uid"] for item in total_data]
+                player = len(set(player_uid))
         result = {
             "room_card": room_card,
             "total": total,
@@ -219,37 +192,68 @@ class ClubAggregateRanks(GameAuthApi):
 class ClubRanks(GameAuthApi):
     """茶馆战绩排行榜"""
     async def get(self, req: Request, **kwargs):
-        uid = kwargs.get("u_info").get("uid")
         club_id = self.check_int(req.args.get("club_id"), default=None, require=True, p_name="茶馆ID")
+        uid = self.check_int(req.args.get("uid"), default=None, require=False, p_name="用户ID")
         cs_type = self.check_int(req.args.get("cs_type"), default=None, require=False, minval=ServiceEnum.C_WORKERS,
                                  p_name="子服务类型")
         play_type = self.check_str(req.args.get("play_type"), default=None, require=False, p_name="玩法类型")
         start_time = self.check_int(req.args.get("start_time"), default=None, require=False, p_name="开始时间")
         end_time = self.check_int(req.args.get("end_time"), default=None, require=False, p_name="结束时间")
-        final_score = self.check_int(req.args.get("final_score"), default=None, require=False, p_name="最佳分数")
+        final_score = self.check_int(req.args.get("final_score"), default=0, require=False, p_name="最佳分数")
         page = self.check_int(req.args.get("page"), require=False, minval=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, minval=1, p_name="每页数量")
         order_field = self.check_str(req.args.get("order_field"), require=False, default="total_score", p_name="排序字段")
         order_type_val = self.check_int(req.args.get("order_type"), require=False, minval=1, maxval=2, p_name="排序方式")
-        order_type = "DESC"
+        order_type = True
         if order_type_val == 2:
-            order_type = "ASC"
-
+            order_type = False
+        if play_type:
+            play_type = play_type.strip('[]').split(',')  # Returns: ['2']
         data, e = await RecordsGameTotalRC.query_record_total_by_sql(
             club_id=club_id,
-            final_score=final_score,
+            uid=uid,
             play_type=play_type,
             cs_type=cs_type,
             start_time=start_time,
             end_time=end_time,
-            page=page,
-            page_size=page_size,
-            order_field=order_field,
-            order_type=order_type,
-            group_field="uid",
-            filtration="uid, record_rid, club_id, COUNT(final_status) AS total_status, SUM(final_score) AS total_score, SUM(final_grade) AS total_grade, SUM(price) AS total_price, final_result"
+            filtration="uid, record_rid, room_id, club_id, final_status, final_score, final_grade, price, final_result, final_ranking"
         )
-        return self.answer(data=data, hint=e)
+        result = []
+        if data:
+            tmp = {}
+            room_data, msg = await RecordsGameRoomRC.get_record_room_by_filter(
+                club_id=club_id,
+                start_time=start_time,
+                end_time=end_time,
+                play_type=play_type,
+                cs_type=cs_type,
+                field=("room_id", "price", "creator", "room_status")
+            )
+            for item in data:
+                final_grade = 1 if item["final_score"] >= final_score and item["final_ranking"] == 1 else 0
+                if item["uid"] in tmp.keys():
+                    tmp[item["uid"]]["total_status"] += 1
+                    tmp[item["uid"]]["total_score"] += item["final_score"]
+                    tmp[item["uid"]]["total_grade"] += final_grade
+                else:
+                    tmp[item["uid"]] = {
+                        "uid": item["uid"],
+                        "total_status": 1,
+                        "total_score": item["final_score"],
+                        "total_grade": final_grade,
+                        "total_price": 0,
+                        "total_result": item["final_result"],
+                    }
+                    for room_tmp in room_data:
+                        # 不考虑中途解散房间
+                        # if room_tmp["creator"] == item["uid"] and not room_tmp["room_status"]:
+                        if room_tmp["creator"] == item["uid"]:
+                            tmp[item["uid"]]["total_price"] += room_tmp["price"]
+            result = sorted(tmp.values(), key=lambda x: x[order_field], reverse=order_type)
+            # 最佳分数条件大于0且最佳次数大于0展示
+            if result and final_score > 0:
+                result = [item for item in result if item["total_grade"] > 0]
+        return self.answer(data=result, hint=e)
 
 
 class PastRanks(GameAuthApi):

@@ -59,6 +59,10 @@ class CmdClub(BaseEnum):
     PLAYER_READY_EXCEPT_OWNER = 5, "所有玩家准备，除了房主", CallCheck.INNER.val
     LEAVE_CLUB = 6, "离开茶馆"
     CLUB_NOTICE = 7,"茶馆公告通知", CallCheck.INNER.val
+    UPDATE_ROOM_SET = 8,"茶馆设置更新"
+    CHECK_GAME_STATUS = 9, "检查是否在游戏中"
+    JOIN_NEW_GAME = 10, "加入新游戏房间"
+    JOIN_NEW_GAME_SUC = 11, "加入新游戏房间成功",CallCheck.INNER.val
 
 
 @unique
@@ -155,6 +159,9 @@ class CmdRoom(BaseEnum):
     ROBOT_CAL_PENG = 100, "机器人碰计算", CallCheck.INNER.val
     ROBOT_CAL_GANG = 101, "机器人杠计算", CallCheck.INNER.val
     ZHA_JIAN = 102, "炸捡", "麻将"
+    CHANGE_CONNECT = 103,"玩家状态变化","麻将"
+    CLUB_QUIT_ROOM = 104, "茶馆玩家退出房间", CallCheck.INNER.val
+    FORCE_DISMISS_ROOM = 105, "强制解散房间", CallCheck.INNER.val
 
     #休闲玩法
     TIMELY_KOU_FEN = 110, "即时结算", "麻将"
@@ -163,6 +170,8 @@ class CmdRoom(BaseEnum):
     FAN_JI_INFO = 113, "翻鸡信息", "麻将"
     MANY_HU = 114, "多人胡", "麻将"
     RECORD_ACCOUNT = 115, "记账", "麻将"
+
+    FANOUT_LOST_CONNECT = 201, "离线通知公共频道", "麻将"
 
 
 @unique

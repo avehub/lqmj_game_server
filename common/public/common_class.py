@@ -2,6 +2,7 @@ from typing import Optional
 
 from aio_pika import DeliveryMode
 from nsanic.base_conf import BaseConf
+from nsanic.libs import tool_dt
 # from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
@@ -39,6 +40,14 @@ class CommonApi(LogMeta):
         return gold
 
     @classmethod
+    async def get_player_in_game(cls, uid):
+        try:
+            is_gaming = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            is_gaming = {"is_gaming": False}
+        return is_gaming
+
+    @classmethod
     async def get_player_ws_info(cls, uid):
         ws_info = await cls.conf.rds.get_hash(CacheKey.WS_ONLINE_INFO, uid)
         if ws_info:
@@ -61,8 +70,6 @@ class CommonApi(LogMeta):
         通过rmq推送消息到网关
         该方法默认消息不持久化
         """
-
-        cls.loginfo(f"cs2cs_by_rmq: {cs_type}, {c_code}, {uid}, {msg}, {r_key}, {exp}, {delivery_mode}")
         await cls.conf.rmq.cs2cs_rmp(cs_type, c_code, uid, msg, r_key, exp, delivery_mode)
 
     @classmethod
@@ -274,3 +281,17 @@ class CommonApi(LogMeta):
             return f"{url}&{query_string}"
         else:
             return f"{url}?{query_string}"
+
+    @classmethod
+    async def date_time_range(cls, start_time: datetime, end_time: datetime) -> list[datetime]:
+        """
+        获取时间段内的所有时间点
+        :param start_time: 开始时间
+        :param end_time: 结束时间
+        :return: 时间点列表
+        """
+        start_date = tool_dt.dt_str(start_time, '%Y-%m-%d').split('-')
+        end_date = tool_dt.dt_str(end_time, '%Y-%m-%d').split('-')
+        date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
+                                        end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
+        return date_range

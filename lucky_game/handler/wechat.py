@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from nsanic.libs.component import LogMeta
 
 from common.public.base_enum import BaseEnum
@@ -143,6 +145,24 @@ class WeChat(LogMeta):
         return await cls.__return_access_token(req_data, app_id)
 
     @classmethod
+    async def wechat_check_access_token(cls, login_info):
+        """微信公众号用户登录access_token过期检查"""
+        url = f"https://api.weixin.qq.com/sns/auth?access_token={login_info.get('access_token')}&openid={login_info.get('openid')}"
+        req_data = await http_get(url)
+        return cls.__return_req_data(req_data)
+
+    @classmethod
+    async def wechat_refresh_access_token(cls, uid, login_info):
+        """微信公众号用户登录access_token刷新"""
+        url = f"https://api.weixin.qq.com/sns/oauth2/refresh_token?appid={WeChatConf.WE_CHAT_GZH_APP_ID}&grant_type=refresh_token&refresh_token={login_info.get('refresh_token')}"
+        req_content = await http_get(url)
+        req_sta, req_data = cls.__return_req_data(req_content)
+        if req_sta != 0:
+            return req_sta, req_data
+        await BaseUserRC.cache_wechat_access_token_info(uid, req_data)
+        return 0, req_data
+
+    @classmethod
     async def wechat_get_ticket(cls, access_token):
         """ 获得jsapi_ticket """
         cache_at = await cls.conf.rds.get_item(cls.WECHAT_TICKET)
@@ -241,7 +261,7 @@ class WeChat(LogMeta):
 
 
     @classmethod
-    async def wechat_mini_game_return_order(cls, uid, trade_amount: int, order_id: str, product_id: str,
+    async def wechat_mini_game_return_order(cls, uid, trade_amount: int | Decimal | float, order_id: str, product_id: str,
                                             method="requestMidasPaymentGameItem"):
         """
         小游戏创建订单返回（道具直购专用）
@@ -266,7 +286,7 @@ class WeChat(LogMeta):
             "platform": 'android',
             "zoneId": '1',
             "productId": product_id or '',
-            "goodsPrice": int(trade_amount * cls.WECHAT_COIN_RATE),  # 单位（分）
+            "goodsPrice": int(Decimal(str(trade_amount)) * cls.WECHAT_COIN_RATE),  # 单位（分）
             "outTradeNo": order_id,
         }
         encode_data = json_encode(sign_data)
@@ -304,7 +324,7 @@ class WeChat(LogMeta):
                 {
                     "title": '点我充值',
                     "description": f'{trade_amount}元\n支付完成请返回游戏查看',
-                    "url": f'{H5_SERVER_ADDR}/mahjong_main/gzh_pay/hjmj_wxpay_new/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}&payData={json_encode(pay_info)}',
+                    "url": f'{H5_SERVER_ADDR}/mahjong_main/static/gzh_pay/hjmj_wxpay_new/index.html?uid={uid}&orderId={order_id}&price={trade_amount}&curSever={server_addr}&payData={json_encode(pay_info)}',
                     # 微信商户后台配置没位了，只能暂用他们的
                     "thumb_url": 'https://ddzres.lpyqp.com/pay2.png'  # 图片地址
                 }
@@ -344,7 +364,7 @@ class WeChat(LogMeta):
         req_data = json_parse(req_get)
         cls.log_info('Wechat userinfo result:', req_data)
         errcode = req_data.get("errcode", 0)
-        if errcode > 0:
+        if errcode != 0:
             data = {"errcode": errcode, "errmsg": req_data}
             return False, data
         return True, req_data
