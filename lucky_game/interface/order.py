@@ -225,9 +225,9 @@ class MiniProgramRecvPush(SpecialApi):
             if params_dict is None:
                 return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
             # 2.创建订单 不清楚这块参数是根据什么生成的，目前按老版本逻辑生成
-            uid = params_dict.get("uid")
+            uid = int(params_dict.get("uid"))
             sku = params_dict.get("item_id")
-            platform = params_dict.get('platform') or PlatForm.WECHAT_MP
+            platform = int(params_dict.get('platform')) or PlatForm.WECHAT_MP
             express = await GoodRC.get_good_info(str(sku))
             if not express:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
