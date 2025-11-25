@@ -511,18 +511,21 @@ class BaseRoom(metaclass=ABCMeta):
         task_list = []
         for p in self.__seats:
             if p:
+                uid = p.uid
                 if not p.is_robot and p.tid != 0:  # 玩家可能在上一桌破产离开，仅仅只是将tid置为0
-                    uid = p.uid
                     if self.__room_type == RoomType.SELF_BUILD:
                         await self.service.del_player_in_game(uid)
-                        tid = p.tid
-                        task_list.append(GameRoomsRC.leave_room(tid, uid))
+                        # tid = p.tid
+                        # task_list.append(GameRoomsRC.leave_room(tid, uid))
                         # self.log_info("游戏结束离开房间:", leave_result, "房间状态:", self.__room_status)
+                if not p.is_robot:
+                    task_list.append(GameRoomsRC.leave_room(self.tid, uid))
                     task_list.append(self.service.del_player_in_service(uid))
                 self.service.release_player(p)
         self.__room_status = RoomStatus.T_CLOSED
         if task_list:
-            await asyncio.gather(*task_list)
+           result = await asyncio.gather(*task_list)
+           self.log_info("调用离开房间结果",result)
         self.service.release_room(self)
 
 

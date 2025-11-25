@@ -97,7 +97,7 @@ class ClubGroupRC(RCModel):
                     return sta, "删除失败"
                 sta, e = await ExtraClubBehaviorRC.create_club_behavior(
                     ExtraClubBehaviorRC.BEHAVIOR_ISOLATION_INDEX,
-                    0,
+                    uid,
                     group["club_id"],
                     check_uid=uid,
                     status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,

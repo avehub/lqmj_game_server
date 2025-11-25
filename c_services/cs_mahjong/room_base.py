@@ -389,7 +389,7 @@ class Room(BaseCardRoom):
             return
         self.log_info("开始发牌")
         self.set_flow_status(FlowStatus.T_IN_DEAL_CARDS)
-        await self.async_set_room_status(RoomStatus.T_PLAYING)
+        # await self.async_set_room_status(RoomStatus.T_PLAYING)
         if self.__four_card_bao_ting:
             return await self.start_bao_ting_by_four_cards()
         all_cards = self.poker.deal_cards(self.max_player_count, self.deal_cards_count)
@@ -3160,9 +3160,9 @@ class Room(BaseCardRoom):
         await self.inner_broadcast(CmdRoom.ROUND_START, data_model)
         self.log_info(self.tid, "round_start", self.__shang_ga, self.__default_ji)
         if self.__shang_ga:
-            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else self.call_flow(1.5,self.start_player_shang_ga)
+            await self.force_set_gu_mai_score() if self.__gu_mai_score > 0 else self.call_flow(0.5,self.start_player_shang_ga)
         else:
-            self.call_flow(2, self.deal_cards)
+            self.call_flow(0.5, self.deal_cards)
 
     async def round_over(self, over_type=OverType.DEFAULT, **kwargs):
         is_force = kwargs.get("is_force", False)
@@ -4618,33 +4618,10 @@ class Room(BaseCardRoom):
         self.log_info("收到定位信息",player.uid,player.seat_id,"x",x,"y",y)
         await self.notify_distance()
 
-    async def force_dismiss(self, over_type=OverType.DEFAULT):
-        self.log_info("force_dismiss", self.not_playing_dismiss)
-        if not self.room_status_is_equal(RoomStatus.T_PLAYING):
-            if self.not_playing_dismiss:
-                data = {"game_begin": self.room_status == RoomStatus.T_DISMISS and self.record_id > 0}
-                data_model = S2CRoomDismissInfo.pb_model(**data)
-                await self.inner_broadcast(CmdRoom.ROOM_DISMISS,data_model)
-                if self.club_id > 0:
-                    await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
-                if (self.room_status == RoomStatus.T_DISMISS or over_type == OverType.CLUB_OWNER_DISMISS) and self.record_id > 0:
-                    if self.not_playing_room_status != RoomStatus.T_PLAYING:
-                        self.set_room_status(self.not_playing_room_status)
-                        self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                        return await self.game_over(over_type)
-                    self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                    await self.liu_ju()
-                    return
-                self.set_not_playing_dismiss(RoomStatus.T_IDLE, False)
-                return await super(BaseCardRoom, self).game_over()
-            self.set_room_status(self.not_playing_room_status)
-            return await self.game_over(over_type)
-        await self.liu_ju()
-
     async def liu_ju(self):
         await self.liu_ju_notify()
         self.__win_seat_list = []
-        await super().force_dismiss()
+        await super(BaseCardRoom, self).force_dismiss()
 
     def refresh_room_conf(self, service, room_conf):
         self.__init__(self.tid, service, room_conf)

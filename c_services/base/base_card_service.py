@@ -17,6 +17,7 @@ class BaseCardService(BaseService):
         self.add_handlers({
             CmdRoom.REQ_DISMISS.val: self.__req_dismiss_room,
             CmdRoom.CLUB_OWNER_DISMISS.val: self.__club_owner_dismiss,
+            CmdRoom.FORCE_DISMISS_ROOM.val: self.__force_dismiss_room,
         })
 
         DelayCall(120, self.close_room_timeout_idle).loop_start()
@@ -65,39 +66,12 @@ class BaseCardService(BaseService):
             return player
         return self.create_player(c_player, uid, False)
 
-    @staticmethod
-    async def __req_dismiss_room(player, room, data):
-        if not room.agree_dismiss_seats and not room.timer_dismiss:
-            room.call_dismiss(120, room.force_dismiss, OverType.FORCE)
-            if room.room_status not in (RoomStatus.T_DISMISS,RoomStatus.T_CLOSED):
-                room.set_not_playing_dismiss(room.room_status,True)
-                await room.async_set_room_status(RoomStatus.T_DISMISS)
-
+    async def __req_dismiss_room(self,player, room, data):
         req_dismiss_model.ParseFromString(data)
         agree = req_dismiss_model.agree or False
-        if agree:
-            room.add_agree_dismiss(player.seat_id)
-        else:
-            room.clear_agree_dismiss()
-            await room.back_room_status()
-
-        data = {
-            "seat_id": player.seat_id,
-            "agree": agree,
-            "agree_seats": list(room.agree_dismiss_seats),
-            "total_time":120,
-            "left_seconds":room.dismiss_left_seconds(),
-        }
-        if room.in_room_count > 1:
-            data_model = S2CReqDismissRoom.pb_model(**data)
-            await room.inner_broadcast(CmdRoom.REQ_DISMISS, data_model)
-        room.log_info("请求解散房间",player.uid,"结果:",agree)
-        if room.agree_dismiss_count() == room.in_room_count:
-            room.clear_agree_dismiss()
-            return await room.force_dismiss(OverType.FORCE)
-        if player.uid == room.owner and room.in_room_count == 1:
-            room.clear_agree_dismiss()
-            return await room.force_dismiss(OverType.FORCE)
+        code,msg = await room.req_dismiss_room(player,agree)
+        if code != StaCode.PASS:
+            return await self.cs2ws_by_rmq(CmdRoom.REQ_DISMISS, player.uid, code, msg)
 
     async def __club_owner_dismiss(self, _, data):
         tid = data.get("room_id")
@@ -117,6 +91,12 @@ class BaseCardService(BaseService):
         if from_club:
             data = {"req_id":req_id,"secret":C_SERVICE_SECRET_KEY}
             await self.cs2cs_by_rmq(ServiceEnum.C_CLUB,CmdClub.JOIN_NEW_GAME_SUC, data,uid)
+
+    async def __force_dismiss_room(self, _, data):
+        tid = data.get("room_id")
+        room = self.get_room(tid)
+        if room:
+            await room.force_dismiss(OverType.ULTIMATE_DISMISS)
 
 
     async def clear_in_service(self):

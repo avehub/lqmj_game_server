@@ -62,7 +62,7 @@ class GameRoomAPI(RoomTemplateBase):
             # 校验茶馆成员身份信息
             club_user, e = await ClubUsersRC.get_club_user_by_one(creator, club_id)
             if not club_user or club_user["status"] == ClubUsersRC.STATUS_BLACK:
-                return self.answer(StaCode.FAIL, hint=e)
+                return self.answer(StaCode.FAIL, hint="暂时无法创建房间，请联系馆主")
             # 权限&规则校验
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             club = json_parse(club)
@@ -119,6 +119,26 @@ class GameRoomAPI(RoomTemplateBase):
                     cs_type=ServiceEnum.C_NOTICE
                 )
 
+    async def _join_room(self, room_data, uid):
+        room_id = room_data["room_id"]
+        sta, e = await GameRoomsRC.join_room(room_data, uid)
+        if sta is False:
+            return False, e
+        cs_enum = ServiceEnum.find_member_by_val(room_data["cs_type"])
+        if not cs_enum:
+            await GameRoomsRC.delete_game_room(room_id, True)
+            return False, "非法服务"
+        rmq_data = room_data
+        rmq_data["secret"] = C_SERVICE_SECRET_KEY
+        rmq_data["online_group_user"] = await GameRoomsRC.get_online_user_group(uid, room_data["club_id"])
+        await self.cs2cs_by_rmq(
+            cs_enum,
+            CmdRoom.NEW_MATCH,
+            rmq_data,
+            uid,
+        )
+        return True, "加入成功"
+
 
 class CreateRoom(GameRoomAPI):
     """创建房间（支持普通房间和茶馆房间）"""
@@ -137,59 +157,51 @@ class CreateRoom(GameRoomAPI):
             pay_type = self.check_int(req.json.get("pay_type"), require=False, default=0, p_name="支付方式")    # 默认房主支付
             if platform == PlatForm.WECHAT_MINI_GAME:
                 pay_type = 3
-        # 创建房间前判断是否在黑名单中
-        if club_id:
-            is_black, e = await ClubUsersRC.is_club_user_black(creator, club_id)
-            if is_black:
-                return self.answer(StaCode.FAIL, hint=e)
-        # 预处理
-        rule_details = await verify_rule_detail(rule_details, play_type)
-        await self._before_create_room(
-            creator=creator,
-            price=int(price),
-            club_id=club_id,
-            u_info=u_info,
-            pay_type=pay_type,
-            platform=platform,
-            max_player=max_player,
-        )
 
-        # 创建房间
-        new_room, err = await GameRoomsRC.create_game_room(
-            platform=platform,
-            creator=creator,
-            play_type=play_type,
-            pay_type=pay_type,
-            price=price,
-            total_round=total_round,
-            max_player=max_player,
-            rule_details=rule_details,
-            club_id=club_id,
-            is_location=is_location,
-            is_friend=is_friend,
-            cs_type=cs_type,
-            room_type=2,
-        )
-        if not new_room:
-            return self.answer(StaCode.FAIL, hint=err)
-        # 创建房间后直接加入
-        room_data, _ = await GameRoomsRC.get_game_room_by_room_id(new_room)
-        sta, e = await GameRoomsRC.join_room(room_data, creator)
-        if sta is False:
-            return self.answer(StaCode.FAIL, hint=e)
-        cs_enum = ServiceEnum.find_member_by_val(cs_type)
-        if not cs_enum:
-            await GameRoomsRC.delete_game_room(new_room, True)
-            return self.answer(StaCode.FAIL, hint="非法服务")
-        rmq_data = room_data
-        rmq_data["secret"] = C_SERVICE_SECRET_KEY
-        rmq_data["online_group_user"] = await GameRoomsRC.get_online_user_group(creator, club_id)
-        await self.cs2cs_by_rmq(
-            cs_enum,
-            CmdRoom.NEW_MATCH,
-            rmq_data,
-            creator,
-        )
+        # 校验用户是否存在未解散房间
+        room_data = await GameRoomsRC.cache_user_room_get(creator)
+        self.conf.log.info(f"用户{creator}查询到房间ID:{room_data}")
+        if room_data:
+            # room_data, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            sta, e = await self._join_room(room_data, creator)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=e)
+        else:
+            # 预处理
+            rule_details = await verify_rule_detail(rule_details, play_type)
+            await self._before_create_room(
+                creator=creator,
+                price=int(price),
+                club_id=club_id,
+                u_info=u_info,
+                pay_type=pay_type,
+                platform=platform,
+                max_player=max_player,
+            )
+
+            # 创建房间
+            new_room, err = await GameRoomsRC.create_game_room(
+                platform=platform,
+                creator=creator,
+                play_type=play_type,
+                pay_type=pay_type,
+                price=price,
+                total_round=total_round,
+                max_player=max_player,
+                rule_details=rule_details,
+                club_id=club_id,
+                is_location=is_location,
+                is_friend=is_friend,
+                cs_type=cs_type,
+                room_type=2,
+            )
+            if not new_room:
+                return self.answer(StaCode.FAIL, hint=err)
+            # 创建房间后直接加入
+            room_data, _ = await GameRoomsRC.get_game_room_by_room_id(new_room)
+            sta, e = await self._join_room(room_data, creator)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=e)
         if again == 1 and again_uid:
             await self.again_mq(again_uid, room_data)
         return self.answer(data=room_data)
