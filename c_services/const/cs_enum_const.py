@@ -161,6 +161,7 @@ class CmdRoom(BaseEnum):
     ZHA_JIAN = 102, "炸捡", "麻将"
     CHANGE_CONNECT = 103,"玩家状态变化","麻将"
     CLUB_QUIT_ROOM = 104, "茶馆玩家退出房间", CallCheck.INNER.val
+    FORCE_DISMISS_ROOM = 105, "强制解散房间", CallCheck.INNER.val
 
     #休闲玩法
     TIMELY_KOU_FEN = 110, "即时结算", "麻将"

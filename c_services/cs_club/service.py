@@ -57,6 +57,8 @@ class ClubServer(BaseServer):
         if club_id <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "茶馆id有误")
         room = self.get_or_create_room(club_id, owner)
+        if uid in room.members:
+            return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家已在茶馆")
         # todo: 2.检验当前uid是否是club id下的茶馆成员
         if uid <= 0:
             return await self.cs2ws_by_rmq(CmdClub.ENTER_CLUB, uid, StaCode.FAIL, "玩家uid有误")

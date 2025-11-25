@@ -106,6 +106,7 @@ class ClubUsersRC(BaseCommonRC):
                         # 普通成员->管理员
                         status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
                         group_status = ClubUserGroupRC.GROUP_STATUS_DISABLE
+                    # 写入行为记录
                     sta, msg = await ExtraClubBehaviorRC.create_club_behavior(
                         ExtraClubBehaviorRC.BEHAVIOR_MANAGE_INDEX,
                         data["uid"],
@@ -115,13 +116,18 @@ class ClubUsersRC(BaseCommonRC):
                     )
                     if not sta:
                         return False, msg
-                    group_id, e = await ClubUserGroupRC.update_club_user_group(
-                        data["uid"],
+                    # 更新禁止同桌状态
+                    groups, e = await ClubUserGroupRC.get_club_user_group_by_filter(
                         data["club_id"],
-                        status=group_status
+                        uid=data["uid"]
                     )
-                    if not group_id:
-                        return False, msg
+                    if groups and groups[0]["u_ids"]:
+                        group_id, e = await ClubUserGroupRC.update_club_user_group(
+                            groups[0]["gid"],
+                            status=group_status
+                        )
+                        if not group_id:
+                            return False, msg
         except OperationalError as e:
             return False, e
         return True, "更新成功"

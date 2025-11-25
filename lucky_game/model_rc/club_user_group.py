@@ -143,10 +143,7 @@ class ClubUserGroupRC(RCModel):
         exist = False
         if group and group["status"] == 1:
             if group["u_ids"]:
-                cls.conf.log.info(f"group_1:禁止同桌u_ids: {type(group['u_ids'])} {group['u_ids']}")
                 for u_id in group["u_ids"]:
-                    cls.conf.log.info(f"group_1:禁止同桌u_id: {type(u_id)} {u_id}")
-                    cls.conf.log.info(f"group_1:禁止同桌room_uid: {type(room_uid)} {room_uid}")
                     if str(u_id) in room_uid:
                         exist = True
                         break
