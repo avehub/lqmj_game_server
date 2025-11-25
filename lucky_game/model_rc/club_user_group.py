@@ -116,6 +116,8 @@ class ClubUserGroupRC(RCModel):
                 if group_list:
                     for group in group_list:
                         cls.conf.log.info(f"group_2: {group}, 待加入uid: {uid}, 房间内room_uid: {room_uid}")
+                        cls.conf.log.info(f"group_2:禁止同桌uid: {type(uid)} {uid}")
+                        cls.conf.log.info(f"group_2:禁止同桌room_uid: {type(room_uid)} {room_uid}")
                         if group["status"] == 1 and str(group["uid"]) in room_uid:
                             room_u_sta = True
                             break
