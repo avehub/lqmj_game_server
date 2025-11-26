@@ -150,7 +150,7 @@ class RoomZY(RoomBJ):
         if is_sha_bao:
             extra_fan.append(ExtraHuPai.SHA_BAO)
 
-        if self.poker.left_count <= const.LIU_JU_COUNT:
+        if self.play_type == PlayType.AN_SHUN_MJ and self.poker.left_count <= const.LIU_JU_COUNT:
             extra_fan.append(ExtraHuPai.SEA_MOON)
 
         qing_upgrade_map = {
