@@ -507,7 +507,7 @@ class BaseCardRoom(BaseRoom):
                 await asyncio.gather(*send_list)
 
         is_dismiss = over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE
-        send_list = []
+        record_data_list = []
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
@@ -522,28 +522,26 @@ class BaseCardRoom(BaseRoom):
                 else:
                     room_status = 0
                 data = {
-                    "record_id": self.__record_id,
                     "total_score": p.total_score,
                     "final_ranking": final_ranking,
                     "final_grade": final_grade,
                     "game_over_data": p.game_over_data,
                     "num": num,
                     "room_status": room_status,
-                    "tid":self.tid
+                    "tid":self.tid,
+                    "uid":p.uid
                 }
-                send_list.append(self.send_task_to_worker(CmdWorkers.INSERT_GAME_RECORD_TOTAL,data,p.uid))
-        # 总结算战绩插入
-        if send_list:
-            await asyncio.gather(*send_list)
+                record_data_list.append(data)
 
-        if is_dismiss:
-            data = {
-                "record_id": self.__record_id,
-                "round_idx": round_idx,
-                "tid": self.tid,
-                "is_all": True
-            }
-            await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES,data)
+        record_data = {
+            "record_id": self.__record_id,
+            "round_idx": round_idx,
+            "tid": self.tid,
+            "is_all": True,
+            "is_dismiss": is_dismiss,
+            "record_data_list": record_data_list
+        }
+        await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES,record_data)
 
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
