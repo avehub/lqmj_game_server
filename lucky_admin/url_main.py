@@ -53,8 +53,8 @@ class MainBp(BaseBlue):
         # 奖励模块
         Urls("/Award", Award),
 
-        # 设置
-        Urls("/Award", Award),
+
+
 
 
 
