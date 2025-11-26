@@ -470,17 +470,17 @@ class WorkersServer(JsonBaseServer):
 
     async def __insert_game_grade(self, uid, data):
         replay_msg_data = data.get("replay_msg_data")
+        tid = data.get("tid")
         for replay_msg in replay_msg_data:
             msg = replay_msg.get("replay_msg")
             for i, m in enumerate(msg):
                 msg[i] = UtilsTool.base64_to_bytes(m,log_fun = self.log_info)
         result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
-        self.log_info("游戏结束一轮结束战绩插入", result_data)
+        self.log_info(tid,"游戏结束一轮结束战绩插入", result_data)
 
 
     async def __update_game_record_times(self, uid, data):
         """ 更新游戏战绩次数 """
-        print("dddd")
         tid = data.get("tid")
         await self.conf.locker.locked(tid,self.update_record_times,(uid,data))
 
