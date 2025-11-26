@@ -206,6 +206,8 @@ class CmdWorkers(BaseEnum):
     CANCEL_BACKGROUND_SCHEDULED_TASK = 26, "取消后台定时任务"
     FETCH_ACTIVE_MAILS = 27, "获取活跃（一段时间）邮件"
     USER_EVENT_TRACKING = 28, "用户事件追踪"
+    UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
+    INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
 
 
 @unique
