@@ -16,6 +16,9 @@ import ujson
 from nsanic.libs.tool import http_get, json_parse
 
 from .meta_class import NoInstances
+import base64
+import binascii
+from typing import Optional
 
 
 class UtilsTool(metaclass=NoInstances):
@@ -701,3 +704,46 @@ class UtilsTool(metaclass=NoInstances):
         except Exception as data:
             print(data)
         return 0.0
+
+    @staticmethod
+    def base64_to_bytes(base64_string: str,
+                        handle_data_url: bool = True,
+                        log_fun: Optional[callable] = None) -> Optional[bytes]:
+        """将 Base64 字符串转换回原始的 bytes 数据"""
+        if not base64_string:
+            error_msg = "Base64 字符串不能为空"
+            if log_fun:
+                log_fun(error_msg)
+            else:
+                print(error_msg)
+            return None
+
+        try:
+            # 处理可能的数据URL前缀
+            if handle_data_url and ',' in base64_string:
+                # 分离MIME类型和实际的Base64数据
+                header, actual_base64 = base64_string.split(',', 1)
+                base64_string = actual_base64
+
+            # 移除可能存在的空白字符
+            base64_string = base64_string.strip()
+
+            # 进行Base64解码
+            decoded_bytes = base64.b64decode(base64_string)
+
+            return decoded_bytes
+
+        except binascii.Error as e:
+            error_msg = f"Base64 解码错误: {e}"
+            if log_fun:
+                log_fun(error_msg)
+            else:
+                print(error_msg)
+            return None
+        except Exception as e:
+            error_msg = f"解码过程发生意外错误: {e}"
+            if log_fun:
+                log_fun(error_msg)
+            else:
+                print(error_msg)
+            return None

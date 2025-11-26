@@ -274,7 +274,7 @@ class PaymentLogic:
             purchase_uid=purchase_uid if purchase_uid else uid,
             good_id=express.get("good_id"),
             sku=express.get("sku"),
-            platform=platform,
+            platform=int(platform),
             amount=express.get("price"),
             currency=express.get("currency"),
             pay_mode=pay_mode,

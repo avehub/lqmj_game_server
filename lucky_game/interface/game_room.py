@@ -62,7 +62,7 @@ class GameRoomAPI(RoomTemplateBase):
             # 校验茶馆成员身份信息
             club_user, e = await ClubUsersRC.get_club_user_by_one(creator, club_id)
             if not club_user or club_user["status"] == ClubUsersRC.STATUS_BLACK:
-                return self.answer(StaCode.FAIL, hint=e)
+                return self.answer(StaCode.FAIL, hint="暂时无法创建房间，请联系馆主")
             # 权限&规则校验
             club, _ = await BaseClubRC.get_club_by_id(club_id)
             club = json_parse(club)
