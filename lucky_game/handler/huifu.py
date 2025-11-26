@@ -101,20 +101,20 @@ class DouGongPay:
         request.req_seq_id = order_info.get('order_no')
         request.goods_desc = str(order_info.get('sku')) or '未知商品'
         # T_JSAPI: 微信公众号, JS-A_JSAPI: 支付宝, T_APP: 微信APP支付, 微信小程序: T_MINIAPP
-        trade_type = ""
-        wx_data = {}
-        if order_info.get('platform') == PlatForm.WECHAT_MP:
-            trade_type = "T_JSAPI"
-            wx_data = {
-                "sub_appid": WeChatConf.WE_CHAT_GZH_APP_ID,  # 微信公众号应用ID
-                "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
-            }
-        elif order_info.get('platform') == PlatForm.WECHAT_MINI_GAME:
-            trade_type = "T_MINIAPP"
-            wx_data = {
-                "sub_appid": WeChatConf.WE_CHAT_MG_APP_ID,  # 微信小程序应用ID
-                "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
-            }
+        # trade_type = ""
+        # wx_data = {}
+        # if order_info.get('platform') == PlatForm.WECHAT_MP:
+        trade_type = "T_JSAPI"
+        wx_data = {
+            "sub_appid": WeChatConf.WE_CHAT_GZH_APP_ID,  # 微信公众号应用ID
+            "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
+        }
+        # elif order_info.get('platform') == PlatForm.WECHAT_MINI_GAME:
+        #     trade_type = "T_MINIAPP"
+        #     wx_data = {
+        #         "sub_appid": WeChatConf.WE_CHAT_MG_APP_ID,  # 微信小程序应用ID
+        #         "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
+        #     }
         request.trade_type = trade_type
         request.trans_amt = f"{float(order_info.get('amount')):.2f}"  # 交易金额，必须大于0，保留两位小数点，如0.10、100.05等
 
