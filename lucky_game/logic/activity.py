@@ -44,6 +44,14 @@ async def act_count(uid: int, act_id: int, period: str):
                                                              end_time=end_time, count=True)
     return sta, signed
 
+async def check_gain_status(uid: int, award_id: int, start_time: int = None, end_time: int = None, act_id: int = None) -> tuple:
+    """检查用户是否已领取奖励"""
+    sta, await_gain = await AwardGainsRC.get_award_gains(uid=uid, start_time=start_time, end_time=end_time,
+                                                         act_id=act_id, type_id=award_id, status=99)
+    if sta:
+        return True, "暂未领取"
+    return False, "已领取"
+
 
 class Base:
     conf: ConfSrv = conf_srv
@@ -509,6 +517,10 @@ class Package(Base):
         award_id = await self.now_award_id(platform)
         if not award_id:
             return False, "当前时间不在活动时间内", {}
+        start_time, end_time = await CommonApi.get_time_range(period="day")
+        package_sta, msg = await check_gain_status(uid, award_id, start_time=start_time, end_time=end_time, act_id=act_id)
+        if not package_sta:
+            return False, msg, {}
         rewards, _ = await AwardRC.get_award_info(award_id)
         NLogger.info(f"rewards={rewards}")
         if not rewards:
@@ -576,6 +588,9 @@ class Package(Base):
                                                                 start_time=start_time,
                                                                 end_time=end_time, count=True)
         return count
+
+
+
 
     async def progress_data(self, uid: int, ac: dict, award_gains: list) -> dict:
         award_ids = ac.get("condition_awards").get("award_ids")

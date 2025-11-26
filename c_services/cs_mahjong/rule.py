@@ -1994,7 +1994,7 @@ class Rule(metaclass=NoInstances):
             lz_count = Rule.remove_by_value(one_path, lai_zi, -1)
             if lz_count == 0:
                 continue
-            if len(one_path) == 1:
+            if len(one_path) <= 1:
                 continue
             one_path.sort()
             if one_path[0] + 1 == one_path[1]:

@@ -1080,7 +1080,8 @@ class Room(BaseCardRoom):
                     # data["operates"].append(ActionType.ACTION_TYPE_PASS)
                     p.add_operates(ActionType.ACTION_TYPE_PASS)
                 elif ActionType.ACTION_TYPE_PASS in self.__record_operates.get(p.seat_id, []):
-                    operates.append(ActionType.ACTION_TYPE_PASS)
+                    if ActionType.ACTION_TYPE_PASS not in operates:
+                        operates.append(ActionType.ACTION_TYPE_PASS)
             data_model = S2CPublicOperatesMahjong.pb_model(**data)
             if operates:
                 await self.inner_send(p, CmdRoom.PUBLIC_OPERATES, data_model)
@@ -2862,7 +2863,8 @@ class Room(BaseCardRoom):
         else:
             if self.can_select_tian_ting(p, self.deal_cards_count + 1):
                 result.append(ActionType.ACTION_TYPE_TIAN_TING)
-
+        if result:
+            result.append(ActionType.ACTION_TYPE_PASS)
         return result
 
     def can_select_tian_ting(self, p: Player, cards_len):
@@ -3200,18 +3202,19 @@ class Room(BaseCardRoom):
         is_gy = self.play_type == PlayType.GUI_YANG_4
         is_wu_dui = self.play_type == PlayType.BI_JIE_MJ
         for p in self.seats:
-            if p.seat_id in self.__win_seat_list:
-                p.lian_zhuang += 1
-            else:
-                p.lian_zhuang = 0
-            if self.__liang_men_pai == 0 and self.play_type in (PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
-                if p.que_count() > 0:
-                    self.log_info(self.tid, p.uid, "玩家缺牌未打完", p.cards, p.que)
-                    continue
-            p.jiao_pai = Rule.get_round_over_jiao_pai(
-                p.table_cards, p.cards, allow_hu_map, is_gy=is_gy, lai_zi=self.__lai_zi, is_wu_dui=is_wu_dui)
-            if p.seat_id not in self.__win_seat_list and self.flow_status == FlowStatus.T_IN_EIGHT_TIAN_HU:
-                p.jiao_pai = 0
+            if p:
+                if p.seat_id in self.__win_seat_list:
+                    p.lian_zhuang += 1
+                else:
+                    p.lian_zhuang = 0
+                if self.__liang_men_pai == 0 and self.play_type in (PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
+                    if p.que_count() > 0:
+                        self.log_info(self.tid, p.uid, "玩家缺牌未打完", p.cards, p.que)
+                        continue
+                p.jiao_pai = Rule.get_round_over_jiao_pai(
+                    p.table_cards, p.cards, allow_hu_map, is_gy=is_gy, lai_zi=self.__lai_zi, is_wu_dui=is_wu_dui)
+                if p.seat_id not in self.__win_seat_list and self.flow_status == FlowStatus.T_IN_EIGHT_TIAN_HU:
+                    p.jiao_pai = 0
 
     def limit_lose_score(self, account: dict):
         """ 限制输分 """
