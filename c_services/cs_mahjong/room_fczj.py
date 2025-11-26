@@ -27,7 +27,7 @@ from .const import FlowStatus, PlayType, TimerDelay, ActionType, HuType, CardsTy
 from .player_fczj import PlayerFCZJ
 from .poker import Poker
 from .rule_fc import RuleFc
-from ..const.cs_enum_const import RoomStatus, CmdRoom, CmdRobotCal
+from ..const.cs_enum_const import RoomStatus, CmdRoom, CmdRobotCal, CmdWorkers
 
 
 class RoomFCZJ(BaseLeisureRoom):
@@ -2757,8 +2757,10 @@ class RoomFCZJ(BaseLeisureRoom):
         round_data["seats"] = self.room_win_lose_data()
         round_data["winner"] = self.__win_seat_list
         self.log_info("结算数据", round_data)
-        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
-        self.log_info("一轮结束战绩插入", result_data)
+        replay_msg_data = {"replay_msg_data": new_data}
+        await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE,replay_msg_data)
+        # result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(new_data)
+        # self.log_info("一轮结束战绩插入", result_data)
         if over_type != OverType.OTHERS_GIVE_UP:
             fan_ji_score_model = S2CFanJiScore.pb_model(fan_ji_score_list)
             await self.inner_broadcast(CmdRoom.FAN_JI_SCORE, fan_ji_score_model)
@@ -3031,7 +3033,7 @@ class RoomFCZJ(BaseLeisureRoom):
         final_result = {
             "level_desc": self.level_desc
         }
-
+        send_list = []
         for idx, p in enumerate(self.seats):
             if not p or p.is_robot:
                 continue
@@ -3039,9 +3041,22 @@ class RoomFCZJ(BaseLeisureRoom):
             final_result.update(p.game_over_data)
             final_ranking = score_rank_map[p.round_score]
             final_grade = 1 if final_ranking == 1 else 0
-            over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid, p.round_score >= 0, p.round_score
-                                                                            , final_ranking, final_grade, final_result, num)
-            self.log_info("休闲场总结算战绩插入", over_record)
+
+            data = {
+                "record_id": self.__record_id,
+                "total_score": p.round_score,
+                "final_ranking": final_ranking,
+                "final_grade": final_grade,
+                "game_over_data": final_result,
+                "num": num,
+                "tid": self.tid
+            }
+            send_list.append(self.send_task_to_worker(CmdWorkers.INSERT_GAME_RECORD_TOTAL, data, p.uid))
+
+        if send_list:
+            self.log_info("休闲场总结算战绩插入")
+            await asyncio.gather(*send_list)
+
 
     @staticmethod
     def update_player_max_score(p: PlayerFCZJ, total_score, base_score, extra_score, hu_type, extra_hu_list):
