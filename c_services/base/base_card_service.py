@@ -29,7 +29,7 @@ class BaseCardService(BaseService):
 
     async def _on_new_match(self, uid, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
-        self.log_info("匹配信息",data)
+        self.log_info("匹配信息", data)
         await self.new_match(uid, data)
 
     async def new_match(self, uid, data):
@@ -45,7 +45,7 @@ class BaseCardService(BaseService):
         tid = data.get("room_id")
         room = self.get_room(tid)
         if not room:
-            room = self.create_room(self.ROOM, data,tid = tid)
+            room = self.create_room(self.ROOM, data, tid=tid)
             self.log_info(f"创建房间{room.tid}")
         else:
             if room.in_room_count == room.max_player_count:
@@ -56,9 +56,8 @@ class BaseCardService(BaseService):
         if player.seat_id <= 0:
             room.online_group_user = data.get("online_group_user")
             await room.player_join_room([player])
-        self.log_info("玩家加入房间", player.uid, player.seat_id,"最大人数",room.max_player_count)
+        self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)
-
 
     def get_or_create_player(self, uid, c_player):
         player = self.get_player(uid)
@@ -66,10 +65,10 @@ class BaseCardService(BaseService):
             return player
         return self.create_player(c_player, uid, False)
 
-    async def __req_dismiss_room(self,player, room, data):
+    async def __req_dismiss_room(self, player, room, data):
         req_dismiss_model.ParseFromString(data)
         agree = req_dismiss_model.agree or False
-        code,msg = await room.req_dismiss_room(player,agree)
+        code, msg = await room.req_dismiss_room(player, agree)
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.REQ_DISMISS, player.uid, code, msg)
 
@@ -89,8 +88,8 @@ class BaseCardService(BaseService):
         room.set_not_playing_dismiss(room.room_status, True)
         await room.force_dismiss(OverType.CLUB_OWNER_DISMISS)
         if from_club:
-            data = {"req_id":req_id,"secret":C_SERVICE_SECRET_KEY}
-            await self.cs2cs_by_rmq(ServiceEnum.C_CLUB,CmdClub.JOIN_NEW_GAME_SUC, data,uid)
+            data = {"req_id": req_id, "secret": C_SERVICE_SECRET_KEY}
+            await self.cs2cs_by_rmq(ServiceEnum.C_CLUB, CmdClub.JOIN_NEW_GAME_SUC, data, uid)
 
     async def __force_dismiss_room(self, _, data):
         tid = data.get("room_id")
@@ -98,8 +97,6 @@ class BaseCardService(BaseService):
         if room:
             await room.force_dismiss(OverType.ULTIMATE_DISMISS)
 
-
     async def clear_in_service(self):
-        await GameRoomsRC.abnormal_cs_type(self.service_type,"重启子游戏服务")
+        await GameRoomsRC.abnormal_cs_type(self.service_type, "重启子游戏服务")
         await super().clear_in_service()
-
