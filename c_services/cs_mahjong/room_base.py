@@ -3279,6 +3279,8 @@ class Room(BaseCardRoom):
     def dismiss_check_out(self):
         deal_cards = False  # 表示是否已发过牌(未发牌则不翻鸡)
         for p in self.seats:
+            if not p:
+                continue
             if p.cards:
                 deal_cards = True
             p.on_round_over(0)

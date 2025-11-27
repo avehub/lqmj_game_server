@@ -67,7 +67,7 @@ class BaseCardRoom(BaseRoom):
                 self.log_info("房间空闲超时但还有人，增加300s超时", idle_time, self.__timeout_idle_time)
                 return
         self.log_info("超时关闭房间", self.in_room_count, self.seats)
-        await self.force_dismiss(OverType.FORCE)
+        await self.force_dismiss(OverType.ULTIMATE_DISMISS)
 
     @property
     def extra_score_map(self):
