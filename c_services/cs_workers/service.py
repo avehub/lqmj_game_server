@@ -8,7 +8,6 @@ from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, Cm
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
-from common.public.conf import locker
 from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
