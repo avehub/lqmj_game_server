@@ -8,6 +8,7 @@ from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, Cm
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
+from common.public.conf import locker
 from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
@@ -477,6 +478,7 @@ class WorkersServer(JsonBaseServer):
                 msg[i] = UtilsTool.base64_to_bytes(m,log_fun = self.log_info)
         result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
         self.log_info(tid,"游戏结束一轮结束战绩插入", result_data)
+
 
 
     async def __update_game_record_times(self, uid, data):
