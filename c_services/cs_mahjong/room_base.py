@@ -2295,7 +2295,7 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "游戏流程不在可过流程"
 
         if self.has_do_by_action(p, ActionType.ACTION_TYPE_PASS):  # 不允许再次操作
-            return StaCode.RULE_ERR, "已经操作过了"
+            return StaCode.ALREADY_DO, "已经操作过了"
 
         has_do_action = self.has_do_action(p)
         can_operates = p.can_operates()
@@ -2357,7 +2357,7 @@ class Room(BaseCardRoom):
         if self.curr_seat_id != player.seat_id:
             return StaCode.NOT_YOUR_TURN, "没有轮到你"
         if self.has_do_by_action(player, ActionType.ACTION_TYPE_CHU_PAI):  # 不允许再次操作
-            return StaCode.RULE_ERR, "已经操作过出牌了"
+            return StaCode.ALREADY_DO, "已经操作过出牌了"
         if player.card_is_lock():
             if card not in player.get_out_not_lock_card():
                 return StaCode.RULE_ERR, "出牌在锁定范围内，不可出"
@@ -2407,7 +2407,7 @@ class Room(BaseCardRoom):
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_PENG):
             return StaCode.RULE_ERR, "没有可碰操作"
         if self.has_do_by_action(player, [ActionType.ACTION_TYPE_PENG]):  # 不能再次操作
-            return StaCode.RULE_ERROR, "已经操作过碰了"
+            return StaCode.ALREADY_DO, "已经操作过碰了"
 
         if self.play_type < 3 and ActionType.ACTION_TYPE_HU in player.operates or ActionType.ACTION_TYPE_JIAN in player.operates:
             self.set_tui_zhang_ke_kai(player)
@@ -2432,7 +2432,7 @@ class Room(BaseCardRoom):
 
         if self.has_do_by_action(player, [ActionType.ACTION_TYPE_MING_GANG,ActionType.ACTION_TYPE_ZHUAN_WAN_GANG,
                                           ActionType.ACTION_TYPE_AN_GANG]):  # 不能再次操作
-            return StaCode.RULE_ERROR, "已经操作过杠了"
+            return StaCode.ALREADY_DO, "已经操作过杠了"
 
         if self.play_type < 3 and player.can_hu_men_jian():
             self.set_tui_zhang_ke_kai(player)
@@ -2471,7 +2471,7 @@ class Room(BaseCardRoom):
                                     FlowStatus.T_IN_TIAN_TING,FlowStatus.T_IN_EIGHT_TIAN_HU):
             return StaCode.FLOW_ERR, "当前流程不可胡"
         if self.has_do_by_action(player, [ActionType.ACTION_TYPE_HU]):  # 不能再次操作
-            return StaCode.RULE_ERROR, "已经操作过胡了"
+            return StaCode.ALREADY_DO, "已经操作过胡了"
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_HU):
             if self.__have_men_jian_hu:
                 self.log_info(self.tid, player.uid, "胡牌提示版本没有炸胡!")
@@ -2520,7 +2520,7 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前非玩家摸牌阶段"
         if self.has_do_by_action(player, [ActionType.ACTION_TYPE_MEN]):  # 不能再次操作
             self.log_info(self.tid, player.uid, "men------重复操作不对：", self.flow_status)
-            return StaCode.RULE_ERR, "不能再次操作"
+            return StaCode.ALREADY_DO, "不能再次操作"
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
             if self.__have_men_jian_hu:
                 self.log_info(self.tid, player.uid, "胡牌提示版本没有炸闷!")
@@ -2553,6 +2553,8 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前流程不可捡"
         if self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
             return StaCode.RULE_ERR, "牌库小于三张必开，不可捡"
+        if self.has_do_by_action(player, [ActionType.ACTION_TYPE_JIAN]):  # 不能再次操作
+            return StaCode.ALREADY_DO, "已经操作过捡了"
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
             if self.__have_men_jian_hu:
                 self.log_info(self.tid, player.uid, "胡牌提示版本没有炸捡!")
@@ -2601,6 +2603,8 @@ class Room(BaseCardRoom):
         self.log_info("玩家准备", player.uid)
         if self.room_status not in (RoomStatus.T_IDLE, RoomStatus.T_CHECK_OUT):
             return StaCode.FLOW_ERR, "桌子不在可准备状态"
+        if player.is_ready:
+            return StaCode.ALREADY_DO, "玩家已经准备"
         player.is_ready = True
         data = {"seat_id": player.seat_id, "is_ready": player.is_ready}
         data_model = S2CReady07Mahjong.pb_model(**data)
@@ -2674,6 +2678,8 @@ class Room(BaseCardRoom):
             return StaCode.RULE_ERR, "当前流程不可天听"
         if not p.is_action_in_operates(ActionType.ACTION_TYPE_TIAN_TING):
             return StaCode.RULE_ERR, "不存在可天听操作"
+        if p.tian_ting:
+            return StaCode.ALREADY_DO, "玩家已经天听"
         result = {
             "seat_id": p.seat_id,
         }

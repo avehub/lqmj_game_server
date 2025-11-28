@@ -532,7 +532,7 @@ class BaseRoom(metaclass=ABCMeta):
     def clear_room(self):
         """ 清理房间 """
         self.__service = None
-        self.__room_status = RoomStatus.T_IDLE
+        self.__room_status = RoomStatus.T_CLOSED
         self.__flow_status = 0
         self.__curr_seat_id = 0
         self.__dealer = 0

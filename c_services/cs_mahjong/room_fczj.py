@@ -1782,6 +1782,9 @@ class RoomFCZJ(BaseLeisureRoom):
     async def player_recharge_ing(self, player):
         """ 充值中回调 """
         self.log_info(player.uid, player.seat_id, "玩家选择复活，复活中。。。", self.room_status)
+        if player.recharge_sta == PlayerRechargeSta.RECHARGE_ING:
+            await self.inner_send(player,CmdRoom.RECHARGE_ING, code = StaCode.ALREADY_DO, hint = "已经操作过了")
+            return
         player.recharge_sta = PlayerRechargeSta.RECHARGE_ING
         if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
             return
