@@ -47,7 +47,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def set_tid(self, tid):
         """ 房间号累加 """
-        if self.room_status == RoomStatus.T_IDLE:
+        if self.room_status == RoomStatus.T_IDLE or self.room_status == RoomStatus.T_CLOSED:
             self.__tid = tid
 
     @property
@@ -537,7 +537,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__curr_seat_id = 0
         self.__dealer = 0
         self.__round_idx = 1  # 局数
-        self.__seats.clear()
+        self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
         self.cancel_all_timer()
 
@@ -555,3 +555,4 @@ class BaseRoom(metaclass=ABCMeta):
             "total_round") or 1  # 总局数
 
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
+        self.__room_status = RoomStatus.T_IDLE

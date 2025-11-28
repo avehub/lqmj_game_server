@@ -1768,7 +1768,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
-        if self.room_status == RoomStatus.T_IDLE: #游戏解散后防止机器人复活走到这
+        if self.room_status in (RoomStatus.T_CLOSED,RoomStatus.T_IDLE) : #游戏解散后防止机器人复活走到这
             return
         player.recharge_sta = PlayerRechargeSta.IDLE
         self.log_info(player.uid, player.seat_id, "玩家复活")
