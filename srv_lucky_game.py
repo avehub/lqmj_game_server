@@ -6,8 +6,8 @@ from lucky_game.config import conf_srv as conf
 from lucky_game.handler.middleware import logging_middleware
 from lucky_game.url_main import MainBp
 from sanic import Sanic
-from common.utils.exceptions import global_exception_handler
 import sys
+
 
 signal_map = {}
 
@@ -21,3 +21,5 @@ if conf.FILE_UPLOAD.LOCAL_STORAGE['enable']:
 
 if __name__ == '__main__' or 'pydevd' in sys.modules:
     main_server.run()
+
+

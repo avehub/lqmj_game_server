@@ -112,7 +112,7 @@ class ConfJsonRC(BaseCommonRC):
         try:
             query = {}
             if desc is not None:
-                query["desc"] = desc
+                query["desc__contains"] = desc
             order_field = "-update_time"
             if page and page_size:
                 total = await cls.db_model.filter(**query).count()

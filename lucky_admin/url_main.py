@@ -1,25 +1,18 @@
 # coding=utf-8
 from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
-# from lucky_admin.interface.items import GetAllItemsHandler, GetAllStoresHandler
 from lucky_admin.interface.login import LoginByAccount, LoginByToken
-# from lucky_admin.interface.modify_assets import QueryAssetsEnum, ModifyUserAssets
-# from lucky_admin.interface.recharge_correlation import OrderHandler, ReplenishmentOrder
-# from lucky_admin.interface.season import SeasonInfoHandler, SeasonRankingHandler
 from lucky_admin.interface.test_api import TestApi
-# from lucky_admin.interface.data_stats import GetFunnelAnalysis, GetUserRetentionStats, GetAdsEventStats, \
-#     GetUserDataAnalysis, GetAdsUserStats, GetAdsParams
-# from lucky_admin.interface.players_manager import PlayerHandler, OperatesRecordsHandler, PlayerRankingHandler, \
-#     ModifyPassword, RoomPlayerHandler
-# from lucky_admin.interface.inform import AnnouncementsHandler, BanHandler, MailsManagerSend, \
-#     BackgroundRecordsTaskHandler, GetActiveMails, ItemRemovalCompensator
+from lucky_admin.interface.index import IndexBaseData, IndexUserData, IndexBaseTable, IndexGameData, IndexGameUserChart, \
+    IndexPayMoneyRealTime, IndexPayMoneyTotalChart, IndexAddUserTable, IndexAddUserChart, IndexPayMoneyChart, \
+    IndexPayUserChart, IndexOnlineUserChart
 from lucky_admin.interface.mail import Email
 from lucky_admin.interface.club import Club, ClubEvent
 from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatistics, ResourceChanges, ResourceChangeChart, \
      UserResource
 from lucky_admin.interface.room import GameRoom, GameRecord
 from lucky_admin.interface.award import Award
-
+from lucky_admin.interface.config import Config
 
 
 class MainBp(BaseBlue):
@@ -29,6 +22,22 @@ class MainBp(BaseBlue):
         Urls("/testapi", TestApi),
         Urls("/LoginByAccount", LoginByAccount),
         Urls("/LoginByToken", LoginByToken),
+
+        # 首页相关
+        Urls("/IndexBaseData", IndexBaseData),
+        Urls("/IndexUserData", IndexUserData),
+        Urls("/IndexBaseTable", IndexBaseTable),
+        Urls("/IndexGameData", IndexGameData),
+        Urls("/IndexGameUserChart", IndexGameUserChart),
+        Urls("/IndexOnlineUserChart", IndexOnlineUserChart),
+        Urls("/IndexPayMoneyRealTime", IndexPayMoneyRealTime),
+        Urls("/IndexPayMoneyTotalChart", IndexPayMoneyTotalChart),
+        Urls("/IndexAddUserTable", IndexAddUserTable),
+        Urls("/IndexAddUserChart", IndexAddUserChart),
+        Urls("/IndexPayMoneyChart", IndexPayMoneyChart),
+        Urls("/IndexPayUserChart", IndexPayUserChart),
+
+
 
         # 邮件相关
         Urls("/Email", Email),
@@ -53,7 +62,8 @@ class MainBp(BaseBlue):
         # 奖励模块
         Urls("/Award", Award),
 
-
+        # 配置模块
+        Urls("/Config", Config),
 
 
 
