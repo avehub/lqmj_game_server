@@ -53,7 +53,6 @@ class Room(BaseCardRoom):
         self.__curr_card_exist = 0  # 当前牌是否存在
         self.__before_seat_id = 0
         self.__win_seat_list = []
-        self.__all_player_cards = []
 
         self.__ji_cards = None
         self.__player_actions = []  # 玩家动作
@@ -447,6 +446,9 @@ class Room(BaseCardRoom):
 
     def clear_room_round_start(self):
         super().clear_room_round_start()
+        self.clear_room_init()
+
+    def clear_room_init(self):
         self.__win_seat_list = []
         self.__gang_hou_mo_pai = []
         self.__gang_hou_chu_pai = []
@@ -853,6 +855,11 @@ class Room(BaseCardRoom):
             result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
+        if result and ActionType.ACTION_TYPE_HU in result and not p.men_cards and self.poker.left_count >= const.XUE_LIU_LEFT_BI_HU:
+            result.append(ActionType.ACTION_TYPE_PASS)
+        required_actions = {ActionType.ACTION_TYPE_PASS, ActionType.ACTION_TYPE_MEN}
+        if result and p.tian_ting and required_actions.issubset(result):
+            result.remove(ActionType.ACTION_TYPE_PASS)
         return result, can_gang_list
 
     def check_hu_and_ting(self, p: Player, result, can_gang_list):
@@ -1017,6 +1024,8 @@ class Room(BaseCardRoom):
 
     def clear_operates(self, beside_seat_id=-1):
         for p in self.seats:
+            if not p:
+                continue
             if p.seat_id == beside_seat_id:
                 continue
             p.operates = []
@@ -2162,6 +2171,11 @@ class Room(BaseCardRoom):
             result = [ActionType.ACTION_TYPE_HU]
         if result and (ActionType.ACTION_TYPE_HU not in result or self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN)):
             result.append(ActionType.ACTION_TYPE_PASS)
+        if result and ActionType.ACTION_TYPE_HU in result and not p.men_cards and self.poker.left_count >= const.XUE_LIU_LEFT_BI_HU:
+            result.append(ActionType.ACTION_TYPE_PASS)
+        required_actions = {ActionType.ACTION_TYPE_PASS, ActionType.ACTION_TYPE_JIAN}
+        if result and p.tian_ting and required_actions.issubset(result):
+            result.remove(ActionType.ACTION_TYPE_PASS)
         return result
 
     def check_hu_by_chu_pai(self, p, result):
@@ -4639,4 +4653,10 @@ class Room(BaseCardRoom):
 
     def clear_room(self):
         self.__winner_list = []
+        self.__gang_hou_mo_pai = []
+        self.__gang_hou_chu_pai = []
+        self.clear_table_actions()
+        self.clear_room_init()
+        self.__ji_pai_score = None
+        self.__default_ji = None
         super().clear_room()

@@ -1830,6 +1830,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     def clear_operates(self, beside_seat_id=-1):
         for p in self.seats:
+            if not p:
+                continue
             if p.seat_id == beside_seat_id:
                 continue
             p.operates = []
@@ -3024,6 +3026,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__no_jiao_pai_seats = []
         self.__hua_zhu_seats = []
         self.__record_id = 0
+        self.__win_seat_list = []
 
     async def record_game(self):
 
@@ -3097,3 +3100,19 @@ class RoomFCZJ(BaseLeisureRoom):
             return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
         else:
             return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
+
+
+    def clear_room(self):
+        self.clear_table_actions()
+        self.clear_round_over()
+        self.__default_ji = None
+        self.__ji_pai_score_map = None
+        self.__pai_xing_score_map = None
+        self.__extra_score_map = None
+
+    def refresh_room_conf(self, service, room_conf, **extra_room_info):
+        super().refresh_room_conf(service, room_conf, **extra_room_info)
+        self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
+        self.__ji_pai_score_map = self.get_ji_pai_score_map()
+        self.__pai_xing_score_map = self.get_pai_xing_score_map()
+        self.__extra_score_map = self.get_extra_score_map()

@@ -29,7 +29,6 @@ class BaseCardRoom(BaseRoom):
         room_conf.update(rule_details)
         super().__init__(tid, service, room_conf, poker, not_include)
         self.__rule_details = rule_details
-        self.__in_stop = False
         self.__club_id = room_conf.get("club_id") or 0
         self.__owner = room_conf.get("creator") or 0
         self.__create_time = room_conf.get("create_time") or tool_dt.cur_time()
@@ -44,7 +43,6 @@ class BaseCardRoom(BaseRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
         self.__record_id = 0
-        self.__last_round_result = {}
         self.__not_playing_room_status = RoomStatus.T_IDLE
         self.__not_playing_dismiss = False #没开始游戏就解散
         self.__deal_cards_count = 13
@@ -598,15 +596,18 @@ class BaseCardRoom(BaseRoom):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
         self.__replay_msg_data = []  # 存入战绩数据
+        self.__online_group_user = []
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
+        self.__rule_details = None
+        self.__extra_score_map = None
+        self.__pai_xing_score_map = None
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):
         rule_details = room_conf.pop("rule_details")
-        print("刷新房间配置", rule_details)
         room_conf.update(rule_details)
         super().refresh_room_conf(service, room_conf)
 
