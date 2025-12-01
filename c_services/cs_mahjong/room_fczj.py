@@ -3109,6 +3109,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__ji_pai_score_map = None
         self.__pai_xing_score_map = None
         self.__extra_score_map = None
+        super().clear_room()
 
     def refresh_room_conf(self, service, room_conf, **extra_room_info):
         super().refresh_room_conf(service, room_conf, **extra_room_info)

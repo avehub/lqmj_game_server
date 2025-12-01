@@ -73,6 +73,7 @@ class Rmq():
             on_message=None,
             que_auto_del=False,
             enable_rpc=False,
+            fanout_name = '',
     ) -> None:
         """
         消费
@@ -93,6 +94,10 @@ class Rmq():
             # 将队列绑定到交换器
             await queue.bind(match_exchange, routing_key=routing_key)
             extra_rkey and await queue.bind(match_exchange, routing_key=extra_rkey)
+
+            if fanout_name:
+                fanout_exchange = await channel.declare_exchange(fanout_name, ExchangeType.FANOUT,durable=True)
+                await queue.bind(fanout_exchange)
 
             # Start listening the queue
             # 监听队列

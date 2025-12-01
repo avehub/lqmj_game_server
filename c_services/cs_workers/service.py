@@ -56,6 +56,7 @@ class WorkersServer(JsonBaseServer):
     ONCE_OPERATION_LIMIT = 1000  # 单次操作上限
     TASK_DATE_KEY = 'task_date'
     delay_fail = 2
+    SUBSCRIBE_FANOUT = None
 
     def __init__(self):
         super().__init__()

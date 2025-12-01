@@ -808,7 +808,7 @@ class Room(BaseCardRoom):
             await self.inner_send(curr_player, CmdRoom.PUBLIC_OPERATES, data_model)  # 玩家公共操作
         self.__gang_hou_chu_pai = self.__gang_hou_mo_pai
         if curr_player.mo_pai_can_operates():
-            self.log_info("mo_pai_call", curr_player.seat_id, "当前玩家可操作")
+            self.log_info("mo_pai_call", curr_player.seat_id, "当前玩家可操作",operates)
             data = {"seat_id": curr_player.seat_id, "seconds": seconds, "in_flow": self.flow_status}
             data_model = S2CTurnToMahjong.pb_model(**data)
             await self.inner_broadcast(CmdRoom.TURN_TO, data_model)

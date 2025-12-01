@@ -38,6 +38,8 @@ class MatchServer(BaseServer, LeisureService):
     包括：等待匹配、匹配中、匹配完成、离开匹配
     """
     enable_rpc = False
+    SUBSCRIBE_FANOUT = None
+
 
     def __init__(self):
         BaseServer.__init__(self)

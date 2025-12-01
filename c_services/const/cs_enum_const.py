@@ -64,6 +64,10 @@ class CmdClub(BaseEnum):
     JOIN_NEW_GAME = 10, "加入新游戏房间"
     JOIN_NEW_GAME_SUC = 11, "加入新游戏房间成功",CallCheck.INNER.val
 
+@unique
+class CmdFanOut(BaseEnum):
+    LOST_CONNECT = 201, "离线通知公共频道"
+
 
 @unique
 class ClubMsgType(BaseEnum):
@@ -170,8 +174,6 @@ class CmdRoom(BaseEnum):
     FAN_JI_INFO = 113, "翻鸡信息", "麻将"
     MANY_HU = 114, "多人胡", "麻将"
     RECORD_ACCOUNT = 115, "记账", "麻将"
-
-    FANOUT_LOST_CONNECT = 201, "离线通知公共频道", "麻将"
 
 
 @unique

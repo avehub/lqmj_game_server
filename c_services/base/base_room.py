@@ -410,6 +410,12 @@ class BaseRoom(metaclass=ABCMeta):
         """ 发送任务到worker消费 """
         await self.__service.push_task2worker(cmd, data, uid)
 
+    # async def broadcast_to_cs(self,cmd,uid=1,data = None):
+    #     if not self.__service:
+    #         return
+    #     await self.__service.publish_to_fanout(cmd, uid,data)
+
+
     @staticmethod
     @abstractmethod
     def get_player_info(player):
