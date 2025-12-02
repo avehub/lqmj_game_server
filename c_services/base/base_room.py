@@ -47,7 +47,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def set_tid(self, tid):
         """ 房间号累加 """
-        if self.room_status == RoomStatus.T_IDLE:
+        if self.room_status == RoomStatus.T_IDLE or self.room_status == RoomStatus.T_CLOSED:
             self.__tid = tid
 
     @property
@@ -410,6 +410,12 @@ class BaseRoom(metaclass=ABCMeta):
         """ 发送任务到worker消费 """
         await self.__service.push_task2worker(cmd, data, uid)
 
+    # async def broadcast_to_cs(self,cmd,uid=1,data = None):
+    #     if not self.__service:
+    #         return
+    #     await self.__service.publish_to_fanout(cmd, uid,data)
+
+
     @staticmethod
     @abstractmethod
     def get_player_info(player):
@@ -532,12 +538,12 @@ class BaseRoom(metaclass=ABCMeta):
     def clear_room(self):
         """ 清理房间 """
         self.__service = None
-        self.__room_status = RoomStatus.T_IDLE
+        self.__room_status = RoomStatus.T_CLOSED
         self.__flow_status = 0
         self.__curr_seat_id = 0
         self.__dealer = 0
         self.__round_idx = 1  # 局数
-        self.__seats.clear()
+        self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
         self.cancel_all_timer()
 
@@ -555,3 +561,4 @@ class BaseRoom(metaclass=ABCMeta):
             "total_round") or 1  # 总局数
 
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
+        self.__room_status = RoomStatus.T_IDLE
