@@ -37,8 +37,6 @@ class MainBp(BaseBlue):
         Urls("/IndexPayMoneyChart", IndexPayMoneyChart),
         Urls("/IndexPayUserChart", IndexPayUserChart),
 
-
-
         # 邮件相关
         Urls("/Email", Email),
 
@@ -64,6 +62,8 @@ class MainBp(BaseBlue):
 
         # 配置模块
         Urls("/Config", Config),
+
+
 
 
 
