@@ -208,7 +208,7 @@ class PayUserActivate(AdminAuthApi):
                     items[date]["five"] = len(data[date] & user_dict[date])
                     items[date]["six"] = len(data[date] & user_dict[date])
                     items[date]["seven"] = len(data[date] & user_dict[date])
-        result["list"] = [value for value in items.values()]
+        result["list"] = [value for value in items]
         return self.answer(data=result)
 
 class PayUserGap(AdminAuthApi):
@@ -226,10 +226,43 @@ class PayUserGap(AdminAuthApi):
             "up_quantile": 0,
             "down_quantile": 0,
             "median": 0,
+            "total": 0,
         }
-        data = {}
-        data["list"] = [unit]
-        return self.answer(data=data)
+        result = {}
+        order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5, status=99)
+        if order_data:
+            data = {}
+            start_date = tool_dt.dt_str(start_time, '%Y-%m-%d')
+            start_user = set()
+            pay_user = set()
+            max_amount = 0
+            min_amount = 0
+            max_len = len(order_data)
+            for order in order_data:
+                max_len -= 1
+                date = tool_dt.dt_str(order["created"], '%Y-%m-%d')
+                if date not in data:
+                    data[date] = unit.copy()
+                    data[date]["day"] = date
+                if start_date == date and order.get("uid") not in start_user:
+                    start_user.add(order.get("uid"))
+                if order.get("uid") not in pay_user:
+                    pay_user.add(order.get("uid"))
+                data[date]["start"] = len(start_user)
+                data[date]["pay_user"] = len(pay_user)
+                data[date]["total"] += order["amount"]
+                data[date]["age"] = ("%.2f" % (order["amount"] / len(pay_user)))
+                if max_amount < order["amount"]:
+                    data[date]["max"] = order["amount"]
+                if min_amount < order["amount"]:
+                    data[date]["min"] = min_amount
+                else:
+                    data[date]["min"] = order["amount"]
+                if max_len == 0:
+                    data[date]["up_quantile"] = 0
+
+            result["list"] = [value for value in data.values()]
+        return self.answer(data=result)
 
 class GiftPayData(AdminAuthApi):
     """ 收入看板-礼包购买情况 """
@@ -247,6 +280,8 @@ class GiftPayData(AdminAuthApi):
                 "buy_money": 0,
             }
         }
+
+        order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5, status=99)
         data = {}
         data["list"] = [unit]
         return self.answer(data=data)
