@@ -19,7 +19,7 @@ from common.proto.py_pb2.common import common_pb2
 
 class CommonApi(LogMeta):
     conf = BaseConf()
-
+    SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
     # def __init__(self):
     #     # 确保 conf 已初始化
     #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
@@ -33,10 +33,12 @@ class CommonApi(LogMeta):
     @classmethod
     async def get_player_join_gold(cls, uid):
         try:
-            gold = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+            user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+            gold = await cls.conf.rds.get_item(user_gold_key, jsparse=True)
+            if gold is None:
+                gold = {"gold": 0}
         except Exception as e:
             gold = {"gold": 0}
-        cls.conf.log.info(f"{uid} 获取待返还金币: {gold}")
         return gold
 
     @classmethod
@@ -89,6 +91,21 @@ class CommonApi(LogMeta):
         msg = msg or {}
         msg["secret"] = cls.conf.SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
+
+    async def publish_to_fanout(cls, cmd, uid = 1, msg= None):
+        """
+        向SUBSCRIBE_FANOUT频道发送消息
+        """
+        if not isinstance(msg, bytes):
+            msg = json_encode(msg, u_byte=True)
+        pack_data = UtilsTool.pack_inner_msg(cmd, uid, msg)
+        try:
+            await cls.conf.rmq.publish(
+                msg=pack_data,
+                exchange_name=cls.SUBSCRIBE_FANOUT,
+            )
+        except Exception as e:
+            cls.log_err(f"publish_to_fanout error: {e}")
 
     @classmethod
     async def inner_cs2ws(

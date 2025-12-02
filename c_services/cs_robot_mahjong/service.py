@@ -14,10 +14,8 @@ from common.public.enum_const import ServiceEnum
 
 
 class RobotMahjongServer(JsonBaseServer):
-    """
-    老牌友麻将处理函数
-    """
 
+    SUBSCRIBE_FANOUT = None
     def __init__(self):
         super().__init__()
         self.add_handlers({

@@ -1,18 +1,18 @@
 import asyncio
 
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdClub, CallCheck, ClubMsgType, CmdRoom
+from c_services.const.cs_enum_const import CmdClub, CallCheck, ClubMsgType, CmdRoom, CmdFanOut
 from c_services.cs_club.room import ClubRoom
 from common.proto.py_pb2.ws_c2s import leave_club_model, club_room_set_model
 from common.proto.py_pb2.ws_leisure import S2CClubRoomInfo, S2CClubNotice, S2CClubRoomSetInfo, S2CCheckInGame, one_of_model
 from common.public.conf import C_SERVICE_SECRET_KEY
-from common.public.enum_const import StaCode, ServiceEnum, CacheKey
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey, Channel
 from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class ClubServer(BaseServer):
 
-    SUBSCRIBE_FANOUT = None
+    # SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
 
     def __init__(self):
         super().__init__()
@@ -28,6 +28,7 @@ class ClubServer(BaseServer):
             CmdClub.CHECK_GAME_STATUS:self.__check_game_status,
             CmdClub.JOIN_NEW_GAME:self.__join_new_game,
             CmdClub.JOIN_NEW_GAME_SUC:self.__join_new_game_suc,
+            CmdFanOut.LOST_CONNECT:self.__lost_connect,
         })
 
         self.__rooms = {}
@@ -150,6 +151,14 @@ class ClubServer(BaseServer):
         req_id = data.get("req_id")
         await self.cs2ws_by_rmq(CmdClub.JOIN_NEW_GAME, uid ,req_id = req_id)
 
+    async def __lost_connect(self,uid,_):
+        self.log_info("玩家掉线",uid)
+        for club_id, room in self.__rooms.items():
+            if room.check_player_in_club(uid):
+                room.player_quit_club_room(uid)
+                self.log_info("club_id", club_id, "玩家离开茶馆", uid)
+                return await self.cs2ws_by_rmq(CmdClub.LEAVE_CLUB, uid)
+
     async def __room_info_change(self, _, data):
         """ 房间改变下发 """
         self.log_info("房间改变下发数据",data)
@@ -200,6 +209,8 @@ class ClubServer(BaseServer):
         if not func or not callable(func):
             return
         c_enum = CmdClub.find_member_by_val(cmd)
+        if not c_enum:
+            c_enum = CmdFanOut.find_member_by_val(cmd)
         check_inner = c_enum.desc == CallCheck.INNER
         if check_inner:
             data = self.check_inner_call(data)
