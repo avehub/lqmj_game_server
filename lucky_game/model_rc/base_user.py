@@ -508,7 +508,7 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def get_user_filter(cls, uid: any = None, is_vip: int = None, vip: int = None, phone: str = None,
                               id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
-                              page: int = None, page_size: int = None, order_field: str = "-uid"):
+                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None):
         """获取用户列表"""
         try:
             query = {}
@@ -529,6 +529,8 @@ class BaseUserRC(BaseCommonRC):
                 query["phone"] = phone
             if id_card is not None:
                 query["id_card"] = id_card
+            if platform is not None:
+                query["platform"] = platform
             if address is not None:
                 # query["address__contains"] = address
                 query["address"] = address

@@ -11,7 +11,7 @@ from nsanic.base_ws import BaseWebsocket
 from typing import AnyStr, Union
 from nsanic.verify import vint
 from sanic.exceptions import WebsocketClosed
-from c_services.const.cs_enum_const import CmdRoom, CmdWs
+from c_services.const.cs_enum_const import CmdRoom, CmdWs, CmdFanOut
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.common_class import CommonApi
 from common.public.enum_const import Channel, ServiceEnum, CacheKey
@@ -191,7 +191,6 @@ class BaseWS(BaseWebsocket, CommonApi):
         # cur_ws = self.ws_manager.get_ws(uid)
         # if cur_ws and (cur_ws.ws_proto.id == off_ws.ws_proto.id):
         # await self.ws_manager.close_ws(uid)
-
         await super().on_offline(uid)  # todo: 这里不删除online key
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
         self.log_info(uid, "玩家断线, 通知所在子服务：", cs_info)
@@ -199,6 +198,8 @@ class BaseWS(BaseWebsocket, CommonApi):
             cs_type = cs_info.get("cs_type")
             cs_enum = ServiceEnum.find_member_by_val(cs_type)
             await self.cs2cs_by_rmq(cs_enum, CmdRoom.LOST_CONNECT, uid=uid)
+        await self.publish_to_fanout(CmdFanOut.LOST_CONNECT, uid )
+
 
     async def distribute(self, ws, c_type, c_code, msg: AnyStr):
         """ 分发消息 """

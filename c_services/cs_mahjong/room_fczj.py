@@ -1768,7 +1768,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
     async def notify_resurgence(self, player: PlayerFCZJ):
         """ 通知复活 """
-        if self.room_status == RoomStatus.T_IDLE: #游戏解散后防止机器人复活走到这
+        if self.room_status in (RoomStatus.T_CLOSED,RoomStatus.T_IDLE) : #游戏解散后防止机器人复活走到这
             return
         player.recharge_sta = PlayerRechargeSta.IDLE
         self.log_info(player.uid, player.seat_id, "玩家复活")
@@ -1782,6 +1782,9 @@ class RoomFCZJ(BaseLeisureRoom):
     async def player_recharge_ing(self, player):
         """ 充值中回调 """
         self.log_info(player.uid, player.seat_id, "玩家选择复活，复活中。。。", self.room_status)
+        if player.recharge_sta == PlayerRechargeSta.RECHARGE_ING:
+            await self.inner_send(player,CmdRoom.RECHARGE_ING, code = StaCode.ALREADY_DO, hint = "已经操作过了")
+            return
         player.recharge_sta = PlayerRechargeSta.RECHARGE_ING
         if not self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
             return
@@ -1827,6 +1830,8 @@ class RoomFCZJ(BaseLeisureRoom):
 
     def clear_operates(self, beside_seat_id=-1):
         for p in self.seats:
+            if not p:
+                continue
             if p.seat_id == beside_seat_id:
                 continue
             p.operates = []
@@ -3021,6 +3026,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__no_jiao_pai_seats = []
         self.__hua_zhu_seats = []
         self.__record_id = 0
+        self.__win_seat_list = []
 
     async def record_game(self):
 
@@ -3094,3 +3100,20 @@ class RoomFCZJ(BaseLeisureRoom):
             return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
         else:
             return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
+
+
+    def clear_room(self):
+        self.clear_table_actions()
+        self.clear_round_over()
+        self.__default_ji = None
+        self.__ji_pai_score_map = None
+        self.__pai_xing_score_map = None
+        self.__extra_score_map = None
+        super().clear_room()
+
+    def refresh_room_conf(self, service, room_conf, **extra_room_info):
+        super().refresh_room_conf(service, room_conf, **extra_room_info)
+        self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
+        self.__ji_pai_score_map = self.get_ji_pai_score_map()
+        self.__pai_xing_score_map = self.get_pai_xing_score_map()
+        self.__extra_score_map = self.get_extra_score_map()

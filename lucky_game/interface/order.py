@@ -211,7 +211,7 @@ class MiniProgramRecvPush(SpecialApi):
         event = payload_data.get('Event')
         session_from = payload_data.get("SessionFrom") or ""
         from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
-        if not session_from:
+        if not session_from or session_from == "客服按钮":
             # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
             # 目前重点处理支付，其他的客服人员处理
             return response.json({"ErrCode": 0, "ErrMsg": "Success"})

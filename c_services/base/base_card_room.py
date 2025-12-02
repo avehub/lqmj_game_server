@@ -29,7 +29,6 @@ class BaseCardRoom(BaseRoom):
         room_conf.update(rule_details)
         super().__init__(tid, service, room_conf, poker, not_include)
         self.__rule_details = rule_details
-        self.__in_stop = False
         self.__club_id = room_conf.get("club_id") or 0
         self.__owner = room_conf.get("creator") or 0
         self.__create_time = room_conf.get("create_time") or tool_dt.cur_time()
@@ -44,9 +43,8 @@ class BaseCardRoom(BaseRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
         self.__record_id = 0
-        self.__last_round_result = {}
         self.__not_playing_room_status = RoomStatus.T_IDLE
-        self.__not_playing_dismiss = False
+        self.__not_playing_dismiss = False #没开始游戏就解散
         self.__deal_cards_count = 13
         if self.play_type == PlayType.BI_JIE_MJ:
             self.__deal_cards_count = 10
@@ -67,7 +65,7 @@ class BaseCardRoom(BaseRoom):
                 self.log_info("房间空闲超时但还有人，增加300s超时", idle_time, self.__timeout_idle_time)
                 return
         self.log_info("超时关闭房间", self.in_room_count, self.seats)
-        await self.force_dismiss(OverType.FORCE)
+        await self.force_dismiss(OverType.ULTIMATE_DISMISS)
 
     @property
     def extra_score_map(self):
@@ -151,6 +149,15 @@ class BaseCardRoom(BaseRoom):
                                           self.club_room_info(ClubMsgType.ENTER_ROOM))  # 通知茶馆创建房间
 
     async def player_quit_room(self, player, data):
+        await self.service.conf.locker.locked(self.tid,self.quit_room,(player,data))
+
+    async def quit_room(self, player, data):
+        if self.room_status == RoomStatus.T_CLOSED:
+            await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, "房间已经关闭")
+            return
+        if player.uid == 0:
+            self.log_info("玩家不存在或者已经退出")
+            return
         self.log_info("请求退出房间:uid", player.uid, "game_began:", self.game_began, "owner:", self.owner, "tid:",
                       self.tid)
         if not self.game_began:
@@ -168,11 +175,9 @@ class BaseCardRoom(BaseRoom):
             one_of_model = s2c_one_of_model()
             one_of_model.seat_id = player.seat_id
             await self.inner_broadcast(CmdRoom.QUIT_ROOM, one_of_model)
-            await GameRoomsRC.leave_room(self.tid, player.uid)
             self.seats[player.seat_id - 1] = None
             await self.service.del_player_in_game(player.uid)
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
-            self.service.release_player(player)
             if self.club_id > 0:
                 online_group_user_set = set()
                 for p in self.seats:
@@ -188,6 +193,7 @@ class BaseCardRoom(BaseRoom):
             self.log_info("游戏开始了，不能离开", player.uid)
             return
         super(BaseCardRoom, self).player_quit_room(player, data)
+        self.service.release_player(player)
 
     async def req_dismiss_room(self, player, agree):
         if self.room_status == RoomStatus.T_CLOSED or self.in_room_count == 0:
@@ -590,15 +596,18 @@ class BaseCardRoom(BaseRoom):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
         self.__replay_msg_data = []  # 存入战绩数据
+        self.__online_group_user = []
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
+        self.__rule_details = None
+        self.__extra_score_map = None
+        self.__pai_xing_score_map = None
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):
         rule_details = room_conf.pop("rule_details")
-        print("刷新房间配置", rule_details)
         room_conf.update(rule_details)
         super().refresh_room_conf(service, room_conf)
 
