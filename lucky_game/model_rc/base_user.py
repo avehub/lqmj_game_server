@@ -508,7 +508,8 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def get_user_filter(cls, uid: any = None, is_vip: int = None, vip: int = None, phone: str = None,
                               id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
-                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None):
+                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None,
+                              group_field: str = None):
         """获取用户列表"""
         try:
             query = {}
@@ -543,7 +544,11 @@ class BaseUserRC(BaseCommonRC):
                         offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, total, data)
             else:
-                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+                if group_field == "platform":
+                    result = data = await cls.db_model.filter(**query).order_by(order_field).group_by(group_field).values(group_field,
+                                                                                                     f"{group_field}__count AS group_total")
+                else:
+                    result = data = await cls.db_model.filter(**query).order_by(order_field).values()
 
             if not data:
                 return False, result

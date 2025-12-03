@@ -74,7 +74,7 @@ class RecordsAdEventRC(BaseCommonRC):
 
     @classmethod
     async def get_uid_login_list(cls, uid: int = None, start_time: int = None, end_time: int = None, platform: int = None,
-                                 filtration: str = "*",):
+                                 filtration: str = "*", group_by: str = None):
         """根据用户ID获取登录记录"""
         where = " 1=1 "
         if uid is not None:
@@ -88,6 +88,8 @@ class RecordsAdEventRC(BaseCommonRC):
         order_field = "id"
         order_type = "DESC"
         sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} ORDER BY {order_field} {order_type}"
+        if group_by:
+            sql += f" GROUP BY {group_by}"
         result = await cls.db_model.exec_query(sql)
         if not result:
             return False, result
