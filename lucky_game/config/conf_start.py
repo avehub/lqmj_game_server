@@ -24,6 +24,7 @@ class ConfSrv(BaseConf):
     ALLOW_HEADER = ['Authorization', 'Content-Type']
     RESP_TYPE = 'JSON'
 
+    # FALLBACK_ERROR_FORMAT = "auto"
     SECRET_KEY = C_SERVICE_SECRET_KEY  # 子游戏密钥（消息验证）
     SERVER_SECRET_KEY = SERVER_SECRET_KEY  # 服务器密钥（加密使用）
     STA_CODE = StaCode

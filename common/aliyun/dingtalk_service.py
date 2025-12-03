@@ -6,11 +6,14 @@ import base64
 import urllib.parse
 import requests
 import logging
-from typing import List, Optional, Dict, Any
+import traceback
+import functools
+from typing import List, Callable, Type, Any, Optional, Union, Dict
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 from common.public.conf import DINGTALK_SECRET, DINGTALK_WEBHOOK
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -168,15 +171,10 @@ class DingTalkRobotService:
         title = f"{emoji} {alert_type}告警"
 
         content = f"""## {title}
-
 **告警级别：** {level.value}
-
 **告警时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 **告警内容：** {message}
-
 请及时处理！"""
-
         return self.send_markdown_message(title, content)
 
     def send_exception_alert(self, service_name: str, exception_message: str,
@@ -192,14 +190,10 @@ class DingTalkRobotService:
         Returns:
             发送结果
         """
-        content = f"""## 🚨 系统异常告警
-
+        content = f"""## 系统异常告警
 **服务名称：** {service_name}
-
 **异常时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 **异常信息：** {exception_message}
-
 """
 
         if stack_trace:
@@ -222,18 +216,12 @@ class DingTalkRobotService:
         Returns:
             发送结果
         """
-        title = "💰 余额不足告警"
-
+        title = "余额不足告警"
         content = f"""## {title}
-
 **账户类型：** {account_type}
-
 **当前余额：** {current_balance}
-
 **告警阈值：** {threshold}
-
 **告警时间：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
 请及时充值！"""
 
         return self.send_markdown_message(title, content)
@@ -348,9 +336,11 @@ class DingTalkNotifier:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+        if DINGTALK_WEBHOOK and DINGTALK_SECRET:
+            cls._instance.initialize()
         return cls._instance
 
-    def initialize(self, webhook_url: str, secret: str, timeout: int = 30):
+    def initialize(self, webhook_url: str = DINGTALK_WEBHOOK, secret: str = DINGTALK_SECRET, timeout: int = 30):
         """
         初始化钉钉通知器
 
@@ -370,30 +360,94 @@ class DingTalkNotifier:
 
 
 # 装饰器：异常自动通知
-def dingtalk_exception_handler(service_name: str = "警告：", notify_on_error: bool = True):
+def dingtalk_exception_handler(
+        service_name: str = "警告",
+        notify_on_error: bool = True,
+        exclude_exceptions: tuple[Type[Exception], ...] = (),
+        include_request_context: bool = False,
+        rate_limit_seconds: int = 300  # 5 minutes rate limiting
+):
     """
     异常自动通知装饰器
-
     Args:
         service_name: 服务名称
         notify_on_error: 是否在异常时通知
+        exclude_exceptions: 不发送通知的异常类型
+        include_request_context: 是否包含请求上下文
+        rate_limit_seconds: 相同错误通知的最小间隔(秒)
     """
 
-    def decorator(func):
-        def wrapper(*args, **kwargs):
+    def decorator(func: Callable) -> Callable:
+        last_error_time: Dict[str, float] = {}  # 用于限速的缓存
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            # 获取请求上下文（如果是web请求）
+            request_context = {}
+            if include_request_context and hasattr(args[0], 'request'):
+                request = args[0].request
+                request_context = {
+                    'method': getattr(request, 'method', ''),
+                    'path': getattr(request, 'path', ''),
+                    'query_params': dict(getattr(request, 'query_params', {})),
+                    'user': str(getattr(request, 'user', 'anonymous')),
+                    'remote_ip': getattr(request, 'META', {}).get('REMOTE_ADDR', '')
+                }
+
             try:
                 return func(*args, **kwargs)
+
+            except exclude_exceptions:
+                raise
+
             except Exception as e:
-                if notify_on_error:
+                if not notify_on_error:
+                    raise
+
+                # 获取完整的堆栈信息
+                stack_trace = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+
+                # 生成错误指纹，用于限速
+                error_fingerprint = f"{func.__module__}.{func.__name__}:{type(e).__name__}:{str(e)[:100]}"
+                current_time = datetime.now().timestamp()
+
+                # 检查是否需要限速
+                if (error_fingerprint in last_error_time and
+                        (current_time - last_error_time[error_fingerprint]) < rate_limit_seconds):
+                    raise
+
+                last_error_time[error_fingerprint] = current_time
+
+                # 准备通知内容
+                try:
                     notifier = DingTalkNotifier()
                     service = notifier.get_service()
+
+                    # 构建详细错误信息
+                    error_details = {
+                        "服务名称": service_name,
+                        "异常类型": type(e).__name__,
+                        "异常信息": str(e),
+                        "发生时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "函数模块": func.__module__,
+                        "函数名称": func.__name__,
+                        "请求上下文": request_context if request_context else "无",
+                        "堆栈跟踪": stack_trace[-2000:]  # 限制长度
+                    }
+
+                    # 发送通知
                     service.send_exception_alert(
-                        service_name=service_name,
+                        service_name=f"{service_name} - {type(e).__name__}",
                         exception_message=str(e),
-                        stack_trace=str(e.__traceback__)
+                        stack_trace=json.dumps(error_details, ensure_ascii=False, indent=2)
                     )
+                except Exception as notify_err:
+                    logger.error(f"发送钉钉通知失败: {notify_err}")
+
                 raise
+
         return wrapper
+
     return decorator
 
 

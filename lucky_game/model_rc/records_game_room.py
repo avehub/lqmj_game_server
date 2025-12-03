@@ -17,7 +17,9 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def create_record_game_room(cls, room_id: int, start_time: int, end_time: int = 0):
         """创建房间战绩记录"""
         try:
-            game_room, _ = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            game_room, msg = await GameRoomsRC.get_game_room_by_room_id(room_id)
+            if not game_room:
+                return game_room, msg
             record_data = {
                 "room_id": room_id,
                 "club_id": game_room["club_id"],
@@ -49,11 +51,14 @@ class RecordsGameRoomRC(BaseCommonRC):
                 return None, "战绩不存在"
             end_time = kwargs.get("end_time")
             round_num = kwargs.get("round_num")
+            room_status = kwargs.get("room_status")
             update = {}
             if end_time:
                 update["end_time"] = end_time
             if round_num:
                 update["round_num"] = round_num
+            if room_status:
+                update["room_status"] = room_status
             if update:
                 up_sta = await cls.db_model.update_by_pk(record_rid, update, old_data=record)
                 if not up_sta:
@@ -77,7 +82,7 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
                                         , end_time: any = None, play_type: any = None, cs_type: any = None,
                                         creator: any = None, record_rid: any = None, order_field: any = None,
-                                        page: int = None, page_size: int = None):
+                                        page: int = None, page_size: int = None, field: any = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -114,9 +119,9 @@ class RecordsGameRoomRC(BaseCommonRC):
             if start_time is not None:
                 query["start_time__gte"] = start_time
             if end_time is not None:
-                query["end_time__lt"] = end_time
+                query["end_time__lte"] = end_time
             if order_field is None:
-                order_field = "record_rid"
+                order_field = "-record_rid"
             if page and page_size:
                 total, _ = await cls.count_record_room(**query)
                 records = []
@@ -125,7 +130,10 @@ class RecordsGameRoomRC(BaseCommonRC):
                     records = await cls.db_model.filter(**query).order_by(order_field).limit(page_size).offset(offset).values()
                 result = await cls.page_result(page, page_size, total, records)
             else:
-                result = records = await cls.db_model.filter(**query).order_by(order_field).values()
+                if field:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values(*field)
+                else:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
                 return result, "暂无战绩"
         except OperationalError as e:

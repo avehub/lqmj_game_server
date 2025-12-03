@@ -5,16 +5,18 @@ from nsanic.libs import tool_dt
 from common.utils.kit_dt import KitDt
 from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
-from lucky_game.model_db.main import ConfStore
+from lucky_game.model_db.main import Stores, Goods
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
-from lucky_game.model_rc.base_rc import BaseRC
+from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.const import StoreType, PayType, AdSlotItem
+from tortoise.exceptions import OperationalError
+from lucky_game.handler.random_utils import generate_random_string
 
 
-class ConfStoreRC(BaseRC):
+class StoreRC(BaseCommonRC):
     """游戏商店"""
-    db_model = ConfStore
+    db_model = Stores
     tb_name = db_model.sheet_name()
 
     expired_mode = 0
@@ -29,8 +31,6 @@ class ConfStoreRC(BaseRC):
     async def get_store_items(cls, uid, store_type=StoreType.DEFAULT, platform='', os=''):
         items = await cls.cache_all_conf_item()
         if items:
-            # for item in items:
-            #     DouYin.adjust_payment_for_douyin(item, platform, os)
             items_list = await cls.organize_store_data(uid, items, store_type, filter_types=cls.COMMON_STORE_TYPES)
             return items_list
         return
@@ -39,10 +39,7 @@ class ConfStoreRC(BaseRC):
     async def get_store_item_by_id(cls, store_id, platform='', os=''):
         """按ID获取商店项目"""
         item = await cls.cache_conf_by_pk(store_id)
-        if item:
-            DouYin.adjust_payment_for_douyin(item, platform, os)
-            return item
-        return
+        return item
 
     @classmethod
     def __check_item_validity(cls, item):
@@ -132,6 +129,151 @@ class ConfStoreRC(BaseRC):
                 return True
             return False
         return True
+
+    @classmethod
+    async def get_store_filter(cls, platform: any = None, sid: any = None, status: int = None, type_id: any = None,
+                        start_time: int = None, end_time: int = None, currency: int = None,
+                        order_by: str = None, sku_id: any = None, fields: str = None):
+        """获取用户参与活动次数"""
+        try:
+            query = {}
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform__contains"] = platform
+            if sid is not None:
+                if isinstance(sid, list):
+                    query["sid__in"] = sid
+                else:
+                    query["sid"] = sid
+            if type_id is not None:
+                if isinstance(type_id, list):
+                    query["type__in"] = type_id
+                else:
+                    query["type"] = type_id
+            if sku_id is not None:
+                if isinstance(sku_id, list):
+                    query["sku_id__in"] = sku_id
+                else:
+                    query["sku_id"] = sku_id
+            if status is not None:
+                query["status"] = status
+            if currency is not None:
+                query["currency"] = currency
+            if order_by is None:
+                order_by = "-rank"
+            if start_time is not None:
+                query["start_time__gte"] = start_time
+            if end_time is not None:
+                query["end_time__lte"] = end_time
+            print("query", query)
+            data = await cls.db_model.filter(**query).order_by(order_by).values()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return data, "成功"
+
+class GoodRC(BaseCommonRC):
+    """商品(道具)"""
+    db_model = Goods
+    tb_name = db_model.sheet_name()
+
+    @classmethod
+    async def get_good_filter(cls, good_id: any = None, sid: any = None, status: int = None, type_id: any = None,
+                              start_time: int = None, end_time: int = None, kind: int = None, currency: int = None,
+                        order_by: str = None, bag_type: int = None, sku: any = None, fields: str = None):
+        """获取用户参与活动次数"""
+        try:
+            query = {}
+            if good_id is not None:
+                if isinstance(good_id, list):
+                    query["good_id__in"] = good_id
+                else:
+                    query["good_id"] = good_id
+            if sid is not None:
+                if isinstance(sid, list):
+                    query["sid__in"] = sid
+                else:
+                    query["sid"] = sid
+            if type_id is not None:
+                if isinstance(type_id, list):
+                    query["type_id__in"] = type_id
+                else:
+                    query["type_id"] = type_id
+            if sku is not None:
+                if isinstance(sku, list):
+                    query["sku__in"] = sku
+                else:
+                    query["sku"] = sku
+            if status is not None:
+                query["status"] = status
+            if kind is not None:
+                query["kind"] = kind
+            if currency is not None:
+                query["currency"] = currency
+            if order_by is None:
+                order_by = "-rank"
+            if bag_type is not None:
+                query["bag_type"] = bag_type
+            if start_time is not None:
+                query["up_time__gte"] = start_time
+            if end_time is not None:
+                query["down_time__lte"] = end_time
+            data = await cls.db_model.filter(**query).order_by(order_by).values()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return data, "成功"
+
+    @classmethod
+    async def get_good_info(cls, sku: str) -> dict:
+        """获取商品信息"""
+        data, msg = await cls.get_good_filter(sku=sku)
+        if not data:
+            return {}
+        return data[0] if data else {}
+
+
+    @classmethod
+    async def __make_sku(cls, length: int = 8) -> str:
+        """生成商品sku"""
+        while True:
+            sku = generate_random_string(length, use_uppercase=True, use_lowercase=False, use_digits=False)
+            good_info = await cls.get_good_info(sku)
+            if not good_info:
+                return sku
+
+    async def create_good(cls, sid: int, type: int, currency: int, name: str, img: str, original: float, price: float,
+                      content: str, status: int = 1, desc: str = None, purchase_limit: str = None,
+                      total: int = -1, kind: int = 0, up_time: int = None, down_time: int = None, bag_type: int = 0,
+                          rank: int = 0) -> dict:
+        good = {
+            "sid": sid,
+            "kind": kind,
+            "type": type,
+            "currency": currency,
+            "sku": await cls.__make_sku(),
+            "total": total,
+            "purchase_limit": purchase_limit,
+            "name": name,
+            "img": img,
+            "desc": desc,
+            "original": original,
+            "price": price,
+            "content": content,
+            "status": status,
+            "up_time": up_time,
+            "down_time": down_time,
+            "bag_type": bag_type,
+            "rank": rank,
+        }
+        new = await cls.db_model.add_one(good)
+        if not new:
+            return None, "添加失败"
+        return new, "成功"
+
+
+
+
 
 
 

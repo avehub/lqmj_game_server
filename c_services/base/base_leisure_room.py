@@ -6,18 +6,19 @@ from nsanic.libs.tool import json_encode
 from c_services.base.base_room import BaseRoom
 from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement
 from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CChangeConnect
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
+from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_admin.const import WeightEnum
 from lucky_game.const import ReasonCostGold, SeasonStatus, GiftType
-# from lucky_game.model_rc.base_activity import ConfActivityRC
+from lucky_game.logic.activity import ReturnGift
 
 
 class BaseLeisureRoom(BaseRoom):
-    def __init__(self, tid, service, room_conf, extra_room_info, poker):
-        super().__init__(tid, service, room_conf, poker)
+    def __init__(self, tid, service, room_conf, extra_room_info, poker,extra_count = 0):
+        super().__init__(tid, service, room_conf, poker, extra_count = extra_count)
         self.__record_ori_gold = {}  # 记录玩家金币信息
         self.__task_collect = {}  # 任务收集器
         self.__season_status = extra_room_info.get("ranking_info", {}).get("season_status") or SeasonStatus.OFF_SEASON
@@ -89,9 +90,10 @@ class BaseLeisureRoom(BaseRoom):
             self.__record_ori_gold[p.seat_id] = p.gold
             seat2uid[p.seat_id] = p.uid
         self.log_info("游戏开始", seat2uid, self.__record_ori_gold)
-        await self.inner_broadcast(CmdRoom.ROUND_START)
+        # await self.inner_broadcast(CmdRoom.ROUND_START)
 
     async def do_trustee(self, player):
+        self.log_info("玩家",player.seat_id,player.uid,"trustee",player.trustee)
         is_trustee = False if player.trustee else True
         player.trustee = is_trustee
         tm = s2c_trustee_model(player.seat_id, is_trustee)
@@ -124,6 +126,7 @@ class BaseLeisureRoom(BaseRoom):
             await self.service.del_player_in_service(player.uid)
             await self.try_round_over()
 
+
     async def try_round_over(self):
         """ 尝试解散房间 """
         for player in self.seats:
@@ -131,8 +134,10 @@ class BaseLeisureRoom(BaseRoom):
                 continue
             if not (player.is_out and player.offline):
                 return  # 但凡有真实玩家 没有 破产和离线则不解散房间
+        if self.room_status == RoomStatus.T_IDLE:
+            return
         self.log_info("房间内已经没有真人玩家，enter force_dismiss")
-        await self.delay_func(0.5, self.force_dismiss)
+        await self.force_dismiss()
 
     async def deduct_tickets(self):
         """ 扣除门票 """
@@ -140,6 +145,7 @@ class BaseLeisureRoom(BaseRoom):
         if not price:
             return
         update_task = []
+        gold_task = []
         gold_info = []
         for player in self.seats:
             if not player.is_robot:
@@ -148,11 +154,14 @@ class BaseLeisureRoom(BaseRoom):
                 update_task.append(self.update_user_gold(player, -price, ReasonCostGold.TICKETS_LEISURE))
 
             player.update_gold(-price, accumulate=False)
+            if not player.is_robot:
+                gold_task.append(self.service.save_play_gold(player.uid, player.gold))
             gold_info.append({"seat_id": player.seat_id, "gold": player.gold})
 
         tickets_model = s2c_tickets_model(gold_info)
         update_task.append(self.inner_broadcast(CmdRoom.DEDUCT_TICKETS, tickets_model))
         update_task and await asyncio.gather(*update_task)
+        gold_task and await asyncio.gather(*gold_task)
 
     async def player_join_room(self, players):
         """ 玩家加入房间 """
@@ -221,7 +230,9 @@ class BaseLeisureRoom(BaseRoom):
         player.gold = gold
 
     async def update_user_gold(self, player, win_score, reason: ReasonCostGold):
-        await self.service.update_user_gold(player, win_score, reason)
+        sta, e = await self.service.update_user_gold(player, win_score, reason)
+        if not sta:
+            self.log_info("更新金币失败",e)
         # todo: 保险箱补足
         # await self.safe_box_auto_complement(player)
 
@@ -240,14 +251,19 @@ class BaseLeisureRoom(BaseRoom):
         if update_task:
             await asyncio.gather(*update_task)
 
+    async def player_change_connect(self, player,data):
+        data_connect = {"seat_id":player.seat_id,"offline":data}
+        data_model = S2CChangeConnect.pb_model(**data_connect)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model,exclude_uid =player.uid)
+
     async def game_over(self, is_force=False):
         """ 游戏结束 """
         self.set_room_status(RoomStatus.T_DISMISS)
         await self.inner_broadcast(CmdRoom.GAME_OVER)
         not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
-        await self.update_game_states()  # 更新游戏胜场/总场等
+        # await self.update_game_states()  # 更新游戏胜场/总场等
         await self.send_task()  # 发送任务
-        await self.tigger_big_win_announcement()
+        # await self.tigger_big_win_announcement()
         await super().game_over()
 
     async def tigger_big_win_announcement(self):
@@ -355,37 +371,57 @@ class BaseLeisureRoom(BaseRoom):
             await asyncio.gather(*send_list)
 
     async def __do_resurgence(self, player, solid_time=0):
-        for gift in self.__gift_conf:
-            if gift.get("gift_type") == GiftType.REVENGE:
-                activity_id = gift.get("activity_id")
-                # data = await ConfActivityRC.get_activity_item_by_id(activity_id)
-                data = {}
-                conf_items = data.get("conf_items")
-                if conf_items:
-                    gold = conf_items[0].get("goods_count")
-                    self.log_info(player.uid, "机器人复活", activity_id, gold)
-                    sale_limit = data.get("sale_limit")
-                    multiple = sale_limit.get("multiple") or 1
-                    if multiple > 1:
-                        gold *= multiple
+        sta, data = await ReturnGift().act_award(self.level)
+        if sta:
+            amount_value = data[0]["content"]["rewards"][0]["amount"]
 
-                    if not player.is_robot:
-                        await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+            gold = amount_value
+            self.log_info(player.uid, "机器人复活", data[0]["name"], gold)
+            if not player.is_robot:
+                await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+                player.gold = gold
+            player.gold = gold
+            if solid_time:
+                DelayCall(solid_time, self.notify_resurgence, player).start()
+                return
+            DelayCall(random.randint(10, 15), self.notify_resurgence, player).start()
+            return
+        else:
+            self.log_info("获取配置有误",data)
 
-                    player.gold = gold
-                    if solid_time:
-                        self.call_flow_robot(solid_time, self.notify_resurgence, player)
-                        return
-                    self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
-                    return
+        # for gift in self.__gift_conf:
+        #     if gift.get("gift_type") == GiftType.REVENGE:
+        #         activity_id = gift.get("activity_id")
+        #         # data = await ConfActivityRC.get_activity_item_by_id(activity_id)
+        #         data = {}
+        #         conf_items = data.get("conf_items")
+        #         if conf_items:
+        #             gold = conf_items[0].get("goods_count")
+        #             self.log_info(player.uid, "机器人复活", activity_id, gold)
+        #             sale_limit = data.get("sale_limit")
+        #             multiple = sale_limit.get("multiple") or 1
+        #             if multiple > 1:
+        #                 gold *= multiple
+        #
+        #             if not player.is_robot:
+        #                 await self.update_user_gold(player, gold, ReasonCostGold.ACT_PACKAGE)
+        #
+        #             player.gold = gold
+        #             if solid_time:
+        #                 self.call_flow_robot(solid_time, self.notify_resurgence, player)
+        #                 return
+        #             self.call_flow_robot(random.randint(10, 15), self.notify_resurgence, player)
+        #             return
 
     async def robot_go_broke(self, player):
         """ 机器人概率复活 """
-        flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
-        # flag = UtilsTool.random_choice_num([0, 1], [0, 1])
+        flag = UtilsTool.random_choice_num([0, 1], [0.7, 0.3])
+        if self.poker.left_count < 3:  #剩余牌量小于3 机器人不复活
+            flag = 0
+            self.log_info("剩余牌量小于3 机器人不复活")
         if flag:
             return await self.__do_resurgence(player)
-        return self.call_flow_robot(random.randint(2, 5), self.player_give_up, player)
+        return DelayCall(random.randint(2, 5), self.player_give_up, player).start()
 
     async def notify_resurgence(self, player):
         """ 通知复活 """
@@ -424,8 +460,10 @@ class BaseLeisureRoom(BaseRoom):
         self.set_room_status(RoomStatus.T_RECHARGE_ING)
         self.log_info(player.uid, player.seat_id, "进入是否复仇")
         sec = 30
+        if not player.is_robot:
+            self.call_flow(sec, self.player_give_up, player)
         await self.notify_buy_gift_pack(player, seconds=sec)
-        self.call_flow(sec, self.player_give_up, player)
+
 
     async def player_give_up(self, player):
         player.is_out = True
@@ -456,9 +494,8 @@ class BaseLeisureRoom(BaseRoom):
 
     async def player_recharge(self, player):
         """ 玩家充值回调 """
-        if player.seat_id != self.curr_seat_id:
-            return
         await self.service.init_player(player)
+        self.log_info("收到玩家复活",player.uid,player.seat_id,player.gold)
         if player.gold <= 0:
             return await self.inner_send(player, CmdRoom.RECHARGE, code=StaCode.GOLD_NOT_ENOUGH)
         if player.is_out:
@@ -488,6 +525,10 @@ class BaseLeisureRoom(BaseRoom):
                     self.log_info(player.uid, "游戏结束下发返还礼包")
                     send_list.append(self.notify_buy_gift_pack(player, CmdRoom.GOLD_NOT_ENOUGH))
         send_list and await asyncio.gather(*send_list)
+
+    async def send_quit_chat(self, send_seat_id, recv_seat_id, chat_info, m):
+        await self.inner_broadcast(CmdRoom.BROADCAST_CHAT, m)
+
 
     # async def safe_box_auto_complement(self, player):
     #     """ 保险箱自动补足 """

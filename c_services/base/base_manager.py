@@ -23,6 +23,10 @@ class SessionManager:
     async def new_match(self, *args, **kwargs):
         """ 接收新匹配 """
 
+    @property
+    def rooms(self):
+        return self.__rooms
+
     def get_room(self, tid):
         """ 获取房间 """
         return self.__rooms.get(tid)
@@ -37,34 +41,39 @@ class SessionManager:
 
     def create_room(self, room, room_conf, **kwargs):
         room_type = room_conf.get("room_type")
-        tid = kwargs.pop("tid") if room_type == RoomType.SELF_BUILD else 0
+        tid = kwargs.pop("tid")
         if self.__room_pool:
             room_obj = self.__room_pool.popleft()
-            room_obj.set_tid(tid)
+            if tid != 0:
+                room_obj.set_tid(tid)
             room_obj.refresh_room_conf(self, room_conf, **kwargs)
-            if room_type != RoomType.SELF_BUILD:
-                tid = room_obj.tid + 1
-                while self.__rooms.get(tid):
-                    tid += 1
+            # if room_type != RoomType.SELF_BUILD:
+            #     tid = room_obj.tid + 1
+            #     while self.__rooms.get(tid):
+            #         tid += 1
+            #     room_obj.set_tid(tid)
         else:
-            if room_type == RoomType.SELF_BUILD:
-                room_obj = room.new(tid,self, room_conf, **kwargs)
-            else:
-                room_obj = self.__create_room(room, room_conf, **kwargs)
+            room_obj = room.new(tid, self, room_conf, **kwargs)
+            # if room_type == RoomType.SELF_BUILD:
+            #     room_obj = room.new(tid,self, room_conf, **kwargs)
+            # else:
+            #     room_obj = self.__create_room(room, room_conf, **kwargs)
         self.__rooms[room_obj.tid] = room_obj
         return room_obj
 
     def release_room(self, room):
         """ 释放房间 """
-        self.__del_room(room.tid)
         room.clear_room()
-        if self.__use_pool:
-            self.__room_pool.append(room)
+        del_room = self.__del_room(room.tid)
+        if del_room:
+            if self.__use_pool:
+                self.__room_pool.append(room)
 
     def __del_room(self, tid):
         """ 删除房间 """
-        self.__rooms.pop(tid, None)
-        self.log_info(f"回收房间：{tid}, 当前游戏房间：{self.__rooms.keys()}")
+        room = self.__rooms.pop(tid, None)
+        self.log_info(f"回收房间：{tid}, 当前游戏房间剩余：{len(self.__rooms)}")
+        return room
 
     def create_player(self, c_player, uid, is_robot) -> BasePlayer or None:
         """ 创建玩家 """
@@ -82,13 +91,17 @@ class SessionManager:
 
     def release_player(self, p):
         """ 释放玩家 """
-        self.__del_player(p)
+        del_p = self.__del_player(p)
         p.clear_player()  # 此处顺序不能调整！！！
-        if self.__use_pool:
-            self.__player_pool.append(p)  # 回收玩家对象到对象池
+
+        if del_p:
+            if self.__use_pool:
+                self.__player_pool.append(p)  # 回收玩家对象到对象池
 
     def __del_player(self, p: BasePlayer):
         """ 回收玩家 """
         del_p = self.__players.get(p.uid)
+        # if del_p == p:
         if del_p and del_p.tid == p.tid:  # 玩家破产退出时的tid与新进房间tid不一样
             self.__players.pop(p.uid, None)
+        return del_p

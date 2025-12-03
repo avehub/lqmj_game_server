@@ -29,6 +29,7 @@ from c_services.cs_matching.session import Session
 from typing import Iterable
 from c_services.base.base_leisure_service import LeisureService
 from c_services.base.base_server import BaseServer
+from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
 class MatchServer(BaseServer, LeisureService):
@@ -37,6 +38,8 @@ class MatchServer(BaseServer, LeisureService):
     包括：等待匹配、匹配中、匹配完成、离开匹配
     """
     enable_rpc = False
+    SUBSCRIBE_FANOUT = None
+
 
     def __init__(self):
         BaseServer.__init__(self)
@@ -50,6 +53,7 @@ class MatchServer(BaseServer, LeisureService):
         self.__all_robot = []
         self.__robot_cursor = 0
         self.__robot_count = 0
+        self.__platform = 0
 
         self.__matching_mode = MatchingMode.RAND_TIME
         self.__match_search_extension_time: Dict[int, Dict[str, int]] = {}  # 赛季搜索扩展时间
@@ -204,6 +208,7 @@ class MatchServer(BaseServer, LeisureService):
             "u_list": ing_player_list,
             "level": session.level,
             "pt": session.play_type,
+            "platform": self.__platform,
             "secret": self.conf.SECRET_KEY,
             # 房间信息（类似于开房选项）
             "extra_room_info": {
@@ -224,6 +229,7 @@ class MatchServer(BaseServer, LeisureService):
         parse_data = C2SEnterLeisure.decode(data)
         cs_type = parse_data.data.cs_type
         req_id = parse_data.req_id
+        self.__platform = parse_data.platform
         info = await self.get_player_in_service(uid)
         cmd = CmdMatch.MATCH_LEISURE
         if info:
@@ -233,6 +239,10 @@ class MatchServer(BaseServer, LeisureService):
             data_model = s2c_in_service_model(tid=tid, cs_type=cs_type, timestamp=timestamp)
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.ALREADY_IN_SERVICE, msg=data_model, req_id=req_id)
 
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
+        if conf and conf.get("status"):
+            hint = "游戏玩法正在维护，喝杯茶，休息一下!"
+            return await self.cs2ws_by_rmq(cmd, uid, StaCode.FORBID, hint, req_id=req_id)
         forbid_str = self.__forbid_match_set.get(cs_type) or ""
         if forbid_str:
             hint = f'亲爱的玩家，该游戏正维护, 预计：{forbid_str}开放，敬请谅解！'
@@ -280,7 +290,7 @@ class MatchServer(BaseServer, LeisureService):
         #     p = Player(uid)
         #     p.init_prop_info(prop_info)
         # else:
-        level_id = await self.__find_suitable_leisure(level, user_info.get("gold"), cs_type)
+        level_id = await self.__find_suitable_leisure(level, user_info.get("gold"), cs_type, play_type)
         if not level_id:
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.GOLD_NOT_ENOUGH, req_id=req_id)
         p = Player(uid)

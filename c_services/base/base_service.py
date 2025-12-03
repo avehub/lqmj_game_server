@@ -5,16 +5,20 @@ import asyncio
 from nsanic.libs.tool import json_parse
 from c_services.base.base_manager import SessionManager
 from common.proto.py_pb2.ws_leisure import one_of_model
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from c_services.base.base_player import BasePlayer
 from c_services.base.base_server import BaseServer
-from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType
+from c_services.const.cs_enum_const import CmdRoom, CallCheck, RoomType, RoomStatus, CmdClub, CmdFanOut
 from common.proto.py_pb2.ws_c2s import play_card_model, ws_leisure_pb2, enter_room_model, set_cards_model
-from common.public.enum_const import StaCode, CacheKey
+from common.public.enum_const import StaCode, CacheKey, ServiceEnum
 from lucky_game.const import ReasonCostGold, PayType, QuickChatType, ActivityType
 # from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+
+
 # from lucky_game.model_rc.conf_quick_chat import ConfQuickChatRC
 
 
@@ -31,13 +35,14 @@ class BaseService(BaseServer, SessionManager):
         self.add_handlers({
             CmdRoom.NEW_MATCH.val: self._on_new_match,
 
-            CmdRoom.LOST_CONNECT.val: self.__lost_connect,
+            CmdFanOut.LOST_CONNECT.val: self.__lost_connect,
             CmdRoom.TRUSTEE.val: self.__on_trustee,
             CmdRoom.BROADCAST_CHAT.val: self.__on_broadcast_chat,
             CmdRoom.QUERY_PLAYER_IN_SERVICE.val: self.__on_query_player_is_in_service,
 
             CmdRoom.ENTER_ROOM.val: self.enter_room,
             CmdRoom.QUIT_ROOM.val: self.__on_quit_room,
+            CmdRoom.CLUB_QUIT_ROOM.val: self.__on_club_quit_room,
             CmdRoom.FORCE_DISMISS.val: self.__on_force_dismiss,
             CmdRoom.SET_CARDS_IN_DEBUG.val: self.__on_set_cards,
         })
@@ -52,6 +57,15 @@ class BaseService(BaseServer, SessionManager):
         """ 离线处理 """
         player.offline = True
         self.log_info(room.tid, player.uid, "玩家掉线")
+        if room.room_type == RoomType.COMMON:
+            # if room.room_status == RoomStatus.T_RECHARGE_ING:
+            #     return
+            await room.player_quit_room(player,player.uid)
+        else:
+            await room.player_change_connect(player,player.offline)
+
+        # await room.broadcast_to_cs(CmdRoom.FANOUT_LOST_CONNECT,player.uid, "玩家离线")
+
         # await room.inner_broadcast(CmdRoom.BROADCAST_CHAT)
 
     @staticmethod
@@ -129,19 +143,20 @@ class BaseService(BaseServer, SessionManager):
         """ 进入房间 """
         # 离开房间则断线，重进则上线
         player.offline = False  # 此处不改变状态，玩家收不到房间以下两条信息
-        if player.trustee:
-            await room.do_trustee(player)
-
-        self.log_info(player.uid, "enter_room", player.tid, id(player),"最大人数",room.max_player_count)
-
         # 同步房间、玩家信息
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
         reenter = enter_room_model.reenter or False
+        if not player.receive_enter_room:
+            reenter = False
+        player.receive_enter_room = 1
+        self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
-        await room.inner_send(player, CmdRoom.ENTER_ROOM, req_id=req_id)
-        await room.notify_distance()
+        await room.player_change_connect(player,player.offline)
+        # await room.inner_broadcast(player, CmdRoom.ENTER_ROOM, req_id=req_id)
+        if player.trustee:
+            await room.do_trustee(player)
 
     @staticmethod
     async def __on_quit_room(player, room, data):
@@ -149,6 +164,22 @@ class BaseService(BaseServer, SessionManager):
         one_of_model.ParseFromString(data)
         req_id = one_of_model.req_id
         await room.player_quit_room(player, req_id)
+
+    async def __on_club_quit_room(self,uid, data):
+        """ 茶馆玩家离开游戏房间 """
+        tid = data.get("room_id")
+        room = self.get_room(tid)
+        if not room:
+            self.log_info("__on_club_quit_room, 房间不存在")
+            return
+        player = self.get_player(uid)
+        if not player:
+            self.log_info("__on_club_quit_room, 玩家不存在")
+            return
+        req_id = data.get("req_id")
+        await room.player_quit_room(player, req_id)
+        data = {"req_id":req_id,"secret":C_SERVICE_SECRET_KEY}
+        await self.cs2cs_by_rmq(ServiceEnum.C_CLUB,CmdClub.JOIN_NEW_GAME_SUC, data,uid)
 
     async def __on_force_dismiss(self, player, room, data):
         """ 强制解散房间，主要用于休闲玩法 """
@@ -198,7 +229,11 @@ class BaseService(BaseServer, SessionManager):
 
     @staticmethod
     async def update_user_gold(player, gold, reason):
-        return await BaseUserRC.update_user_asset(player.uid, {"gold": gold}, reason)
+        operation = "add" if gold > 0 else "sub"
+        if operation == "sub":
+            gold = abs(gold)
+        return await ExtraUserResourceChangesRC.change_user_resource(player.uid, "gold", gold,operation,reason =reason)
+        # return await BaseUserRC.update_user_asset(player.uid, {"gold": gold}, reason)
 
     async def check_in_room(self, uid, cmd, with_notify=True):
         player = self.get_player(uid)
@@ -215,6 +250,8 @@ class BaseService(BaseServer, SessionManager):
 
     async def clear_in_service(self):
         """ 启动时清理in service """
+        await self.clear_player_gold()
+        await self.clear_player_game_sta()
         all_in_service = await self.conf.rds.get_hash_all(CacheKey.IN_SERVICE)
         if not all_in_service:
             return
@@ -226,6 +263,49 @@ class BaseService(BaseServer, SessionManager):
                 uid_list.append(uid)
         uid_list and await self.conf.rds.drop_hash_bulk(CacheKey.IN_SERVICE, uid_list)
 
+
+    async def clear_player_gold(self):
+        """删除符合当前服务类型的所有玩家金币缓存"""
+        pattern = f"{CacheKey.PLAYER_GOLD}:*"  # 匹配所有玩家的金币缓存键
+        cursor = '0'
+        keys_to_delete = []
+
+        try:
+            # 使用SCAN命令查找所有匹配的键
+            while cursor != 0:
+                cursor, keys = await self.conf.rds.conn.scan(cursor=int(cursor), match=pattern, count=100)
+                for key in keys:
+                    # 获取每个键的内容
+                    try:
+                        info = await self.conf.rds.get_item(key, jsparse=True)
+                        # 检查服务类型是否匹配
+                        if info and info.get("cs_type") == self.service_type:
+                            keys_to_delete.append(key)
+                    except Exception as e:
+                        self.log_info(f"获取缓存信息失败: key={key}, error={e}")
+
+            # 批量删除匹配的键
+            if keys_to_delete:
+                async with self.conf.rds.conn.pipeline() as pipe:
+                    for key in keys_to_delete:
+                        pipe.delete(key)
+                    await pipe.execute()
+                self.log_info(f"已删除{len(keys_to_delete)}个符合条件的玩家金币缓存")
+        except Exception as e:
+            self.log_info(f"清理玩家金币缓存失败: {e}")
+
+    async def clear_player_game_sta(self):
+        all_in_game = await self.conf.rds.get_hash_all(CacheKey.PLAYER_GAME_STA)
+        if not all_in_game:
+            return
+        uid_list = []
+        for uid, info in all_in_game.items():
+            uid = UtilsTool.to_py(uid)
+            info = json_parse(info)
+            if info.get("cs_type") == self.service_type:
+                uid_list.append(uid)
+        uid_list and await self.conf.rds.drop_hash_bulk(CacheKey.PLAYER_GAME_STA, uid_list)
+
     async def call_handler(self, cmd, uid, data):
         """
         uid: uid or ws
@@ -235,6 +315,8 @@ class BaseService(BaseServer, SessionManager):
         if not func or not callable(func):
             return
         c_enum = CmdRoom.find_member_by_val(cmd)
+        if not c_enum:
+            c_enum = CmdFanOut.find_member_by_val(cmd)
         check_inner = c_enum.desc == CallCheck.INNER
         if check_inner:
             data = self.check_inner_call(data)

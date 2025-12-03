@@ -24,7 +24,7 @@ class Switch(BaseEnum):
 @unique
 class StaCode(BaseCode):
     """ 状态码 """
-    DEFAULT = 0, 0, ''
+    DEFAULT = 0, 200, ''
     PASS = 1, 200, 'Finished.'
     TEND = -2, 200, 'Under maintenance.'
     FAIL = -3, 200, 'Failed.'
@@ -39,32 +39,33 @@ class StaCode(BaseCode):
     REAPED = -10, 200, 'Request is repeated.'
     ERR_CONF = -11, 200, 'Error by configuration.'
     MULT_LOGIN = -12, 200, '您的账号已在其他设备登录，若不是本人操作，请注意账号安全！'
-    NO_PLAYER_INFO = -13, 0, '没有玩家信息'
-    EXTERNAL_ERR = -14, 0, '外部错误'  # 外部错误需要解data进一步确认
-    TOKEN_ERR = -15, 0, 'TOKEN 错误'
-    HAD_CERTIFICATED = -16, 0, '玩家已实名认证过了'
-    REQ_FREQUENT = -17, 0, '操作频繁，请稍后再试'
-    WITHOUT_MODIFY = -18, 0, '未修改任何数据'
-    ORDER_NOT_FOUND = -19, 0, '无此订单'
-    GOODS_NOT_FOUND = -20, 0, '无此物品'
-    ALREADY_SIGN_IN = -21, 0, '已经签到过'
-    ALREADY_RAFFLE = -22, 0, '已经抽奖过'
-    CONDITION_NOT_MET = -23, 0, '未满足指定条件'
-    EMAIL_NOT_FOUND = -24, 0, '无此邮件'
-    DIAMOND_NOT_ENOUGH = -25, 0, '钻石不足'
-    ACTIVITY_NOT_EXIST = -26, 0, '活动不存在'
-    NO_CONFIGURATION = -27, 0, '无配置数据'
-    NOT_WITHIN_VALID_PERIOD = -28, 0, '不在有效期内'
-    NOT_IN_VALID_STATE = -29, 0, '不是有效状态'
-    SESSION_KEY_EXPIRED = -30, 0, 'SESSION_KEY失效'
+    NO_PLAYER_INFO = -13, 200, '没有玩家信息'
+    EXTERNAL_ERR = -14, 200, '外部错误'  # 外部错误需要解data进一步确认
+    TOKEN_ERR = -15, 200, 'TOKEN 错误'
+    HAD_CERTIFICATED = -16, 200, '玩家已实名认证过了'
+    REQ_FREQUENT = -17, 200, '操作频繁，请稍后再试'
+    WITHOUT_MODIFY = -18, 200, '未修改任何数据'
+    ORDER_NOT_FOUND = -19, 200, '无此订单'
+    GOODS_NOT_FOUND = -20, 200, '无此物品'
+    ALREADY_SIGN_IN = -21, 200, '已经签到过'
+    ALREADY_RAFFLE = -22, 200, '已经抽奖过'
+    CONDITION_NOT_MET = -23, 200, '未满足指定条件'
+    EMAIL_NOT_FOUND = -24, 200, '无此邮件'
+    DIAMOND_NOT_ENOUGH = -25, 200, '钻石不足'
+    ACTIVITY_NOT_EXIST = -26, 200, '活动不存在'
+    NO_CONFIGURATION = -27, 200, '无配置数据'
+    NOT_WITHIN_VALID_PERIOD = -28, 200, '不在有效期内'
+    NOT_IN_VALID_STATE = -29, 200, '不是有效状态'
+    SESSION_KEY_EXPIRED = -30, 200, 'SESSION_KEY失效'
 
     # 以下主要为子游戏的状态码 之前的预留给web
-    ALREADY_IN_SERVICE = -101, 0, '已经在某个服务（游戏）中'
-    GOLD_NOT_ENOUGH = -102, 0, '金币不足'
-    NOT_YOUR_TURN = -103, 0, '未轮到你'
-    RULE_ERR = -104, 0, '规则错误'
-    FLOW_ERR = -105, 0, '流程错误'
-    ALREADY_DO = -106, 0, '已经操作过'
+    ALREADY_IN_SERVICE = -101, 200, '已经在某个服务（游戏）中'
+    GOLD_NOT_ENOUGH = -102, 200, '金币不足'
+    NOT_YOUR_TURN = -103, 200, '未轮到你'
+    RULE_ERR = -104, 200, '规则错误'
+    FLOW_ERR = -105, 200, '流程错误'
+    ALREADY_DO = -106, 200, '已经操作过'
+    RESOURCE_NOT_ENOUGH = -107, 200, '资源不足'
 
 
 @unique
@@ -110,31 +111,30 @@ class ServiceEnum(BaseEnum):
     """ 服务枚举号 """
     WS_HALL = 1, "lucky_ws", '大厅网关'
     WS_CHILD = 2, "lucky_wsc", '子网关'
-    C_MATCHING = 3, "matching", '子服务-匹配服务'
-    C_WORKERS = 4, "workers", '任务服务（异步调度任务（不停地消费）：服务端内部使用）'
+    C_MATCHING = 3, "lucky_matching", '子服务-匹配服务'
+    C_WORKERS = 4, "lucky_workers", '任务服务（异步调度任务（不停地消费）：服务端内部使用）'
 
     C_MONSTER = 5, "monster", GameType.LEISURE
     C_MONSTER_SEQUEL = 6, "monster_sequel", GameType.LEISURE
     C_MONSTER_MANY = 7, "monster_many", GameType.LEISURE
     C_NOTICE = 8, "notice", '通知服务号，不以服务启动，只作为消息通知服务号'
-    C_CHAT = 9, "chat", '聊天服务'
-    C_CLUB = 10, "club", '俱乐部服务'
+    C_CHAT = 9, "lucky_chat", '聊天服务'
+    C_CLUB = 10, "lucky_club", '俱乐部服务'
 
     C_MAHJONG_FC = 11, "mahjong_fc", GameType.LEISURE
 
-    C_WATER_FISH = 20, "water_fish", GameType.LEISURE
-    C_LANDLORDS = 21, "landlords", GameType.LEISURE
-    C_MAHJONG_XY = 22,"mahjong_xy",GameType.ROOM_CARD
-    C_MAHJONG_GY = 23,"mahjong_gy",GameType.ROOM_CARD
-    C_MAHJONG_ZY = 24,"mahjong_zy",GameType.ROOM_CARD
-    C_MAHJONG_BJ = 25,"mahjong_bj",GameType.ROOM_CARD
+    C_MAHJONG_XY = 22, "mahjong_xy", GameType.ROOM_CARD
+    C_MAHJONG_GY = 23, "mahjong_gy", GameType.ROOM_CARD
+    C_MAHJONG_ZY = 24, "mahjong_zy", GameType.ROOM_CARD
+    C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
+    C_MAHJONG_RH = 26, "mahjong_rh", GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
     ROBOT_MONSTER_SEQ = 102, "monster_seq", '神魔仙逆下篇机器人'
     ROBOT_WATER_FISH = 103, "water_fish", '暗水鱼机器人'
     ROBOT_LANDLORDS = 104, "landlords", '斗地主机器人'
-    ROBOT_MAHJONG_FC = 105, "mahjong_fc", '麻将发财捉鸡机器人'
+    ROBOT_MAHJONG_FC = 105, "mahjong_fc_robot", '麻将发财捉鸡机器人'
 
 
 LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MANY.val]
@@ -143,11 +143,14 @@ LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MAN
 class Channel(StrEnum):
     C_SERVICES = "C_SERVICES"  # 子服务频道前缀
     CHANNEL_SYSTEM_MSG = "CHANNEL_SYSTEM_MSG"  # 系统消息
+    C_SERVICES_COMMON = "C_SERVICES_COMMON" #公共广播消息
 
 
 class CacheKey(StrEnum):
     IN_SERVICE = "IN_SERVICE"  # 在子服务（在哪个子服务）
     WS_ONLINE_INFO = "WS_ONLINE_INFO"  # ws在线信息
+    PLAYER_GOLD = "PLAYER_GOLD" #休闲场玩家起始金币
+    PLAYER_GAME_STA = "PLAYER_GAME_STA" #玩家游戏状态
 
 
 class DbKey(StrEnum):

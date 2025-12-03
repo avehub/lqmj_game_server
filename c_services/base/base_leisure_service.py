@@ -7,7 +7,8 @@ from common.public.enum_const import ServiceEnum, StaCode
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from nsanic.libs import tool
 
-from ..const.cs_enum_const import CmdRoom
+from lucky_game.model_rc.game_rooms import GameRoomsRC
+from ..const.cs_enum_const import CmdRoom, RoomType
 
 
 class LeisureService():
@@ -78,8 +79,28 @@ class BaseLeisureService(BaseService, LeisureService):
         user_list = data.get("u_list")
         level = data.get("level")
         play_type = data.get("pt") or 1
+        platform = data.get("platform") or 0
         room_conf = await self.get_level_conf(level, play_type)
+        room_conf["room_type"] = RoomType.COMMON
+        room_conf["rule_details"] = {}
         extra_room_info = data.get("extra_room_info") or {}
+        max_player = room_conf.get("rule_conf", {}).get("max_player") or 4
+        room_data = {
+            "max_player":max_player,
+            "pay_type": 0,
+            "price": 0,
+            "cs_type": self.service_type.val,
+            "is_location": 0,
+            "is_friend": 0,
+            "room_type": RoomType.COMMON.val,
+            "status": 0,
+            "round_num": 1,
+        }
+        new_room,err = await GameRoomsRC.create_game_room(platform,user_list[0].get("uid"),{},play_type,0,**room_data)
+        if not new_room:
+            self.log_info("休闲场创建房间失败",err,"参数",platform,user_list[0].get("uid"),play_type,room_data)
+            return
+        extra_room_info["tid"] = new_room
         room = self.create_room(room, room_conf, **extra_room_info)
         self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)
         player_list = []

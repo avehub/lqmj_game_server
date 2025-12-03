@@ -13,14 +13,14 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.handler.huifu import DouGongPay
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.base_user import BaseUserRC
-from lucky_game.model_db.main import RecordsTradeOrder
+# from lucky_game.model_db.main import RecordsTradeOrder
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.WXBizMsgCrypt import WXBizMsgCrypt
 from lucky_game.handler.up_assets import UpAssets
 from nsanic.libs import tool_dt
 from lucky_game.handler.alipay import Alipay
 from common.utils.utils import UtilsTool
-from lucky_game.model_rc.base_store import ConfStoreRC
+from lucky_game.model_rc.base_store import StoreRC
 from common.proto.py_pb2.common import get_one_of_model
 from common.public.enum_const import DbKey, TaskId
 from nsanic.libs.tool import json_parse, json_encode
@@ -31,11 +31,11 @@ class BaseSomePay(GameAuthApi):
 
     @classmethod
     def log_info(cls, *data):
-        cls.log_info("支付日志：", *data)
+        cls.loginfo("支付日志：", *data)
 
     @classmethod
     def log_err(cls, *data):
-        cls.log_info("支付错误：", *data)
+        cls.logerr("支付错误：", *data)
 
     async def process_after_deliver(self, uid, trade_amount):
         """发货后处理（更新物品和发货状态之后）"""
@@ -73,7 +73,7 @@ class BaseSomePay(GameAuthApi):
         if item_num == 3:
             express = await ConfActivityRC.get_activity_item_by_id(act_id=trade_item)
         else:
-            express = await ConfStoreRC.get_store_item_by_id(store_id=trade_item)
+            express = await StoreRC.get_store_item_by_id(store_id=trade_item)
 
         randed = False  # 是否返利
         if not express:
@@ -229,7 +229,7 @@ class MakeOrder(BaseSomePay):
         trade_item = self.check_int(req.json.get("trade_item"), require=True, minval=2000, maxval=4000,
                                     p_name="trade_item")
         pay_mode = req.json.get("pay_mode")
-        platform = req.args.get('c_platform') or ''
+        platform = req.args.get('platform') or ''
         count = req.json.get("count") or 1
 
         order_info, hint = await self.create_order(uid, trade_item, pay_mode, platform, req, count=count)
@@ -435,8 +435,7 @@ class MiniGameQueryOrder(BaseSomePay):
         self.log_info(datetime.now().strftime("%Y年%m月%d日%H时%M分%S秒"), f"主动查询，本地结果 {order_info}")
 
         # 2.查询微信小游戏订单
-        access_token = await self.wechat_get_access_token()
-        errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, access_token, order_id)
+        errcode, req_data = await WeChat.wechat_mini_game_query_order(uid, open_id, order_id)
         self.log_info(uid, "MiniGameQueryOrder 解析查询数据：", req_data, errcode)
         if errcode:
             data = {"errcode": errcode, "errmsg": req_data}
@@ -1199,14 +1198,14 @@ class MiniProgramRecvPush(BaseSomePay):
         if params_dict is None:
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
 
-        params_key = {"trade_item", "uid", "c_platform", "count"}
+        params_key = {"trade_item", "uid", "platform", "count"}
         if not params_key.issubset(params_dict.keys()):
             return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数缺失，不予回复！'})
 
         # 2.创建订单
         uid = params_dict.get("uid")
         trade_item = params_dict.get("trade_item")
-        platform = params_dict.get('c_platform') or ''
+        platform = params_dict.get('platform') or ''
         count = req.json.get("count") or 1
 
         order_info, hint = await MakeOrder.create_order(uid, trade_item, PayMode.IOS_TO_H5, platform, req, count=count)

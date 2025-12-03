@@ -2,8 +2,12 @@
 茶馆相关
 """
 from tortoise.exceptions import OperationalError
+
+from lucky_game.const import ReasonCostGold
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.club_group import ClubGroupRC
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus
@@ -12,6 +16,8 @@ from common.public.enum_const import DbKey
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
+
+
 
 
 class BaseClubRC(BaseCommonRC):
@@ -60,15 +66,25 @@ class BaseClubRC(BaseCommonRC):
 
 
     @classmethod
-    async def create_club(cls, name: str, club_uid: int, room_card: int):
+    async def create_club(cls, name: str, club_uid: int, room_card: int = None, other: dict = None, notice: str = None,
+                          status: int = None, record_status: int = None):
         """创建茶馆"""
         try:
             club_dick = {
                 "name": name,
                 "uid": club_uid,
-                "other": {"pay_type": 1, "host_power_room": 3}
+                "other": {"pay_type": 0, "host_power_room": 3}
             }
-            # cls.conf.info_log('creat club:', club_dick)
+            if room_card is not None:
+                club_dick["room_card"] = room_card
+            if other is not None:
+                club_dick["other"] = other
+            if notice is not None:
+                club_dick["notice"] = notice
+            if status is not None:
+                club_dick["status"] = status
+            if record_status is not None:
+                club_dick["record_status"] = record_status
             row = await cls.db_model.add_one(club_dick)
             club_user, e = await ClubUsersRC.create_club_user(club_uid, row.id, role=ClubUsersRC.ROLE_HOST)
             if not club_user:
@@ -102,7 +118,8 @@ class BaseClubRC(BaseCommonRC):
         return club, "成功"
 
     @classmethod
-    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None):
+    async def update_club(cls, club_id: int, name: str = None, other: dict = None, status: int = None, notice: str = None,
+                          record_status: int = None, room_card: int = None):
         """更新茶馆信息"""
         try:
             club, e = await cls.get_club_by_id(club_id)
@@ -113,8 +130,14 @@ class BaseClubRC(BaseCommonRC):
                 up_data["name"] = name
             if other:
                 up_data["other"] = other
-            if status:
+            if status is not None:
                 up_data["status"] = status
+            if notice:
+                up_data["notice"] = notice
+            if record_status is not None:
+                up_data["record_status"] = record_status
+            if room_card:
+                up_data["room_card"] = room_card
             if up_data:
                 sta = await cls.db_model.update_by_pk(club_id, up_data)
                 if not sta:
@@ -123,6 +146,26 @@ class BaseClubRC(BaseCommonRC):
                 await cls.cache_session_set(club_id, club)
         except OperationalError as e:
             return None, f"失败：{str(e)}"
+        if room_card:
+            #TODO事件记录写入消费队列
+            event = event_type = event_msg = None
+            if room_card > club["room_card"]:
+                event = True
+                event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]
+                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
+                    price=room_card - club["room_card"],
+                )
+            elif room_card < club["room_card"]:
+                event = True
+                event_type = ExtraClubEventRC.EVENT_TYPE["CLOSE_LOG"]
+                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
+                    price=club["room_card"]-room_card,
+                )
+            if event:
+                uid = 0
+                sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, uid, event_msg)
+                if not sta:
+                    return False, "写入事件记录失败"
         return club, "成功"
 
     @classmethod
@@ -152,6 +195,8 @@ class BaseClubRC(BaseCommonRC):
                 if total > 1:
                     return None, "无法解散，还有其他玩家"
                 club, e = await cls.get_club_by_id(club_id)
+                if not club:
+                    return None, "茶馆不存在"
                 # 茶馆基金
                 if club["room_card"] > 0:
                     # return None, "无法解散，还有未消耗的房卡基金"
@@ -170,6 +215,14 @@ class BaseClubRC(BaseCommonRC):
                 # 删除茶馆房间模板
                 del_template, e = await ClubRoomTemplatesRC.delete_club_all(club_id)
                 if not del_template:
+                    return None, e
+                # 删除茶馆隔离组
+                del_group, e = await ClubGroupRC.delete_club_all(club_id)
+                if not del_group:
+                    return None, e
+                # 删除茶馆禁止同桌
+                del_user_group, e = await ClubUserGroupRC.delete_club_all(club_id)
+                if not del_user_group:
                     return None, e
                 await cls.db_model.update_by_pk(club_id, {"status": 1})
                 await cls.cache_session_drop(club_id)
@@ -201,29 +254,23 @@ class BaseClubRC(BaseCommonRC):
         try:
             u_operation = "sub" if operation == "add" else "add"
             async with in_transaction(connection_name=DbKey.DEFAULT):
+                # 更新用户房卡
+                user_sta, e = await ExtraUserResourceChangesRC.change_user_resource(u_info.get("uid"), field_name, num, u_operation, reason=ReasonCostGold.CLUB_ROOM_CARD)
+                if not user_sta:
+                    return False, "更新用户房卡失败"
                 up_sta, e = await cls.update_club_int_field(club_id, field_name, num, operation)
                 if not up_sta:
                     return False, e
-                # 更新用户房卡
-                user_sta, e = await ExtraUserResourceChangesRC.change_user_resource(u_info.get("uid"), field_name, num, u_operation)
-                if not user_sta:
-                    return False, "更新用户房卡失败"
                 # 写入茶馆事件记录
                 if operation == "add":
                     event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]
                     event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        name=u_info.get("name"),
-                        uid=u_info.get("uid"),
                         price=num,
                     )
                 elif operation == "sub":
-                    event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
+                    event_type = ExtraClubEventRC.EVENT_TYPE["CLOSE_LOG"]
                     event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        name=u_info.get("name"),
-                        uid=u_info.get("uid"),
                         price=num,
-                        play_type="解散茶馆",
-                        room_id=0,
                     )
                 sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, u_info.get("uid"), event_msg)
                 if not sta:
@@ -231,6 +278,44 @@ class BaseClubRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"
+
+    @classmethod
+    async def get_club_filter(cls, club_id: int = None, uid: int = None, status: int = None, page: int = None,
+                              page_size: int = None, order_field: str = "-id"):
+        """更新茶馆信息"""
+        try:
+            query = {}
+            if club_id:
+                query["id"] = club_id
+            if uid:
+                query["uid"] = uid
+            if status is not None:
+                query["status"] = status
+            if page and page_size:
+                _, total = await cls.count_club_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+            if not data:
+                return False, result
+        except OperationalError as e:
+            return None, f"失败：{str(e)}"
+        return True, result
+
+    @classmethod
+    async def count_club_total(cls, **perms):
+        """获取茶馆数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return True, count
+
 
 
 

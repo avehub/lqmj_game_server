@@ -1,5 +1,5 @@
 """
-斗地主休闲场
+麻将贵阳玩法服务
 """
 
 from common.utils.init import start

@@ -3,7 +3,7 @@ import traceback
 from typing import AnyStr
 
 from nsanic.libs import tool_dt
-from nsanic.libs.tool import json_parse
+from nsanic.libs.tool import json_parse, json_encode
 from nsanic.orm.rc_model import RCModel
 from tortoise import Tortoise, connections
 
@@ -143,12 +143,17 @@ class BaseServer(BasePubService, CommonApi):
         exchange_name = exchange_name or self.listen_channel[0]
         que_name = self.queue_name
         await self.conf.rmq.consume(
-            exchange_name, que_name, que_name, on_message=self.on_message, enable_rpc=self.enable_rpc)
+            exchange_name, que_name, que_name, on_message=self.on_message,
+            enable_rpc=self.enable_rpc, fanout_name=self.SUBSCRIBE_FANOUT)
 
     async def on_message(self, message: AbstractIncomingMessage) -> None:
         """ rmq消息回调 """
         async with message.process():  # 使用上下文处理器结束时也会消息确认
             try:
+
+                if message.exchange == Channel.C_SERVICES_COMMON:
+                    if not self.SUBSCRIBE_FANOUT:
+                        return
                 res_data: dict = await self.receive_data_callback(message.body) or {}  # 调用方法
                 if message.reply_to:  # 处理rpc调用
                     res_data.pop('secret', None)
@@ -194,6 +199,44 @@ class BaseServer(BasePubService, CommonApi):
     async def del_player_in_service(self, uid):
         await self.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
 
+    async def sava_player_in_game(self, uid, tid, owner, club_id, game_status):
+        info = {
+            "room_id": tid,
+            "cs_type": self.service_type,
+            "owner": owner,
+            "club_id": club_id,
+            "game_status": game_status
+        }
+        await self.conf.rds.set_hash(CacheKey.PLAYER_GAME_STA, uid, info)
+
+    async def del_player_in_game(self, uid):
+        await self.conf.rds.drop_hash(CacheKey.PLAYER_GAME_STA, uid)
+
+    async def save_play_gold(self, uid, gold):
+        info = {
+            "cs_type": self.service_type,
+            "gold": gold
+        }
+        user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+        await self.conf.rds.set_item(user_gold_key, info, ex_time=3600)
+        self.log_info(f"{uid} 存储待返还金币: {CacheKey.PLAYER_GOLD} {gold}")
+
+    @classmethod
+    async def get_play_gold(cls, uid):
+        try:
+            user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+            gold = await cls.conf.rds.get_item(user_gold_key, jsparse=True)
+            if gold is None:
+                gold = {"gold": 0}
+        except Exception as e:
+            gold = {"gold": 0}
+        return gold
+
+    async def del_play_gold(self, uid):
+        user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+        await self.conf.rds.drop_item(user_gold_key)
+        self.log_info(f"{uid} 清空待返还金币:  {CacheKey.PLAYER_GOLD} ")
+
     async def on_signal_stop(self, *args):
         """ 服务关闭时触发 """
         self.log_info(f"{self.service_name} 服务关闭")
@@ -224,6 +267,21 @@ class BaseServer(BasePubService, CommonApi):
             await self.conf.rds.publish(channel, pack_data)
         except Exception as data:
             self.log_err(f"publish data error: {self.server_id} {data}")
+
+    async def publish_to_fanout(self, cmd, uid=1, msg: AnyStr = None):
+        """
+        向SUBSCRIBE_FANOUT频道发送消息
+        """
+        if not isinstance(msg, bytes):
+            msg = json_encode(msg, u_byte=True)
+        pack_data = UtilsTool.pack_inner_msg(cmd, uid, msg)
+        try:
+            await self.conf.rmq.publish(
+                msg=pack_data,
+                exchange_name=self.SUBSCRIBE_FANOUT,
+            )
+        except Exception as e:
+            self.log_err(f"publish_to_fanout error: {e}")
 
     async def cs2ws_by_rds(self, c_code, uid, code: StaCode, hint="", msg: AnyStr = None, req_id=""):
         """
@@ -285,7 +343,8 @@ class BaseServer(BasePubService, CommonApi):
             req_id="",
             cs_type: ServiceEnum = 0
     ):
-        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=self.service_type)
+        cs_type = cs_type or self.service_type
+        await super().send_msg_to_player(c_code, uid, code, hint, msg, req_id, cs_type=cs_type)
 
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """
@@ -299,6 +358,7 @@ class BaseServer(BasePubService, CommonApi):
 
 class JsonBaseServer(BaseServer):
     """ 内部服务调用消息协议使用Json """
+    SUBSCRIBE_FANOUT = None
 
     def __init__(self):
         super(JsonBaseServer, self).__init__()

@@ -28,5 +28,5 @@ class RepMiddle(BaseMeta):
         hint = ''
         if hasattr(rep, 'raw_body'):
             hint = rep.raw_body.get('msg') or ''
-        await RecordsAdminOperates.insert_one(username, route, op_name, method, params, status, hint[:32])
+        # await RecordsAdminOperates.insert_one(username, route, op_name, method, params, status, hint[:32])
         return

@@ -13,15 +13,15 @@ class Player(BaseLeisurePlayer):
         self.__que = 0
         self.__yuan_que = 0
         self.__is_lock = False
-        self.__tian_ting =0
+        self.__tian_ting = 0
         self.__tian_hu = 0
         self.__mo_pai = 0
         self.__jiao_pai = 0
-        self.__men_cards = []  #闷、捡牌都在里面
-        self.__zi_mo_cards = [] #玩家闷的牌
+        self.__men_cards = []  # 闷、捡牌都在里面
+        self.__zi_mo_cards = []  # 玩家闷的牌
         self.__has_shang_ga = False
         self.__can_tian_ting = 0
-        self.__operates = [] #玩家能做的操作
+        self.__operates = []  # 玩家能做的操作
         self.__shang_ga_score = 0
         self.__table_cards = []  # 玩家桌牌
         self.__all_chu_cards = []  # 所有出牌记录
@@ -57,11 +57,15 @@ class Player(BaseLeisurePlayer):
         self.__is_ready = False
         self.__hu_info = {}  # 胡开信息
         self.__shao_tong_xing_zheng = 0  # 烧通行证
-        self.__hu_path = None
-        self.__dian_pao_no_hu = 0 #点炮未胡
+        self.__hu_path = []
+        self.__dian_pao_no_hu = 0  # 点炮未胡
+        self.__eight_card_tian_hu = 0
+        self.__receive_enter_room = 0 #是否收到过客户端发送的03消息
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
+
+        self.__is_exchange_status = False #玩家换牌状态 防止多个玩家同一时间选择换牌导致换牌有误
 
     @property
     def has_shang_ga(self):
@@ -78,16 +82,16 @@ class Player(BaseLeisurePlayer):
         return self.__shang_ga_score
 
     @shang_ga_score.setter
-    def shang_ga_score(self, shang_ga_score):
-        self.__shang_ga_score = shang_ga_score
+    def shang_ga_score(self, value):
+        self.__shang_ga_score = value
 
     @property
-    def que(self):
+    def que(self) -> int:
         return self.__que
 
     @que.setter
-    def que(self,que:int):
-        self.__que = que
+    def que(self, value: int):
+        self.__que = value
 
     @property
     def yuan_que(self):
@@ -98,24 +102,32 @@ class Player(BaseLeisurePlayer):
         return self.__is_lock
 
     @is_lock.setter
-    def is_lock(self,is_lock:bool):
-        self.__is_lock = is_lock
+    def is_lock(self, value: bool):
+        self.__is_lock = value
 
     @property
     def tian_ting(self):
         return self.__tian_ting
 
     @tian_ting.setter
-    def tian_ting(self,tian_ting:int):
-        self.__tian_ting = tian_ting
+    def tian_ting(self, value: int):
+        self.__tian_ting = value
 
     @property
     def tian_hu(self):
         return self.__tian_hu
 
     @tian_hu.setter
-    def tian_hu(self, tian_hu):
-        self.__tian_hu = tian_hu
+    def tian_hu(self, value):
+        self.__tian_hu = value
+
+    @property
+    def eight_card_tian_hu(self):
+        return self.__eight_card_tian_hu
+
+    @eight_card_tian_hu.setter
+    def eight_card_tian_hu(self,value):
+        self.__eight_card_tian_hu = value
 
     @property
     def all_chu_cards(self):
@@ -144,8 +156,8 @@ class Player(BaseLeisurePlayer):
         return self.__chu_cards.pop()
 
     @can_tian_ting.setter
-    def can_tian_ting(self, can_tian_ting):
-        self.__can_tian_ting = can_tian_ting
+    def can_tian_ting(self, value):
+        self.__can_tian_ting = value
 
     @property
     def operates(self):
@@ -170,24 +182,23 @@ class Player(BaseLeisurePlayer):
         return self.__hu_path
 
     @hu_path.setter
-    def hu_path(self, hu_path):
-        self.__hu_path = hu_path
-
+    def hu_path(self, value):
+        self.__hu_path = value
 
     @property
     def mo_pai(self):
         return self.__mo_pai
 
     @mo_pai.setter
-    def mo_pai(self,mo_pai:int):
-        self.__mo_pai = mo_pai
+    def mo_pai(self, value: int):
+        self.__mo_pai = value
 
     @property
     def jiao_pai(self):
         return self.__jiao_pai
 
     @jiao_pai.setter
-    def jiao_pai(self,jiao_pai:int):
+    def jiao_pai(self, jiao_pai: int):
         self.__jiao_pai = jiao_pai
 
     @property
@@ -207,7 +218,7 @@ class Player(BaseLeisurePlayer):
         cards.append(from_seat_id)
         self.__table_cards.append(cards)
 
-    def add_men_cards(self,data, is_zha=False):
+    def add_men_cards(self, data, is_zha=False):
         self.__men_cards.append(data)
         card = data["card"]
         self.__zi_mo_cards.append(card)
@@ -215,11 +226,10 @@ class Player(BaseLeisurePlayer):
         if not is_zha:
             self.__zi_mo_count += 1
 
-    def rm_cards(self, cards,chu_pai=False):
+    def rm_cards(self, cards, chu_pai=False):
         super().rm_cards(cards)
         chu_pai and self.__chu_cards.extend(cards)
         self.__all_chu_cards.extend(cards)
-
 
     @property
     def zi_mo_cards(self):
@@ -230,8 +240,16 @@ class Player(BaseLeisurePlayer):
         return self.__dian_pao_no_hu
 
     @dian_pao_no_hu.setter
-    def dian_pao_no_hu(self,value):
+    def dian_pao_no_hu(self, value):
         self.__dian_pao_no_hu = value
+
+    @property
+    def receive_enter_room(self):
+        return self.__receive_enter_room
+
+    @receive_enter_room.setter
+    def receive_enter_room(self,value):
+        self.__receive_enter_room = value
 
     def gang_in_operates(self):
         if ActionType.ACTION_TYPE_AN_GANG in self.__operates:
@@ -243,7 +261,7 @@ class Player(BaseLeisurePlayer):
         else:
             return None
 
-    def is_action_in_operates(self,action):
+    def is_action_in_operates(self, action):
         return action in self.__operates
 
     def can_hu_men_jian(self):
@@ -265,9 +283,8 @@ class Player(BaseLeisurePlayer):
     def shao_tong_xing_zheng(self):
         return self.__shao_tong_xing_zheng
 
-
     def on_round_over_clear(self):
-        self.is_lock = False
+        self.__is_lock = False
         self.__has_shang_ga = False
         self.__mo_pai = 0
         self.__shang_ga_score = 0
@@ -295,23 +312,24 @@ class Player(BaseLeisurePlayer):
         self.__lock_cards = []
         self.__zha_hu = 0
         self.__tian_hu = 0
+        self.__eight_card_tian_hu = 0
         self.__hu_info = {}
         self.__han_dou_cards = set()
         self.__shao_tong_xing_zheng = 0
         self.__tui_zhang_ke_kai = 0
         self.__jian_next_player_card = 0
         self.__is_ready = False
-        self.__hu_path = None
+        self.__hu_path = []
 
         self.__chu_cards.clear()
         self.__all_chu_cards.clear()
         self.__table_cards.clear()
         self.__zi_mo_cards.clear()
+        self.__is_exchange_status = False
 
     def clear_data_round_over(self):
         super().clear_data_round_over()
         self.on_round_over_clear()
-
 
     def mo_pai_can_operates(self):
         """两个集合有交集返回True,即至少有其中一个操作"""
@@ -329,14 +347,17 @@ class Player(BaseLeisurePlayer):
         return not target_actions.isdisjoint(operates_map)
 
     def exchange_cards_seat(self, index_list, cards):
+        if self.__is_exchange_status:
+            return
+        self.__is_exchange_status = True
         for i, idx in enumerate(index_list, 1):
-            self.ex_cards(cards[-i],idx)
+            self.ex_cards(cards[-i], idx)
 
     def can_an_gang(self, rule, card=0):
-        if self.__que > 0:
-            if (card or 0) // 10 == self.__que:
-                return False, 0
-        return rule.can_an_gang(self.cards, card)
+        # if self.__que > 0:
+        #     if (card or 0) // 10 == self.__que:
+        #         return False, [0]
+        return rule.can_an_gang(self.cards, card,self.__que)
 
     @property
     def tui_zhang_ke_kai(self):
@@ -370,7 +391,7 @@ class Player(BaseLeisurePlayer):
         if self.__que > 0:
             if (card or 0) // 10 == self.__que:
                 return False, 0
-        return rule.can_ming_gang(self.cards,card)
+        return rule.can_ming_gang(self.cards, card)
 
     def can_peng(self, card, rule):
         """ 1. 手牌有两张相同 2. 碰牌之后还要有牌可以打出 """
@@ -383,22 +404,21 @@ class Player(BaseLeisurePlayer):
                 return False
         return rule.can_peng(self.cards, card)
 
-
     @property
     def ting_list(self):
         return self.__ting_list
 
     @ting_list.setter
-    def ting_list(self, ting_list):
-        self.__ting_list = ting_list
+    def ting_list(self, value):
+        self.__ting_list = value
 
     @property
     def lock_cards(self):
         return self.__lock_cards
 
     @lock_cards.setter
-    def lock_cards(self, lock_cards):
-        self.__lock_cards = lock_cards
+    def lock_cards(self, value):
+        self.__lock_cards = value
 
     def get_out_not_lock_card(self):
         card_count = {}
@@ -420,9 +440,9 @@ class Player(BaseLeisurePlayer):
         """ 锁牌，锁住除lock_cards的牌 """
         self.__lock_cards = []
         temp_cards = deepcopy(self.cards)
-        print("锁牌",temp_cards, self.__lock_cards)
         for card in lock_cards:
-            temp_cards.remove(card)
+            if card in temp_cards:
+                temp_cards.remove(card)
         self.__lock_cards = temp_cards
 
     def set_position(self, x, y):
@@ -438,7 +458,7 @@ class Player(BaseLeisurePlayer):
     def card_is_lock(self):
         return self.tian_ting or len(self.men_cards) > 0
 
-    def chu_pai(self,card,chu_pai=True):
+    def chu_pai(self, card, chu_pai=True):
         self.rm_cards([card], chu_pai)
 
     def jie_pao_count(self):
@@ -458,8 +478,8 @@ class Player(BaseLeisurePlayer):
         return self.__lian_zhuang
 
     @lian_zhuang.setter
-    def lian_zhuang(self, lian_zhuang):
-        self.__lian_zhuang = lian_zhuang
+    def lian_zhuang(self, value):
+        self.__lian_zhuang = value
 
     def __add_table_cards(self, card_type, cards, from_seat_id):
         cards = deepcopy(cards)
@@ -489,7 +509,7 @@ class Player(BaseLeisurePlayer):
         """ 仅检测当前牌能否转弯杠 """
         return any(
             card_type == ActionType.ACTION_TYPE_PENG and first_card == card
-            for card_type, first_card,*_ in self.__table_cards
+            for card_type, first_card, *_ in self.__table_cards
         )
 
     def check_an_gang(self, card) -> bool:
@@ -508,7 +528,7 @@ class Player(BaseLeisurePlayer):
         return self.__jian_next_player_card
 
     @jian_next_player_card.setter
-    def jian_next_player_card(self,value):
+    def jian_next_player_card(self, value):
         self.__jian_next_player_card = value
 
     @property
@@ -524,16 +544,16 @@ class Player(BaseLeisurePlayer):
         return self.__fang_pao
 
     @fang_pao.setter
-    def fang_pao(self, fang_pao):
-        self.__fang_pao = fang_pao
+    def fang_pao(self, value):
+        self.__fang_pao = value
 
     @property
     def hu_type(self):
         return self.__hu_type
 
     @hu_type.setter
-    def hu_type(self, hu_type):
-        self.__hu_type = hu_type
+    def hu_type(self, value):
+        self.__hu_type = value
 
     @property
     def ji_pai(self):
@@ -544,33 +564,64 @@ class Player(BaseLeisurePlayer):
         return self.__chong_feng_ji
 
     @chong_feng_ji.setter
-    def chong_feng_ji(self, chong_feng_ji):
-        self.__chong_feng_ji = chong_feng_ji
+    def chong_feng_ji(self, value):
+        self.__chong_feng_ji = value
 
     @property
     def chong_feng_wgj(self):
         return self.__chong_feng_wgj
 
     @chong_feng_wgj.setter
-    def chong_feng_wgj(self, chong_feng_ji):
-        self.__chong_feng_wgj = chong_feng_ji
+    def chong_feng_wgj(self, value):
+        self.__chong_feng_wgj = value
+
+    @property
+    def chong_feng_yi_tong(self):
+        return self.__chong_feng_yi_tong
+
+    @chong_feng_yi_tong.setter
+    def chong_feng_yi_tong(self,value):
+        self.__chong_feng_yi_tong = value
+
+    @property
+    def chong_feng_yi_wan(self):
+        return self.__chong_feng_yi_wan
+
+    @chong_feng_yi_wan.setter
+    def chong_feng_yi_wan(self,value):
+        self.__chong_feng_yi_wan = value
 
     @property
     def ze_ren_ji(self):
         return self.__ze_ren_ji
 
     @ze_ren_ji.setter
-    def ze_ren_ji(self, ze_ren_ji):
-        self.__ze_ren_ji = ze_ren_ji
+    def ze_ren_ji(self, value):
+        self.__ze_ren_ji = value
 
     @property
     def ze_ren_wgj(self):
         return self.__ze_ren_wgj
 
     @ze_ren_wgj.setter
-    def ze_ren_wgj(self, ze_ren_ji):
-        self.__ze_ren_wgj = ze_ren_ji
+    def ze_ren_wgj(self, value):
+        self.__ze_ren_wgj = value
 
+    @property
+    def ze_ren_yi_wan(self):
+        return self.__ze_ren_yi_wan
+
+    @ze_ren_yi_wan.setter
+    def ze_ren_yi_wan(self,value):
+        self.__ze_ren_yi_wan = value
+
+    @property
+    def ze_ren_yi_tong(self):
+        return self.__ze_ren_yi_tong
+
+    @ze_ren_yi_tong.setter
+    def ze_ren_yi_tong(self,value):
+        self.__ze_ren_yi_tong = value
 
     def on_game_start_clear_data(self):
         """ 房间开始前的清理 """
@@ -583,12 +634,10 @@ class Player(BaseLeisurePlayer):
         self.__zhuan_wan_gang_count = 0
         self.__lian_zhuang = 0
         self.__zi_mo_count = 0
-        self.__tian_ting = 0
-        self.__can_tian_ting = 0
-        self.__shang_ga_score = 0
+        self.__dian_pao_count = 0
+        self.__jie_pao_count = 0
 
-
-    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None,include_hand_card = True):
+    def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """
         计算玩家自己所有鸡牌
         fan_ji_list: 桌子中所有鸡牌的集合(默认鸡 + 翻鸡 + 乌骨鸡，后两种可选)
@@ -599,7 +648,10 @@ class Player(BaseLeisurePlayer):
         """
         fan_ji_list = fan_ji_list or set()
 
-        all_bird = default_ji | fan_ji_list  # 并集
+        all_bird = default_ji | set(fan_ji_list)  # 并集
+
+        if week_ji:
+            all_bird = all_bird | week_ji
 
         if include_hand_card:
             # 手牌
@@ -631,6 +683,11 @@ class Player(BaseLeisurePlayer):
                 if card in fan_ji_list:
                     self.__ji_pai.append(card)
 
+    def calc_lai_zi_ji(self,lai_zi):
+        for card in self.__chu_cards:
+            if card == lai_zi:
+                self.__ji_pai.append(card)
+
     def calc_stand_ji(self, default_ji) -> list:
         """
         计算站鸡，站鸡仅限默认鸡，冲锋鸡是打出去的鸡没有站鸡
@@ -657,7 +714,7 @@ class Player(BaseLeisurePlayer):
                     stand_ji.append(card)
         return stand_ji
 
-    def calc_peng_gang_ji(self, default_ji,include_an_gang=False):
+    def calc_peng_gang_ji(self, default_ji, include_an_gang=False):
         """ 计算碰杠的鸡(除暗杠) """
         peng_gang_ji = []
         for combo in self.__table_cards:
@@ -668,7 +725,7 @@ class Player(BaseLeisurePlayer):
                     peng_gang_ji.append(card)
         return peng_gang_ji
 
-    def get_bao_ji(self, default_ji,include_an_gang=False):
+    def get_bao_ji(self, default_ji, include_an_gang=False):
         """
         不叫牌的玩家碰杠的默认鸡和打出的默认鸡要按相
         同分数倒给进行包鸡。
@@ -692,10 +749,10 @@ class Player(BaseLeisurePlayer):
         return self.__is_ready
 
     @is_ready.setter
-    def is_ready(self,is_ready:bool):
-        self.__is_ready = is_ready
+    def is_ready(self, value: bool):
+        self.__is_ready = value
 
-    def player_info(self,contain_cards = True):
+    def player_info(self, contain_cards=True):
         public_men_cards = []
         for men_cards in self.__men_cards:
             data = deepcopy(men_cards)
@@ -711,14 +768,21 @@ class Player(BaseLeisurePlayer):
         p_info["mo_pai"] = self.__mo_pai
         p_info["first_ji"] = self.__chong_feng_ji
         p_info["first_wu_gu_ji"] = self.__chong_feng_wgj
+        p_info["first_yi_tong_ji"] = self.__chong_feng_yi_tong
+        p_info["first_yi_wan_ji"] = self.__chong_feng_yi_wan
         p_info["ze_ren_ji"] = self.__ze_ren_ji
         p_info["ze_ren_wu_gu_ji"] = self.__ze_ren_wgj
+        p_info["ze_ren_yi_tong_ji"] = self.__ze_ren_yi_tong
+        p_info["ze_ren_yi_wan_ji"] = self.__ze_ren_yi_wan
         p_info["is_lock_cards"] = self.__tian_ting or bool(public_men_cards)
         p_info["table_cards"] = self.get_table_cards()
         p_info["out_cards"] = deepcopy(self.__chu_cards)
         p_info["lock_cards"] = self.__lock_cards
         p_info["operates"] = self.operates[:]
         p_info["men_cards"] = self.__men_cards
+        p_info["que"] = self.__que
+        p_info["is_out"] = self.is_out
+        p_info["total_score"] = self.total_score
         return p_info
 
     def round_over_data(self):
@@ -741,7 +805,7 @@ class Player(BaseLeisurePlayer):
     def game_over_data(self):
         return {
             "seat_id": self.seat_id,
-            "uid": self.__uid,
+            "uid": self.uid,
             "total_score": self.total_score,  # 总分
             "dian_pao_count": self.__dian_pao_count,  # 点炮次数
             "jie_pao_count": self.__jie_pao_count,  # 接炮次数
@@ -775,8 +839,6 @@ class Player(BaseLeisurePlayer):
 
     def get_public_pai(self):
         return [deepcopy(item) for item in self.__table_cards]
-
-
 
     def on_round_over(self, score):
         """ 一局结束结算 """
@@ -841,10 +903,10 @@ class Player(BaseLeisurePlayer):
         self.__add_table_cards(ActionType.ACTION_TYPE_PENG, cards, from_seat_id)
         return True
 
-
     def clear_player(self):
         self.on_round_over_clear()
         self.__clear_game_data()
+        self.__receive_enter_room = 0
         super().clear_player()
 
     def jiao_di_long(self):
@@ -867,8 +929,8 @@ class Player(BaseLeisurePlayer):
         fan_ji_list = fan_ji_list or set()
         all_bird = default_ji | fan_ji_list  # 并集
 
-        if lai_zi not in self.__cards:
-            for card in self.__cards:
+        if lai_zi not in self.cards:
+            for card in self.cards:
                 if card in all_bird:
                     hand_ji_list.append(card)
             if self.jiao_di_long():
@@ -908,7 +970,7 @@ class Player(BaseLeisurePlayer):
             for c in all_comb_list:
                 all_comb_list_c_map[c] = all_comb_list_c_map.get(c, 0) + 1
             extra_cards = []
-            for c in self.__cards:
+            for c in self.cards:
                 # [31, 28, 29] <-> [27, 28, 29] -> [27]
                 if all_comb_list_c_map.get(c, 0) > 0:
                     all_comb_list_c_map[c] -= 1
@@ -939,12 +1001,14 @@ class Player(BaseLeisurePlayer):
 
         return hand_ji_list
 
-    def lai_zi_in_played(self, lai_zi):
+    def lai_zi_in_played(self, lai_zi ,just_chu_cards = False):
         """ 打出去的癞子 + 碰杠的癞子 """
         count = 0
         for card in self.__chu_cards:
             if card == lai_zi:
                 count += 1
+        if just_chu_cards:
+            return count
         for combo in self.__table_cards:
             if combo[1] != lai_zi:
                 continue

@@ -2,6 +2,7 @@
 用户相关
 """
 import asyncio
+import decimal
 from typing import Union, Iterable
 from datetime import datetime, date
 from nsanic.libs import tool_dt
@@ -19,6 +20,8 @@ from lucky_game.handler.random_utils import generate_natural_random
 from common.utils.utils import UtilsTool
 from nsanic.libs.mk_random import RngMaker
 
+from lucky_game.model_rc.records_user_login import RecordsAdEventRC
+
 
 class BaseUserRC(BaseCommonRC):
     db_model = User
@@ -33,6 +36,8 @@ class BaseUserRC(BaseCommonRC):
     KEY_UNION_ID = 'union_id'
     KEY_OPENID = 'open_id'
     KEY_SESSION = "session_key"
+    KEY_WECHAT_LOGIN = "wechat_login"
+    KEY_APPLE_ID = 'apple_id'
     KEY_USER_PAY_INFO = "user_pay_info"  # 已下单的支付信息
     KEY_USER_PAID_ORDER = "user_paid_order"  # 已支付订单
 
@@ -50,9 +55,23 @@ class BaseUserRC(BaseCommonRC):
         return await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{uid}")
 
     @classmethod
+    async def cache_wechat_access_token_info(cls, uid, wechat_access_token_info):
+        # refresh_token有效期为30天
+        await cls.conf.rds.drop_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        return await cls.conf.rds.set_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}", wechat_access_token_info, ex_time=30 * 86400 - 5)
+
+    @classmethod
+    async def get_wechat_access_token_info(cls, uid):
+        data = await cls.conf.rds.get_item(f"{cls.KEY_WECHAT_LOGIN}:{uid}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
+
+    @classmethod
     async def cache_user_pay_info(cls, uid, order_id, pay_info):
         """缓存平台的支付信息"""
-        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info), ex_time=86400)
+        return await cls.conf.rds.set_item(f"{cls.KEY_USER_PAY_INFO}:{uid}_{order_id}", json_encode(pay_info),
+                                           ex_time=86400)
 
     @classmethod
     async def get_user_pay_info(cls, uid, order_id):
@@ -149,19 +168,21 @@ class BaseUserRC(BaseCommonRC):
         return {}
 
     @classmethod
-    async def cache_count_buy_limit(cls, uid, trade_item, data):
+    async def cache_count_buy_limit(cls, uid, sku, data):
         """ 缓存短期限购次数（通用） """
         # 从 data 中获取周期类型，例如：{"times": 5, "limit_period": 1}
-        buy_limit = data.get("buy_limit")
-        limit_period = buy_limit.get("limit_period", 0)
-        cur_time = tool_dt.cur_time()
+        sta = False
+        if data:
+            buy_limit = data.get("buy_limit")
+            limit_period = buy_limit.get("limit_period", 0)
+            cur_time = tool_dt.cur_time()
 
-        # 计算周期结束时间
-        time_node = KitDt.cal_period_deadline(limit_period, cur_time)
-        data["time_node"] = time_node
-
-        return await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{trade_item}", json_encode(data),
-                                           ex_time=cls.expired_sec)
+            # 计算周期结束时间
+            time_node = KitDt.cal_period_deadline(limit_period, cur_time)
+            data["time_node"] = time_node
+            sta = await cls.conf.rds.set_item(f"{cls.KEY_BUY_LIMIT}:{uid}_{sku}", json_encode(data),
+                                              ex_time=cls.expired_sec)
+        return sta
 
     @classmethod
     async def cache_by_pk(cls, pk_val: Union[bytes, int, str], **kwargs):
@@ -360,6 +381,25 @@ class BaseUserRC(BaseCommonRC):
         return set()
 
     @classmethod
+    async def handel_online_status(cls, handle_data: list):
+        """
+        处理用户数据，并在数据中添加在线离线状态
+        handle_data：需要处理的用户数据列表，每个元素必须包含"uid"字段
+        """
+        u_ids = [item["uid"] for item in handle_data]
+        # last_login_data, msg = await RecordsAdEventRC.get_uid_login_last(u_ids)
+        # last_data = {item["uid"]: item for item in last_login_data}
+        on_line_ids = await cls.get_online_uid(u_ids)
+        for i in handle_data:
+            # 过滤隔离组内在线用户
+            is_online = 0
+            if i["uid"] in on_line_ids:
+                is_online = 1
+            i["is_online"] = is_online
+            # i["last_time"] = last_data.get(i["uid"], {}).get("created", 0)
+        return handle_data
+
+    @classmethod
     async def deal_user_update_goods(cls, uid, id_list=None, is_del=False, key_name='user_new_bag'):
         """
         用户新获得/可升级物品缓存goods_id或者其他id集合用于通知
@@ -411,7 +451,8 @@ class BaseUserRC(BaseCommonRC):
         return await cls.conf.rds.set_item(key, 1, cool_down_time)
 
     @classmethod
-    async def update_user_int_field(cls, uid: int, field_name: str, value: int, operation: str = 'add'):
+    async def update_user_int_field(cls, uid: int, field_name: str, value: [int | decimal.Decimal],
+                                    operation: str = 'add'):
         try:
             user, e = await cls.update_int_field(uid, field_name, value, operation)
             if not user:
@@ -434,6 +475,7 @@ class BaseUserRC(BaseCommonRC):
         union = kwargs.get(register_type)
         name = kwargs.get("nickname")
         dev_ident = kwargs.get("dev_ident")
+        phone = kwargs.get("phone")
         if register_type == cls.KEY_PHONE_CACHE:
             name = ''.join(list(union)[-4:])
         elif register_type in [cls.KEY_UNION_ID, cls.KEY_OPENID]:
@@ -444,17 +486,94 @@ class BaseUserRC(BaseCommonRC):
         else:
             name = generate_natural_random(4)
         return {
-            "avatar": SERVER_ADDR + "/resource/default/avatar.png",
             "nickname": name,
             "sex": 0,
-            # "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('guest_openid', union)),
-            # "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('guest_unionid', union)),
+            "phone": phone,
+            "openid": kwargs.get("openid", UtilsTool.get_hash_secrets('phone_openid', union, extra_str=phone)),
+            "unionid": kwargs.get("unionid", UtilsTool.get_hash_secrets('phone_unionid', union, extra_str=phone)),
             # "safe_key": RngMaker.mk_str(18),
             # "valid_key": RngMaker.mk_str(16),
             # "dev_ident": dev_ident,
             # "country": "CN",
             # "tst_mark": False,
         }
+
+    @classmethod
+    async def get_user_by_apple(cls, apple_id: str):
+        """通过 Apple ID 获取用户信息"""
+        sql = f"SELECT * FROM {cls.tb_name} WHERE apple_id = {apple_id} AND status = 1 LIMIT 1"
+        result = await cls.db_model.exec_query(sql)
+        return dict(result) if result else None
+
+    @classmethod
+    async def get_user_filter(cls, uid: any = None, is_vip: int = None, vip: int = None, phone: str = None,
+                              id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
+                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None):
+        """获取用户列表"""
+        try:
+            query = {}
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lte"] = end_time
+            if is_vip is not None:
+                query["vip__gte"] = is_vip
+            if vip is not None:
+                query["vip"] = vip
+            if phone is not None:
+                query["phone"] = phone
+            if id_card is not None:
+                query["id_card"] = id_card
+            if platform is not None:
+                query["platform"] = platform
+            if address is not None:
+                # query["address__contains"] = address
+                query["address"] = address
+            if page and page_size:
+                _, total = await cls.count_user_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+
+            if not data:
+                return False, result
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, result
+
+    @classmethod
+    async def count_user_total(cls, **kwargs):
+        """统计用户总数"""
+        try:
+            total = await cls.db_model.filter(**kwargs).count()
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, total
+
+    @classmethod
+    async def get_data_user_info(cls, data):
+        """
+        获取用户数据
+        :param data: 用户相关数据
+        :return: 带用户数据的相关数据
+        """
+        u_ids = [data.get("uid") for data in data if data.get("uid")]
+        users = await cls.get_user_filter(uid=u_ids)
+        users_dict = {uid: user for uid, user in users}
+        for item in data:
+            item["user_name"] = users_dict.get(item.get("uid"), {}).get("name", "")
+        return data
+
 
 class BaseBanRC(BaseCommonRC):
     db_model = RecordsUserBan

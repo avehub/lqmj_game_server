@@ -9,9 +9,8 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
-from c_services.const.cs_enum_const import RoomStatus, CmdClub
-from common.public.common_class import CommonApi
-from common.public.enum_const import StaCode, ServiceEnum, CacheKey
+from c_services.const.cs_enum_const import RoomStatus, CmdClub, RedDotType
+from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
@@ -19,11 +18,11 @@ from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 class BaseClub(GameAuthApi):
     async def _check_other_params(self, other):
         """ 检查其他参数 """
-        other_dict = await CommonApi.json_by_dict(other)
+        other_dict = await self.json_by_dict(other)
         if not isinstance(other_dict, dict):
             return self.answer(StaCode.FAIL, hint="other参数格式错误")
-        self.check_int(other_dict.get("pay_type"), require=True, minval=1, maxval=2, p_name="pay_type")
-        self.check_int(other_dict.get("host_power_room"), require=True, minval=0, maxval=3,  p_name="host_power_room")
+        self.check_int(other_dict.get("pay_type"), require=True, p_name="pay_type")
+        self.check_int(other_dict.get("host_power_room"), require=True, p_name="host_power_room")
         return other_dict
 
 
@@ -54,16 +53,29 @@ class ClubUpdate(BaseClub):
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         other = self.check_str(req.json.get("other"), require=False, p_name="配置内容")
         name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="茶馆名称")
+        notice = self.check_str(req.json.get("notice"), require=False, p_name="茶馆公告")
+        record_status = self.check_int(req.json.get("record_status"), require=False, minval=0, maxval=1, p_name="战绩状态")
         check_sta, e = await BaseClubRC.check_club_name(name, club_id)
         if not check_sta:
             return self.answer(StaCode.FAIL, hint=e)
-        if name or other:
+        if name or other or notice or record_status is not None:
             other_dict = {}
             if other:
                 other_dict = await self._check_other_params(other)
-            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict)
+            sta, e = await BaseClubRC.update_club(club_id, name=name, other=other_dict, notice=notice, record_status=record_status)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
+            if notice:
+                # 茶馆公告更新同步所有玩家
+                cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
+                data, _ = await BaseClubRC.get_club_by_id(club_id)
+                data["secret"] = C_SERVICE_SECRET_KEY
+                await self.cs2cs_by_rmq(
+                    cs_enum,
+                    CmdClub.CLUB_NOTICE,
+                    data,
+                    uid,
+                )
         return self.answer()
 
 
@@ -98,6 +110,10 @@ class ClubHall(BaseClub):
         status = self.check_int(req.args.get("status"), minval=0, maxval=6, require=False, p_name="房间状态")
         if status is None:
             status = [RoomStatus.T_IDLE, RoomStatus.T_READY, RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING, RoomStatus.T_CHECK_OUT, RoomStatus.T_DISMISS]
+        # 茶馆信息
+        club, e = await BaseClubRC.get_club_by_id(club_id)
+        if club is None or club["status"] != 0:
+            return self.answer(StaCode.FAIL, hint=e)
         # 玩法模板
         templates, e = await ClubRoomTemplatesRC.get_by_club(club_id=club_id, play_type=play_type)
         # 游戏房间
@@ -119,7 +135,7 @@ class ClubHall(BaseClub):
                 room["seats"] = user_uids if user_uids else []
             result.extend(room_list)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
-        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "uid": uid}
+        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": club_id, "club_uid": club["uid"], "uid": uid}
         await self.cs2cs_by_rmq(
             cs_enum,
             CmdClub.ENTER_CLUB,
@@ -184,10 +200,31 @@ class ClubCheck(BaseClub):
         status = req.json.get("status")
         self.check_int(behavior_id, require=True, p_name="申请行为ID")
         self.check_int(status, require=True, p_name="审批状态")
-        # TODO 管理员校验 测试暂不加
+        behavior, e = await ExtraClubBehaviorRC.get_behavior_by_id(behavior_id)
+        if not behavior or behavior.get("status") != ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT:
+            return self.answer(StaCode.FAIL, hint=f"申请不存在或已处理")
+        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=behavior.get("club_id"))
+        # 玩家自己可以取消申请
+        if behavior.get('uid') != check_uid:
+            if not club_manage:
+                return self.answer(StaCode.FAIL, hint="无权限审批")
+            manage_uid = [item.get("uid") for item in club_manage]
+            if check_uid not in manage_uid:
+                return self.answer(StaCode.FAIL, hint="无权限审批")
         sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
+        # 红点通知茶馆用户申请结果
+        await self.send_red_dot(
+            e.get("uid"),
+            RedDotType.RD_CLUB_CHECK,
+        )
+        for manage in club_manage:
+            if manage.get("uid") != check_uid:
+                await self.send_red_dot(
+                    manage.get("uid"),
+                    RedDotType.RD_CLUB_APPLY,
+                )
         return self.answer()
 
 
@@ -200,11 +237,25 @@ class ClubApply(BaseClub):
         club_id = req.json.get("club_id")
         self.check_int(club_id, require=True, p_name="茶馆ID")
         # 校验是否已申请
-        has, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid=uid, club_id=club_id, status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
+        has, e = await ExtraClubBehaviorRC.get_behavior_by_filter(type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX,
+                                                                  uid=uid, club_id=club_id,
+                                                                  status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT)
         if not has:
+            # 是否为茶馆成员
+            is_member, e = await ClubUsersRC.get_club_user_by_one(uid, club_id)
+            if is_member:
+                return self.answer(StaCode.FAIL, hint="您已经是茶馆成员，无需申请")
             sta, e = await ExtraClubBehaviorRC.create_club_behavior(ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, uid, club_id)
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
+        # 红点通知茶馆管理员审批
+        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=club_id)
+        if club_manage:
+            for manage in club_manage:
+                await self.send_red_dot(
+                    manage.get("uid"),
+                    RedDotType.RD_CLUB_APPLY,
+                )
         return self.answer()
 
 
@@ -262,6 +313,8 @@ class ClubRoomCard(BaseClub):
         club_id = self.check_int(req.json.get("club_id"), require=True, p_name="茶馆ID")
         num = self.check_int(req.json.get("num"), require=True, minval=1, p_name="操作数量")
         # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
+        if num > u_info["room_card"]:
+            return self.answer(StaCode.FAIL, hint="房卡不足")
         data, e = await BaseClubRC.club_room_card_operation(u_info, club_id, num)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)

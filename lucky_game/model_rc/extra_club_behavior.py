@@ -7,6 +7,7 @@ from lucky_game.model_db.main import ExtraClubBehavior
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
+from lucky_game.model_rc.base_user import BaseUserRC
 
 
 class ExtraClubBehaviorRC(BaseCommonRC):
@@ -17,21 +18,27 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     BEHAVIOR_BLACK_INDEX = 2
     BEHAVIOR_ISOLATION_INDEX = 3
     BEHAVIOR_OUT_INDEX = 4
+    BEHAVIOR_MANAGE_INDEX = 5
+    BEHAVIOR_TEMPLATE_INDEX = 6
     BEHAVIOR_TYPE = {
         1: "加入茶馆申请",
         2: "小黑屋",
         3: "隔离",
-        4: "退出茶馆"
+        4: "退出茶馆",
+        5: "管理员",
+        6: "玩法"
     }
 
     BEHAVIOR_STATUS_DEFAULT = 0
     BEHAVIOR_STATUS_REFUSE = 1
     BEHAVIOR_STATUS_CANCEL = 2
+    BEHAVIOR_STATUS_ALTER = 3
     BEHAVIOR_STATUS_SUCCEED = 99
     BEHAVIOR_STATUS = {
         0: "未审批",
         1: "拒绝",
         2: "取消",
+        3: "更新",
         99: "通过"
     }
 
@@ -47,7 +54,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
     async def create_club_behavior(cls, behavior_type: int, uid: int, club_id: int, check_uid: int = 0, status: int = None):
         """新增茶馆行为"""
         try:
-            if status is not None:
+            if status is None:
                 status = await cls._type_re_status(behavior_type)
             row = await cls.db_model.add_one({
                 "uid": uid,
@@ -95,15 +102,13 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                         return False, e
         except OperationalError as e:
             return False, f"失败：{str(e)}"
-        return True, "更新成功"
+        return True, data
 
     @classmethod
     async def delete_club_behavior(cls, behavior_id: int):
         """删除茶馆行为"""
         try:
-            sta = await cls.db_model.filter(id=behavior_id).delete()
-            if not sta:
-                return False, "删除失败"
+            await cls.db_model.filter(id=behavior_id).delete()
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"
@@ -137,9 +142,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 query["type"] = behavior_type
             if status is not None:
                 query["status"] = status
-            sta = await cls.db_model.filter(**query).delete()
-            if not sta:
-                return False, "删除失败"
+            await cls.db_model.filter(**query).delete()
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"
@@ -157,7 +160,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
 
     @classmethod
     async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None,
-                                     page: int = None, page_size: int = None):
+                                     page: int = None, page_size: int = None, status_range: int = None):
         """多条件查询茶馆操作行为列表"""
         try:
             query = {}
@@ -168,6 +171,8 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                     query["club_id"] = club_id
             if status is not None:
                 query["status"] = status
+            if status_range is not None:
+                query["status__gte"] = status_range
             if uid is not None:
                 query["uid"] = uid
             if type is not None:
@@ -177,10 +182,10 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 data = []
                 if total > 0:
                     offset = (page - 1) * page_size
-                    data = await cls.db_model.filter(**query).order_by("status").offset(offset).limit(page_size).values()
+                    data = await cls.db_model.filter(**query).order_by("-id").offset(offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, total, data)
             else:
-                result = data = await cls.db_model.filter(**query).order_by("status").values()
+                result = data = await cls.db_model.filter(**query).order_by("-id").values()
             if not data:
                 return result, "暂无数据"
         except OperationalError as e:
@@ -209,3 +214,62 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             return False, f"失败：{str(e)}"
         return True, "成功"
 
+    @classmethod
+    async def club_behavior_explain(cls, data: list):
+        """茶馆行为说明"""
+        if not data:
+            return data
+
+        for item in data:
+            explain = ""
+            u_info = await BaseUserRC.cache_by_pk(item["uid"])
+            check_info = await BaseUserRC.cache_by_pk(item["check_uid"])
+            if u_info and len(u_info["name"]) > 6:
+                u_info["name"] = u_info['name'][0:6] + "..."
+            if check_info and len(check_info["name"]) > 6:
+                check_info["name"] = check_info['name'][0:6] + "..."
+            # 茶馆申请
+            if item["type"] == cls.BEHAVIOR_APPLY_INDEX:
+                msg = "同意"
+                if item["status"] == cls.BEHAVIOR_STATUS_REFUSE:
+                    msg = "拒绝"
+                explain = f"{check_info['name']}{msg}了{u_info['name']}的加入申请"
+            # 黑名单
+            elif item["type"] == cls.BEHAVIOR_BLACK_INDEX:
+                msg = "加入"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "移除"
+                explain = f"{check_info['name']}将{u_info['name']}{msg}黑名单"
+            # 隔离组
+            elif item["type"] == cls.BEHAVIOR_ISOLATION_INDEX:
+                explain = f"{check_info['name']}操作了隔离组"
+                if item["status"] == cls.BEHAVIOR_STATUS_SUCCEED:
+                    msg = "加入"
+                    explain = f"{check_info['name']}将{u_info['name']}{msg}隔离组"
+                elif item["status"] == cls.BEHAVIOR_STATUS_ALTER:
+                    msg = "更新至"
+                    explain = f"{check_info['name']}将{u_info['name']}{msg}隔离组"
+                elif item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "删除了"
+                    explain = f"{check_info['name']}{msg}隔离组"
+            # 退出茶馆
+            elif item["type"] == cls.BEHAVIOR_OUT_INDEX:
+                msg = "退出"
+                explain = f"{u_info['name']}{msg}了茶馆"
+                if item["check_uid"]:
+                    msg = "移出"
+                    explain = f"{check_info['name']}将{u_info['name']}{msg}了茶馆"
+            elif item["type"] == cls.BEHAVIOR_MANAGE_INDEX:
+                msg = "设为了管理员"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "设为了普通成员"
+                explain = f"{check_info['name']}将{u_info['name']}{msg}"
+            elif item["type"] == cls.BEHAVIOR_TEMPLATE_INDEX:
+                msg = "新增"
+                if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
+                    msg = "删除"
+                elif item["status"] == cls.BEHAVIOR_STATUS_ALTER:
+                    msg = "修改"
+                explain = f"{u_info['name']}{msg}了模板"
+            item["explain"] = explain
+        return data

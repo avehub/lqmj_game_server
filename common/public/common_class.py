@@ -2,21 +2,52 @@ from typing import Optional
 
 from aio_pika import DeliveryMode
 from nsanic.base_conf import BaseConf
+from nsanic.libs import tool_dt
+# from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
+from datetime import datetime
+import calendar
+from typing import Tuple, Union
+from c_services.const.cs_enum_const import CmdNotice
+from common.proto.py_pb2.common import common_pb2
 
 
 class CommonApi(LogMeta):
-    conf: BaseConf
+    conf = BaseConf()
+    SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
+    # def __init__(self):
+    #     # 确保 conf 已初始化
+    #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
+    #         CommonApi.conf = BaseConf()
 
     @classmethod
     async def get_player_ws_id(cls, uid):
         ws_id, _ = await cls.get_player_ws_info(uid)
         return ws_id
+
+    @classmethod
+    async def get_player_join_gold(cls, uid):
+        try:
+            user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+            gold = await cls.conf.rds.get_item(user_gold_key, jsparse=True)
+            if gold is None:
+                gold = {"gold": 0}
+        except Exception as e:
+            gold = {"gold": 0}
+        return gold
+
+    @classmethod
+    async def get_player_in_game(cls, uid):
+        try:
+            is_gaming = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            is_gaming = {"is_gaming": False}
+        return is_gaming
 
     @classmethod
     async def get_player_ws_info(cls, uid):
@@ -61,6 +92,21 @@ class CommonApi(LogMeta):
         msg["secret"] = cls.conf.SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
+    async def publish_to_fanout(cls, cmd, uid = 1, msg= None):
+        """
+        向SUBSCRIBE_FANOUT频道发送消息
+        """
+        if not isinstance(msg, bytes):
+            msg = json_encode(msg, u_byte=True)
+        pack_data = UtilsTool.pack_inner_msg(cmd, uid, msg)
+        try:
+            await cls.conf.rmq.publish(
+                msg=pack_data,
+                exchange_name=cls.SUBSCRIBE_FANOUT,
+            )
+        except Exception as e:
+            cls.log_err(f"publish_to_fanout error: {e}")
+
     @classmethod
     async def inner_cs2ws(
             cls,
@@ -104,6 +150,13 @@ class CommonApi(LogMeta):
         pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
         cmd = UtilsTool.packet_command(cs_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+
+    @classmethod
+    async def send_red_dot(cls, uid, rd_type):
+        """ 红点消息 """
+        model = common_pb2.S2COneFieldWeb()
+        model.red_dot = rd_type
+        await cls.send_msg_to_player(CmdNotice.RED_DOT, uid=uid, msg=model, cs_type=ServiceEnum.C_NOTICE)
 
     @classmethod
     async def req_by_rpc(cls, cs_type: ServiceEnum, c_code, uid, msg, r_key=''):
@@ -166,3 +219,96 @@ class CommonApi(LogMeta):
         else:
             str_json = data
         return json_parse(str_json)
+
+    @classmethod
+    async def seconds_since_midnight(cls, now: datetime = None) -> int:
+        """
+        返回当前时间距离当天凌晨（00:00:00）过去的秒数
+
+        Returns:
+            int: 当天凌晨到现在的秒数
+        """
+        if now is None:
+            now = datetime.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return int((now - midnight).total_seconds())
+
+    @classmethod
+    async def get_time_range(cls, period: str = 'month', start_hour: int = 0, end_hour: int = 23, state_minute: int = 0,
+                             end_minute: int = 59, start_second: int = 0, end_second: int = 59) -> Tuple:
+        """
+        获取本月或当天的第一天和最后一天的时间戳
+
+        Args:
+            period (str): 'month' 获取本月的时间戳, 'day' 获取当天的时间戳
+
+        Returns:
+            Tuple[int, int]: (开始时间戳, 结束时间戳)
+        """
+        # 获取当前时间
+        now = datetime.now()
+
+        if period == 'day':
+            # 获取当天的日期时间（00:00:00）
+            start_of_day = now.replace(hour=start_hour, minute=state_minute, second=start_second, microsecond=0)
+            # 获取当天的日期时间（23:59:59）
+            end_of_day = now.replace(hour=end_hour, minute=end_minute, second=end_second, microsecond=999999)
+            return int(start_of_day.timestamp()), int(end_of_day.timestamp())
+
+        elif period == 'month':
+            # 获取本月第一天的日期时间（00:00:00）
+            first_day = now.replace(day=1, hour=start_hour, minute=state_minute, second=start_second, microsecond=0)
+            # 获取本月最后一天的日期
+            last_day = calendar.monthrange(now.year, now.month)[1]
+            # 获取本月最后一天的日期时间（23:59:59）
+            last_day_dt = now.replace(day=last_day, hour=end_hour, minute=end_minute, second=end_second, microsecond=0)
+            return int(first_day.timestamp()), int(last_day_dt.timestamp())
+
+        else:
+            return None, None
+
+    @classmethod
+    async def list_by_group(cls, arr: list[dict[str, any]], key: str, unordered: bool = True):
+        result = {}
+        try:
+            for item in arr:
+                index = item[key]
+                if index not in result:
+                    result[index] = []
+                result[index].append(item)
+            # 将字典转为列表
+            if unordered:
+                return list(result.values())
+        except Exception as e:
+            return e
+        return result
+
+    @classmethod
+    async def append_query_params(cls, url, params):
+        """
+        追加查询参数到URL
+        :param url: 基础URL
+        :param params: 查询参数字典
+        :return: 追加查询参数后的URL
+        """
+        if not params:
+            return url
+        query_string = '&'.join(f"{key}={value}" for key, value in params.items())
+        if '?' in url:
+            return f"{url}&{query_string}"
+        else:
+            return f"{url}?{query_string}"
+
+    @classmethod
+    async def date_time_range(cls, start_time: datetime, end_time: datetime) -> list[datetime]:
+        """
+        获取时间段内的所有时间点
+        :param start_time: 开始时间
+        :param end_time: 结束时间
+        :return: 时间点列表
+        """
+        start_date = tool_dt.dt_str(start_time, '%Y-%m-%d').split('-')
+        end_date = tool_dt.dt_str(end_time, '%Y-%m-%d').split('-')
+        date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
+                                        end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
+        return date_range

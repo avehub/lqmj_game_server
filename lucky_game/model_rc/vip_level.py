@@ -1,6 +1,8 @@
 """
 充值VIP模型
 """
+from decimal import Decimal, getcontext
+
 from nsanic.libs.tool import json_encode, json_parse
 from nsanic.orm.rc_model import RCModel
 from common.public.enum_const import LevelType
@@ -9,6 +11,7 @@ from lucky_game.const import CompleteSta
 # from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_rc import BaseRC
 from lucky_game.model_db.main import ConfVip, UserVip
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
@@ -92,10 +95,10 @@ class UserVipRC(RCModel):
                 break
 
         # 已加经验等级
-        cur_exp = vip_info.get("cur_exp") or 0
-        cur_exp += add_exp
-        cur_amount = vip_info.get("recharge_amount") or 0  # 当前充值金额
-        cur_amount += amount
+        cur_exp = Decimal(vip_info.get("cur_exp") or 0)
+        cur_exp += Decimal(add_exp)
+        cur_amount = Decimal(vip_info.get("recharge_amount") or 0)
+        cur_amount += Decimal(amount)
 
         top_reached = False  # 满级达成标识
         new_level = cur_level
@@ -134,8 +137,11 @@ class UserVipRC(RCModel):
 
         if not sta:
             return False, False
+        if cur_level != new_level:
+            u_info = await BaseUserRC.cache_by_pk(uid)
+            await BaseUserRC.update_info(u_info, {"vip": vip_id})
+        cls.conf.log.info(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
 
-        cls.conf.info_log(uid, "玩家VIP经验更新：", cur_level, "==>>", new_level, "是否升到满级：", top_reached)
         return True, True if cur_level < new_level else False
 
     @classmethod

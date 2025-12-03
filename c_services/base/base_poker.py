@@ -41,6 +41,7 @@ class BasePoker:
     def shuffle_cards(self, card_count):
         """ 洗牌 """
         self.__cursor = 0
+        self.__not_set_cards = []
         if self.__set_cards_list:
             self.__set_cards_ordered(card_count)
         else:
@@ -74,10 +75,14 @@ class BasePoker:
             try:
                 # 查找目标牌位置（从当前游标开始搜索）
                 idx = self.__cards.index(card, self.__cursor)
-                # 移除并返回该牌
-                c = self.__cards.pop(idx)
-                # 牌总数减1（若需要）
-                self.__cards_count -= 1
+
+                if self.__cursor >= self.__cards_count:
+                    return 0
+
+                # 交换目标牌与其后一位（多重赋值实现交换）
+                self.__cards[idx], self.__cards[self.__cursor] = self.__cards[self.__cursor], self.__cards[idx]
+                c = self.__cards[self.__cursor]
+                self.__cursor += 1
                 return c
             except ValueError:  # 目标牌不存在
                 return 0
@@ -112,7 +117,7 @@ class BasePoker:
     def deal_good_cards(self,player_count: int = 4):
 
         cards_pool = self.CARDS_ENUM.all_cards().copy()
-        result_dict = dict(Counter(cards_pool))
+        result_dict = dict(Counter(cards_pool)).copy()
 
         players_hands = [[] for _ in range(player_count + 1)]
         for player_id in range(player_count):
@@ -131,14 +136,21 @@ class BasePoker:
                 dui_zi_index = random.randrange(1, 5)
             while combo_count < count:
                 combo = self.get_better_cards_combo(result_dict,combo_count,1,dui_zi_index,kz_ctrl,kz_index,suit_list)
-                for card in combo:
-                    if result_dict.get(card, 0):
-                        result_dict[card] -= 1
-                hands.extend(combo)
+                if self.has_cards(combo,result_dict):
+                    for card in combo:
+                        if result_dict.get(card, 0):
+                            result_dict[card] -= 1
+                    hands.extend(combo)
                 combo_count += 1
+            valid_items = [key for key, value in result_dict.items() if value > 0]
+            random.shuffle(valid_items)
             for i in range(13 - len(hands)):
-                hands.append(cards_pool.pop())
+                if valid_items:  # 确保非空
+                    card = valid_items.pop()
+                    hands.append(card)
+                    result_dict[card] -= 1
             players_hands[player_id] = hands
+        # players_hands[0] = [51,51,12,12,13,13,24,24,25,25,26,26,27]
         print("players_hands",players_hands)
         self.__set_cards_list = players_hands
         return players_hands
@@ -204,10 +216,12 @@ class BasePoker:
         """
         # 设置手牌
         all_set_cards = []
+        set_cards = []
         player_count = len(self.__set_cards_list) - 1  # 在这里计算人数表示 只发设置人数
         for cards in self.__set_cards_list[:-1]:
             all_set_cards.extend(cards[:card_count]) #根据传入牌数切片处理防止设牌数量大于发牌数量,导致总的牌数量有误
-
+            set_cards.extend(cards[card_count:])
+        print("set_cards",set_cards)
         self.__not_set_cards = self.__set_cards_list[:-1]
         # 设置摸牌
         set_mo_cards = self.__set_cards_list[-1]
@@ -215,8 +229,8 @@ class BasePoker:
         all_cards_map = {}
         for c in self.all_cards:
             all_cards_map[c] = all_cards_map.get(c, 0) + 1
-
         all_set_cards_map = {}
+
         for c in all_set_cards + set_mo_cards:
             all_set_cards_map[c] = all_set_cards_map.get(c, 0) + 1
 
@@ -224,11 +238,14 @@ class BasePoker:
             all_cards_map[card] = count - all_set_cards_map.get(card, 0)
 
         # 其余牌
+        print("all_cards_map", all_cards_map)
         remain_cards = []
         for card, count in all_cards_map.items():
             remain_cards.extend([card] * count)
 
         random.shuffle(remain_cards)
+        for card in set_cards:
+            remain_cards.remove(card)
         order_cards = []
         for i in range(card_count):
             for j in range(player_count):
@@ -241,18 +258,23 @@ class BasePoker:
 
 
         # 设置摸牌
-        order_cards.extend(set_mo_cards)
+        # order_cards.extend(set_mo_cards)
+        remain_cards.extend(set_cards)
+        random.shuffle(remain_cards)
         order_cards.extend(remain_cards)
+        print("order_cards",order_cards)
         order_cards = [self.get_card_by_key(c) for c in order_cards]
 
         self.__cards = order_cards
         self.__set_cards_list.clear()  # 清除当前设牌
 
-    def not_set_cards_ordered(self,seats,card_count):
+    def not_set_cards_ordered(self,seats,card_count,bu_card_count,is_clear = True):
         not_set_cards = []
+        not_set_cards_list = []
         for i ,cards in enumerate(self.__not_set_cards):
             if i+1 in seats:
                 not_set_cards.extend(cards[card_count:])
+                not_set_cards_list.append(cards[card_count:])
 
         count_no = Counter(not_set_cards)
         count_remain = Counter(self.__cards[self.__cursor:])
@@ -271,10 +293,19 @@ class BasePoker:
             else:
                 temp.append(card)  # 保留非匹配元素
         print("remain_cards",self.__cards[self.__cursor:])
-
-        new_remain = not_set_cards + temp  # 前 N 位 = no_set_cards，后续 = 剩余元素
+        new_remain = []
+        remain_set_cards = []
+        for cards in not_set_cards_list:
+            if not cards:
+                new_remain = new_remain + temp[:bu_card_count]
+                temp = temp[bu_card_count:]
+            else:
+                new_remain = new_remain + cards[:bu_card_count]
+                remain_set_cards.extend(cards[bu_card_count:])
+        new_remain = new_remain + temp + remain_set_cards
         self.__cards[self.__cursor:] = new_remain  # 同步修改原列表
-        self.__not_set_cards = []
+        if is_clear:
+            self.__not_set_cards = []
         print("new_remain",self.__cards[self.__cursor:])
 
 
@@ -364,9 +395,17 @@ class BasePoker:
             if first_match is None:
                 first_match = next((num for num in dz_cards if (num // 10) % 10 == combo_suit and num % 10 >= dui_zi), None)
             result.extend([first_match]*2)
-
-        print("result", result)
+        # print("result",result)
         return result
 
+    @staticmethod
+    def has_cards(cards, result_dict):
+        if cards[0] == cards[1]:
+            return result_dict.get(cards[0], 0) >= len(cards)
+        for card in cards:
+            if result_dict.get(card, 0) == 0:
+                return False
+
+        return True
 
 

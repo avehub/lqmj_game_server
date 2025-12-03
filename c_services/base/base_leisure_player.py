@@ -55,6 +55,12 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__timer = DelayCall(seconds, func, *params, **kwargs)
         self.__timer.start()
 
+    def cancel_timer(self):
+        self.__cancel_timer()
+
+    def left_seconds(self) -> int:
+        return self.__timer and self.__timer.left_seconds()
+
     @property
     def is_out(self):
         return self.__is_out
@@ -91,7 +97,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__is_win = flag
 
     def init_player(self, u_info: dict):
-        self.__gold = u_info.get("gold") or 0
+        self.__gold = int(u_info.get("gold")) if u_info.get("gold") is not None else 0
         self.__diamond = u_info.get("diamond") or 0
 
     def update_gold(self, score: int, accumulate=True):
@@ -178,5 +184,6 @@ class BaseLeisurePlayer(BasePlayer, Player):
 
         self.__actual_score = 0
         self.__is_win = 0
+        self.__cancel_timer()
         BasePlayer.clear_player(self)
         Player.clear_player(self)

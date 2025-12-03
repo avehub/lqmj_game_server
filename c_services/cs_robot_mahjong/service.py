@@ -9,14 +9,13 @@ from c_services.const.cs_enum_const import CmdRobotCal
 from c_services.cs_robot_mahjong.lpy_xts import LpyMoveGenerator
 from c_services.cs_robot_mahjong.new_xts import MoveGenerator
 from c_services.cs_robot_mahjong.yxp import calc_best_cards_by_lpy_uid, calc_best_cards_by_lpy
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum
 
 
 class RobotMahjongServer(JsonBaseServer):
-    """
-    老牌友麻将处理函数
-    """
 
+    SUBSCRIBE_FANOUT = None
     def __init__(self):
         super().__init__()
         self.add_handlers({
@@ -33,7 +32,11 @@ class RobotMahjongServer(JsonBaseServer):
 
         print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
         print("######-> AI开始计算预测动作 <-######")
-        if data.get("cs_type", None) == ServiceEnum.C_MAHJONG_FC:
+        cs_type = data.get("cs_type", None)
+        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        uid = data.get("uid",1)
+        cmd = data.get("cmd", None)
+        if cs_type == ServiceEnum.C_MAHJONG_FC:
             # 血流红中🀄
             action = self.calc_lpy_xl_actions(data)
         else:
@@ -42,21 +45,25 @@ class RobotMahjongServer(JsonBaseServer):
 
         # todo: 解析动作, 包装数据
         send_data = self.parse_receive_data(data)
-        send_data['cards'] = action
-        await self.log_info(f"计算出牌, tid: {send_data.get('tid')}, uid: {send_data.get('uid')}, action: {action}")
+        send_data["card"] = action
+        self.log_info(f"计算出牌, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
         print("输出封装预测后的数据: ", send_data)
-        print('当前预测玩家ID为: {}'.format(send_data['self']))
+        print('当前预测玩家ID为: {}'.format(data['seat_id']))
         print('AI输出预测打牌动作: {}'.format(action))
         print()
         print("%##############<< 预测下一位玩家出牌动作 >>##################%")
-
-        # await self.send_child_name_lpy(send_data, action)
+        await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
     async def cal_pong(self,_, data):
         """
         计算是否碰
         """
         self.log_info("碰牌",data)  # 日志记录
+
+        cs_type = data.get("cs_type", None)
+        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        uid = data.get("uid",1)
+        cmd = data.get("cmd", None)
 
         print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
         print("######-> AI开始计算预测动作 <-######")
@@ -77,21 +84,25 @@ class RobotMahjongServer(JsonBaseServer):
         action = mg.calc_can_xqd_pong(data.get("curr_card"))
         # todo: 解析动作, 包装数据
         send_data = self.parse_receive_data(data)
-        send_data['cards'] = action
-        self.log_info(f"计算碰, tid: {send_data.get('tid')}, uid: {send_data.get('uid')}, action: {action}")
+        send_data["card"] = action
+        self.log_info(f"计算碰, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
         print("输出封装预测后的数据: ", send_data)
-        print('当前预测玩家ID为: {}'.format(send_data['self']))
+        print('当前预测玩家ID为: {}'.format(data['seat_id']))
         print('AI输出预测碰牌动作: {}'.format(action))
         print()
         print("%##############<< 预测下一位玩家出牌动作 >>##################%")
 
-        # await self.send_child_name_lpy(send_data, action)
+        await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
     async def cal_gang(self,_, data):
         """
         计算是否杠
         """
         self.log_info("杠牌",data)
+        uid = data.get("uid",1)
+        cmd = data.get("cmd", None)
+        cs_type = data.get("cs_type", None)
+        cs_enum = ServiceEnum.find_member_by_val(cs_type)
 
         print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
         print("######-> AI开始计算预测动作 <-######")
@@ -111,16 +122,16 @@ class RobotMahjongServer(JsonBaseServer):
         action = mg.calc_can_gang(data.get("can_gang_cards"), data.get("gang_type"))
         # todo: 解析动作, 包装数据
         send_data = self.parse_receive_data(data)
-        send_data['cards'] = action
-        send_data['gang_type'] = data.get("gang_type", 0)
-        self.log_info(f"计算杠, tid: {send_data.get('tid')}, uid: {send_data.get('uid')}, action: {action}")
+        send_data["card"] = action
+        send_data["gang_type"] = data.get("gang_type", 0)
+        self.log_info(f"计算杠, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
         print("输出封装预测后的数据: ", send_data)
-        print('预测玩家ID为: {}'.format(send_data['self']))
+        print('预测玩家ID为: {}'.format(data['seat_id']))
         print('AI输出预测杠牌动作: {}'.format(action))
         print()
         print("%##############<< 预测下一位玩家出牌动作 >>##################%")
 
-        # await self.send_child_name_lpy(send_data, action)
+        await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
     async def cal_yxp(self,_, data):
         """
@@ -138,7 +149,7 @@ class RobotMahjongServer(JsonBaseServer):
             action, hu_cards = calc_best_cards_by_lpy(data)
 
         send_data = self.parse_receive_data(data)
-        send_data['cards'] = action
+        send_data["card"] = action
         send_data["hu_cards"] = hu_cards  # 添加能胡卡牌
 
         self.log_info(f"计算有效牌, tid: {send_data.get('tid')}, uid: {send_data.get('uid')}, action: {action}")
@@ -165,15 +176,8 @@ class RobotMahjongServer(JsonBaseServer):
         """
         send_data = {
             "tid": data.pop("tid", 0),
-            "uid": data.pop("uid", 0),
             "cmd": data.pop("cmd", 0),
-            "res": data.pop("res", 0),
-            "self": data.pop("self", 0),
-            "server_type": data.pop("server_type", 33),
-            "server_index": data.pop("server_index", 1),
-            "match_id": data.pop("match_id", None),
-            "qi_ci": data.pop("qi_ci", None),
-            "channel": data.pop("channel", "")
+            "secret": C_SERVICE_SECRET_KEY,
         }
         return send_data
 

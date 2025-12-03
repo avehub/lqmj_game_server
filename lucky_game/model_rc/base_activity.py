@@ -9,15 +9,28 @@ from lucky_game.handler.douyin import DouYin
 from lucky_game.model_rc.base_user import BaseUserRC
 # from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from lucky_game.model_rc.base_rc import BaseRC
-from lucky_game.model_db.main import ConfActivity, UserActivity
+from lucky_game.model_db.main import ConfActivity, UserActivityProgress
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.const import ActivitySta, ConditionType, ActivityItem, ActivityType, RandType
+from tortoise.exceptions import OperationalError
 
 
 class ConfActivityRC(BaseRC):
     db_model = ConfActivity
     tb_name = db_model.sheet_name()
     expired_mode = 0
+
+    KEY_SESSION = "conf_activity"
+    @classmethod
+    async def cache_session_set(cls, query, value):
+        return await cls.conf.rds.set_item(f"{cls.KEY_SESSION}:{query}", value)
+
+    @classmethod
+    async def cache_session_get(cls, query):
+        data = await cls.conf.rds.get_item(f"{cls.KEY_SESSION}:{query}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
 
     @classmethod
     async def get_activity_item_by_id(cls, act_id, platform='', os=''):
@@ -35,7 +48,7 @@ class ConfActivityRC(BaseRC):
         if items:
             for item in items:
                 DouYin.adjust_payment_for_douyin(item, platform, os)
-#             await GoodsManagerRC.pack_goods_many_conf(items)
+            #             await GoodsManagerRC.pack_goods_many_conf(items)
             return items
         return []
 
@@ -47,9 +60,64 @@ class ConfActivityRC(BaseRC):
             return
         return [i for i in info if i.get("act_type") == act_type]
 
+    @classmethod
+    async def get_activity_by_once(cls, act_type: int = None, act_id: int = None, act_level: int = None, status: int = 1,
+                                    platform: any = None):
+        """获取单条活动信息"""
+        query = {"status": status}
+        try:
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform__contains"] = platform
+            if act_type:
+                query["act_type"] = act_type
+            if act_id:
+                query["act_id"] = act_id
+            if act_level:
+                query["act_level"] = act_level
+            info = await cls.db_model.filter(**query).first().values()
+            if not info:
+                return None, "暂时没找到这类型的活动哦"
+        except OperationalError as e:
+            return None, f"获取活动信息失败: {str(e)}"
+        return info, "成功"
+
+    @classmethod
+    async def get_activity_filter(cls, act_type: any = None, act_id: any = None, act_level: any = None, status: int = 1,
+                                    platform: any = None):
+        """获取单条活动信息"""
+        query = {"status": status}
+        try:
+            if platform is not None:
+                if isinstance(platform, list):
+                    query["platform__in"] = platform
+                else:
+                    query["platform__contains"] = platform
+            if act_type is not None:
+                if isinstance(act_type, list):
+                    query["act_type__in"] = act_type
+                elif isinstance(act_type, int):
+                    query["act_type"] = act_type
+            if act_id is not None:
+                if isinstance(act_id, list):
+                    query["act_id__in"] = act_id
+                elif isinstance(act_id, int):
+                    query["act_id"] = act_id
+            if act_level is not None:
+                if isinstance(act_level, list):
+                    query["act_level__in"] = act_level
+                elif isinstance(act_level, int):
+                    query["act_level"] = act_level
+            data = await cls.db_model.filter(**query).values()
+        except OperationalError as e:
+            return None, f"获取活动信息失败: {str(e)}"
+        return data, "成功"
+
 
 class UserActivityRC(BaseRC):
-    db_model = UserActivity
+    db_model = UserActivityProgress
     tb_name = db_model.sheet_name()
 
     expired_mode = 1
@@ -383,3 +451,5 @@ class UserActivityRC(BaseRC):
                     return ActivityType.WEEK_CARD.val
 
         return ActivityType.DEFAULT.val
+
+

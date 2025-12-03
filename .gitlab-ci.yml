@@ -1,0 +1,40 @@
+# GitLab CI/CD 配置 - Lucky Game 自动部署
+# 使用 SSH Executor
+
+stages:
+  - deploy
+
+variables:
+  GIT_STRATEGY: none
+
+# 测试环境部署
+deploy_test:
+  stage: deploy
+  before_script:
+    - echo "=========================================="
+    - echo "部署到测试环境"
+    - echo "=========================================="
+  script:
+    # SSH Executor 已经在目标服务器上了，直接执行脚本
+    - /opt/deploy/lucky_game_deploy.sh dev_测试服
+  only:
+    - dev_测试服
+#  tags:
+#    - ssh
+#    - test  # 可以用 tags 区分不同环境的 Runner
+  environment:
+    name: test
+
+# 生产环境部署
+# deploy_prod:
+#   stage: deploy
+#   before_script:
+#     - echo "=========================================="
+#     - echo "部署到生产环境"
+#     - echo "=========================================="
+#   script:
+#     - /opt/deploy/lucky_game_deploy.sh main
+#   only:
+#     - main
+#   environment:
+#     name: production

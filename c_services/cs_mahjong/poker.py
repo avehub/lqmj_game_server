@@ -40,7 +40,7 @@ class Cards(BaseCard):
     LAI_ZI = 51, 5, 1
 
     @classmethod
-    def all_cards(cls,extra_count= 0):
+    def all_cards(cls, extra_count=0):
         all_member = list()
         for c in cls._member_map_.values():
             if c != 51:
@@ -54,8 +54,8 @@ class Poker(BasePoker):
     CARDS_ENUM = Cards
     CARDS_NUM = 4
 
-    def __init__(self,not_include=0,extra_count =0):
-        super().__init__(not_include,extra_count)
+    def __init__(self, not_include=0, extra_count=0):
+        super().__init__(not_include, extra_count)
 
     def deal_cards(self, player_count: int = 4, card_count: int = 13, extra_count=0):
         """

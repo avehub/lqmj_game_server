@@ -49,22 +49,34 @@ class CallCheck(BaseEnum):
     CLIENT = 1, "客户端"
     INNER = 2, "内部调用"
 
+
 @unique
 class CmdClub(BaseEnum):
-    ENTER_CLUB = 1,"进入茶馆",CallCheck.INNER.val
-    QUIT_CLUB = 2,"退出茶馆",CallCheck.INNER.val
-    ROOM_INFO_CHANGE = 3,"茶馆房间改变",CallCheck.INNER.val
-    CLUB_OWNER_DISMISS = 4,"茶馆房主解散"
-    PLAYER_READY_EXCEPT_OWNER = 5,"所有玩家准备，除了房主",CallCheck.INNER.val
-    LEAVE_CLUB = 6,"离开茶馆"
+    ENTER_CLUB = 1, "进入茶馆", CallCheck.INNER.val
+    QUIT_CLUB = 2, "退出茶馆", CallCheck.INNER.val
+    ROOM_INFO_CHANGE = 3, "茶馆房间改变", CallCheck.INNER.val
+    CLUB_OWNER_DISMISS = 4, "茶馆房主解散"
+    PLAYER_READY_EXCEPT_OWNER = 5, "所有玩家准备，除了房主", CallCheck.INNER.val
+    LEAVE_CLUB = 6, "离开茶馆"
+    CLUB_NOTICE = 7,"茶馆公告通知", CallCheck.INNER.val
+    UPDATE_ROOM_SET = 8,"茶馆设置更新"
+    CHECK_GAME_STATUS = 9, "检查是否在游戏中"
+    JOIN_NEW_GAME = 10, "加入新游戏房间"
+    JOIN_NEW_GAME_SUC = 11, "加入新游戏房间成功",CallCheck.INNER.val
+
+@unique
+class CmdFanOut(BaseEnum):
+    LOST_CONNECT = 201, "离线通知公共频道"
+
 
 @unique
 class ClubMsgType(BaseEnum):
-    CREATE_ROOM = 1,"创建茶馆游戏房间"
-    ENTER_ROOM = 2,"进入茶馆游戏房间"
-    QUIT_ROOM = 3,"退出茶馆游戏房间"
-    DISMISS_ROOM = 4,"解散茶馆游戏房间"
-    UPDATE_ROOM = 5,"更新茶馆游戏房间"
+    CREATE_ROOM = 1, "创建茶馆游戏房间"
+    ENTER_ROOM = 2, "进入茶馆游戏房间"
+    QUIT_ROOM = 3, "退出茶馆游戏房间"
+    DISMISS_ROOM = 4, "解散茶馆游戏房间"
+    UPDATE_ROOM = 5, "更新茶馆游戏房间"
+
 
 @unique
 class CmdRoom(BaseEnum):
@@ -118,52 +130,58 @@ class CmdRoom(BaseEnum):
     DO_RE_REDOUBLE = 54, "Do 加加倍", "斗地主（反铲）"
 
     # 麻将
-    PLAYER_PASS = 60,"过","麻将"
-    PLAYER_PENG = 61,"碰","麻将"
-    PLAYER_GANG = 62,"杠","麻将"
-    PLAYER_HU = 63,"胡","麻将"
-    PLAYER_MEN = 64,"闷","麻将"
-    PLAYER_JIAN = 65,"捡","麻将"
-    PLAYER_SHANG_GA = 66,"估卖","麻将(卖分)"
-    GAME_START = 67,"游戏开始","麻将"
-    START_EXCHANGE_CARDS = 68,"开始换牌","麻将"
-    PLAYER_EXCHANGE_CARDS = 69,"玩家换牌","麻将"
-    START_DING_QUE = 70,"开始定缺","麻将"
-    PUBLIC_OPERATES = 71,"公共操作","麻将"
-    PLAYER_TIAN_TING = 72,"天听","麻将"
-    PLAYER_SHANG_GA_BEGIN = 73,"开始估卖","麻将"
-    HU_AFTER_CARDS_INFO = 74,"通知所有玩家手牌信息","麻将"
-    PLAYER_MEN_SUC = 75,"闷成功","麻将"
-    PLAYER_JIAN_SUC = 76,"捡成功","麻将"
-    PLAYER_MO_PAI = 77,"摸牌","麻将"
-    AFTER_GANG_MO_CARD = 78,"杠后摸牌","麻将"
-    LIU_JU_NOTIFY = 79,"流局通知","麻将"
-    CONFIRM_CHONG_FENG_JI = 80,"冲锋鸡","麻将"
-    ZHA_HU = 91,"炸胡","麻将"
-    ZHA_MEN = 92,"炸闷","麻将"
-    REQ_DISMISS = 93,"请求解散房间","麻将"
-    NOTIFY_POSITION = 94,"开局通知定位","麻将"
-    PLAYER_DING_QUE = 95,"玩家定缺","麻将"
-    ROOM_DISMISS = 96,"房间解散","麻将"
-    CLUB_OWNER_DISMISS = 97,"茶馆房主解散", CallCheck.INNER.val
-    FAN_JI_SCORE = 98,"翻鸡分数","麻将"
-    ROBOT_CAL_ACTION = 99,"机器人出牌计算",CallCheck.INNER.val
-    ROBOT_CAL_PENG = 100,"机器人碰计算",CallCheck.INNER.val
-    ROBOT_CAL_GANG = 101,"机器人杠计算",CallCheck.INNER.val
+    PLAYER_PASS = 60, "过", "麻将"
+    PLAYER_PENG = 61, "碰", "麻将"
+    PLAYER_GANG = 62, "杠", "麻将"
+    PLAYER_HU = 63, "胡", "麻将"
+    PLAYER_MEN = 64, "闷", "麻将"
+    PLAYER_JIAN = 65, "捡", "麻将"
+    PLAYER_SHANG_GA = 66, "估卖", "麻将(卖分)"
+    GAME_START = 67, "游戏开始", "麻将"
+    START_EXCHANGE_CARDS = 68, "开始换牌", "麻将"
+    PLAYER_EXCHANGE_CARDS = 69, "玩家换牌", "麻将"
+    START_DING_QUE = 70, "开始定缺", "麻将"
+    PUBLIC_OPERATES = 71, "公共操作", "麻将"
+    PLAYER_TIAN_TING = 72, "天听", "麻将"
+    PLAYER_SHANG_GA_BEGIN = 73, "开始估卖", "麻将"
+    HU_AFTER_CARDS_INFO = 74, "通知所有玩家手牌信息", "麻将"
+    PLAYER_MEN_SUC = 75, "闷成功", "麻将"
+    PLAYER_JIAN_SUC = 76, "捡成功", "麻将"
+    PLAYER_MO_PAI = 77, "摸牌", "麻将"
+    AFTER_GANG_MO_CARD = 78, "杠后摸牌", "麻将"
+    LIU_JU_NOTIFY = 79, "流局通知", "麻将"
+    CONFIRM_CHONG_FENG_JI = 80, "冲锋鸡", "麻将"
+    ZHA_HU = 91, "炸胡", "麻将"
+    ZHA_MEN = 92, "炸闷", "麻将"
+    REQ_DISMISS = 93, "请求解散房间", "麻将"
+    NOTIFY_POSITION = 94, "开局通知定位", "麻将"
+    PLAYER_DING_QUE = 95, "玩家定缺", "麻将"
+    ROOM_DISMISS = 96, "房间解散", "麻将"
+    CLUB_OWNER_DISMISS = 97, "茶馆房主解散", CallCheck.INNER.val
+    FAN_JI_SCORE = 98, "翻鸡分数", "麻将"
+    ROBOT_CAL_ACTION = 99, "机器人出牌计算", CallCheck.INNER.val
+    ROBOT_CAL_PENG = 100, "机器人碰计算", CallCheck.INNER.val
+    ROBOT_CAL_GANG = 101, "机器人杠计算", CallCheck.INNER.val
+    ZHA_JIAN = 102, "炸捡", "麻将"
+    CHANGE_CONNECT = 103,"玩家状态变化","麻将"
+    CLUB_QUIT_ROOM = 104, "茶馆玩家退出房间", CallCheck.INNER.val
+    FORCE_DISMISS_ROOM = 105, "强制解散房间", CallCheck.INNER.val
 
     #休闲玩法
-    TIMELY_KOU_FEN = 110,"即时结算","麻将"
-    START_FAN_JI = 111,"通知开始翻鸡","麻将"
-    FAN_JI = 112,"翻鸡","麻将"
-    FAN_JI_INFO = 113,"翻鸡信息","麻将"
-    MANY_HU = 114,"多人胡","麻将"
-    RECORD_ACCOUNT = 115,"记账","麻将"
+    TIMELY_KOU_FEN = 110, "即时结算", "麻将"
+    START_FAN_JI = 111, "通知开始翻鸡", "麻将"
+    FAN_JI = 112, "翻鸡", "麻将"
+    FAN_JI_INFO = 113, "翻鸡信息", "麻将"
+    MANY_HU = 114, "多人胡", "麻将"
+    RECORD_ACCOUNT = 115, "记账", "麻将"
+
 
 @unique
 class CmdRobotCal(BaseEnum):
-    CAL_ACTION = 1, "出牌",CallCheck.INNER.val
-    CAL_PONG = 2, "麻将碰",CallCheck.INNER.val
-    CAL_GANG = 3, "麻将杠",CallCheck.INNER.val
+    CAL_ACTION = 1, "出牌", CallCheck.INNER.val
+    CAL_PONG = 2, "麻将碰", CallCheck.INNER.val
+    CAL_GANG = 3, "麻将杠", CallCheck.INNER.val
+
 
 class CmdWorkers(BaseEnum):
     """ 消费服务命令（服务端内部使用） """
@@ -190,6 +208,8 @@ class CmdWorkers(BaseEnum):
     CANCEL_BACKGROUND_SCHEDULED_TASK = 26, "取消后台定时任务"
     FETCH_ACTIVE_MAILS = 27, "获取活跃（一段时间）邮件"
     USER_EVENT_TRACKING = 28, "用户事件追踪"
+    UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
+    INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
 
 
 @unique
@@ -215,7 +235,6 @@ class CmdNotice(BaseEnum):
     INVITE_ROOM = 16, "邀请加入房间"
 
 
-
 class RedDotType(BaseEnum):
     """红点通知类型"""
     RD_SIGN_IN_RF = 1, "可签到/累计签到达成（运势）"
@@ -233,10 +252,17 @@ class RedDotType(BaseEnum):
     RD_MONOPOLY = 13, "大富翁有骰子"
     RD_MONOPOLY_FREE_DICE = 14, "大富翁免费骰子"
     RD_MONOPOLY_TASK = 15, "大富翁任务"
-    RD_SIGN_IN = 16, "可签到/累计签到达成（七日）"
+    RD_SIGN_IN = 16, "可签到/累计签到达成（每月）"
     RD_RANKING_AWARDS = 17, "境界突破奖励"
     RD_DOUYIN_REVISIT = 18, "抖音侧边栏奖励"
     RD_SIGN_IN_WK = 19, "可签到 / 累计签到达成（每周七日）"
+    RD_SHARE = 20, "分享奖励"
+    RD_LIMIT_LOGIN = 21, "限时登录"
+    RD_CLUB_APPLY = 22, "俱乐部申请"
+    RD_CLUB_CHECK = 23, "俱乐部审批"
+    RD_CLUB_USER_LIST = 24, "俱乐部用户列表"
+    RD_CLUB_KICK = 25, "俱乐部踢出"
+    RD_CLUB_CHECK_REFRESH = 26, "俱乐部审批刷新"
 
 
 class CmdRobotMethods(BaseEnum):
