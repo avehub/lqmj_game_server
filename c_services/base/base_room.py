@@ -544,7 +544,12 @@ class BaseRoom(metaclass=ABCMeta):
         self.__dealer = 0
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
+<<<<<<< HEAD
 
+=======
+        self.__room_conf = None
+        self.__poker = None
+>>>>>>> dev_测试服
         self.cancel_all_timer()
 
     def refresh_room_conf(self, service, room_conf):
