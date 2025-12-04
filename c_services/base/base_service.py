@@ -150,7 +150,7 @@ class BaseService(BaseServer, SessionManager):
         if not player.receive_enter_room:
             reenter = False
         player.receive_enter_room = 1
-        self.log_info(player.uid, "enter_room", player.tid, id(player), "最大人数", room.max_player_count,reenter)
+        self.log_info(player.uid, "enter_room", player.tid, "最大人数", room.max_player_count,reenter)
         await self.notify_player_enter_room(room, player,reenter)
         # todo: 通知其它玩家该玩家上线
         await room.player_change_connect(player,player.offline)
