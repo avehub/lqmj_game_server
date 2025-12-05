@@ -544,11 +544,7 @@ class BaseUserRC(BaseCommonRC):
                         offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, total, data)
             else:
-                if group_field == "platform":
-                    result = data = await cls.db_model.filter(**query).order_by(order_field).group_by(group_field).values(group_field,
-                                                                                                     f"{group_field}__count AS group_total")
-                else:
-                    result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
 
             if not data:
                 return False, result
@@ -578,6 +574,21 @@ class BaseUserRC(BaseCommonRC):
         for item in data:
             item["user_name"] = users_dict.get(item.get("uid"), {}).get("name", "")
         return data
+
+    @classmethod
+    async def get_user_group(cls, start_time: int = None, end_time: int = None, platform: int = None,
+                              group_field: str = None):
+        where = "WHERE 1=1"
+        if start_time:
+            where += f" AND created >= {start_time}"
+        if end_time:
+            where += f" AND created <= {end_time}"
+        if platform:
+            where += f" AND platform = {platform}"
+        sql = f"SELECT {group_field}, COUNT({group_field}) AS group_total FROM {cls.tb_name} {where} GROUP BY {group_field}"
+        result = await cls.db_model.exec_query(sql)
+        return result if result else None
+
 
 
 class BaseBanRC(BaseCommonRC):

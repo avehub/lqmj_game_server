@@ -7,7 +7,6 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.records_user_login import RecordsAdEventRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.order import OrderRC
-from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_admin.logic.good_logic import GoodLogic
 
 
@@ -179,18 +178,18 @@ class PayUserActivate(AdminAuthApi):
         }
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         user_all = set()
+        user_dict = {}
         if sta:
-            user_dict = {}
             for user in user_data:
                 date = tool_dt.dt_str(user["created"], '%Y-%m-%d')
                 if date not in user_dict:
                     user_dict[date] = set()
                 user_dict[date].add(user.get("uid"))
                 if user.get("uid") not in user_all:
-                    user_all.add(user.get("uid"))
+                    user_all.add(int(user.get("uid")))
         order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5,
                                                          status=99,
-                                                         uid=user_all)
+                                                         uid=list(user_all))
         if order_data:
             data = {}
             for order in order_data:
@@ -198,8 +197,8 @@ class PayUserActivate(AdminAuthApi):
                 if date not in data:
                     data[date] = set()
                 data[date].add(order.get("uid"))
-            items = {}
             if user_dict:
+                items = {}
                 for date, item in user_dict.items():
                     if date not in data:
                         data[date] = unit.copy()
@@ -211,7 +210,7 @@ class PayUserActivate(AdminAuthApi):
                     items[date]["five"] = len(data[date] & user_dict[date])
                     items[date]["six"] = len(data[date] & user_dict[date])
                     items[date]["seven"] = len(data[date] & user_dict[date])
-        result["list"] = [value for value in items]
+                result["list"] = list(items.values())
         return self.answer(data=result)
 
 
@@ -348,8 +347,7 @@ class PlatformBaseData(AdminAuthApi):
             "buy_user": 0,
             "buy_money": 0
         }
-
-        sta, user_total = await BaseUserRC.count_user_total(start_time=date_time, end_time=end_time)
+        sta, user_total = await BaseUserRC.count_user_total(created__gte=date_time, created__lte=end_time)
         if sta:
             data["add_user"] = user_total
         sta, login_user = await RecordsAdEventRC.get_uid_login_list(start_time=date_time, end_time=end_time,
@@ -399,9 +397,8 @@ class PlatformData(AdminAuthApi):
         login_u_ids = []
         if sta:
             login_u_ids = [item["uid"] for item in login_user]
-        sta, user_group = await BaseUserRC.get_user_filter(group_field="platform")
-
-        if sta:
+        user_group = await BaseUserRC.get_user_group(start_time=start_time, end_time=end_time, group_field="platform")
+        if user_group:
             data = {}
             index_data = {index["platform"]: index for index in user_group}
             order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5,
@@ -424,8 +421,8 @@ class PlatformData(AdminAuthApi):
                     today_reg_user = today_p_dict[item["platform"]]
 
                 old_pay_user = list(order_u_ids - today_reg_user)
-                data[item["platform"]] = item["platform"]
-                data[item["platform"]]["today_user"] = item["group_total"] - index_data[item["platform"]]["group_total"]
+                data[item["platform"]]["platform"] = item["platform"]
+                data[item["platform"]]["today_user"] = item["group_total"]
                 data[item["platform"]]["old_activate_user"] = len(set(login_u_ids) - today_reg_user)
                 data[item["platform"]]["new_activate_user"] = len(today_u_ids)
                 data[item["platform"]]["old_pay_user"] = len(old_pay_user)
@@ -439,7 +436,6 @@ class PlatformData(AdminAuthApi):
 
 class PlatformAddUserRecord(AdminAuthApi):
     """ 渠道统计-新增用户（按平台） """
-
     async def get(self, req: Request):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
@@ -451,19 +447,16 @@ class PlatformAddUserRecord(AdminAuthApi):
         sta, user_group = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         if sta:
             data = {}
-            dates = {}
             for item in user_group:
                 key = f"platform_{item['platform']}"
                 date = tool_dt.dt_str(item["created"], '%Y-%m-%d')
                 if key not in data:
-                    data[key] = []
-                if date not in dates:
-                    dates[date] = unit.copy()
-                dates[date]["y"] += 1
-                data[key] = dates
-
-            for key, val in data.items():
-                result[key] = list(val.values())
+                    data[key] = {}
+                if date not in data[key]:
+                    data[key][date] = unit.copy()
+                    data[key][date]["x"] = date
+                data[key][date]["y"] += 1
+            result = {key: list(val.values()) for key, val in data.items()}
         return self.answer(data=result)
 
 
@@ -484,16 +477,15 @@ class PlatformPayMoneyRecord(AdminAuthApi):
                                                          status=99)
         if order_data:
             data = {}
-            dates = {}
             for order in order_data:
                 key = f"platform_{order['platform']}"
                 date = tool_dt.dt_str(order["created"], '%Y-%m-%d')
                 if key not in data:
-                    data[key] = []
-                if date not in dates:
-                    dates[date] = unit.copy()
-                dates[date]["y"] += order["amount"]
-                data[key] = dates
+                    data[key] = {}
+                if date not in data[key]:
+                    data[key][date] = unit.copy()
+                    data[key][date]["x"] = date
+                data[key][date]["y"] += order["amount"]
             result = {key: list(val.values()) for key, val in data.items()}
         return self.answer(data=result)
 
@@ -515,16 +507,15 @@ class PlatformPayUserRecord(AdminAuthApi):
                                                          status=99)
         if order_data:
             data = {}
-            dates = {}
             for order in order_data:
                 key = f"platform_{order['platform']}"
                 date = tool_dt.dt_str(order["created"], '%Y-%m-%d')
                 if key not in data:
-                    data[key] = []
-                if date not in dates:
-                    dates[date] = unit.copy()
-                dates[date]["y"] += 1
-                data[key] = dates
+                    data[key] = {}
+                if date not in data[key]:
+                    data[key][date] = unit.copy()
+                    data[key][date]["x"] = date
+                data[key][date]["y"] += 1
             result = {key: list(val.values()) for key, val in data.items()}
         return self.answer(data=result)
 
@@ -546,19 +537,18 @@ class PlatformActivateUserRecord(AdminAuthApi):
         sta, login_user = await RecordsAdEventRC.get_uid_login_list(start_time=start_time, end_time=end_time,
                                                                     filtration="uid", group_by="uid")
         if sta:
-            login_u_ids = set(item["uid"] for item in login_user)
-            _, user_data = await BaseUserRC.get_user_filter(uid=login_u_ids)
+            login_u_ids = set(int(item["uid"]) for item in login_user)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(login_u_ids))
             data = {}
-            dates = {}
             for item in user_data:
                 key = f"platform_{item['platform']}"
                 date = tool_dt.dt_str(item["created"], '%Y-%m-%d')
                 if key not in data:
-                    data[key] = []
-                if date not in dates:
-                    dates[date] = unit.copy()
-                dates[date]["y"] += 1
-                data[key] = dates
+                    data[key] = {}
+                if date not in data[key]:
+                    data[key][date] = unit.copy()
+                    data[key][date]["x"] = date
+                data[key][date]["y"] += 1
             result = {key: list(val.values()) for key, val in data.items()}
         return self.answer(data=result)
 
@@ -889,9 +879,6 @@ class UserPortrait(AdminAuthApi):
     """ 用户画像-地区分布/性别统计 """
 
     async def get(self, req: Request):
-        start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
-        end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
-        uid = self.check_int(req.args.get('uid'), require=True, p_name='用户ID')
         unit = {
             "address": "",
             "count": 0,
@@ -935,7 +922,7 @@ class UserPortraitDiff(AdminAuthApi):
             "new_user": [],
         }
 
-        sta, user_total = await BaseUserRC.count_user_total(end_time=start_time)
+        sta, user_total = await BaseUserRC.count_user_total(created__lte=start_time)
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         if sta:
             dates = {}
@@ -1008,24 +995,87 @@ class UserActivityList(AdminAuthApi):
             "activate_user": 0,
             "keep_ratio": 0,
             "pay_ratio": 0,
+            "pay_user": 0,
         }
-        data = {}
-        data["list"] = [unit]
-        return self.answer(data=data)
+        result = {}
+        sta, login_data = await RecordsAdEventRC.get_uid_login_list(start_time=start_time, end_time=end_time)
+        sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
+        order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5, status=99)
+        order_dict = {}
+        if order_dict:
+            order_dict = {item["uid"]: item for item in order_data}
+        if sta:
+            data = {}
+            user_u_ids = set([item["uid"] for item in user_data])
+            user_dict = {item["uid"]: item for item in user_data}
+            for item in login_data:
+                date = tool_dt.dt_str(item["created"], "%Y-%m-%d")
+                if date not in data:
+                    data[date] = unit.copy()
+                    data[date]["date"] = date
+                if item["uid"] in user_u_ids and date == tool_dt.dt_str(user_dict[item["uid"]]["created"], "%Y-%m-%d"):
+                    data[date]["add_user"] += 1
+                elif item["uid"] in user_u_ids and date != tool_dt.dt_str(user_dict[item["uid"]]["created"],
+                                                                          "%Y-%m-%d"):
+                    data[date]["keep_user"] += 1
+                else:
+                    data[date]["backflow_user"] += 1
+                if item["uid"] in order_dict:
+                    data[date]["pay_user"] += 1
+                data[date]["activate_user"] += 1
+                data[date]["backflow_user"] = data[date]["add_user"] - data[date]["keep_user"]
+                data[date]["keep_ratio"] = ("%.2f%%" % (data[date]["keep_user"] / data[date]["activate_user"]))
+                data[date]["pay_ratio"] = ("%.2f%%" % (data[date]["pay_user"] / data[date]["activate_user"]))
+            result["list"] = [item for item in data.values()]
+        return self.answer(data=result)
 
 
 class UserActivityValue(AdminAuthApi):
     """ 用户生命周期-用户生命价值"""
-
     async def get(self, req: Request):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
+        result = {}
         unit = {
             "ltv": 0,  # 用户生命周期价值
             "arpu": 0,  # 用户平均费用
-            "avg": 0,  # 平均留存时间
+            "avg": 0.0,  # 平均留存时间
             "month": 0,
         }
+        # LTV（用户生命周期价值） = ARPU * 平均用户寿命
+        # 其中，ARPU（平均每用户收入）为：总收入/活跃用户数
+        # 平均用户寿命为：1 / 流失率
+        # 流失率 = 流失用户数 / 活跃用户数
+        # 所以，LTV = （总收入 / 活跃用户数）* （1 / 流失率）
         data = {}
-        data["list"] = [unit]
-        return self.answer(data=data)
+        time_range = await self.get_month_start_timestamps(start_time, end_time)
+        for s_time in time_range:
+            e_time = await self.get_month_end_timestamp(s_time)
+            last_s_time = tool_dt.month_begin(tool_dt.to_datetime((s_time - 1)))
+            last_e_time = await self.get_month_end_timestamp(last_s_time)
+            login_last_u_ids = set()
+            login_u_ids = set()
+            order_u_ids = set()
+            order_total_amount = 0
+            sta, login_last = await RecordsAdEventRC.get_uid_login_list(start_time=last_s_time, end_time=last_e_time, filtration="uid", group_by="uid")
+            if sta:
+                login_last_u_ids = set([item["uid"] for item in login_last])
+            sta, login_data = await RecordsAdEventRC.get_uid_login_list(start_time=s_time, end_time=e_time, filtration="uid", group_by="uid")
+            if sta:
+                login_u_ids = set([item["uid"] for item in login_data])
+            order_data, msg = await OrderRC.get_order_filter(start_time=s_time, end_time=e_time, currency=5, status=99)
+            if order_data:
+                for order in order_data:
+                    if order["uid"] not in order_u_ids:
+                        order_u_ids.add(order["uid"])
+                    order_total_amount += order["amount"]
+            backflow_rate = round(len(login_last_u_ids & login_u_ids) / len(login_last_u_ids) if login_last_u_ids else 0, 2)
+            date_m = tool_dt.dt_str(s_time, "%Y-%m")
+            if date_m not in data:
+                data[date_m] = unit.copy()
+                data[date_m]["month"] = date_m
+            data[date_m]["arpu"] = order_total_amount / len(order_u_ids) if order_u_ids else 0
+            data[date_m]["avg"] = round(1 / backflow_rate if backflow_rate else 0, 2)
+            data[date_m]["ltv"] = data[date_m]["arpu"] * data[date_m]["avg"]
+        result["list"] = [item for item in data.values()]
+        return self.answer(data=result)

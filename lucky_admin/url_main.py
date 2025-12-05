@@ -13,6 +13,11 @@ from lucky_admin.interface.user import User, UserStatus, OrderList, OrderStatist
 from lucky_admin.interface.room import GameRoom, GameRecord
 from lucky_admin.interface.award import Award
 from lucky_admin.interface.config import Config
+from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData, RepeatPayData, PaySituation, \
+     PayUserActivate, PayUserGap, GiftPayData, PlatformBaseData, PlatformData, PlatformAddUserRecord, \
+     PlatformPayMoneyRecord, PlatformPayUserRecord, PlatformActivateUserRecord, PlatformAddUser, PlatformPayUser, \
+     PlatformPayMoney, PlatformActivateUser, RoomcardBaseStatistics, RoomcardListStatistics, PropertyRankingList, \
+     PropertyRankingRecord, UserPortrait, UserPortraitDiff, UserActivityChart, UserActivityList, UserActivityValue
 
 
 class MainBp(BaseBlue):
@@ -56,12 +61,41 @@ class MainBp(BaseBlue):
         # 游戏房间模块
         Urls("/GameRoom", GameRoom),
         Urls("/GameRecord", GameRecord),
+        # Urls("/RoomCard", ResourceChangeChart),
 
         # 奖励模块
         Urls("/Award", Award),
 
         # 配置模块
         Urls("/Config", Config),
+
+        # 数据分析
+        Urls("/BuyBaseData", BuyBaseData),
+        Urls("/AddUserPayData", AddUserPayData),
+        Urls("/RepeatPayData", RepeatPayData),
+        Urls("/PaySituation", PaySituation),
+        Urls("/PayUserActivate", PayUserActivate),
+        Urls("/PayUserGap", PayUserGap),
+        Urls("/GiftPayData", GiftPayData),
+        Urls("/PlatformBaseData", PlatformBaseData),
+        Urls("/PlatformData", PlatformData),
+        Urls("/PlatformAddUserRecord", PlatformAddUserRecord),
+        Urls("/PlatformPayMoneyRecord", PlatformPayMoneyRecord),
+        Urls("/PlatformPayUserRecord", PlatformPayUserRecord),
+        Urls("/PlatformActivateUserRecord", PlatformActivateUserRecord),
+        Urls("/PlatformAddUser", PlatformAddUser),
+        Urls("/PlatformPayUser", PlatformPayUser),
+        Urls("/PlatformPayMoney", PlatformPayMoney),
+        Urls("/PlatformActivateUser", PlatformActivateUser),
+        Urls("/RoomcardBaseStatistics", RoomcardBaseStatistics),
+        Urls("/RoomcardListStatistics", RoomcardListStatistics),
+        Urls("/PropertyRankingList", PropertyRankingList),
+        Urls("/PropertyRankingRecord", PropertyRankingRecord),
+        Urls("/UserPortrait", UserPortrait),
+        Urls("/UserPortraitDiff", UserPortraitDiff),
+        Urls("/UserActivityChart", UserActivityChart),
+        Urls("/UserActivityList", UserActivityList),
+        Urls("/UserActivityValue", UserActivityValue),
 
 
 
