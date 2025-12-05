@@ -508,7 +508,8 @@ class BaseUserRC(BaseCommonRC):
     @classmethod
     async def get_user_filter(cls, uid: any = None, is_vip: int = None, vip: int = None, phone: str = None,
                               id_card: str = None, start_time: int = None, end_time: int = None, address: str = None,
-                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None):
+                              page: int = None, page_size: int = None, order_field: str = "-uid", platform: int = None,
+                              group_field: str = None):
         """获取用户列表"""
         try:
             query = {}
@@ -573,6 +574,21 @@ class BaseUserRC(BaseCommonRC):
         for item in data:
             item["user_name"] = users_dict.get(item.get("uid"), {}).get("name", "")
         return data
+
+    @classmethod
+    async def get_user_group(cls, start_time: int = None, end_time: int = None, platform: int = None,
+                              group_field: str = None):
+        where = "WHERE 1=1"
+        if start_time:
+            where += f" AND created >= {start_time}"
+        if end_time:
+            where += f" AND created <= {end_time}"
+        if platform:
+            where += f" AND platform = {platform}"
+        sql = f"SELECT {group_field}, COUNT({group_field}) AS group_total FROM {cls.tb_name} {where} GROUP BY {group_field}"
+        result = await cls.db_model.exec_query(sql)
+        return result if result else None
+
 
 
 class BaseBanRC(BaseCommonRC):

@@ -13,60 +13,63 @@ from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 class IndexBaseData(AdminAuthApi):
     """ 顶部基础数据 """
     async def get(self, req: Request):
-        start_time, end_time = await self.get_time_range("day")
-        yesterday_start_time = start_time - 86400
-        yesterday_end_time = end_time - 86400
-        data = {
-            "today_consumer_gold": 0,
-            "yesterday_consumer_gold": 0,
-            "today_consumer_discount": 0,
-            "yesterday_consumer_discount": 0,
-            "today_online_user": 0,
-            "yesterday_online_user": 0,
-            "today_total_user": 0,
-            "yesterday_total_user": 0,
-        }
-        # 新增、累计用户
-        sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
-        if sta:
-            yesterday_total_user = today_total_user = 0
-            for user in user_data:
-                if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
-                    yesterday_total_user += 1
-                if user["created"] >= start_time and user["created"] <= end_time:
-                    today_total_user += 1
-            data["today_total_user"] = today_total_user
-            data["yesterday_total_user"] = yesterday_total_user
-        # 在线用户
-        sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=yesterday_start_time, end_time=end_time)
-        if sta:
-            yesterday_online_user = today_online_user = []
-            for user in online_user:
-                if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
-                    yesterday_online_user.append(user["uid"])
-                if user["created"] >= start_time and user["created"] <= end_time:
-                    today_online_user.append(user["uid"])
-            data["today_online_user"] = set(today_online_user)
-            data["yesterday_online_user"] = set(yesterday_online_user)
-        # 资产变化
-        sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
-        if sta:
-            today_consumer_gold = yesterday_consumer_gold = today_consumer_discount = yesterday_consumer_discount = 0
-            for item in resource_change:
-                if item["created"] >= yesterday_start_time and item["created"] <= yesterday_end_time:
-                    if item["currency"] == 1:
-                        yesterday_consumer_gold += item["num"]
-                    if item["currency"] == 2:
-                        yesterday_consumer_discount += item["num"]
-                if item["created"] >= start_time and item["created"] <= end_time:
-                    if item["currency"] == 1:
-                        today_consumer_gold += item["num"]
-                    if item["currency"] == 2:
-                        today_consumer_discount += item["num"]
-            data["today_consumer_gold"] = today_consumer_gold
-            data["yesterday_consumer_gold"] = yesterday_consumer_gold
-            data["today_consumer_discount"] = today_consumer_discount
-            data["yesterday_consumer_discount"] = yesterday_consumer_discount
+        try:
+            start_time, end_time = await self.get_time_range("day")
+            yesterday_start_time = start_time - 86400
+            yesterday_end_time = end_time - 86400
+            data = {
+                "today_consumer_gold": 0,
+                "yesterday_consumer_gold": 0,
+                "today_consumer_discount": 0,
+                "yesterday_consumer_discount": 0,
+                "today_online_user": 0,
+                "yesterday_online_user": 0,
+                "today_total_user": 0,
+                "yesterday_total_user": 0,
+            }
+            # 新增、累计用户
+            sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
+            if sta:
+                yesterday_total_user = today_total_user = 0
+                for user in user_data:
+                    if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
+                        yesterday_total_user += 1
+                    if user["created"] >= start_time and user["created"] <= end_time:
+                        today_total_user += 1
+                data["today_total_user"] = today_total_user
+                data["yesterday_total_user"] = yesterday_total_user
+            # 在线用户
+            sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=yesterday_start_time, end_time=end_time)
+            if sta:
+                yesterday_online_user = today_online_user = []
+                for user in online_user:
+                    if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
+                        yesterday_online_user.append(user["uid"])
+                    if user["created"] >= start_time and user["created"] <= end_time:
+                        today_online_user.append(user["uid"])
+                data["today_online_user"] = set(today_online_user)
+                data["yesterday_online_user"] = set(yesterday_online_user)
+            # 资产变化
+            sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
+            if sta:
+                today_consumer_gold = yesterday_consumer_gold = today_consumer_discount = yesterday_consumer_discount = 0
+                for item in resource_change:
+                    if item["created"] >= yesterday_start_time and item["created"] <= yesterday_end_time:
+                        if item["currency"] == 1:
+                            yesterday_consumer_gold += item["num"]
+                        if item["currency"] == 2:
+                            yesterday_consumer_discount += item["num"]
+                    if item["created"] >= start_time and item["created"] <= end_time:
+                        if item["currency"] == 1:
+                            today_consumer_gold += item["num"]
+                        if item["currency"] == 2:
+                            today_consumer_discount += item["num"]
+                data["today_consumer_gold"] = today_consumer_gold
+                data["yesterday_consumer_gold"] = yesterday_consumer_gold
+                data["today_consumer_discount"] = today_consumer_discount
+                data["yesterday_consumer_discount"] = yesterday_consumer_discount
+        except Exception as e:
+            return self.answer(self.sta_code.FAIL, hint=str(e))
         return self.answer(data=data)
 
 
@@ -158,6 +161,8 @@ class IndexBaseTable(AdminAuthApi):
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         if sta:
             for user in user_data:
+                if user['created'] < start_time:
+                    continue
                 day = tool_dt.dt_str(user['created'], '%Y-%m-%d')
                 data[day]["add_user"] += 1
         # 活跃用户
@@ -183,9 +188,9 @@ class IndexBaseTable(AdminAuthApi):
                 if order["uid"] not in pay_user[day]:
                     pay_user[day].add(order["uid"])
                 data[day]["pay_user"] = len(pay_user[day])
-                data[day]["pay_rate"] = data[day]["pay_user"] / data[day]["activate_user"] if data[day]["activate_user"] > 0 else 0
-                data[day]["arpu"] = data[day]["pay_money"] / data[day]["pay_user"] if data[day]["pay_user"] > 0 else 0
-                data[day]["arppu"] = data[day]["pay_user"] / data[day]["activate_user"] if data[day]["activate_user"] > 0 else 0
+                data[day]["pay_rate"] = ("%.2f" % (data[day]["pay_user"] / data[day]["activate_user"])) if data[day]["activate_user"] > 0 else 0
+                data[day]["arpu"] = ("%.2f" % (data[day]["pay_money"] / data[day]["pay_user"])) if data[day]["pay_user"] > 0 else 0
+                data[day]["arppu"] = ("%.2f" % (data[day]["pay_user"] / data[day]["activate_user"])) if data[day]["activate_user"] > 0 else 0
         result = [item for item in data.values()]
         return self.answer(data=result)
 
@@ -220,21 +225,22 @@ class IndexGameUserChart(AdminAuthApi):
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         data, msg = await RecordsGameTotalRC.get_record_total_by_filter(start_time=start_time, end_time=end_time)
         result = {}
+        unit = {
+            "x": "",
+            "y": 0,
+        }
         if data:
-            days = set()
+            data_dict = {}
             for item in data:
                 key = f"play_{item['play_type']}"
                 day = tool_dt.dt_str(item['created'], '%Y-%m-%d')
-                if key not in result:
-                    result[key] = {
-                        "x": day,
-                        "y": 0,
-                    }
-                if day not in days:
-                    days.add(day)
-                    result[key]["x"] = day
-                if day == result[key]["x"]:
-                    result[key]["y"] += 1
+                if key not in data_dict:
+                    data_dict[key] = {}
+                if day not in data_dict[key]:
+                    data_dict[key][day] = unit.copy()
+                    data_dict[key][day]["x"] = day
+                data_dict[key][day]["y"] += 1
+            result = {key: list(data_dict[key].values()) for key in data_dict}
         return self.answer(data=result)
 
 
@@ -245,12 +251,15 @@ class IndexOnlineUserChart(AdminAuthApi):
         end_time = date_time + 86400 - 1
         now_online = await BaseUserRC.get_online_uid()
         now_time = int(datetime.now().timestamp())
-        hour = int(tool_dt.dt_str(now_time, '%H'))
-        hours = range(0, hour, 1)
+        now_hour = tool_dt.dt_str(tool_dt.cut_utctime(), '%Y-%m-%d %H')
+        now_hour_arr = now_hour.split(' ')
+        hours = range(1, 24, 1)
         unit_list = []
         for hour in hours:
+            if hour > int(now_hour_arr[1]):
+                break
             unit_list.append({
-                "x": hour,
+                "x": f"{now_hour_arr[0]} {hour:02d}",
                 "y": 0,
             })
         result = {
@@ -265,7 +274,7 @@ class IndexOnlineUserChart(AdminAuthApi):
             result["total"] = len(login_user)
             hour_user = {}
             for user in login_user:
-                hour_time = int(tool_dt.dt_str(user["created"], '%H'))
+                hour_time = tool_dt.dt_str(user["created"], '%Y-%m-%d %H')
                 if hour_time not in hour_user:
                     hour_user[hour_time] = set()
                 else:
@@ -274,7 +283,7 @@ class IndexOnlineUserChart(AdminAuthApi):
                 for key in result["list"]:
                     if key["x"] == hour_time:
                         key["y"] = len(hour_user[hour_time])
-            result["avg"] = len(login_user) / len(hours)
+            result["avg"] = ("%.2f" % (len(login_user) / len(unit_list)))
         return self.answer(data=result)
 
 class IndexPayMoneyRealTime(AdminAuthApi):
@@ -439,7 +448,7 @@ class IndexAddUserChart(AdminAuthApi):
                 day = tool_dt.dt_str(item["created"], '%Y-%m-%d')
                 if item["uid"] not in item_login:
                     item_login.add(item["uid"])
-                    if item["uid"] in date_user[day]:
+                    if day in date_user and item["uid"] in date_user[day]:
                         data[day]["y"] += 1
             result = [item for item in data.values()]
         return self.answer(data=result)
