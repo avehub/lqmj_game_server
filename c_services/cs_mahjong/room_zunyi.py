@@ -645,5 +645,8 @@ class RoomZY(RoomBJ):
             return 1,self.__ze_ren_yi_wan_seat_id
         return 0,0
 
+    def clear_room(self):
+        super().clear_room()
+        self.__fan_ji_score = {}
 
 
