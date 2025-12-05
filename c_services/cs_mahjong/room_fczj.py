@@ -3112,8 +3112,4 @@ class RoomFCZJ(BaseLeisureRoom):
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf, **extra_room_info):
-        super().refresh_room_conf(service, room_conf, **extra_room_info)
-        self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
-        self.__ji_pai_score_map = self.get_ji_pai_score_map()
-        self.__pai_xing_score_map = self.get_pai_xing_score_map()
-        self.__extra_score_map = self.get_extra_score_map()
+        self.__init__(self.tid, service, room_conf)
