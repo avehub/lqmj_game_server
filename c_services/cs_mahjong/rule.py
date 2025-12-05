@@ -710,7 +710,7 @@ class Rule(metaclass=NoInstances):
             if flag:
                 return flag, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         if allow_hu_map.get(HuType.FOUR_CARD_IS_SAME) and len(table_cards) == 0:
-            same, path = Rule.is_four_card_is_same(cards, lai_zi)
+            same, path = Rule.is_four_card_is_same(cards, lai_zi ,card)
             if same:
                 return same, list(map(lambda v: list(map(hong_zhong_2_lai_zi, v)), path))
         if is_wu_dui:
@@ -1231,7 +1231,7 @@ class Rule(metaclass=NoInstances):
         return False, []
 
     @staticmethod
-    def is_four_card_is_same(cards, lai_zi=CardsType.LAI_ZI):
+    def is_four_card_is_same(cards, lai_zi=CardsType.LAI_ZI,card = 0):
         """四张一样算法"""
         if len(cards) == 4 and (cards[0] == cards[1] == cards[2] == cards[3]):
             return HuType.FOUR_CARD_IS_SAME, []
@@ -1243,6 +1243,8 @@ class Rule(metaclass=NoInstances):
         if len(fours) != 1:
             return False, []
         if lai_zi_count == 0 and fours[0] // 10 != singles[0] // 10:
+            return False, []
+        if fours[0] == card:
             return False, []
         if lai_zi_count > 0:
             return HuType.FOUR_CARD_IS_SAME, []
@@ -1994,7 +1996,7 @@ class Rule(metaclass=NoInstances):
             lz_count = Rule.remove_by_value(one_path, lai_zi, -1)
             if lz_count == 0:
                 continue
-            if len(one_path) == 1:
+            if len(one_path) <= 1:
                 continue
             one_path.sort()
             if one_path[0] + 1 == one_path[1]:

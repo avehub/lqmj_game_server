@@ -40,6 +40,10 @@ from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.logic.payment import PaymentLogic
+from common.utils.utils import UtilsTool
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
+from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
+from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
 
 
@@ -52,6 +56,7 @@ class WorkersServer(JsonBaseServer):
     ONCE_OPERATION_LIMIT = 1000  # 单次操作上限
     TASK_DATE_KEY = 'task_date'
     delay_fail = 2
+    SUBSCRIBE_FANOUT = None
 
     def __init__(self):
         super().__init__()
@@ -63,6 +68,9 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_ITEM_ORDER_COUNT: self.__update_item_order_count,
             CmdWorkers.BAN_PLAYER: self.__ban_player,
             CmdWorkers.NOTIFY_ANNOUNCEMENT: self.__notify_announcement,
+            CmdWorkers.INSERT_GAME_GRADE: self.__insert_game_grade,
+            CmdWorkers.UPDATE_GAME_RECORD_TIMES: self.__update_game_record_times,
+            CmdWorkers.INSERT_GAME_RECORD_TOTAL: self.__insert_game_record_total,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -460,6 +468,71 @@ class WorkersServer(JsonBaseServer):
             return
         pb_data = S2CTopAnnouncements.pb_model(ann_list)
         await self.notice_ws_by_rmq(CmdNotice.TOP_ANNOUNCEMENT, uid, msg=pb_data)
+
+    async def __insert_game_grade(self, uid, data):
+        replay_msg_data = data.get("replay_msg_data")
+        tid = data.get("tid")
+        for replay_msg in replay_msg_data:
+            msg = replay_msg.get("replay_msg")
+            for i, m in enumerate(msg):
+                msg[i] = UtilsTool.base64_to_bytes(m,log_fun = self.log_info)
+        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
+        self.log_info(tid,"游戏结束一轮结束战绩插入", result_data)
+
+
+
+    async def __update_game_record_times(self, uid, data):
+        """ 更新游戏战绩次数 """
+        tid = data.get("tid")
+        await self.conf.locker.locked(tid,self.update_record_times,(uid,data))
+
+    async def update_record_times(self,uid,data):
+        round_idx = data.get("round_idx")
+        record_id = data.get("record_id")
+        tid = data.get("tid")
+        is_all = data.get("is_all")
+        if not is_all:
+            round_msg_records = data.get("round_msg_records")
+            for i, m in enumerate(round_msg_records):
+                round_msg_records[i] = UtilsTool.base64_to_bytes(m, log_fun=self.log_info)
+            up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(record_id, uid, replay_msg=round_msg_records,
+                                                                  round_num=round_idx)
+            self.log_info(tid, "玩家", uid, "战绩更新结果", e)
+
+        else:
+            is_dismiss = data.get("is_dismiss")
+            record_data_list =data.get("record_data_list")
+            for record_data in record_data_list:
+                final_grade = record_data.get("final_grade")
+                final_ranking = record_data.get("final_ranking")
+                num = record_data.get("num")
+                room_status = record_data.get("room_status") or None
+                total_score = record_data.get("total_score")
+                game_over_data = record_data.get("game_over_data")
+                tid = record_data.get("tid")
+                uid = record_data.get("uid")
+                up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
+                                                                              , final_ranking, final_grade, game_over_data, num,
+                                                                              room_status)
+                self.log_info(tid, "插入游戏战绩总分结果", up_result)
+            if is_dismiss:
+                up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(record_id, round_num=round_idx)
+                self.log_info(tid, "玩家", uid, "战绩更新结果", data)
+                self.log_info(tid,"更新所有战绩结果", up_result)
+
+    async def __insert_game_record_total(self,uid,data):
+        """ 插入游戏战绩总分 """
+        record_id = data.get("record_id")
+        final_grade = data.get("final_grade")
+        final_ranking = data.get("final_ranking")
+        num = data.get("num")
+        room_status = data.get("room_status") or None
+        total_score = data.get("total_score")
+        game_over_data = data.get("game_over_data")
+        tid = data.get("tid")
+        up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
+                                                                        , final_ranking, final_grade, game_over_data, num, room_status)
+        self.log_info(tid,"插入游戏战绩总分结果", up_result)
 
     async def __login_sign_in(self, uid):
         """登陆签到"""

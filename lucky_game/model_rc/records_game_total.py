@@ -252,7 +252,6 @@ class RecordsGameTotalRC(BaseCommonRC):
     @classmethod
     async def get_settle_info(cls, record: dict, uid: int, final_status: int):
         """获取结算信息"""
-        room_uid = await cls.conf.rds.smembers(f"{GameRoomsRC.SESSION_DISK_KEY}:{record['room_id']}")
         # 默认茶馆基金支付
         price_uid = 0
         price = record["price"]
@@ -265,7 +264,7 @@ class RecordsGameTotalRC(BaseCommonRC):
             price_uid = uid
         # AA支付
         elif record["pay_type"] == 3:
-            price = record["price"] / len(room_uid)
+            price = record["price"] / record["max_player"]
         return {"uid": price_uid, "club_id": club_id, "price": price}
 
     @classmethod

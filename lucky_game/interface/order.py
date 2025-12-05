@@ -211,7 +211,7 @@ class MiniProgramRecvPush(SpecialApi):
         event = payload_data.get('Event')
         session_from = payload_data.get("SessionFrom") or ""
         from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
-        if not session_from:
+        if not session_from or session_from == "客服按钮":
             # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
             # 目前重点处理支付，其他的客服人员处理
             return response.json({"ErrCode": 0, "ErrMsg": "Success"})
@@ -225,9 +225,9 @@ class MiniProgramRecvPush(SpecialApi):
             if params_dict is None:
                 return response.json({"ErrCode": self.sta_code.ERR_ARG, "ErrMsg": '参数格式错误，不予回复！'})
             # 2.创建订单 不清楚这块参数是根据什么生成的，目前按老版本逻辑生成
-            uid = params_dict.get("uid")
+            uid = int(params_dict.get("uid"))
             sku = params_dict.get("item_id")
-            platform = params_dict.get('platform') or PlatForm.WECHAT_MP
+            platform = int(params_dict.get('platform')) or PlatForm.WECHAT_MP
             express = await GoodRC.get_good_info(str(sku))
             if not express:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})

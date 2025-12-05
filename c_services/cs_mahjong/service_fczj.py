@@ -39,7 +39,6 @@ class MahjongServerFc(BaseLeisureService):
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_DING_QUE, player.uid, code, msg, ws_id=player.ws_id)
 
     async def __on_robot_cal_action(self, uid, data):
-        print("收到机器人出牌", data)
         tid = data.get("tid")
         card = data.get("card")
         room, p = self.check_room_and_player(tid, uid)
@@ -57,7 +56,6 @@ class MahjongServerFc(BaseLeisureService):
         await room.enter_chu_pai_call()
 
     async def __on_robot_cal_peng(self, uid, data):
-        print("收到机器人碰",data)
         tid = data.get("tid")
         card = data.get("card")
         room, p = self.check_room_and_player(tid, uid)
@@ -80,7 +78,6 @@ class MahjongServerFc(BaseLeisureService):
             await room.check_action_end()
 
     async def __on_robot_cal_gang(self, uid, data):
-        print("收到机器人杠", data)
         tid = data.get("tid")
         card = data.get("card")
         room, p = self.check_room_and_player(tid, uid)
