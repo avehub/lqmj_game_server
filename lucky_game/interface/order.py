@@ -93,7 +93,8 @@ class CallbackAli(SpecialApi):
     """支付宝订单回调"""
 
     async def post(self, req: Request, **kwargs):
-        form = req.args
+        form = req.get_form()
+        self.loginfo(f"支付宝回调参数: {form}")
         app_id = form.get("app_id", "")
         sign = form.get("sign", "")
         if not sign or not app_id:

@@ -147,6 +147,7 @@ class BaseService(BaseServer, SessionManager):
         enter_room_model.ParseFromString(data)
         req_id = enter_room_model.req_id or ""
         reenter = enter_room_model.reenter or False
+        self.log_info("收到进入房间请求",player.uid, reenter)
         if not player.receive_enter_room:
             reenter = False
         player.receive_enter_room = 1
