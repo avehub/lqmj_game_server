@@ -1160,6 +1160,9 @@ class Room(BaseCardRoom):
         await self.check_action_end()
 
     async def check_action_end(self):
+        await self.service.conf.locker.locked(self.tid,self.lock_action_end)
+
+    async def lock_action_end(self):
         operate_list = {}  # {动作: [seat_id, ...]}
         for item in self.__player_actions:
             if item[1] in const.ACTION_PRIORITY:

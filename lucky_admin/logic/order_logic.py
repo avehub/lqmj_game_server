@@ -66,3 +66,5 @@ class OrderLogic:
                         tmp[day]['return_gift_amount'] += item['amount']
                         tmp[day]['return_gift_count'] += 1
         return tmp
+
+
