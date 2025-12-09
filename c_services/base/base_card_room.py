@@ -167,15 +167,13 @@ class BaseCardRoom(BaseRoom):
                     return await self.force_dismiss()
                 await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, "房主不能退出")
                 return
+            self.seats[player.seat_id - 1] = None
             sta, e = await GameRoomsRC.leave_room(self.tid, player.uid)
             if not sta:
                 self.log_info("离开房间失败", e)
-                await self.inner_send(player, CmdRoom.QUIT_ROOM, None, StaCode.FAIL, e)
-                return
             one_of_model = s2c_one_of_model()
             one_of_model.seat_id = player.seat_id
             await self.inner_broadcast(CmdRoom.QUIT_ROOM, one_of_model)
-            self.seats[player.seat_id - 1] = None
             await self.service.del_player_in_game(player.uid)
             await self.service.del_player_in_service(player.uid)  # 释放玩家放在下面，因为下面会清理玩家数据
             if self.club_id > 0:

@@ -54,7 +54,6 @@ class RecordsAdEventRC(BaseCommonRC):
             tuple: (结果列表, 消息字符串)
         """
         sql = f"SELECT DISTINCT ON (uid) * FROM {cls.tb_name} ORDER BY uid, id DESC"
-        print(sql)
         query = {}
         if uid is not None:
             query["uid__in" if isinstance(uid, list) else "uid"] = uid
@@ -74,7 +73,7 @@ class RecordsAdEventRC(BaseCommonRC):
 
     @classmethod
     async def get_uid_login_list(cls, uid: int = None, start_time: int = None, end_time: int = None, platform: int = None,
-                                 filtration: str = "*",):
+                                 filtration: str = "*", group_by: str = None):
         """根据用户ID获取登录记录"""
         where = " 1=1 "
         if uid is not None:
@@ -87,7 +86,11 @@ class RecordsAdEventRC(BaseCommonRC):
             where += f" AND platform = {platform}"
         order_field = "id"
         order_type = "DESC"
-        sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} ORDER BY {order_field} {order_type}"
+        sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where}"
+        if group_by:
+            sql += f" GROUP BY {group_by}"
+        if order_field:
+            sql += f" ORDER BY {order_field} {order_type}"
         result = await cls.db_model.exec_query(sql)
         if not result:
             return False, result
