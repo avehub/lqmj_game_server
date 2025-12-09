@@ -98,23 +98,22 @@ class CallbackAli(SpecialApi):
         app_id = form.get("app_id", "")
         sign = form.get("sign", "")
         if not sign or not app_id:
-            return response.json({"response": {"code": '40001', "msg": 'Param Error'}}, status=500)
+            return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数错误")
         pay_platform = "APP" if app_id == AliPayConf.PLATFORM.get("APP").get("APP_ID") else "H5"
         if hasattr(form, 'get'):
             form = dict(form)
         sta, data = AlipayPayment(pay_platform).verify_callback(form, sign)
         self.loginfo(f"支付宝回调验证结果: {sta}, {data}")
-        err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}}, status=500)
         if not sta:
-            return err_result
+            return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数验证失败")
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)
         if not sta:
-            return err_result
-        return response.json({"response": {"code": '10000', "msg": 'Success'}})
+            return self.answer(code=self.sta_code.FAIL, hint=msg) if msg != "暂无数据" else response.text('success')
+        return response.text('success')
 
 
 class CallbackHf(SpecialApi):

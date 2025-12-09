@@ -1263,6 +1263,9 @@ class RoomFCZJ(BaseLeisureRoom):
         return result
 
     async def check_action_end(self):
+        await self.service.conf.locker.locked(self.tid, self.lock_action_end)
+
+    async def lock_action_end(self):
         operate_list = {}  # {动作: [seat_id, ...]}
         for item in self.__player_actions:
             if item[1] in const.ACTION_PRIORITY_FC:
@@ -1270,11 +1273,6 @@ class RoomFCZJ(BaseLeisureRoom):
         if len(operate_list) == 0:
             return
         is_finish, max_operate_list = self.__is_player_actions_finish(operate_list)
-        # if max_operate_list[0] == ActionType.ACTION_TYPE_HU:
-        #     operate_list = self.get_operate_player_max_operate()  # {seat_id1: priority or 0, ...}
-        #     # [seat_id1, ]
-        #     hu_list = [seat_id for seat_id, action in operate_list.items() if action == ActionType.ACTION_TYPE_HU]
-        #     return await self.somebody_hu(hu_list)
         if not is_finish:
             return
 
@@ -3112,8 +3110,4 @@ class RoomFCZJ(BaseLeisureRoom):
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf, **extra_room_info):
-        super().refresh_room_conf(service, room_conf, **extra_room_info)
-        self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
-        self.__ji_pai_score_map = self.get_ji_pai_score_map()
-        self.__pai_xing_score_map = self.get_pai_xing_score_map()
-        self.__extra_score_map = self.get_extra_score_map()
+        self.__init__(self.tid, service, room_conf)
