@@ -28,8 +28,8 @@ class GameRecord(AdminAuthApi):
             end_time = self.check_int(req.args.get('end_time'), require=False, p_name='结束时间')
             data, msg = await BaseRecordsGameRC.get_record_list(uid=uid, room_id=room_id, page=page, page_size=page_size,
                                                             start_time=start_time, end_time=end_time)
+            return self.answer(data=data, hint=msg)
         except Exception as e:
             self.log_info(f"获取房间战绩失败: {str(e)}")
             return self.answer(self.sta_code.FAILURE, hint="获取房间战绩失败")
-        return self.answer(data=data, hint=msg)
 
