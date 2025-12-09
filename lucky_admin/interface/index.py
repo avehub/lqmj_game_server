@@ -29,6 +29,7 @@ class IndexBaseData(AdminAuthApi):
             }
             # 新增、累计用户
             sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
+            self.log_info(f"顶部基础数据-新增、累计用户结果：{user_data}")
             if sta:
                 yesterday_total_user = today_total_user = 0
                 for user in user_data:
@@ -40,6 +41,7 @@ class IndexBaseData(AdminAuthApi):
                 data["yesterday_total_user"] = yesterday_total_user
             # 在线用户
             sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=yesterday_start_time, end_time=end_time)
+            self.log_info(f"顶部基础数据-在线用户结果：{online_user}")
             if sta:
                 yesterday_online_user = today_online_user = []
                 for user in online_user:
@@ -51,6 +53,7 @@ class IndexBaseData(AdminAuthApi):
                 data["yesterday_online_user"] = set(yesterday_online_user)
             # 资产变化
             sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
+            self.log_info(f"顶部基础数据-资产变化结果：{resource_change}")
             if sta:
                 today_consumer_gold = yesterday_consumer_gold = today_consumer_discount = yesterday_consumer_discount = 0
                 for item in resource_change:
@@ -68,9 +71,11 @@ class IndexBaseData(AdminAuthApi):
                 data["yesterday_consumer_gold"] = yesterday_consumer_gold
                 data["today_consumer_discount"] = today_consumer_discount
                 data["yesterday_consumer_discount"] = yesterday_consumer_discount
+                return self.answer(data=data)
         except Exception as e:
+            self.log_info(f"顶部基础数据失败: {str(e)}")
             return self.answer(self.sta_code.FAIL, hint=str(e))
-        return self.answer(data=data)
+
 
 
 class IndexUserData(AdminAuthApi):
@@ -95,7 +100,9 @@ class IndexUserData(AdminAuthApi):
             "week_pay_money": 0,
         }
         # 新增用户
+        self.log_info(f"用户基础数据-新增用户")
         sta, user_data = await BaseUserRC.get_user_filter(start_time=week_start_time, end_time=end_time)
+        self.log_info(f"用户基础数据-新增用户结果：{user_data}")
         if sta:
             yesterday_add_user = today_add_user = week_add_user = 0
             for user in user_data:
@@ -108,6 +115,7 @@ class IndexUserData(AdminAuthApi):
             data["week_add_user"] = len(user_data)
         # 登录用户
         sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=week_start_time, end_time=end_time)
+        self.log_info(f"用户基础数据-登录用户结果：{online_user}")
         if sta:
             yesterday_login_user = today_login_user = week_login_user = []
             for user in online_user:
@@ -124,6 +132,7 @@ class IndexUserData(AdminAuthApi):
         data["week_activate_user"] = data["week_login_user"]
         # 充值统计
         order_data, msg = await OrderRC.get_order_filter(start_time=week_start_time, end_time=end_time, currency=5, status=99)
+        self.log_info(f"用户基础数据-充值统计结果：{order_data}")
         if order_data:
             today_pay_money = yesterday_pay_money = week_pay_money = 0
             for order in order_data:
