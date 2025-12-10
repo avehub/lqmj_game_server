@@ -13,69 +13,69 @@ from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 class IndexBaseData(AdminAuthApi):
     """ 顶部基础数据 """
     async def get(self, req: Request):
-        try:
-            start_time, end_time = await self.get_time_range("day")
-            yesterday_start_time = start_time - 86400
-            yesterday_end_time = end_time - 86400
-            data = {
-                "today_consumer_gold": 0,
-                "yesterday_consumer_gold": 0,
-                "today_consumer_discount": 0,
-                "yesterday_consumer_discount": 0,
-                "today_online_user": 0,
-                "yesterday_online_user": 0,
-                "today_total_user": 0,
-                "yesterday_total_user": 0,
-            }
-            # 新增、累计用户
-            sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
-            self.log_info(f"顶部基础数据-新增、累计用户结果：{user_data}")
-            if sta:
-                yesterday_total_user = today_total_user = 0
-                for user in user_data:
-                    if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
-                        yesterday_total_user += 1
-                    if user["created"] >= start_time and user["created"] <= end_time:
-                        today_total_user += 1
-                data["today_total_user"] = today_total_user
-                data["yesterday_total_user"] = yesterday_total_user
-            # 在线用户
-            sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=yesterday_start_time, end_time=end_time)
-            self.log_info(f"顶部基础数据-在线用户结果：{online_user}")
-            if sta:
-                yesterday_online_user = today_online_user = []
-                for user in online_user:
-                    if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
-                        yesterday_online_user.append(user["uid"])
-                    if user["created"] >= start_time and user["created"] <= end_time:
-                        today_online_user.append(user["uid"])
-                data["today_online_user"] = len(set(today_online_user))
-                data["yesterday_online_user"] = len(set(yesterday_online_user))
-            # 资产变化
-            sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
-            self.log_info(f"顶部基础数据-资产变化结果：{resource_change}")
-            if sta:
-                today_consumer_gold = yesterday_consumer_gold = today_consumer_discount = yesterday_consumer_discount = 0
-                for item in resource_change:
-                    if item["created"] >= yesterday_start_time and item["created"] <= yesterday_end_time:
-                        if item["currency"] == 1:
-                            yesterday_consumer_gold += item["num"]
-                        if item["currency"] == 2:
-                            yesterday_consumer_discount += item["num"]
-                    if item["created"] >= start_time and item["created"] <= end_time:
-                        if item["currency"] == 1:
-                            today_consumer_gold += item["num"]
-                        if item["currency"] == 2:
-                            today_consumer_discount += item["num"]
-                data["today_consumer_gold"] = today_consumer_gold
-                data["yesterday_consumer_gold"] = yesterday_consumer_gold
-                data["today_consumer_discount"] = today_consumer_discount
-                data["yesterday_consumer_discount"] = yesterday_consumer_discount
-                self.log_info(f"顶部基础数据结果: {data}")
-                return self.answer(data=data)
-        except Exception as e:
-            self.log_err(f"顶部基础数据失败: {str(e)}")
-            return self.answer(self.sta_code.FAIL, hint=str(e))
+        # try:
+        start_time, end_time = await self.get_time_range("day")
+        yesterday_start_time = start_time - 86400
+        yesterday_end_time = end_time - 86400
+        data = {
+            "today_consumer_gold": 0,
+            "yesterday_consumer_gold": 0,
+            "today_consumer_discount": 0,
+            "yesterday_consumer_discount": 0,
+            "today_online_user": 0,
+            "yesterday_online_user": 0,
+            "today_total_user": 0,
+            "yesterday_total_user": 0,
+        }
+        # 新增、累计用户
+        sta, user_data = await BaseUserRC.get_user_filter(start_time=yesterday_start_time, end_time=end_time)
+        self.log_info(f"顶部基础数据-新增、累计用户结果：{user_data}")
+        if sta:
+            yesterday_total_user = today_total_user = 0
+            for user in user_data:
+                if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
+                    yesterday_total_user += 1
+                if user["created"] >= start_time and user["created"] <= end_time:
+                    today_total_user += 1
+            data["today_total_user"] = today_total_user
+            data["yesterday_total_user"] = yesterday_total_user
+        # 在线用户
+        sta, online_user = await RecordsAdEventRC.get_uid_login_list(start_time=yesterday_start_time, end_time=end_time)
+        self.log_info(f"顶部基础数据-在线用户结果：{online_user}")
+        if sta:
+            yesterday_online_user = today_online_user = []
+            for user in online_user:
+                if user["created"] >= yesterday_start_time and user["created"] <= yesterday_end_time:
+                    yesterday_online_user.append(user["uid"])
+                if user["created"] >= start_time and user["created"] <= end_time:
+                    today_online_user.append(user["uid"])
+            data["today_online_user"] = len(set(today_online_user))
+            data["yesterday_online_user"] = len(set(yesterday_online_user))
+        # 资产变化
+        sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
+        self.log_info(f"顶部基础数据-资产变化结果：{resource_change}")
+        if sta:
+            today_consumer_gold = yesterday_consumer_gold = today_consumer_discount = yesterday_consumer_discount = 0
+            for item in resource_change:
+                if item["created"] >= yesterday_start_time and item["created"] <= yesterday_end_time:
+                    if item["currency"] == 1:
+                        yesterday_consumer_gold += item["num"]
+                    if item["currency"] == 2:
+                        yesterday_consumer_discount += item["num"]
+                if item["created"] >= start_time and item["created"] <= end_time:
+                    if item["currency"] == 1:
+                        today_consumer_gold += item["num"]
+                    if item["currency"] == 2:
+                        today_consumer_discount += item["num"]
+            data["today_consumer_gold"] = today_consumer_gold
+            data["yesterday_consumer_gold"] = yesterday_consumer_gold
+            data["today_consumer_discount"] = today_consumer_discount
+            data["yesterday_consumer_discount"] = yesterday_consumer_discount
+        self.log_info(f"顶部基础数据结果: {data}")
+        return self.answer(data=data)
+        # except Exception as e:
+        #     self.log_err(f"顶部基础数据失败: {str(e)}")
+        #     return self.answer(self.sta_code.FAIL, hint=str(e))
 
 
 
