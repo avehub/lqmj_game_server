@@ -296,7 +296,7 @@ class IndexOnlineUserChart(AdminAuthApi):
                 for key in result["list"]:
                     if key["x"] == hour_time:
                         key["y"] = len(hour_user[hour_time])
-            result["avg"] = ("%.2f" % (len(login_user) / len(unit_list)))
+            result["avg"] = round(len(login_user) / len(unit_list))
         return self.answer(data=result)
 
 class IndexPayMoneyRealTime(AdminAuthApi):
