@@ -261,7 +261,7 @@ class IndexOnlineUserChart(AdminAuthApi):
         end_time = date_time + 86400 - 1
         now_online = await BaseUserRC.get_online_uid()
         now_time = int(datetime.now().timestamp())
-        now_hour = tool_dt.dt_str(tool_dt.cut_utctime(), '%Y-%m-%d %H')
+        now_hour = tool_dt.dt_str(end_time, '%Y-%m-%d %H')
         now_hour_arr = now_hour.split(' ')
         hours = range(1, 24, 1)
         unit_list = []
