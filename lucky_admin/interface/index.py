@@ -153,6 +153,7 @@ class IndexBaseTable(AdminAuthApi):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         date_range = await self.date_time_range(start_time, end_time)
+        self.log_info(f"基础数据报表-时间段：{date_range}")
         data = {}
         for item_day in date_range:
             date_time = str(item_day)
@@ -181,6 +182,7 @@ class IndexBaseTable(AdminAuthApi):
             activate_day = {}
             for user in online_user:
                 day = tool_dt.dt_str(user['created'], '%Y-%m-%d')
+                self.log_info(f"基础数据报表-活跃用户时间：{day}")
                 if day not in activate_day:
                     activate_day[day] = set()
                 if user["uid"] not in activate_day[day]:
@@ -192,6 +194,7 @@ class IndexBaseTable(AdminAuthApi):
             pay_user = {}
             for order in order_data:
                 day = tool_dt.dt_str(order['created'], '%Y-%m-%d')
+                self.log_info(f"基础数据报表-付费用户时间：{day}")
                 data[day]["pay_money"] += order["amount"]
                 if day not in pay_user:
                     pay_user[day] = set()
@@ -293,7 +296,7 @@ class IndexOnlineUserChart(AdminAuthApi):
                 for key in result["list"]:
                     if key["x"] == hour_time:
                         key["y"] = len(hour_user[hour_time])
-            result["avg"] = ("%.2f" % (len(login_user) / len(unit_list)))
+            result["avg"] = round(len(login_user) / len(unit_list))
         return self.answer(data=result)
 
 class IndexPayMoneyRealTime(AdminAuthApi):
