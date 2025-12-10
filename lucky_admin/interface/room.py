@@ -30,6 +30,6 @@ class GameRecord(AdminAuthApi):
                                                             start_time=start_time, end_time=end_time)
             return self.answer(data=data, hint=msg)
         except Exception as e:
-            self.log_info(f"获取房间战绩失败: {str(e)}")
+            self.log_err(f"获取房间战绩失败: {str(e)}")
             return self.answer(self.sta_code.FAILURE, hint="获取房间战绩失败")
 
