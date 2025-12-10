@@ -49,8 +49,8 @@ class IndexBaseData(AdminAuthApi):
                         yesterday_online_user.append(user["uid"])
                     if user["created"] >= start_time and user["created"] <= end_time:
                         today_online_user.append(user["uid"])
-                data["today_online_user"] = set(today_online_user)
-                data["yesterday_online_user"] = set(yesterday_online_user)
+                data["today_online_user"] = len(set(today_online_user))
+                data["yesterday_online_user"] = len(set(yesterday_online_user))
             # 资产变化
             sta, resource_change = await ExtraUserResourceChangesRC.get_resource_changes_filter(start_time=yesterday_start_time, end_time=end_time, status=ExtraUserResourceChangesRC.OPERATION_MAP["sub"])
             self.log_info(f"顶部基础数据-资产变化结果：{resource_change}")
@@ -71,9 +71,10 @@ class IndexBaseData(AdminAuthApi):
                 data["yesterday_consumer_gold"] = yesterday_consumer_gold
                 data["today_consumer_discount"] = today_consumer_discount
                 data["yesterday_consumer_discount"] = yesterday_consumer_discount
+                self.log_info(f"顶部基础数据结果: {data}")
                 return self.answer(data=data)
         except Exception as e:
-            self.log_info(f"顶部基础数据失败: {str(e)}")
+            self.log_err(f"顶部基础数据失败: {str(e)}")
             return self.answer(self.sta_code.FAIL, hint=str(e))
 
 
