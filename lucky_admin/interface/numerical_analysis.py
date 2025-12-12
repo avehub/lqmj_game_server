@@ -268,6 +268,7 @@ class PayUserGap(AdminAuthApi):
                 if max_len == 0:
                     data[date]["up_quantile"] = 0
                     quartiles = numpy.percentile(all_amount, [25, 50, 75])
+                    self.log_info("quartiles:", quartiles)
                     data[date]["down_quantile"] = quartiles[0]
                     data[date]["median"] = quartiles[1]
                     data[date]["up_quantile"] = quartiles[2]
@@ -634,7 +635,7 @@ class PlatformPayUser(AdminAuthApi):
                                                          status=99)
         if order_data:
             order_u_ids = set(item["uid"] for item in order_data)
-            _, user_data = await BaseUserRC.get_user_filter(uid=order_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(order_u_ids))
             new_u_ids = set()
             user_dict = {}
             for item in user_data:
@@ -653,7 +654,7 @@ class PlatformPayUser(AdminAuthApi):
                 else:
                     data["platform_statistics"][key]["old_user"] += 1
                 data["platform_statistics"][key]["platform_ratio"] = ("%.2f" % (data["platform_statistics"][key]["today_user"] / total_user))
-                if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
+                if item["uid"] in user_dict and user_dict[item["uid"]]["region"] not in address:
                     address[item["region"]] = address_x.copy()
                     address[item["region"]]["address"] = item["region"]
                 address[item["region"]]["add_num"] += 1
@@ -694,7 +695,7 @@ class PlatformPayMoney(AdminAuthApi):
                 if item["uid"] not in order_u_ids:
                     order_u_ids.add(item["uid"])
                 order_amount += item["amount"]
-            _, user_data = await BaseUserRC.get_user_filter(uid=order_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(order_u_ids))
             new_u_ids = set()
             user_dict = {}
             for item in user_data:
@@ -713,7 +714,7 @@ class PlatformPayMoney(AdminAuthApi):
                     data["platform_statistics"][key]["old_money"] += item["amount"]
                 data["platform_statistics"][key]["platform_ratio"] = (
                             "%.2f" % (data["platform_statistics"][key]["today_money"] / order_amount))
-                if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
+                if item["uid"] in user_dict and user_dict[item["uid"]]["region"] not in address:
                     address[item["region"]] = address_x.copy()
                     address[item["region"]]["address"] = item["region"]
                 address[item["region"]]["add_num"] += 1
@@ -751,7 +752,7 @@ class PlatformActivateUser(AdminAuthApi):
         if sta:
             login_u_ids = set(item["uid"] for item in login_user)
             today_activate = len(login_u_ids)
-            _, user_data = await BaseUserRC.get_user_filter(uid=login_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(login_u_ids))
             new_u_ids = set()
             address = {}
             for item in user_data:
