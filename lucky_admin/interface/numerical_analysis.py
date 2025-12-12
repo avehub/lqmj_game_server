@@ -597,10 +597,10 @@ class PlatformAddUser(AdminAuthApi):
                     data["sex_statistics"]["woman"] += 1
                     data["platform_statistics"][key]["woman"] += 1
                 data["platform_statistics"][key]["add_ratio"] = ("%.2f" % (data["platform_statistics"][key]["platform_user"]/data["platform_statistics"][key]["add_user"]))
-                if item["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                if item["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
             data["total"] = add_user
         return self.answer(data=data)
@@ -654,9 +654,9 @@ class PlatformPayUser(AdminAuthApi):
                     data["platform_statistics"][key]["old_user"] += 1
                 data["platform_statistics"][key]["platform_ratio"] = ("%.2f" % (data["platform_statistics"][key]["today_user"] / total_user))
                 if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
         return self.answer(data=data)
 
@@ -714,9 +714,9 @@ class PlatformPayMoney(AdminAuthApi):
                 data["platform_statistics"][key]["platform_ratio"] = (
                             "%.2f" % (data["platform_statistics"][key]["today_money"] / order_amount))
                 if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
         return self.answer(data=data)
 
@@ -757,10 +757,10 @@ class PlatformActivateUser(AdminAuthApi):
             for item in user_data:
                 if item["created"] >= date_time:
                     new_u_ids.add(item["uid"])
-                if item["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                if item["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
                 key = f"platform_{item['platform']}"
                 if key not in data:
                     data["platform_statistics"][key] = platform_x.copy()
@@ -895,10 +895,10 @@ class UserPortrait(AdminAuthApi):
             data["total"] = len(user_data)
             address_data = {}
             for item in user_data:
-                if item["address"] not in address_data:
-                    address_data[item["address"]] = unit.copy()
-                    address_data[item["address"]]["address"] = item["address"]
-                address_data[item["address"]]["count"] += 1
+                if item["region"] not in address_data:
+                    address_data[item["region"]] = unit.copy()
+                    address_data[item["region"]]["address"] = item["region"]
+                address_data[item["region"]]["count"] += 1
                 if item["sex"] == 1:
                     data["man"] += 1
                 else:
