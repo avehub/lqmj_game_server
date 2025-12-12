@@ -19,6 +19,8 @@ from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData
      PlatformPayMoney, PlatformActivateUser, RoomcardBaseStatistics, RoomcardListStatistics, PropertyRankingList, \
      PropertyRankingRecord, UserPortrait, UserPortraitDiff, UserActivityChart, UserActivityList, UserActivityValue
 
+from lucky_admin.interface.tournament import TournamentTemplate
+
 
 class MainBp(BaseBlue):
     # 路由请添加在这里
@@ -96,6 +98,11 @@ class MainBp(BaseBlue):
         Urls("/UserActivityChart", UserActivityChart),
         Urls("/UserActivityList", UserActivityList),
         Urls("/UserActivityValue", UserActivityValue),
+
+        # 赛事
+
+        ## 赛事模板
+        Urls("/TournamentTemplate", TournamentTemplate),
 
 
 

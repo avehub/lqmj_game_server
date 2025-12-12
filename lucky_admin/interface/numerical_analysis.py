@@ -860,25 +860,17 @@ class PropertyRankingList(AdminAuthApi):
         currency = self.check_int(req.args.get('currency'), require=True, p_name='货币类型')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
-        order_field = "gold"
+        order_field = "-gold"
         if currency == 2:
-            order_field = "diamond"
+            order_field = "-diamond"
         elif currency == 3:
-            order_field = "room_card"
+            order_field = "-room_card"
         elif currency == 4:
-            order_field = "yellow_diamond"
-        sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time, order_field=order_field,
+            order_field = "-yellow_diamond"
+        sta, data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time, order_field=order_field,
                                                           page=page, page_size=page_size)
-        # data = user_data["total"]
-        # if sta and user_data["list"]:
-        #     for item in data["list"]:
-        #         unit = {
-        #             "uid": item["uid"],
-        #             "avatar": item["avatar"],
-        #             order_field: item[order_field],
-        #         }
-        #         data["list"].append(unit)
-        return self.answer(data=user_data)
+
+        return self.answer(data=data)
 
 
 class PropertyRankingRecord(AdminAuthApi):
@@ -946,22 +938,29 @@ class UserPortraitDiff(AdminAuthApi):
         sta, user_total = await BaseUserRC.count_user_total(created__lte=start_time)
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         if sta:
-            dates = {}
+            dates = {
+                "new": {},
+                "old": {}
+            }
             new_user = 0
             for item in user_data:
                 date = tool_dt.dt_str(item["created"], "%Y-%m-%d")
-                if date not in dates:
-                    dates[date] = unit.copy()
-                    dates[date]["x"] = date
+                if date not in dates["new"]:
+                    dates["new"][date] = unit.copy()
+                    dates["new"][date]["x"] = date
+                    dates["new"][date]["y"] = 1
                     user_total += new_user
                     new_user = 0
-                new_user += 1
-                new_user_unit = dates[date]
-                new_user_unit["y"] = new_user
-                data["new_user"].append(new_user_unit)
-                old_user_unit = dates[date]
-                old_user_unit["y"] = user_total
-                data["old_user"].append(old_user_unit)
+                else:
+                    dates["new"][date]["y"] += 1
+                    new_user += 1
+
+                if date not in dates["old"]:
+                    dates["old"][date] = unit.copy()
+                    dates["old"][date]["x"] = date
+                dates["old"][date]["y"] = user_total
+            data["new_user"] = list(dates["new"].values())
+            data["old_user"] = list(dates["old"].values())
         return self.answer(data=data)
 
 
