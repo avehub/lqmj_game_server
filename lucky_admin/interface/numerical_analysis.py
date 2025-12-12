@@ -738,10 +738,17 @@ class PlatformActivateUser(AdminAuthApi):
             "address": "",
             "add_num": 0,
         }
+        statistics = {
+            "man": 0,
+            "woman": 0,
+        }
         data = {
             "today_activate": 0,
             "old_activate": 0,
             "new_activate": 0,
+            "today_statistics": statistics.copy(),
+            "new_statistics": statistics.copy(),
+            "old_statistics": statistics.copy(),
             "platform_statistics": {},
             "address_statistics": [],
             "total": 0,
@@ -756,8 +763,21 @@ class PlatformActivateUser(AdminAuthApi):
             new_u_ids = set()
             address = {}
             for item in user_data:
+                if item["sex"] == 1:
+                    data["today_statistics"]["man"] += 1
+                else:
+                    data["today_statistics"]["woman"] += 1
                 if item["created"] >= date_time:
                     new_u_ids.add(item["uid"])
+                    if item["sex"] == 1:
+                        data["new_statistics"]["man"] += 1
+                    else:
+                        data["new_statistics"]["woman"] += 1
+                else:
+                    if item["sex"] == 1:
+                        data["old_statistics"]["man"] += 1
+                    else:
+                        data["old_statistics"]["woman"] += 1
                 if item["region"] not in address:
                     address[item["region"]] = address_x.copy()
                     address[item["region"]]["address"] = item["region"]
