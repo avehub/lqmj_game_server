@@ -447,9 +447,9 @@ class BaseCardRoom(BaseRoom):
     async def game_start(self):
         if not self.room_status_is_equal(RoomStatus.T_READY):
             return
+        self.set_game_began()
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
-        self.set_game_began()
         if self.round_idx == 1:
             uid_list = [p.uid for p in self.seats if p and p.uid != self.owner]
             sta, e = await GameRoomsRC.room_start_sub(self.tid, uid_list)

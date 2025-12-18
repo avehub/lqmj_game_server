@@ -222,7 +222,8 @@ class Player(BaseLeisurePlayer):
         self.__men_cards.append(data)
         card = data["card"]
         self.__zi_mo_cards.append(card)
-        self.rm_cards([card])
+        if card in self.cards:
+            self.rm_cards([card])
         if not is_zha:
             self.__zi_mo_count += 1
 
