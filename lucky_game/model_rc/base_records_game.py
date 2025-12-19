@@ -74,7 +74,7 @@ class BaseRecordsGameRC(BaseCommonRC):
                 room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
                     record_rid=[item["record_rid"] for item in data["list"]],
                 )
-                data["list"] = cls.merge_by_key(data["list"], room_data, "record_rid", ["total_round", "max_player", "start_time", "end_time"])
+                data["list"] = await cls.merge_by_key(data["list"], room_data, "record_rid", ["total_round", "max_player", "start_time", "end_time"])
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
