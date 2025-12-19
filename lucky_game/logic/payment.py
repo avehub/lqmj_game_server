@@ -78,7 +78,7 @@ class PaymentLogic:
         currency = express.get("currency")
         price = express.get("price")
         # 确保 price 是 Decimal 类型
-        if isinstance(price, (int, float)):
+        if isinstance(price, (int, float, str)):
             price = decimal.Decimal(price)
         elif not isinstance(price, decimal.Decimal):
             return False, '商品价格格式不正确', {}
@@ -158,7 +158,7 @@ class PaymentLogic:
             pass
         # 扣除商品数量
         if express.get("total") > 0:
-            await GoodRC.update_int_field(sku, "total", 1, "sub")
+            await GoodRC.update_int_field(express["good_id"], "total", 1, "sub")
 
         return sta, msg, result
 
@@ -533,6 +533,15 @@ class PaymentLogic:
             if not add_sta:
                 return False, e
         return True, "OK"
+
+    async def pay_fail(self, order: dict):
+        """订单支付失败"""
+        pass
+
+    async def pay_success(self, order: dict):
+        """订单支付成功"""
+        pass
+
 
 
 

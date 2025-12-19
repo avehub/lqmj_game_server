@@ -3,8 +3,6 @@ from sanic import Request
 from common.public.enum_const import StaCode
 from lucky_admin.base_api import AdminAuthApi
 from common.model_rc.tournament_template import TournamentTemplateRC
-from lucky_game.model_rc.game_rooms import GameRoomsRC
-from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class TournamentTemplate(AdminAuthApi):

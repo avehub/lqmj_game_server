@@ -2,6 +2,8 @@
 游戏各种商店
 """
 from nsanic.libs import tool_dt
+from nsanic.libs.tool import json_parse
+
 from common.utils.kit_dt import KitDt
 from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
@@ -179,9 +181,25 @@ class GoodRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
 
     @classmethod
+    async def cache_session_set(cls, query, value):
+        return await cls.conf.rds.set_item(f"{cls.tb_name}:{query}", value)
+
+    @classmethod
+    async def cache_session_get(cls, query):
+        data = await cls.conf.rds.get_item(f"{cls.tb_name}:{query}")
+        if isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
+
+    @classmethod
+    async def cache_session_del(cls, query):
+        return await cls.conf.rds.del_item(f"{cls.tb_name}:{query}")
+
+    @classmethod
     async def get_good_filter(cls, good_id: any = None, sid: any = None, status: int = None, type_id: any = None,
                               start_time: int = None, end_time: int = None, kind: int = None, currency: int = None,
-                        order_by: str = None, bag_type: int = None, sku: any = None, fields: str = None):
+                        order_by: str = None, bag_type: int = None, sku: any = None, fields: str = None,
+                              page: int = None, page_size: int = None):
         """获取用户参与活动次数"""
         try:
             query = {}
@@ -219,17 +237,44 @@ class GoodRC(BaseCommonRC):
                 query["up_time__gte"] = start_time
             if end_time is not None:
                 query["down_time__lte"] = end_time
-            data = await cls.db_model.filter(**query).order_by(order_by).values()
+            if page and page_size:
+                total = await cls.db_model.filter(**query).count()
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_by).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by(order_by).values()
+            if not data:
+                return result, "无数据"
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        return data, "成功"
+        return result, "成功"
 
     @classmethod
     async def get_good_info(cls, sku: str) -> dict:
         """获取商品信息"""
+        cache_data = await cls.cache_session_get(sku)
+        if cache_data:
+            return cache_data
         data, msg = await cls.get_good_filter(sku=sku)
         if not data:
             return {}
+        await cls.cache_session_set(sku, data[0])
+        return data[0] if data else {}
+
+    @classmethod
+    async def get_good_by_id(cls, good_id: int) -> dict:
+        """根据商品id获取商品信息"""
+        cache_data = await cls.cache_session_get(good_id)
+        if cache_data:
+            return cache_data
+        data, msg = await cls.get_good_filter(good_id=good_id)
+        if not data:
+            return {}
+        await cls.cache_session_set(good_id, data[0])
         return data[0] if data else {}
 
 
@@ -242,10 +287,11 @@ class GoodRC(BaseCommonRC):
             if not good_info:
                 return sku
 
+    @classmethod
     async def create_good(cls, sid: int, type: int, currency: int, name: str, img: str, original: float, price: float,
                       content: str, status: int = 1, desc: str = None, purchase_limit: str = None,
                       total: int = -1, kind: int = 0, up_time: int = None, down_time: int = None, bag_type: int = 0,
-                          rank: int = 0) -> dict:
+                          rank: int = 0) -> tuple:
         good = {
             "sid": sid,
             "kind": kind,
@@ -269,7 +315,22 @@ class GoodRC(BaseCommonRC):
         new = await cls.db_model.add_one(good)
         if not new:
             return None, "添加失败"
-        return new, "成功"
+        return True, new
+
+
+    @classmethod
+    async def update_good(cls, good_id, up_data: dict):
+        """更新商品"""
+        try:
+            query = {"good_id": good_id}
+            valid_fields = {"sid", "kind", "type", "currency", "total", "purchase_limit", "name", "img", "desc", "original", "price", "content", "status", "up_time", "down_time", "bag_type", "rank"}
+            update_data = {k: v for k, v in up_data.items() if k in valid_fields}
+            if update_data:
+                await cls.db_model.filter(**query).update(**update_data)
+                await cls.cache_session_del(good_id)
+        except OperationalError as e:
+            return None, f"失败:{e}"
+        return True, "成功"
 
 
 

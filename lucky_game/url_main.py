@@ -30,6 +30,8 @@ from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder,
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode, GetGameRecord, DissolveRoom
 from lucky_game.interface.ad_event import CreateAdRecord
 from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
+from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament
+from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList
 
 
 class MainBp(BaseBlue):
@@ -59,8 +61,6 @@ class MainBp(BaseBlue):
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
         Urls("/BindByPhone/", BindByPhone),  # 绑定手机号
-
-
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
@@ -146,4 +146,15 @@ class MainBp(BaseBlue):
         Urls("/UnclaimedOrder/", UnclaimedOrder),  # 未领取订单
         Urls("/GainOrder/", GainOrder),  # 领取订单
         Urls("/MiniProgramRecvPush/", MiniProgramRecvPush),  # 小程序订单（小程序回调创建订单）
+
+        # 赛事相关
+        Urls("/TournamentConfig/", TournamentConfig),  # 获取赛事配置
+        Urls("/TournamentUserPoint/", TournamentUserPoint),  # 获取用户赛事积分
+        Urls("/TournamentLeaderboard/", TournamentLeaderboard),  # 获取赛事排行榜
+        Urls("/JoinTournament/", JoinTournament),  # 加入赛事
+
+        # 背包相关
+        Urls("/BagList/", BagList),
+        Urls("/UserExchangeList/", UserExchangeList),
+        Urls("/UserInformationGather/", UserInformationGather),
     ]
