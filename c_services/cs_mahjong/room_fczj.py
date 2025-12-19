@@ -785,7 +785,7 @@ class RoomFCZJ(BaseLeisureRoom):
         elif self.flow_status == FlowStatus.T_IN_TIAN_HU:
             return await self.turn_to_player_chu_pai(p)
         # 都不要再摸牌
-        return self.call_flow(sec, self.__mo_pai)  # 即时结算等待
+        return await self.delay_func(sec, self.__mo_pai)  # 即时结算等待
 
     async def do_zhuan_wan_gang_end(self):
         curr_player = self.__curr_action_player
@@ -1060,14 +1060,12 @@ class RoomFCZJ(BaseLeisureRoom):
                         self.log_info(p.uid, "玩家 超时捡 fail!!!")
                     await self.check_action_end()
                 else:
-                    p.operates = []
-                    self.save_player_action(p, ActionType.ACTION_TYPE_PASS)
-                    one_of_model = s2c_one_of_model()
-                    one_of_model.seat_id = self.curr_seat_id
-                    await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
-                    DelayCall(0.1, self.check_action_end).start()
-            if is_chu_pai and self.player_do_pass(p):
-                await self.check_action_end()
+                    code, _ = await self.on_player_pass(p)
+                    if code != StaCode.PASS:
+                        self.log_info(p.uid, "玩家 超时pass fail!!!")
+                    await self.check_action_end()
+            # if is_chu_pai and self.player_do_pass(p):
+            #     await self.check_action_end()
 
     def player_do_pass(self, p, action=ActionType.ACTION_TYPE_PASS):
         for item in self.__player_actions:
@@ -1083,7 +1081,7 @@ class RoomFCZJ(BaseLeisureRoom):
         for p in self.seats:
             if p.is_robot:
                 continue
-            if p.trustee != 1:
+            if not p.trustee:
                 continue
             if p.is_lock:
                 continue
@@ -3110,12 +3108,9 @@ class RoomFCZJ(BaseLeisureRoom):
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf, **extra_room_info):
-<<<<<<< HEAD
         super().refresh_room_conf(service, room_conf, **extra_room_info)
         self.__default_ji = {CardsType.YAO_JI, CardsType.WU_GU_JI}
         self.__ji_pai_score_map = self.get_ji_pai_score_map()
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
         self.__extra_score_map = self.get_extra_score_map()
-=======
         self.__init__(self.tid, service, room_conf)
->>>>>>> dev_测试服

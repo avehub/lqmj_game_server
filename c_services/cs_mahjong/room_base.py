@@ -2069,6 +2069,8 @@ class Room(BaseCardRoom):
         """ 获取玩家手牌信息 """
         cards_info = []
         for p in self.seats:
+            if not p:
+                continue
             if not is_zi_mo and hu_list and p.seat_id in hu_list:
                 p.rev_card(self.__curr_card)  # 非自摸将当前牌放到玩家手牌中
             cards_info.append({"seat_id": p.seat_id, "hand_cards": p.cards})
@@ -4658,6 +4660,8 @@ class Room(BaseCardRoom):
         self.__winner_list = []
         self.__gang_hou_mo_pai = []
         self.__gang_hou_chu_pai = []
+        self.__que_list = []
+        self.__shang_ga_list = []
         self.clear_table_actions()
         self.clear_room_init()
         self.__ji_pai_score = None

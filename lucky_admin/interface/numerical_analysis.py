@@ -268,6 +268,7 @@ class PayUserGap(AdminAuthApi):
                 if max_len == 0:
                     data[date]["up_quantile"] = 0
                     quartiles = numpy.percentile(all_amount, [25, 50, 75])
+                    self.log_info("quartiles:", quartiles)
                     data[date]["down_quantile"] = quartiles[0]
                     data[date]["median"] = quartiles[1]
                     data[date]["up_quantile"] = quartiles[2]
@@ -597,10 +598,10 @@ class PlatformAddUser(AdminAuthApi):
                     data["sex_statistics"]["woman"] += 1
                     data["platform_statistics"][key]["woman"] += 1
                 data["platform_statistics"][key]["add_ratio"] = ("%.2f" % (data["platform_statistics"][key]["platform_user"]/data["platform_statistics"][key]["add_user"]))
-                if item["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                if item["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
             data["total"] = add_user
         return self.answer(data=data)
@@ -634,7 +635,7 @@ class PlatformPayUser(AdminAuthApi):
                                                          status=99)
         if order_data:
             order_u_ids = set(item["uid"] for item in order_data)
-            _, user_data = await BaseUserRC.get_user_filter(uid=order_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(order_u_ids))
             new_u_ids = set()
             user_dict = {}
             for item in user_data:
@@ -653,10 +654,10 @@ class PlatformPayUser(AdminAuthApi):
                 else:
                     data["platform_statistics"][key]["old_user"] += 1
                 data["platform_statistics"][key]["platform_ratio"] = ("%.2f" % (data["platform_statistics"][key]["today_user"] / total_user))
-                if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                if item["uid"] in user_dict and user_dict[item["uid"]]["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
         return self.answer(data=data)
 
@@ -694,7 +695,7 @@ class PlatformPayMoney(AdminAuthApi):
                 if item["uid"] not in order_u_ids:
                     order_u_ids.add(item["uid"])
                 order_amount += item["amount"]
-            _, user_data = await BaseUserRC.get_user_filter(uid=order_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(order_u_ids))
             new_u_ids = set()
             user_dict = {}
             for item in user_data:
@@ -713,10 +714,10 @@ class PlatformPayMoney(AdminAuthApi):
                     data["platform_statistics"][key]["old_money"] += item["amount"]
                 data["platform_statistics"][key]["platform_ratio"] = (
                             "%.2f" % (data["platform_statistics"][key]["today_money"] / order_amount))
-                if item["uid"] in user_dict and user_dict[item["uid"]]["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                if item["uid"] in user_dict and user_dict[item["uid"]]["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
             data["address_statistics"] = list(address.values())
         return self.answer(data=data)
 
@@ -737,10 +738,17 @@ class PlatformActivateUser(AdminAuthApi):
             "address": "",
             "add_num": 0,
         }
+        statistics = {
+            "man": 0,
+            "woman": 0,
+        }
         data = {
             "today_activate": 0,
             "old_activate": 0,
             "new_activate": 0,
+            "today_statistics": statistics.copy(),
+            "new_statistics": statistics.copy(),
+            "old_statistics": statistics.copy(),
             "platform_statistics": {},
             "address_statistics": [],
             "total": 0,
@@ -751,16 +759,29 @@ class PlatformActivateUser(AdminAuthApi):
         if sta:
             login_u_ids = set(item["uid"] for item in login_user)
             today_activate = len(login_u_ids)
-            _, user_data = await BaseUserRC.get_user_filter(uid=login_u_ids)
+            _, user_data = await BaseUserRC.get_user_filter(uid=list(login_u_ids))
             new_u_ids = set()
             address = {}
             for item in user_data:
+                if item["sex"] == 1:
+                    data["today_statistics"]["man"] += 1
+                else:
+                    data["today_statistics"]["woman"] += 1
                 if item["created"] >= date_time:
                     new_u_ids.add(item["uid"])
-                if item["address"] not in address:
-                    address[item["address"]] = address_x.copy()
-                    address[item["address"]]["address"] = item["address"]
-                address[item["address"]]["add_num"] += 1
+                    if item["sex"] == 1:
+                        data["new_statistics"]["man"] += 1
+                    else:
+                        data["new_statistics"]["woman"] += 1
+                else:
+                    if item["sex"] == 1:
+                        data["old_statistics"]["man"] += 1
+                    else:
+                        data["old_statistics"]["woman"] += 1
+                if item["region"] not in address:
+                    address[item["region"]] = address_x.copy()
+                    address[item["region"]]["address"] = item["region"]
+                address[item["region"]]["add_num"] += 1
                 key = f"platform_{item['platform']}"
                 if key not in data:
                     data["platform_statistics"][key] = platform_x.copy()
@@ -839,25 +860,17 @@ class PropertyRankingList(AdminAuthApi):
         currency = self.check_int(req.args.get('currency'), require=True, p_name='货币类型')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
-        order_field = "gold"
+        order_field = "-gold"
         if currency == 2:
-            order_field = "diamond"
+            order_field = "-diamond"
         elif currency == 3:
-            order_field = "room_card"
+            order_field = "-room_card"
         elif currency == 4:
-            order_field = "yellow_diamond"
-        sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time, order_field=order_field,
+            order_field = "-yellow_diamond"
+        sta, data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time, order_field=order_field,
                                                           page=page, page_size=page_size)
-        # data = user_data["total"]
-        # if sta and user_data["list"]:
-        #     for item in data["list"]:
-        #         unit = {
-        #             "uid": item["uid"],
-        #             "avatar": item["avatar"],
-        #             order_field: item[order_field],
-        #         }
-        #         data["list"].append(unit)
-        return self.answer(data=user_data)
+
+        return self.answer(data=data)
 
 
 class PropertyRankingRecord(AdminAuthApi):
@@ -895,10 +908,10 @@ class UserPortrait(AdminAuthApi):
             data["total"] = len(user_data)
             address_data = {}
             for item in user_data:
-                if item["address"] not in address_data:
-                    address_data[item["address"]] = unit.copy()
-                    address_data[item["address"]]["address"] = item["address"]
-                address_data[item["address"]]["count"] += 1
+                if item["region"] not in address_data:
+                    address_data[item["region"]] = unit.copy()
+                    address_data[item["region"]]["address"] = item["region"]
+                address_data[item["region"]]["count"] += 1
                 if item["sex"] == 1:
                     data["man"] += 1
                 else:
@@ -925,22 +938,29 @@ class UserPortraitDiff(AdminAuthApi):
         sta, user_total = await BaseUserRC.count_user_total(created__lte=start_time)
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
         if sta:
-            dates = {}
+            dates = {
+                "new": {},
+                "old": {}
+            }
             new_user = 0
             for item in user_data:
                 date = tool_dt.dt_str(item["created"], "%Y-%m-%d")
-                if date not in dates:
-                    dates[date] = unit.copy()
-                    dates[date]["x"] = date
+                if date not in dates["new"]:
+                    dates["new"][date] = unit.copy()
+                    dates["new"][date]["x"] = date
+                    dates["new"][date]["y"] = 1
                     user_total += new_user
                     new_user = 0
-                new_user += 1
-                new_user_unit = dates[date]
-                new_user_unit["y"] = new_user
-                data["new_user"].append(new_user_unit)
-                old_user_unit = dates[date]
-                old_user_unit["y"] = user_total
-                data["old_user"].append(old_user_unit)
+                else:
+                    dates["new"][date]["y"] += 1
+                    new_user += 1
+
+                if date not in dates["old"]:
+                    dates["old"][date] = unit.copy()
+                    dates["old"][date]["x"] = date
+                dates["old"][date]["y"] = user_total
+            data["new_user"] = list(dates["new"].values())
+            data["old_user"] = list(dates["old"].values())
         return self.answer(data=data)
 
 
