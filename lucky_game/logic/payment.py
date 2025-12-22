@@ -10,6 +10,7 @@ from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.handler.vivo_pay import vivo_payment
 from lucky_game.logic.activity import FirstCharge
+from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -78,7 +79,7 @@ class PaymentLogic:
         currency = express.get("currency")
         price = express.get("price")
         # 确保 price 是 Decimal 类型
-        if isinstance(price, (int, float)):
+        if isinstance(price, (int, float, str)):
             price = decimal.Decimal(price)
         elif not isinstance(price, decimal.Decimal):
             return False, '商品价格格式不正确', {}
@@ -156,7 +157,8 @@ class PaymentLogic:
             pass
         # 扣除商品数量
         if express.get("total") > 0:
-            await GoodRC.update_int_field(sku, "total", 1, "sub")
+            order = data_before.get("order")
+            await GoodRC.update_int_field(express["good_id"], "total", order["num"], "sub")
 
         return sta, msg, result
 
@@ -509,7 +511,9 @@ class PaymentLogic:
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
                 if order_status == OrderStatus.PAID:
-                    await FirstCharge().charge_order(order_info)
+                    await self.pay_success(order_info)
+                else:
+                    await self.pay_fail(order_info)
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
@@ -531,6 +535,33 @@ class PaymentLogic:
             if not add_sta:
                 return False, e
         return True, "OK"
+
+    async def pay_fail(self, order: dict) -> bool:
+        """订单支付失败"""
+        express = await GoodRC.get_good_info(order["sku"])
+        # 商品库存-退回
+        if express:
+            if express.get("total") > 0:
+                await GoodRC.update_int_field(express["good_id"], "total", order["num"], "add")
+        return True
+
+    async def pay_success(self, order: dict) -> bool:
+        """订单支付成功"""
+        express = await GoodRC.get_good_info(order["sku"])
+        # 商品类型判断-方便后续操作
+        # 商品为活动订单：10金币补足 11复仇礼包 12返还礼包
+        good_type = express.get("type")
+        if good_type in [10, 11, 12]:
+            await FirstCharge().charge_order(order)
+        # 商品为赛事订单：15 农产品
+        elif good_type == 15:
+            # 发送农产品邮件
+            await TournamentLogic().distribute_order_good(order)
+            # 发放赛事积分
+            await TournamentLogic().distribute_order_point(order)
+
+        return True
+
 
 
 

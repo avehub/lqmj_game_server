@@ -506,6 +506,8 @@ class GoodsSku(StrEnum):
     SKU_RETURN_2 = "NSPEJTCZ"   #返还中级场礼包
     SKU_RETURN_3 = "MWSZUWJK"   #返还高级场礼包
     SKU_RETURN_4 = "TIAOJRKA"   #返还王者场礼包
+    # 赛事农产品
+    SKU_TOURNAMENT = "WCRVIABC"
 
 
 @unique
