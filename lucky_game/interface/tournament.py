@@ -87,7 +87,7 @@ class JoinTournament(GameAuthApi):
         has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
             return self.answer(StaCode.FAIL, hint="已报名")
-        sta, new = await TournamentRegistrationRC.add_registration(round_id, uid, TournamentRegistrationRC.REGISTER_TYPE_SINGLE, pid=pid)
+        sta, new = await TournamentRegistrationRC.add_registration(cycle_id, uid, TournamentRegistrationRC.REGISTER_TYPE_SINGLE, pid=pid)
         if not new:
             return self.answer(StaCode.FAIL)
         return self.answer()
