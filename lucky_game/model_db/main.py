@@ -996,3 +996,25 @@ class UserGoodExchange(DBModel):
     class Meta:
         table = "user_good_exchange"
 
+class ConfCompetition(DBModel):
+    """赛事玩法配置表"""
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=32, description='赛事名称')
+    cs_type = fields.IntField(index=True, default=0, description='子服务类型')
+    competition_type = fields.SmallIntField(default=0, description='赛事类型')
+    rule_detail = fields.JSONField(null=True, description='规则详情')
+    max_player = fields.IntField(description='最大玩家数')
+    price = fields.IntField(default=0, description='门票价格')
+    price_type = fields.SmallIntField(default=3, description='支付类型')
+    status = fields.SmallIntField(default=2, description='赛事状态')
+    start_time = fields.BigIntField(default=0, description='开始时间')
+    end_time = fields.BigIntField(default=0, description='结束时间')
+    total_round = fields.SmallIntField(default=1, description='总局数')
+    play_type = fields.SmallIntField(default=3, description='玩法类型')
+    max_match_player = fields.SmallIntField(default=0, description='最大开局人数')
+    daily_start_time = fields.CharField(max_length=32, description='每日开始时间')
+    daily_end_time = fields.CharField(max_length=32, description='每日结束时间')
+    total_match_round = fields.SmallIntField(default=1, description='比赛总轮次')
+
+    class Meta:
+        table = "conf_competition"

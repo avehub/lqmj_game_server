@@ -23,6 +23,7 @@ from common.model_rc.tournament_registration import TournamentRegistrationRC
 from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
 from common.model_rc.tournament_user_point import TournamentUserPointRC
 from lucky_game.model_rc.base_award import AwardRC
+from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 
 
 class TournamentConfig(GameAuthApi):
@@ -90,3 +91,12 @@ class JoinTournament(GameAuthApi):
         if not new:
             return self.answer(StaCode.FAIL)
         return self.answer()
+
+class CompetitionConfig(GameAuthApi):
+    async def get(self, req: Request, **kwargs):
+        """
+        获取赛事玩法配置
+        """
+        competition_id = self.check_int(req.args.get("competition_id"), require=False, default=1, p_name="赛事玩法ID")
+        data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
+        return self.answer(data=data)

@@ -30,7 +30,8 @@ from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder,
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode, GetGameRecord, DissolveRoom
 from lucky_game.interface.ad_event import CreateAdRecord
 from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
-from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament
+from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament, \
+    CompetitionConfig
 from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList
 
 
@@ -152,6 +153,7 @@ class MainBp(BaseBlue):
         Urls("/TournamentUserPoint/", TournamentUserPoint),  # 获取用户赛事积分
         Urls("/TournamentLeaderboard/", TournamentLeaderboard),  # 获取赛事排行榜
         Urls("/JoinTournament/", JoinTournament),  # 加入赛事
+        Urls("/CompetitionConfig/", CompetitionConfig),
 
         # 背包相关
         Urls("/BagList/", BagList),
