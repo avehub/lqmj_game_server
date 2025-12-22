@@ -4,8 +4,10 @@
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
 from common.model_rc.base_rc import BaseCommonRC
-from lucky_game.model_db.main import TournamentUserPoints
+from lucky_game.model_db.main import TournamentCycle, TournamentUserPoints
 from tortoise.exceptions import OperationalError
+from common.public.conf import ENV
+from common.model_rc.tournament_cycle import TournamentCycleRC
 
 
 class TournamentUserPointRC(BaseCommonRC):
@@ -33,6 +35,8 @@ class TournamentUserPointRC(BaseCommonRC):
     async def add_user_point(cls, cycle_id, uid, score, ticket: int = 0):
         """新增模板"""
         try:
+            if ENV != "prod":
+                ticket = 100
             data = {
                 "cycle_id": cycle_id,
                 "uid": uid,
@@ -122,3 +126,44 @@ class TournamentUserPointRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败:{e}"
         return True, "成功"
+
+    @classmethod
+    async def update_int_field(cls, uid: int, ticket: str, value: int, operation: str = 'add'):
+        """
+        门票积分变更
+
+        Args:
+            uid (int): 用户ID
+            field_name (str): 要修改的字段名
+            value (int | Decimal): 修改的值
+            operation (str): 操作类型，'add' 或 'sub'，默认为'add'
+
+        Returns:
+            tuple: (bool, str) - (操作结果, 消息)
+        """
+        if operation not in ['add', 'sub']:
+            return False, "无效的操作类型，只支持'add'或'sub'"
+        try:
+            # 获取当前赛季周期ID
+            cycle_id = await TournamentCycleRC.get_current_cycle_id()
+            sta, data = await cls.get_user_point(cycle_id, uid)
+            if not data:
+                return False, "数据不存在"
+
+            # 获取当前字段值
+            current_value = data[field_name]
+            # 计算新值
+            if operation == 'add':
+                new_value = current_value + value
+            else:
+                new_value = current_value - value
+            if new_value < 0:
+                new_value = 0
+            # 更新数据
+            update_data = {field_name: new_value}
+            up = await cls.db_model.update_by_pk(data["id"], update_data)
+            if not up:
+                return False, "更新失败"
+        except OperationalError as e:
+            return False, f"更新失败：{str(e)}"
+        return True, "更新成功"
