@@ -78,7 +78,7 @@ class TournamentRuleRC(BaseCommonRC):
         return True, data
 
     @classmethod
-    async def get_rule_info(cls, rule_id: int):
+    async def get_rule_info(cls, rule_id: int = 1):
         """获取赛事规则信息"""
         try:
             result = await cls.cache_session_get(rule_id)

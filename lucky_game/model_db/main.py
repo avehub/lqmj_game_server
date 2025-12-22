@@ -366,7 +366,7 @@ class Goods(DBModel):
     sid = fields.IntField(max_length=10, index=True, default=0, description='商城ID')
     kind = fields.SmallIntField(max_length=2, null=True, description='特性：0虚拟 1实物')
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事代金券 14赛事-晋级资格')
+                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
@@ -904,41 +904,6 @@ class TournamentRewards(DBModel):
     class Meta:
         table = "tournament_rewards"
 
-class TournamentStage(DBModel):
-    """比赛阶段表 (16进12, 12进8等)"""
-    end_time = fields.DatetimeField(null=True, description='阶段结束时间')
-    id = fields.BigIntField(primary_key=True, description='阶段ID')
-    participant_count = fields.IntField(description='参赛人数:16')
-    qualifier_count = fields.IntField(description='晋级人数:12')
-    round_id = fields.BigIntField(unique=True, description='关联场次ID')
-    stage_name = fields.CharField(max_length=50, description='阶段名称:16进12')
-    stage_number = fields.BooleanField(description='阶段序号:1,2,3,4')
-    start_time = fields.DatetimeField(null=True, description='阶段开始时间')
-    status = fields.BooleanField(index=True, default=0, description='状态:0-未开始,1-进行中,2-已结束')
-    updated = fields.BigIntField(default=0)
-
-    class Meta:
-        unique_together = (("round_id", "stage_number"),)  # 唯一索引
-        table = "tournament_stage"
-
-
-class TournamentMatch(DBModel):
-    """比赛对局表"""
-    end_time = fields.DatetimeField(null=True, description='对局结束时间')
-    game_count = fields.BooleanField(default=False, description='游戏局数')
-    id = fields.BigIntField(primary_key=True, description='对局ID')
-    match_number = fields.IntField(description='对局编号')
-    room_id = fields.BigIntField(index=True, description='游戏房间ID(关联已有房间表)')
-    round_id = fields.BigIntField(description='关联场次ID')
-    stage_id = fields.BigIntField(description='关联阶段ID')
-    start_time = fields.DatetimeField(null=True, description='对局开始时间')
-    status = fields.BooleanField(default=False, description='状态:0-未开始,1-进行中,2-已结束')
-    updated = fields.BigIntField(default=0)
-
-    class Meta:
-        indexes = (("stage_id", "status"),("round_id", "status"),)  # 联合索引
-        table = "tournament_match"
-
 class TournamentUserPoints(DBModel):
     """用户赛事积分表"""
     id = fields.BigIntField(primary_key=True, description='积分ID')
@@ -962,30 +927,15 @@ class TournamentRegistration(DBModel):
     register_status = fields.BooleanField(default=True, description='报名状态:1-已报名,2-已取消,3-已确认参赛')
     register_time = fields.DatetimeField(description='报名时间')
     register_type = fields.BooleanField(description='报名类型:1-主动报名,2-邀请报名')
-    round_id = fields.BigIntField(index=True, description='关联场次ID')
+    cycle_id = fields.BigIntField(index=True, description='关联赛事周期ID')
     uid = fields.BigIntField(index=True, description='用户ID')
     updated = fields.BigIntField(default=0)
 
     class Meta:
-        unique_together = (("round_id", "uid"),)  # 唯一索引
-        indexes = (("uid", "register_status"),("round_id", "register_status"),)  # 联合索引
+        unique_together = (("cycle_id", "uid"),)  # 唯一索引
+        indexes = (("uid", "register_status"),("cycle_id", "register_status"),)  # 联合索引
         table = "tournament_registration"
 
-class TournamentMatchPlayer(DBModel):
-    """对局参赛者表"""
-    final_rank = fields.BooleanField(null=True, description='对局排名:1-4')
-    id = fields.BigIntField(primary_key=True, description='记录ID')
-    is_qualified = fields.BooleanField(null=True, default=False, description='是否晋级:1-是,0-否')
-    match_id = fields.BigIntField(index=True, description='关联对局ID')
-    seat_position = fields.BooleanField(description='座位位置:1-4')
-    total_score = fields.IntField(default=0, description='总分数')
-    uid = fields.BigIntField(index=True, description='用户ID')
-    updated = fields.BigIntField(default=0)
-
-    class Meta:
-        unique_together = (("match_id", "uid"),)  # 唯一索引
-        indexes = (("uid", "match_id"),)  # 联合索引
-        table = "tournament_match_player"
 
 class TournamentCycleLeaderboard(DBModel):
     """周期排行榜表"""

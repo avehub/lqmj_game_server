@@ -80,10 +80,10 @@ class JoinTournament(GameAuthApi):
         """
         加入赛事
         """
-        round_id = self.check_int(req.json.get("round_id"), require=False, p_name="场次ID")
+        cycle_id = self.check_int(req.json.get("cycle_id"), require=False, p_name="场次ID")
         pid = self.check_int(req.json.get("pid"), require=True, p_name="邀请用户ID")
         uid = kwargs.get("u_info").get("uid")
-        has_registered = await TournamentRegistrationRC.get_uid_registration(uid, round_id)
+        has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
             return self.answer(StaCode.FAIL, hint="已报名")
         sta, new = await TournamentRegistrationRC.add_registration(round_id, uid, TournamentRegistrationRC.REGISTER_TYPE_SINGLE, pid=pid)

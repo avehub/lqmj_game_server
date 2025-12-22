@@ -126,3 +126,15 @@ class TournamentCycleRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"操作失败:{e}"
         return True, "成功"
+
+    @classmethod
+    async def get_current_cycle_id(cls) -> int:
+        """ 获取当前赛事ID """
+        cycle_id = await cls.conf.rds.get_item("cycle_id")
+        if not cycle_id:
+            sta, data = await cls.get_cycle_filter(status=1)
+            cycle_id = data[0]["id"] if data else 0
+            ex_time = 86400 - (tool_dt.cur_time()-tool_dt.day_begin())
+            print("ex_time", ex_time)
+            await cls.conf.rds.set_item("cycle_id", cycle_id, ex_time=ex_time)
+        return cycle_id

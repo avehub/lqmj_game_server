@@ -215,9 +215,9 @@ class GoodRC(BaseCommonRC):
                     query["sid"] = sid
             if type_id is not None:
                 if isinstance(type_id, list):
-                    query["type_id__in"] = type_id
+                    query["type__in"] = type_id
                 else:
-                    query["type_id"] = type_id
+                    query["type"] = type_id
             if sku is not None:
                 if isinstance(sku, list):
                     query["sku__in"] = sku
@@ -331,6 +331,15 @@ class GoodRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, "成功"
+
+    @classmethod
+    async def get_good_sku(cls, good_type: int) -> list:
+        """获取指定范围的商品sku列表"""
+        result = []
+        data, msg = await cls.get_good_filter(type_id=good_type)
+        if not data:
+            return result
+        return [item["sku"] for item in data]
 
 
 
