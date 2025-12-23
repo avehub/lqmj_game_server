@@ -2,6 +2,8 @@
 玩家背包
 基础物品 / 道具 / 装扮
 """
+import math
+
 from sanic import Request
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -18,17 +20,25 @@ class BagList(GameAuthApi):
     async def get(self, _: Request, **kwargs):
         user = kwargs.get("u_info")
         uid = user.get("uid")
-
-        data = await UserBagRC.get_user_bag_by_type(uid=uid)
+        data = await UserBagRC.cache_user_bag(uid)
         if data:
-            UserBagRC.organize_bag_data(data)
-            # 排序逻辑
-            data = sorted(data, key=lambda x: (
-                x.get('goods_type', 0),
-                -(x.get('game_prop_type', 0)),
-                x.get('goods_id', 0)
-            ))
-
+            good_ids = [i.get("good_id") for i in data]
+            good_data, msg = await GoodRC.get_good_filter(good_id=good_ids)
+            good_dict = {i.get("good_id"): i for i in good_data}
+            now = tool_dt.cur_time()
+            for i in data:
+                good_id = i.get("good_id")
+                i.update({
+                    "good_type": good_dict[good_id]["type"],
+                    "sku": good_dict[good_id]["sku"],
+                    "kind": good_dict[good_id]["kind"],
+                    "name": good_dict[good_id]["name"],
+                    "img": good_dict[good_id]["img"],
+                    "desc": good_dict[good_id]["desc"],
+                    "bag_type": good_dict[good_id]["bag_type"],
+                    "content": good_dict[good_id]["content"],
+                    "rest_of_day": math.ceil((i["end_time"] - now) / 86400) if i["end_time"] > 0 else 0,
+                })
         return self.answer(data=data)
 
 
@@ -39,40 +49,30 @@ class DropBagItem(GameAuthApi):
         bag_id = self.check_int(req.json.get("bag_id"), require=True, minval=1, p_name="bag_id")
         user = kwargs.get("u_info")
         uid = user.get("uid")
-
         bag_item = await UserBagRC.get_user_bag_by_id(uid, bag_id)
         (not bag_item) and self.answer(self.sta_code.GOODS_NOT_FOUND, hint="没找到物品")
-
-        exp_time = bag_item.get("exp_time")
-        (exp_time > tool_dt.cur_time()) and self.answer(self.sta_code.CONDITION_NOT_MET, hint="物品没有过期，不允许删除")
-
+        end_time = bag_item.get("end_time")
+        (end_time > tool_dt.cur_time()) and self.answer(self.sta_code.CONDITION_NOT_MET, hint="物品没有过期，不允许删除")
         all_bag = await UserBagRC.drop_user_bag_by_id(uid, bag_id)
         (not all_bag) and self.answer(self.sta_code.FAIL, hint="删除物品失败")
-
-        new_bag = await BaseUserRC.deal_user_update_goods(uid, key_name=UserBagRC.KEY_NEWLY)
-        data = {
-            "all_bag": all_bag,
-            "new_bag": [] if not new_bag else json_parse(new_bag)
-        }
-        self.log_info(uid, f"DropBagItem 背包删除物品{bag_id}成功")
-        return self.answer(data=data)
+        return self.answer()
 
 
 class UserInformationGather(GameAuthApi):
     """道具兑换/信息收集"""
 
     async def post(self, req: Request, **kwargs):
-        real_name = self.check_str(req.json.get("real_name"), require=True, p_name="真实姓名")
+        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, maxlen=10, p_name="真实姓名")
         phone = self.check_phone_number(req.json.get("phone"), require=True)
         region = self.check_str(req.json.get("region"), require=True, p_name="所在地区")
-        address = self.check_int(req.json.get("address"), require=True, p_name="详细地址")
+        address = self.check_str(req.json.get("address"), require=True, p_name="详细地址")
         good_id = self.check_int(req.json.get("good_id"), require=True, p_name="兑换ID")
         good_num = self.check_int(req.json.get("good_num"), require=True, p_name="兑换数量")
-        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台")
+        platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         user = kwargs.get("u_info")
         uid = user.get("uid")
         good_info = await GoodRC.get_good_by_id(good_id)
-        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("goods_type"),
+        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("type"),
                                                           platform, region, address, num=good_num)
 
         if not sta:
@@ -84,10 +84,26 @@ class UserExchangeList(GameAuthApi):
     """获取用户兑换列表"""
 
     async def get(self, req: Request, **kwargs):
-        status = self.check_int(req.args.get("status"), require=True, p_name="兑换状态")
+        status = self.check_int(req.args.get("status"), require=False, p_name="状态")
         page = self.check_int(req.args.get("page"), require=False, default=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")
         user = kwargs.get("u_info")
         uid = user.get("uid")
         sta, data = await UserGoodExchangeRC.get_exchange_filter(uid=uid, status=status, page=page, page_size=page_size)
+        if sta and data["list"]:
+            good_ids = [i.get("good_id") for i in data["list"]]
+            good_data, msg = await GoodRC.get_good_filter(good_id=good_ids)
+            good_dict = {i.get("good_id"): i for i in good_data}
+            for i in data["list"]:
+                good_id = i.get("good_id")
+                i.update({
+                    "sku": good_dict[good_id]["sku"],
+                    "kind": good_dict[good_id]["kind"],
+                    "name": good_dict[good_id]["name"],
+                    "img": good_dict[good_id]["img"],
+                    "desc": good_dict[good_id]["desc"],
+                    "bag_type": good_dict[good_id]["bag_type"],
+                    "content": good_dict[good_id]["content"],
+                })
         return self.answer(data=data)
+

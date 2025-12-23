@@ -11,6 +11,7 @@ from common.model_rc.tournament_rewards import TournamentRewardRC
 from common.model_rc.tournament_rules import TournamentRuleRC
 from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
+from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_mails import MailsRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
@@ -62,10 +63,18 @@ class TournamentLogic:
         """ 分发订单商品、道具 """
         uid = order.get("uid")
         good = await GoodRC.get_good_info(order.get("sku"))
-        mail_type = 2
-        sender = "赛事系统"
-        title = "赛事农产品领取"
-        content = f"恭喜您在赛事中获得{order['num']}个{good['name']}"
-        attachment = {"good_ids": [good["good_id"]], "num": order["num"]}
-        return await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+        # 发送农产品至邮件
+        # mail_type = 2
+        # sender = "赛事系统"
+        # title = "赛事农产品领取"
+        # content = f"恭喜您在赛事中获得{order['num']}个{good['name']}"
+        # attachment = {"good_ids": [good["good_id"]], "num": order["num"]}
+        # return await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+        # 发送商品至背包
+        express = [{
+            "good_id": good["good_id"],
+            "count": order["num"],
+            "end_time": await GoodRC.get_good_end_time(good["type"]),
+        }]
+        return await UserBagRC.update_user_bag(uid, express)
 

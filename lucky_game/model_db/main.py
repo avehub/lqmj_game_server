@@ -88,7 +88,7 @@ class UserBags(DBModel):
     uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
     good_id = fields.IntField(max_length=28, null=True, default=0, description='商品/道具ID')
     count = fields.IntField(max_length=28, null=True, default=0, description='数量')
-    end_time = fields.DatetimeField(null=True, default=None, description='商品有效期')
+    end_time = fields.BigIntField(null=True, default=None, description='商品有效期')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:

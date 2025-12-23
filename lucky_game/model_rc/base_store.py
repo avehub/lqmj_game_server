@@ -1,9 +1,12 @@
 """
 游戏各种商店
 """
+import datetime
+
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 
+from common.public.common_class import CommonApi
 from common.utils.kit_dt import KitDt
 from common.public.enum_const import Switch
 from lucky_game.handler.douyin import DouYin
@@ -20,9 +23,6 @@ class StoreRC(BaseCommonRC):
     """游戏商店"""
     db_model = Stores
     tb_name = db_model.sheet_name()
-
-    expired_mode = 0
-    expired_sec = 2 * 86400
 
     KEY_STORE_ID = 'store_id'
     KEY_STORE_TYPE = 'store_type'
@@ -179,6 +179,9 @@ class GoodRC(BaseCommonRC):
     """商品(道具)"""
     db_model = Goods
     tb_name = db_model.sheet_name()
+
+    EXPIRED_DEFAULT = 0
+    EXPIRED_PERMANENT = -1
 
     @classmethod
     async def cache_session_set(cls, query, value):
@@ -340,6 +343,17 @@ class GoodRC(BaseCommonRC):
         if not data:
             return result
         return [item["sku"] for item in data]
+
+    @classmethod
+    async def get_good_end_time(cls, good_type: int) -> int:
+        """获取指定类型商品过期时间"""
+        end_time = cls.EXPIRED_DEFAULT
+        # 赛事 13赛事-代金券 14赛事-晋级资格 15赛事-农产品
+        if good_type in [13, 14]:
+            start_time, end_time = await CommonApi.get_time_range()
+        if good_type == 15:
+            end_time = cls.EXPIRED_PERMANENT
+        return end_time
 
 
 

@@ -32,7 +32,7 @@ from lucky_game.interface.ad_event import CreateAdRecord
 from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
 from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament, \
     CompetitionConfig
-from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList
+from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList, DropBagItem
 
 
 class MainBp(BaseBlue):
@@ -160,4 +160,5 @@ class MainBp(BaseBlue):
         Urls("/BagList/", BagList),
         Urls("/UserExchangeList/", UserExchangeList),
         Urls("/UserInformationGather/", UserInformationGather),
+        Urls("/DropBagItem/", DropBagItem),
     ]
