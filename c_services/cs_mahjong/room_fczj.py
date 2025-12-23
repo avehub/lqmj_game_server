@@ -74,6 +74,8 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__extra_score_map = self.get_extra_score_map()
         self.__record_id = 0
 
+        self.__is_mo_pai_scheduled = False #标记是否已安排摸牌
+
     async def round_start(self, *args, **kwargs):
         """ 一局开始 """
         await super().round_start()
@@ -785,7 +787,10 @@ class RoomFCZJ(BaseLeisureRoom):
         elif self.flow_status == FlowStatus.T_IN_TIAN_HU:
             return await self.turn_to_player_chu_pai(p)
         # 都不要再摸牌
-        return await self.delay_func(sec, self.__mo_pai)  # 即时结算等待
+        if not self.__is_mo_pai_scheduled:
+            self.__is_mo_pai_scheduled = True
+            return await self.delay_func(sec, self.__mo_pai)  # 即时结算等待
+        return True
 
     async def do_zhuan_wan_gang_end(self):
         curr_player = self.__curr_action_player
@@ -1700,6 +1705,7 @@ class RoomFCZJ(BaseLeisureRoom):
                 p.ting_list = ting_list
 
         if self.__recharge_wait == 0:
+            self.__is_mo_pai_scheduled = True
             self.call_flow(TimerDelay.KOU_FEI_TIME, self.__mo_pai)  # 即时结算等待
 
     async def somebody_men(self, seat_list: list):  # 三人均操作后判断有没有人胡牌
@@ -1847,6 +1853,7 @@ class RoomFCZJ(BaseLeisureRoom):
         """
         摸牌
         """
+        self.__is_mo_pai_scheduled = False
         if self.room_status_is_equal(RoomStatus.T_RECHARGE_ING):
             self.log_info("桌子在充值中，不摸牌")
             return
@@ -3023,6 +3030,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__hua_zhu_seats = []
         self.__record_id = 0
         self.__win_seat_list = []
+        self.__is_mo_pai_scheduled = False
 
     async def record_game(self):
 
@@ -3105,6 +3113,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__ji_pai_score_map = None
         self.__pai_xing_score_map = None
         self.__extra_score_map = None
+        self.__is_mo_pai_scheduled = False
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf, **extra_room_info):
