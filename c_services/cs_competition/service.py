@@ -149,7 +149,8 @@ class CompetitionServer(BaseServer):
         price = conf_data.get("price")
         price_type = conf_data.get("price_type")
         if price_type == PriceType.BY_POINT:
-            user_point = await TournamentUserPointRC.get_point_filter(uid)
+            cycle_id = await TournamentCycleRC.get_current_cycle_id()
+            user_point = await TournamentUserPointRC.get_user_point(cycle_id, uid)
             if user_point.get("ticket") < price:
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足")
             # 扣费
