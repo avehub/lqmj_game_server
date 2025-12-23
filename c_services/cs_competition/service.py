@@ -9,6 +9,8 @@ from nsanic.verify import vint
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CallCheck, CmdFanOut, CmdCompetition, CmdRoom
 from c_services.cs_competition.room import CompetitionRoom
+from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.ws_c2s import join_competition_model
 from common.proto.py_pb2.ws_leisure import s2c_one_of_model, S2CCompetitionOver, S2CJoinCompetition, S2CStartCompetition, S2CGameRoomFinish
 from common.public.conf import ROBOT_BATTLE, R_UID_THRESHOLD
@@ -146,13 +148,12 @@ class CompetitionServer(BaseServer):
 
         price = conf_data.get("price")
         price_type = conf_data.get("price_type")
-        # if price_type == PriceType.BY_POINT:
-        #     user_info = await BaseUserRC.cache_by_uid(uid)
-        #     if not user_info:
-        #         return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家不存在")
-        #     if user_info.get("point") < price:
-        #         return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足")
-        #     # 扣费刷新处理未加
+        if price_type == PriceType.BY_POINT:
+            user_point = await TournamentUserPointRC.get_point_filter(uid)
+            if user_point.get("ticket") < price:
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足")
+            # 扣费
+            await TournamentUserPointRC.update_int_field(uid,"ticket",price,"sub")
 
         await self.__join_competition(uid, competition_id, conf_data, req_id)
 
@@ -295,6 +296,7 @@ class CompetitionServer(BaseServer):
         self.log_info("排名", room.get_rank_by_score())
         competition_result = []
         total_players = len(room.members)
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
         for rank, uid, score in room.get_rank_by_score():
             competition_result.append({
                 "uid": uid,
@@ -302,12 +304,22 @@ class CompetitionServer(BaseServer):
                 "score": 0 if score>=0 else score,
                 "points": total_players - rank + 1
             })
+            await self.update_user_point(uid, cycle_id, score, 0 if score>=0 else score)
         data = {"competition_result": competition_result}
         s2c_competition_over = S2CCompetitionOver.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         room.clear_competition()
         await self.conf.rds.srem("match_room_number", match_room_id)
         self.remove_room(match_room_id)
+
+    @staticmethod
+    async def update_user_point(uid, cycle_id, score, ticket):
+        up_data = {
+            "score": score,
+            "ticket": ticket
+        }
+
+        result, message = await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
 
     async def __sava_player_in_match(self, uid, competition_id):
         info = {
