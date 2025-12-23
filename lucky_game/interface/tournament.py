@@ -82,7 +82,7 @@ class JoinTournament(GameAuthApi):
         加入赛事
         """
         cycle_id = self.check_int(req.json.get("cycle_id"), require=False, p_name="场次ID")
-        pid = self.check_int(req.json.get("pid"), require=True, p_name="邀请用户ID")
+        pid = self.check_int(req.json.get("pid"), require=False, default=0, p_name="邀请用户ID")
         uid = kwargs.get("u_info").get("uid")
         has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
