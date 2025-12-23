@@ -128,7 +128,7 @@ class TournamentUserPointRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def update_int_field(cls, uid: int, ticket: str, value: int, operation: str = 'add'):
+    async def update_int_field(cls, uid: int, field_name: str, value: int, operation: str = 'add'):
         """
         门票积分变更
 
