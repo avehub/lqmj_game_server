@@ -705,3 +705,21 @@ class ChatConst:
     """ 聊天相关常量 """
     WORLD_MAX_VAL = 50  # 世界最大消息长度
     COOLDOWN_TIME = 5  # 冷却时间设置为5秒
+
+class CompetitionType(BaseEnum):
+    """ 赛事类型 """
+    DEFAULT = 0, "默认"
+    POINT = 1, "积分制"
+
+class PriceType(BaseEnum):
+    """ 支付类型 """
+    BY_FREE = 0, "免费"
+    BY_DIAMOND = 1, "钻石"
+    BY_GOLD = 2, "金币"
+    BY_POINT = 3, "积分"
+
+class CompetitionStatus(BaseEnum):
+    """ 赛事状态 """
+    DEFAULT = 0, "默认"
+    PLAYING = 1, "进行中"
+    CLOSED = 2, "已结束"

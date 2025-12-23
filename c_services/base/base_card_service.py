@@ -5,7 +5,7 @@ from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdClub, ClubMsg
 from c_services.cs_mahjong.const import OverType
 from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
 from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
-from common.public.conf import C_SERVICE_SECRET_KEY
+from common.public.conf import C_SERVICE_SECRET_KEY, R_UID_THRESHOLD
 from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
 from lucky_game.model_rc.game_rooms import GameRoomsRC
@@ -30,7 +30,7 @@ class BaseCardService(BaseService):
     async def _on_new_match(self, uid, data):
         """ 新匹配（服务器内部使用，不能给其它人调用） """
         self.log_info("匹配信息", data)
-        await self.new_match(uid, data)
+        await self.conf.locker.locked(uid, self.new_match, (uid, data))
 
     async def new_match(self, uid, data):
 
@@ -52,18 +52,28 @@ class BaseCardService(BaseService):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint="房间已满")
             if not room.room_status_is_equal(RoomStatus.T_IDLE):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
-        player = self.get_or_create_player(uid, self.PLAYER)
+        is_robot = uid < R_UID_THRESHOLD
+        player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
+        match_room_id = data.get("match_room_id") or 0
         if player.seat_id <= 0:
             room.online_group_user = data.get("online_group_user")
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)
 
-    def get_or_create_player(self, uid, c_player):
+        if match_room_id > 0:
+            match_round = data.get("match_round") or 0
+            total_match_round = data.get("total_match_round") or 0
+            player_score = data.get("player_score") or 0
+            print("player_score", player_score)
+            player.round_score = player_score
+            room.match_competition(player, match_room_id, match_round, total_match_round)
+
+    def get_or_create_player(self, uid, c_player, is_robot=False):
         player = self.get_player(uid)
         if player:
             return player
-        return self.create_player(c_player, uid, False)
+        return self.create_player(c_player, uid, is_robot)
 
     async def __req_dismiss_room(self, player, room, data):
         req_dismiss_model.ParseFromString(data)

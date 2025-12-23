@@ -77,6 +77,16 @@ class ClubMsgType(BaseEnum):
     DISMISS_ROOM = 4, "解散茶馆游戏房间"
     UPDATE_ROOM = 5, "更新茶馆游戏房间"
 
+@unique
+class CmdCompetition(BaseEnum):
+    MATCH_COMPETITION = 1, "加入比赛"
+    QUIT_COMPETITION = 2, "退出比赛"
+    START_COMPETITION = 3, "开始比赛"
+    ROOM_FINISH = 4, "房间结束", CallCheck.INNER.val
+    MATCH_FINISH = 5, "比赛结束"
+    MATCH_BY_INNER = 6, "加入比赛（内部调用）", CallCheck.INNER.val
+    BACK_COMPETITION = 7, "返回比赛"
+
 
 @unique
 class CmdRoom(BaseEnum):

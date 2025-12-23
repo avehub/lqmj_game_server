@@ -122,12 +122,14 @@ class ServiceEnum(BaseEnum):
     C_CLUB = 10, "lucky_club", '俱乐部服务'
 
     C_MAHJONG_FC = 11, "mahjong_fc", GameType.LEISURE
+    C_COMPETITION = 12, "competition","比赛场匹配服务"
 
     C_MAHJONG_XY = 22, "mahjong_xy", GameType.ROOM_CARD
     C_MAHJONG_GY = 23, "mahjong_gy", GameType.ROOM_CARD
     C_MAHJONG_ZY = 24, "mahjong_zy", GameType.ROOM_CARD
     C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
     C_MAHJONG_RH = 26, "mahjong_rh", GameType.ROOM_CARD
+    C_MAHJONG_GY_MATCH = 27, "mahjong_gy_match", GameType.ROOM_CARD
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
@@ -151,6 +153,7 @@ class CacheKey(StrEnum):
     WS_ONLINE_INFO = "WS_ONLINE_INFO"  # ws在线信息
     PLAYER_GOLD = "PLAYER_GOLD" #休闲场玩家起始金币
     PLAYER_GAME_STA = "PLAYER_GAME_STA" #玩家游戏状态
+    IN_MATCH = "IN_MATCH"  # 在比赛中
 
 
 class DbKey(StrEnum):
