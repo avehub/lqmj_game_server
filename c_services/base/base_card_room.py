@@ -1,3 +1,6 @@
+import asyncio
+import base64
+
 from nsanic.libs.tool import json_encode
 from nsanic.libs import tool_dt
 from c_services.base.base_room import BaseRoom
@@ -188,6 +191,8 @@ class BaseCardRoom(BaseRoom):
         super(BaseCardRoom, self).player_quit_room(player, data)
 
     async def req_dismiss_room(self, player,agree):
+        if self.room_status == RoomStatus.T_CLOSED or self.in_room_count == 0:
+            return StaCode.FLOW_ERR, "当前房间已关闭"
         if not self.timer_dismiss:
             if agree:
                 self.call_dismiss(120, self.force_dismiss, OverType.FORCE)
@@ -260,8 +265,11 @@ class BaseCardRoom(BaseRoom):
     def __add_pack_msg_records(self, cmd, data, code=StaCode.PASS, hint=''):
         data_msg = PbWsBaseRep.encode(code, hint, data)
         message = UtilsTool.pack_msg_by_bytes(self.service.service_type, cmd, data_msg)
+        if isinstance(message, bytes):  # 新增：处理二进制数据
+            # 将bytes编码为Base64字符串
+            b64_message = base64.b64encode(message).decode('utf-8')
 
-        self.__round_msg_records.append(message)
+            self.__round_msg_records.append(b64_message)
 
     def __add_round_log(self, cmd, data, code, hint):
         """ 对局日志 """
@@ -382,8 +390,8 @@ class BaseCardRoom(BaseRoom):
         if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
-            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
-            self.log_info("一轮结束战绩插入", result_data)
+            replay_msg_data = {"replay_msg_data":self.__replay_msg_data}
+            await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE,replay_msg_data)
             self.__replay_msg_data = []
             await self.next_round_ready()
 
@@ -476,22 +484,30 @@ class BaseCardRoom(BaseRoom):
         # 游戏结束后在这里更新战绩以及回放数据
         round_idx = self.round_idx
         if self.__replay_msg_data:
-            result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(self.__replay_msg_data)
-            self.log_info("游戏结束一轮结束战绩插入", result_data)
+            #游戏结束一轮结束战绩插入
+            replay_msg_data = {"replay_msg_data":self.__replay_msg_data}
+            await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE,replay_msg_data)
         else:
             if round_idx > 1:
                 round_idx = self.round_idx - 1
             self.log_info("战绩更新局数", round_idx)
+            send_list = []
             for p in self.seats:
                 if p:
-                    self.log_info("更新局数数据",self.__record_id,p.uid,self.__round_msg_records,round_idx)
-                    up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(self.__record_id, p.uid,
-                                                                                              replay_msg=self.__round_msg_records,
-                                                                                              round_num=round_idx)
-                    if not up_segment_sta:
-                        self.log_info("玩家", p.uid, p.seat_id, "战绩更新失败", e)
+                    data = {
+                        "record_id": self.__record_id,
+                        "round_idx": round_idx,
+                        "round_msg_records": self.__round_msg_records,
+                        "tid":self.tid,
+                        "is_all" : False
+                    }
+                    send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES,data,p.uid))
+            #战绩更新局数
+            if send_list:
+                await asyncio.gather(*send_list)
 
         is_dismiss = over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE
+        record_data_list = []
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
@@ -505,18 +521,27 @@ class BaseCardRoom(BaseRoom):
                     room_status = 1
                 else:
                     room_status = 0
-                self.log_info("总结算战绩插入数据", self.__record_id, p.uid, final_ranking, final_grade,p.game_over_data,num,room_status)
-                over_record = await RecordsGameTotalRC.create_record_game_total(self.__record_id, p.uid,
-                                                                                p.total_score >= 0, p.total_score
-                                                                                , final_ranking, final_grade,
-                                                                                p.game_over_data, num, room_status)
-                self.log_info("总结算战绩插入", over_record)
+                data = {
+                    "total_score": p.total_score,
+                    "final_ranking": final_ranking,
+                    "final_grade": final_grade,
+                    "game_over_data": p.game_over_data,
+                    "num": num,
+                    "room_status": room_status,
+                    "tid":self.tid,
+                    "uid":p.uid
+                }
+                record_data_list.append(data)
 
-        if is_dismiss:
-            up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(self.__record_id,
-                                                                                     round_num=round_idx)
-            if not up_room_sta:
-                self.log_info("更新战绩时间失败", up_result)
+        record_data = {
+            "record_id": self.__record_id,
+            "round_idx": round_idx,
+            "tid": self.tid,
+            "is_all": True,
+            "is_dismiss": is_dismiss,
+            "record_data_list": record_data_list
+        }
+        await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES,record_data)
 
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))
@@ -848,3 +873,8 @@ class BaseCardRoom(BaseRoom):
 
     async def liu_ju(self):
         pass
+
+    def cancel_all_timer(self):
+        """ 取消所有延时 """
+        self.cancel_timer_dismiss()
+        super().cancel_all_timer()
