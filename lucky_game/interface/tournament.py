@@ -59,9 +59,12 @@ class TournamentUserPoint(GameAuthApi):
         """
         uid = kwargs.get("u_info").get("uid")
         cycle_id = self.check_int(req.args.get("cycle_id"), require=False, p_name="赛事周期ID")
+        if not cycle_id:
+            cycle_id = await TournamentCycleRC.get_current_cycle_id()
         sta, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
         if not sta:
-            user_point = {"cycle_id": cycle_id, "uid": uid, "score": 0, "rank_num": 0, "ticket": 0}
+            user_point = {"cycle_id": cycle_id, "uid": uid, "score": 0, "rank_num": 0, "ticket": 100}
+            await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
         return self.answer(data=user_point)
 
 class TournamentLeaderboard (GameAuthApi):

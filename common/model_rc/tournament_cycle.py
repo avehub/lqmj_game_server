@@ -131,10 +131,11 @@ class TournamentCycleRC(BaseCommonRC):
     async def get_current_cycle_id(cls) -> int:
         """ 获取当前赛事ID """
         cycle_id = await cls.conf.rds.get_item("cycle_id")
+        if isinstance(cycle_id, bytes):
+            cycle_id = json_parse(cycle_id.decode())
         if not cycle_id:
             sta, data = await cls.get_cycle_filter(status=1)
             cycle_id = data[0]["id"] if data else 0
             ex_time = 86400 - (tool_dt.cur_time()-tool_dt.day_begin())
-            print("ex_time", ex_time)
             await cls.conf.rds.set_item("cycle_id", cycle_id, ex_time=ex_time)
         return cycle_id

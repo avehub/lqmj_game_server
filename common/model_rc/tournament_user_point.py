@@ -164,6 +164,7 @@ class TournamentUserPointRC(BaseCommonRC):
             up = await cls.db_model.update_by_pk(data["id"], update_data)
             if not up:
                 return False, "更新失败"
+            await cls.cache_session_del(f"{cycle_id}:{uid}")
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"
         return True, "更新成功"
