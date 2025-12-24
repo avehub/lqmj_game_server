@@ -150,9 +150,12 @@ class CompetitionServer(BaseServer):
         price_type = conf_data.get("price_type")
         if price_type == PriceType.BY_POINT:
             cycle_id = await TournamentCycleRC.get_current_cycle_id()
-            user_point = await TournamentUserPointRC.get_user_point(cycle_id, uid)
+            sta, user_point = await TournamentUserPointRC.get_user_point(cycle_id, uid)
+            if not sta:
+                await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
+                _, user_point = await TournamentUserPointRC.get_user_point(cycle_id, uid)
             if user_point.get("ticket") < price:
-                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足")
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足", req_id=req_id)
             # 扣费
             await TournamentUserPointRC.update_int_field(uid,"ticket",price,"sub")
 

@@ -108,7 +108,7 @@ class TournamentUserPointRC(BaseCommonRC):
             if result:
                 return True, result
             query = {"cycle_id": cycle_id, "uid": uid}
-            result = data = await cls.db_model.filter(**query).first()
+            result = data = await cls.db_model.filter(**query).first().values()
             if not data:
                 return False, "用户未报名"
         except OperationalError as e:
