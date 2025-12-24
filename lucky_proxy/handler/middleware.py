@@ -14,16 +14,4 @@ class RepMiddle(BaseMeta):
         method = req.method
         if method in ('GET', 'OPTIONS'):
             return
-        username, _ = tool_jwt.get_jwinfo(req.token)
-        username = username or req.json.get('username') or ''
-        route = req.path.strip('/').split('/')[-1]
-        op_name = req.args.get('op_name')
-        if req.json:
-            sensitive_data_handler(req.json)
-
-        params = json_encode(req.json) or "{}"
-        status = rep.status
-        hint = ''
-        if hasattr(rep, 'raw_body'):
-            hint = rep.raw_body.get('msg') or ''
         return

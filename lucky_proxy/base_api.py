@@ -13,5 +13,5 @@ class BaseApi(BaseHttpApi, CommonApi):
 
 
 class ProxyAuthApi(BaseApi):
-    # decorators = [ProxyChecker]
-    decorators = []
+    decorators = [ProxyChecker]
+    #decorators = []
