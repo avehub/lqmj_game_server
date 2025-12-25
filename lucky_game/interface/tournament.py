@@ -89,7 +89,7 @@ class TournamentLeaderboard (GameAuthApi):
         if sta:
             data["rank_position"] = rank_position[0]
         else:
-            data["rank_position"] = {"uid": uid, "rank_position": 0, "score": 0}
+            data["rank_position"] = {"uid": uid, "rank_position": 0, "total_points": 0}
         return self.answer(data=data)
 
 class JoinTournament(GameAuthApi):
