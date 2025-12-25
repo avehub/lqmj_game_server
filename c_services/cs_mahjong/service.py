@@ -1,13 +1,14 @@
-from c_services.const.cs_enum_const import CmdRoom
+from c_services.const.cs_enum_const import CmdRoom, RoomStatus
 from c_services.cs_mahjong.player import Player
 from c_services.cs_mahjong.room_base import Room
 from common.public.enum_const import StaCode
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .const import FlowStatus
+from .service_robot_act import MahjongServerRobotAct
 from ..base.base_card_service import BaseCardService
 
 
-class MahjongServer(BaseCardService):
+class MahjongServer(BaseCardService,MahjongServerRobotAct):
     ROOM = Room
     PLAYER = Player
 
@@ -26,6 +27,10 @@ class MahjongServer(BaseCardService):
             CmdRoom.PLAY_CARDS.val: self.__on_player_chu_pai,
             CmdRoom.PLAYER_TIAN_TING.val: self.__on_player_tian_ting,
             CmdRoom.NOTIFY_POSITION.val: self.__notify_position,
+
+            CmdRoom.ROBOT_CAL_ACTION.val: self.on_robot_cal_action,
+            CmdRoom.ROBOT_CAL_PENG.val: self.on_robot_cal_peng,
+            CmdRoom.ROBOT_CAL_GANG.val: self.on_robot_cal_gang,
         })
 
     async def __on_player_pass(self, player, room, _):

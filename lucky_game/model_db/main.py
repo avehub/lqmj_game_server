@@ -12,6 +12,9 @@ from lucky_game.const import QuickChatType, PlatForm, MailSta, PullSta, AchieveT
 from c_services.const.cs_enum_const import RoomStatus
 from c_services.cs_mahjong.const import PlayType
 
+from lucky_admin.const import AdminStatus, AdminPermission, UserGroup, AnnouncementsStatus, WeightEnum, \
+    BackTaskSta, MailSta
+
 
 class User(DBModel):
     """用户总表"""
@@ -88,7 +91,7 @@ class UserBags(DBModel):
     uid = fields.IntField(max_length=28, index=True, default=0, description='玩家ID')
     good_id = fields.IntField(max_length=28, null=True, default=0, description='商品/道具ID')
     count = fields.IntField(max_length=28, null=True, default=0, description='数量')
-    end_time = fields.DatetimeField(null=True, default=None, description='商品有效期')
+    end_time = fields.BigIntField(null=True, default=None, description='商品有效期')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
     class Meta:
@@ -346,7 +349,7 @@ class Stores(DBModel):
     platform = fields.CharField(max_length=32, null=True,
                                 description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包')
+                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
@@ -366,7 +369,7 @@ class Goods(DBModel):
     sid = fields.IntField(max_length=10, index=True, default=0, description='商城ID')
     kind = fields.SmallIntField(max_length=2, null=True, description='特性：0虚拟 1实物')
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包')
+                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     sku = fields.CharField(max_length=64, unique=True, default=0, description="商品唯一标识")
@@ -436,7 +439,7 @@ class GuildUsers(DBModel):
 class Awards(DBModel):
     """ 奖励信息表 """
     award_id = fields.IntField(max_length=10, pk=True, description='奖励ID')
-    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 3活动 3任务 ')
+    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 3活动 3任务 4赛事-线上 5赛事-线下')
     level = fields.SmallIntField(max_length=2, index=True, description='奖励等级')
     name = fields.CharField(max_length=20, null=True, description='奖励名称')
     content = fields.JSONField(null=True, description='奖励内容：JSON存储')
@@ -467,7 +470,7 @@ class Mails(DBModel):
     attachment = fields.JSONField(null=True, description="附件信息：如奖励ID和数量等")
     sender = fields.CharField(max_length=28, default='', description="发送者")
     receiver = fields.IntField(max_length=28, index=True, null=False, description='接收者：玩家ID')
-    mail_sta = fields.IntEnumField(enum_type=MailSta, index=True, default=MailSta.UNREAD, description="邮件状态")
+    mail_sta = fields.IntEnumField(enum_type=MailSta, index=True, default=MailSta.NORMAL, description="邮件状态")
     attachment_sta = fields.IntEnumField(enum_type=PullSta, index=True, default=PullSta.UN_PULL, description="附件状态")
     receive_time = fields.BigIntField(max_length=28, null=True, default=0, description="接收时间")
     exp_time = fields.BigIntField(max_length=28, null=True, default=0, description="过期时间")
@@ -821,3 +824,262 @@ class ClubUserGroups(DBModel):
 
     class Meta:
         table = "club_user_groups"
+
+
+class TournamentTemplate(DBModel):
+    """ 赛事模板表 (支持多赛事并行) """
+    cycle_type = fields.BooleanField(description='周期类型:1-自然月,2-自然季')
+    final_round_offline = fields.BooleanField(default=True, description='总决赛是否线下:1-是,0-否')
+    id = fields.BigIntField(primary_key=True, description='模板ID')
+    online_rounds = fields.BooleanField(description='线上场次数:月赛为3')
+    qualifier_count = fields.IntField(description='晋级总决赛人数:10')
+    rounds_per_cycle = fields.BooleanField(description='每周期场次:月赛为4')
+    status = fields.BooleanField(default=True, description='模板状态:1-启用,0-停用')
+    template_name = fields.CharField(max_length=100, description='模板名称:月赛/季赛等')
+    template_type = fields.BooleanField(description='赛事类型:1-月赛,2-季赛,预留扩展')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        indexes = (("template_type", "status"),)  # 联合索引
+        table = "tournament_template"
+
+class TournamentCycle(DBModel):
+    """赛事周期表 (月度赛事实例)"""
+    cycle_end_date = fields.DateField(description='周期结束日期')
+    cycle_month = fields.IntField(description='月份:1-12')
+    cycle_name = fields.CharField(max_length=100, description='周期名称:2026年1月月赛')
+    cycle_start_date = fields.DateField(description='周期开始日期')
+    cycle_year = fields.IntField(null=True, description='年份:2026')
+    id = fields.BigIntField(primary_key=True, description='周期ID')
+    status = fields.IntField(default=False, description='状态:0-未开始,1-进行中,2-已结束,3-已归档')
+    template_id = fields.BigIntField(index=True, description='关联模板ID')
+    reward_id = fields.BigIntField(null=True, description='关联奖励ID')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        indexes = (("cycle_start_date", "cycle_end_date"),)  # 联合索引
+        table = "tournament_cycle"
+
+class TournamentRound(DBModel):
+    """赛事场次表 (周赛/总决赛)"""
+    current_participants = fields.IntField(default=0, description='当前报名人数')
+    cycle_id = fields.BigIntField(index=True, description='关联周期ID')
+    end_time = fields.DatetimeField(description='结束时间')
+    id = fields.BigIntField(primary_key=True, description='场次ID')
+    max_participants = fields.IntField(description='最大参赛人数')
+    register_end_time = fields.DatetimeField(description='报名截止时间')
+    register_start_time = fields.DatetimeField(description='报名开始时间')
+    round_name = fields.CharField(max_length=100, description='场次名称:第一周周赛')
+    round_number = fields.BooleanField(description='场次序号:1-4')
+    round_type = fields.BooleanField(description='场次类型:1-线上周赛,2-线下总决赛')
+    start_time = fields.DatetimeField(description='开始时间')
+    status = fields.BooleanField(default=False, description='状态:0-未开始,1-报名中,2-报名结束,3-比赛中,4-已结束')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        unique_together = (("cycle_id", "round_number"),)  # 唯一索引
+        indexes = (("status", "start_time"),("register_start_time", "register_end_time"),)  # 联合索引
+        table = "tournament_round"
+
+class TournamentRules(DBModel):
+    """赛事规则表"""
+    id = fields.BigIntField(primary_key=True, description='规则ID')
+    template_id = fields.BigIntField(description='关联模板ID')
+    rule_content = fields.JSONField(description='规则内容JSON')
+    # 默认规则示例: {"range_time": "时间范围", "game_platform": "比赛平台", "game_play": "游戏玩法", "join_type": "参与方式", "game_rule": "开赛规则"}
+    rule_type = fields.IntField(default=1, description='规则类型:1-默认规则')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        unique_together = (("template_id", "rule_type"),)  # 唯一索引
+        table = "tournament_rules"
+
+class TournamentRewards(DBModel):
+    """奖励配置表"""
+    id = fields.BigIntField(primary_key=True, description='奖励ID')
+    rank_end = fields.IntField(description='奖励范围排名结束，默认10')
+    rank_start = fields.IntField(description='奖励范围排名起始值，默认1')
+    reward_content = fields.JSONField(null=True, description='奖励内容')
+    reward_description = fields.CharField(max_length=255, null=True, description='奖励描述')
+    round_type = fields.BooleanField(index=True, description='场次类型:1-线上周赛,2-线下总决赛')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        table = "tournament_rewards"
+
+class TournamentUserPoints(DBModel):
+    """用户赛事积分表"""
+    id = fields.BigIntField(primary_key=True, description='积分ID')
+    cycle_id = fields.BigIntField(index=True, description='关联赛事周期ID')
+    score = fields.IntField(default=0, description='得分')
+    uid = fields.BigIntField(index=True, description='用户ID')
+    ticket = fields.IntField(index=True, description='门票')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        unique_together = (("cycle_id", "uid"),)  # 唯一索引
+        indexes = (("uid", "cycle_id"),)  # 联合索引
+        table = "tournament_user_points"
+
+class TournamentRegistration(DBModel):
+    """用户报名表"""
+    created = fields.BigIntField(default=0)
+    id = fields.BigIntField(primary_key=True, description='报名ID')
+    pid = fields.BigIntField(description='邀请用户ID')
+    register_status = fields.SmallIntField(default=1, description='报名状态:1-已报名,2-已取消,3-已确认参赛')
+    register_time = fields.DatetimeField(description='报名时间')
+    register_type = fields.SmallIntField(description='报名类型:1-主动报名,2-邀请报名')
+    cycle_id = fields.BigIntField(index=True, description='关联赛事周期ID')
+    uid = fields.BigIntField(index=True, description='用户ID')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        unique_together = (("cycle_id", "uid"),)  # 唯一索引
+        indexes = (("uid", "register_status"),("cycle_id", "register_status"),)  # 联合索引
+        table = "tournament_registration"
+
+
+class TournamentCycleLeaderboard(DBModel):
+    """周期排行榜表"""
+    cycle_id = fields.BigIntField(index=True, description='关联周期ID')
+    id = fields.BigIntField(primary_key=True, description='排行榜ID')
+    participated_rounds = fields.IntField(null=True, default=False, description='参与场次数')
+    total_points = fields.IntField(default=0, description='总积分')
+    uid = fields.BigIntField(index=True, description='用户ID')
+    updated = fields.BigIntField(default=0)
+
+
+    class Meta:
+        unique_together = (("cycle_id", "uid"),)  # 唯一索引
+        indexes = (("cycle_id", "total_points"),("cycle_id", "uid"),)  # 联合索引
+        table = "tournament_cycle_leaderboard"
+
+
+class TournamentUserHistory(DBModel):
+    """用户参赛历史表"""
+    cycle_id = fields.BigIntField(index=True, description='周期ID')
+    final_rank = fields.IntField(description='最终排名')
+    id = fields.BigIntField(primary_key=True, description='历史ID')
+    is_qualified = fields.SmallIntField(null=True, default=0, description='是否晋级/获奖:1-是,0-否')
+    participated_time = fields.DatetimeField(description='参赛时间')
+    points_earned = fields.IntField(default=0, description='获得积分')
+    reward_amount = fields.IntField(null=True, default=0, description='获得奖金')
+    round_id = fields.BigIntField(index=True, description='场次ID')
+    round_type = fields.SmallIntField(description='场次类型:1-周赛,2-总决赛')
+    uid = fields.BigIntField(index=True, description='用户ID')
+
+    class Meta:
+        unique_together = (("round_id", "uid"),)  # 唯一索引
+        indexes = (("uid", "send_status"),("send_status", "send_time"),)  # 联合索引
+        table = "tournament_user_history"
+
+class UserGoodExchange(DBModel):
+    """用户兑换记录表"""
+    id = fields.BigIntField(primary_key=True, description='兑换ID')
+    uid = fields.BigIntField(index=True, description='用户ID')
+    good_id = fields.BigIntField(index=True, description='商品（道具）ID')
+    good_type = fields.SmallIntField(description='商品（道具）类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10道具 11实物')
+    platform = fields.SmallIntField(description='平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏')
+    num = fields.IntField(default=1, description='兑换数量:默认=1')
+    phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
+    real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
+    region = fields.CharField(max_length=20, null=True, default="", description='地区/行政区域')
+    address = fields.CharField(max_length=256, null=True, default="", description='所在详细地址')
+    check_status = fields.SmallIntField(default=0, description='审核状态：0未审批 1拒绝 99通过')
+    exchange_no = fields.CharField(max_length=32, default="", description='兑换唯一编号')
+    express_id = fields.SmallIntField(description='快递平台：0无需发货 1顺丰 2京东 3圆通 4韵达 5中通 6申通 7极兔 8百世 9EMS 10德邦')
+    express_no = fields.CharField(max_length=64, null=True, default=0, description='快递单号')
+    status = fields.SmallIntField(index=True,default=0, description='领取状态：0未发放 1已发放 99已领取')
+    updated = fields.BigIntField(default=0)
+
+    class Meta:
+        table = "user_good_exchange"
+
+class ConfCompetition(DBModel):
+    """赛事玩法配置表"""
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=32, description='赛事名称')
+    cs_type = fields.IntField(index=True, default=0, description='子服务类型')
+    competition_type = fields.SmallIntField(default=0, description='赛事类型')
+    rule_detail = fields.JSONField(null=True, description='规则详情')
+    max_player = fields.IntField(description='最大玩家数')
+    price = fields.IntField(default=0, description='门票价格')
+    price_type = fields.SmallIntField(default=3, description='支付类型')
+    status = fields.SmallIntField(default=2, description='赛事状态')
+    start_time = fields.BigIntField(default=0, description='开始时间')
+    end_time = fields.BigIntField(default=0, description='结束时间')
+    total_round = fields.SmallIntField(default=1, description='总局数')
+    play_type = fields.SmallIntField(default=3, description='玩法类型')
+    max_match_player = fields.SmallIntField(default=0, description='最大开局人数')
+    daily_start_time = fields.CharField(max_length=32, description='每日开始时间')
+    daily_end_time = fields.CharField(max_length=32, description='每日结束时间')
+    total_match_round = fields.SmallIntField(default=1, description='比赛总轮次')
+
+    class Meta:
+        table = "conf_competition"
+
+
+class Admins(DBModel):
+    """ 后台管理员 """
+    username = fields.CharField(max_length=20, unique=True, default='', description='玩家昵称')
+    password = fields.CharField(max_length=64, default='', description='密码')
+    updated = fields.BigIntField(null=True, default=0, description='更新时间')
+    safe_key = fields.CharField(max_length=18, null=True, default='', description='安全密钥（不能泄密）')
+    valid_key = fields.CharField(max_length=16, null=True, default='', description='验证密钥')
+    status = fields.IntEnumField(
+        enum_type=AdminStatus, defualt=AdminStatus.PENDING, description='表示管理员账户的状态，如启用、禁用、待审核等。')
+    permission = fields.IntEnumField(
+        enum_type=AdminPermission, defualt=AdminPermission.P1, description='管理员权限')
+
+
+class RecordsAdminOperates(DBModel):
+    """ 后台操作记录 """
+    # _SPLIT_TYPE = 2
+    username = fields.CharField(max_length=20, index=True, default='', description='操作者')
+    route = fields.CharField(max_length=32, index=True, default='', description='路由')
+    op_name = fields.CharField(max_length=16, default='', description='操作名（描述）')
+    method = fields.CharField(max_length=8, default='', description='请求方法')
+    params = fields.JSONField(null=True, default='', description='请求参数')
+    status = fields.SmallIntField(description='状态码')
+    hint = fields.CharField(max_length=32, default='', description='提示')
+
+    class Meta:
+        table = "records_admin_operates"
+
+    @classmethod
+    async def insert_one(cls, username, route, op_name, method, params, status, hint=''):
+        data = {
+            "username": username,
+            "route": route,
+            "op_name": op_name,
+            "method": method,
+            "params": params,
+            "status": status,
+            "hint": hint,
+        }
+        return await cls.add_one(data)
+
+
+class RecordsAdminTimedTask(DBModel):
+    """ 后台定时任务记录 """
+    job_id = fields.CharField(max_length=32, pk=True, default='', description='任务id')
+    cmd = fields.SmallIntField(description='命令号')
+    name = fields.CharField(max_length=16, default='', description='任务名')
+    start_time = fields.BigIntField(null=True, default=0, description='开始时间')
+    params = fields.JSONField(null=True, default='', description='任务参数')
+    status = fields.IntEnumField(enum_type=BackTaskSta, description='状态: 0已取消 1待执行 2已执行')
+
+    class Meta:
+        table = "records_admin_timed_task"
+
+    @classmethod
+    async def insert_one(cls, job_id, cmd, name, start_time, params, status):
+        data = {
+            "job_id": job_id,
+            "cmd": cmd,
+            "name": name,
+            "start_time": start_time,
+            "params": params,
+            "status": status,
+        }
+        return await cls.add_one(data)

@@ -5,13 +5,16 @@ from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier
+from common.model_rc.tournament_cycle import TournamentCycleRC
 from common.public.conf import LIVE_SERVER, CertificationConf
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.logic.tournament import TournamentLogic
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.script.timed_task import BaseTimed
+
 
 
 class TimedService:
@@ -97,7 +100,6 @@ class TimedService:
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, minute='*/3')  # 每5分钟执行一次 测试
 
         # 每日一次任务
-        print("写入待执行任务")
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
 
     async def __every_day_tasks(self):
@@ -106,6 +108,8 @@ class TimedService:
         self.log_info(f"每日一次任务开始 {now_time}")
         # 防沉迷过期时间检查
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
+        # 赛季状态检查更新
+        self.__scheduler.add_date_job(self.check_tournament_time, run_date=now_time + timedelta(hours=0))
 
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
@@ -170,6 +174,20 @@ class TimedService:
                 text=f"过期时间：{CertificationConf.USEFUL_TIME} 请及时登录网络游戏防沉迷实名认证系统进行更新，否则将无法使用实名认证功能。",
                 message_url=CertificationConf.DOMAIN,
             )
+
+    @classmethod
+    async def check_tournament_time(self):
+        """ 检查赛季周期是否过期 """
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
+        if cycle_data:
+            now = tool_dt.cur_time()
+            end_time = datetime.strptime(cycle_data["cycle_end_date"], "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            if now > end_time_tamp:
+                sta = await TournamentLogic().up_cycle_status(cycle_id)
+                self.log_info(f"赛季周期已结束，更新赛季周期状态：{sta}")
+
 
 
     @classmethod

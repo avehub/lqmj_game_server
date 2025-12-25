@@ -1,7 +1,7 @@
 from nsanic.libs.tool import json_encode
 from nsanic.orm.rc_model import RCModel
 
-from lucky_admin.model_db.main import Admins
+from lucky_game.model_db.main import Admins
 
 
 class BaseAdminRC(RCModel):

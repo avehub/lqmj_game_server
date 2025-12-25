@@ -260,3 +260,18 @@ class UpWechatUserInfo(GameAuthApi):
         if not data:
             return self.answer(code=self.sta_code.FAIL, hint=u_data.get("errmsg", "已是最新用户信息，无需更新"))
         return self.answer(data=data)
+
+class UserInvite(GameAuthApi):
+    """ 邀请用户 """
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        invite_code = self.check_str(
+            req.json.get("invite"),
+            require=True,
+            p_name="invite"
+        )
+        # 调用分销模块接口
+        # sta, e = await BaseUserRC.invite_user(u_info.get("uid"), invite_code)
+        # if not sta:
+        #     return self.answer(code=self.sta_code.FAIL, hint=e)
+        return self.answer()

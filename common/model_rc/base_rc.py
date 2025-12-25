@@ -1,12 +1,16 @@
 import decimal
+import datetime
+
 from typing import Union
 from nsanic.libs.tool import json_parse, json_encode
 from nsanic.orm.rc_model import RCModel
 from tortoise.expressions import Q
 from tortoise.exceptions import OperationalError
 from common.public.common_class import CommonApi
-import math
 from decimal import Decimal
+from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, RUN_FAST, WeChatConf, SERVER_SECRET_KEY
+
+from common.public.enum_const import DbKey
 
 
 class BaseRC(RCModel):
@@ -262,6 +266,20 @@ class BaseRC(RCModel):
 
 
 class BaseCommonRC(RCModel, CommonApi):
+    @classmethod
+    def makeup_db_conf(cls, model_list: list):
+        server_name = "lucky_game"
+        return {
+            'apps': {
+                server_name: {'models': model_list},
+                f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
+                                           'default_connection': DbKey.LOG}
+            },
+            'connections': CONF_DB,
+            'use_tz': False,
+            'timezone': "Asia/Shanghai"
+        }
+
 
     @classmethod
     async def page_result(cls, page: int, page_size: int, total: int, data: list):
@@ -327,5 +345,17 @@ class BaseCommonRC(RCModel, CommonApi):
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"
         return True, "更新成功"
+
+    @classmethod
+    async def serialize_dates(cls,data):
+        if isinstance(data, (list, tuple)):
+            return [await cls.serialize_dates(item) for item in data]
+        elif isinstance(data, dict):
+            return {k: await cls.serialize_dates(v) for k, v in data.items()}
+        elif hasattr(data, '__dict__'):
+            return await cls.serialize_dates(data.__dict__)
+        elif isinstance(data, datetime.date):
+            return data.isoformat()
+        return data
 
 
