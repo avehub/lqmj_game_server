@@ -49,6 +49,7 @@ class TeamMemberQuery(ProxyAuthApi):
         last_amount = self.check_int(req.args.get("last_amount"), require=False, p_name="last_amount")
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10,
                                    maxval=100)
+        page = self.check_int(req.args.get("page"), default=1, require=False, p_name="page_size")
         sort = self.check_int(req.args.get("sort"), require=False, p_name="sort", maxval=2, minval=1)
         promotion_player_page = await ProxySummary.query_team_member_page(level1_proxy_id=proxy_id, page_size=page_size,
                                                                           last_id=last_id,

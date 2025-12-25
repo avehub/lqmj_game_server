@@ -41,8 +41,8 @@ class ProxySummary(LogMeta):
     @classmethod
     async def query_team_member_page(cls, level1_proxy_id: int, page_size: int, last_id: int, promotion_id=None,
                                      sort=None):
-        sql = " select t.id ,0 total_player,0 total_amount ,t.created, '' avatar from " \
-              f" proxy_user t   " \
+        sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
+              f" from proxy_user_wallet t left join  user u  on u.uid=t.id   " \
               f" where   t.level1_proxy_id={level1_proxy_id}"
         if last_id:
             sql = sql + f" and t.id <{last_id}"

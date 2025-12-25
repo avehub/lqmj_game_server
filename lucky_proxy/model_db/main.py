@@ -22,7 +22,7 @@ class ProxyUser(DBModel):
     phone = fields.CharField(max_length=20, null=True, default='', description='手机号')
     unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     created = fields.BigIntField(null=True, default=0, description='更新时间')
-    proxy_level = fields.IntField(null=True, default=1, description='代理等级等级')
+    proxy_level = fields.IntField(null=True, default=1, description='代理等级')
     auth_status = fields.IntField(null=True, default=0, description='认证状态 1、已认证 0、未认证')
     level1_proxy_id = fields.IntField(max_length=20, default=0, description='一级代理id')
     promotion_code = fields.CharField(max_length=10, null=False, description='专属邀请码/推广码')
@@ -60,11 +60,11 @@ class ProxyUserWallet(DBModel):
     """代理用户钱包"""
     id = fields.IntField(max_length=20, pk=True, description='代理（服务商id）')
     level1_proxy_id = fields.IntField(max_length=20,  description='一级代理id')
-    total_income = fields.DecimalField(max_digits=10, decimal_places=2, description='总收入累计总收益')
+    total_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,description='总收入累计总收益')
     room_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='房卡收益（')
     assistance_program_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                                     description='助农收益')
-
+    proxy_level = fields.IntField(null=True, default=1, description='代理等级')
     total_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00, description='总推广额')
     room_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00, description='房卡推广总额')
     assistance_program_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00,
@@ -74,7 +74,7 @@ class ProxyUserWallet(DBModel):
                                               description='一级代理（上级）获得的收益')
     level1_assistance_program_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                                            description='级代（上级）理获得的助农收益')
-    level1_room_card_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
+    level1_room_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                                   description='一级代理（上级）获得的房卡收益')
 
     update_time = fields.BigIntField(description='更新时间')

@@ -1,8 +1,10 @@
 from datetime import datetime
 from nsanic.libs.component import LogMeta
 
+from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
-from lucky_proxy.logic.order_sync import OrderSync, PromotionAddUserDTO, PromotionOrderDataDTO
+from lucky_proxy.const import ProxyLevel
+from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
 from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser
 
 """
@@ -14,7 +16,19 @@ class GameDataAdapter(LogMeta):
     conf: ConfSrv = conf_srv
 
     """
-    同步分销订单数据
+    增加一级代理
+    """
+
+    @classmethod
+    async def add_level1_proxy(cls, data: Level1ProxyDTO):
+        proxy_user: ProxyUser = await  ProxyUser.get_by_pk(data.player_id, field=["id"])
+        if proxy_user:
+            return False, "EXISTS"
+        return await GameDataSync.init_level1_proxy(Level1ProxyDTO)
+
+
+    """
+     同步分销订单数据
     """
 
     @classmethod
@@ -35,7 +49,7 @@ class GameDataAdapter(LogMeta):
                 f"忽悠游戏同步代理订单数据uid={data.uid},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
             return 0
 
-        await OrderSync.save_dividend_records(data, relation, proxy_user)
+        await GameDataSync.save_dividend_records(data, relation, proxy_user)
 
     """
     同步邀请新增用户
