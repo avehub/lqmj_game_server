@@ -316,8 +316,9 @@ class CompetitionServer(BaseServer):
             competition_result.append({
                 "uid": uid,
                 "rank": rank,
-                "score": ticket if score>=0 else ticket +score,
-                "points": points
+                "score": 0 if score>=0 else score,
+                "points": points,
+                "ticket": ticket if score>=0 else ticket +score
             })
             self.__player_info.pop(uid)
             await self.update_user_point(uid, self.__current_cycle_id, points, 0 if score>=0 else score)
