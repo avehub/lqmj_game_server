@@ -114,4 +114,10 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
             result = data[0]
         return True if result else False, result
 
+    @classmethod
+    async def get_uid_rank_position(cls, cycle_id: int, uid: int):
+        """获取用户在赛事周期内的排行榜信息"""
+        sql = f"SELECT t1.uid,t1.score,(SELECT COUNT(*) + 1 FROM tournament_user_points t2 WHERE t2.cycle_id = t1.cycle_id AND t2.score > t1.score) as rank_position FROM tournament_user_points t1 WHERE t1.cycle_id = {cycle_id} AND t1.uid = {uid}"
+        result = await cls.db_model.exec_query(sql)
+        return True if result else False, result
 

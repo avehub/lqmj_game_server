@@ -156,9 +156,9 @@ class PaymentLogic:
             # 充值处理
             pass
         # 扣除商品数量
-        if express.get("total") > 0:
+        if express.get("kind") and express.get("total") > 0:
             order = data_before.get("order")
-            await GoodRC.update_int_field(express["good_id"], "total", order["num"], "sub")
+            await GoodRC.update_int_field(express["good_id"], "total", order["order"].get("num"), "sub")
 
         return sta, msg, result
 
@@ -304,6 +304,7 @@ class PaymentLogic:
             "trade_time": order.created,
             "trade_amount": order.amount,
             "pay_mode": order.pay_mode,
+            "num": order.num,
         }
         return True, return_data
 

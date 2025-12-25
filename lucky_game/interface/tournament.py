@@ -80,10 +80,16 @@ class TournamentLeaderboard (GameAuthApi):
         """
         获取赛事排行榜
         """
+        uid = kwargs.get("u_info").get("uid")
         cycle_id = self.check_int(req.args.get("cycle_id"), require=True, p_name="赛事周期ID")
         page = self.check_int(req.args.get("page"), require=False, default=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")
         sta, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=page, page_size=page_size)
+        sta, rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_position(cycle_id, uid)
+        if sta:
+            data["rank_position"] = rank_position[0]
+        else:
+            data["rank_position"] = {"uid": uid, "rank_position": 0, "score": 0}
         return self.answer(data=data)
 
 class JoinTournament(GameAuthApi):

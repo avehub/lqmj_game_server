@@ -439,7 +439,7 @@ class GuildUsers(DBModel):
 class Awards(DBModel):
     """ 奖励信息表 """
     award_id = fields.IntField(max_length=10, pk=True, description='奖励ID')
-    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 3活动 3任务 4赛事')
+    type = fields.SmallIntField(max_length=2, index=True, description='奖励类型：1系统 2牌友会 3活动 3任务 4赛事-线上 5赛事-线下')
     level = fields.SmallIntField(max_length=2, index=True, description='奖励等级')
     name = fields.CharField(max_length=20, null=True, description='奖励名称')
     content = fields.JSONField(null=True, description='奖励内容：JSON存储')
