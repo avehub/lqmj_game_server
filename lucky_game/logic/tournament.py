@@ -78,3 +78,33 @@ class TournamentLogic:
         }]
         return await UserBagRC.update_user_bag(uid, express)
 
+
+    async def up_cycle_status(self, cycle_id: int):
+        """ 更新赛事周期状态 """
+        sta, _ = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
+        if sta:
+            next_cycle_id = 1 + cycle_id
+            new_sta, new_cycle = await TournamentCycleRC.get_cycle_info(next_cycle_id)
+            if new_sta and new_cycle:
+                if new_cycle["status"] != TournamentCycleRC.CYCLE_STATUS_STARTING:
+                    await self.up_cycle_status(next_cycle_id)
+                await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
+        return True
+
+
+    async def cycle_settel(self, cycle_id: int):
+        """ 赛事周期结算 """
+        # 将用户上赛季积分清空
+
+        # 统计赛季周期获奖用户
+
+        # 发送排行榜奖励
+        pass
+
+    async def cycle_point_reset(self, cycle_id: int):
+        """ 赛事周期游戏积分重置 """
+        pass
+
+
+
+

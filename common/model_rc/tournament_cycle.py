@@ -13,6 +13,12 @@ class TournamentCycleRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
     expired_mode = 0
 
+    CYCLE_STATUS_UNSTART = 0  # 未开始
+    CYCLE_STATUS_STARTING = 1  # 进行中
+    CYCLE_STATUS_END = 2  # 结束
+    CYCLE_STATUS_SETTLE = 3  # 结算
+
+
 
     @classmethod
     async def cache_session_set(cls, query, value):

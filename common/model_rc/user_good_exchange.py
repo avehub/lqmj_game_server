@@ -3,9 +3,14 @@
 """
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
+from tortoise.transactions import in_transaction
+
 from common.model_rc.base_rc import BaseCommonRC
+from common.public.enum_const import DbKey
 from lucky_game.model_db.main import UserGoodExchange
 from tortoise.exceptions import OperationalError
+
+from lucky_game.model_rc.base_bag import UserBagRC
 
 
 class UserGoodExchangeRC(BaseCommonRC):
@@ -31,9 +36,16 @@ class UserGoodExchangeRC(BaseCommonRC):
                 "status": status,
                 "express_id": 0,
             }
-            new = await cls.db_model.add_one(data)
-            if not new:
-                return False, "添加失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                new = await cls.db_model.add_one(data)
+                if not new:
+                    return False, "添加失败"
+                # 更新用户背包
+                express = [{
+                    "good_id": good_id,
+                    "count": -num,
+                }]
+                await UserBagRC.update_user_bag(uid, express)
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, new

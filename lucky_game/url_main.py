@@ -154,11 +154,11 @@ class MainBp(BaseBlue):
         Urls("/TournamentUserPoint/", TournamentUserPoint),  # 获取用户赛事积分
         Urls("/TournamentLeaderboard/", TournamentLeaderboard),  # 获取赛事排行榜
         Urls("/JoinTournament/", JoinTournament),  # 加入赛事
-        Urls("/CompetitionConfig/", CompetitionConfig),
+        Urls("/CompetitionConfig/", CompetitionConfig),  # 获取赛事玩法配置
 
         # 背包相关
-        Urls("/BagList/", BagList),
-        Urls("/UserExchangeList/", UserExchangeList),
-        Urls("/UserInformationGather/", UserInformationGather),
-        Urls("/DropBagItem/", DropBagItem),
+        Urls("/BagList/", BagList),  # 获取背包列表
+        Urls("/UserExchangeList/", UserExchangeList),  # 获取用户兑换列表
+        Urls("/UserInformationGather/", UserInformationGather),  # 道具兑换
+        Urls("/DropBagItem/", DropBagItem),  # 删除背包过期道具
     ]

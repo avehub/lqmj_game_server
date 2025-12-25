@@ -33,17 +33,14 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         return await cls.conf.rds.del_item(f"{cls.tb_name}:{query}")
 
     @classmethod
-    async def add_leaderboard(cls, cycle_id, round_id, uid, total_points, participated_rounds, final_rank, is_qualified_final):
+    async def add_leaderboard(cls, cycle_id, uid, total_points, participated_rounds: int = 1):
         """新增排行榜"""
         try:
             data = {
                 "cycle_id": cycle_id,
-                "round_id": round_id,
                 "uid": uid,
                 "total_points": total_points,
                 "participated_rounds": participated_rounds,
-                "final_rank": final_rank,
-                "is_qualified_final": is_qualified_final,
             }
             new = await cls.db_model.add_one(data)
             if not new:
@@ -68,11 +65,10 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         """更新排行榜"""
         try:
             query = {"leaderboard_id": leaderboard_id}
-            valid_fields = {"cycle_id", "round_id", "uid", "total_points", "updated", "participated_rounds", "final_rank", "is_qualified_final"}
+            valid_fields = {"cycle_id", "uid", "total_points", "updated", "participated_rounds"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)
-                await cls.cache_session_del(leaderboard_id)
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, "成功"
@@ -89,7 +85,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
                 query["cycle_id"] = cycle_id
             if uid is not None:
                 query["uid"] = uid
-            order_field = "-id"
+            order_field = "-total_points"
             if page and page_size:
                 total = await cls.db_model.filter(**query).count()
                 data = []

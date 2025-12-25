@@ -3,6 +3,8 @@
 """
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
+
+from c_services.const.cs_enum_const import CmdWorkers
 from common.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_db.main import TournamentCycle, TournamentUserPoints
 from tortoise.exceptions import OperationalError
@@ -60,8 +62,13 @@ class TournamentUserPointRC(BaseCommonRC):
                 score = up_data.get("score", 0)
                 ticket = up_data.get("ticket", 0)
                 await cls.add_user_point(cycle_id, uid, score, ticket)
+                replay_msg_data = {
+                    "uid": uid,
+                    "cycle_id": cycle_id,
+                    "total_points": score,
+                }
             else:
-                valid_fields = {"score", "ticket", "rank_num", "updated"}
+                valid_fields = {"score", "ticket", "updated"}
                 update_data = {k: v for k, v in up_data.items() if k in valid_fields}
                 if update_data:
                     if has.score:
@@ -70,6 +77,14 @@ class TournamentUserPointRC(BaseCommonRC):
                         update_data["ticket"] = has.ticket + update_data["ticket"]
                     await cls.db_model.filter(**query).update(**update_data)
                     await cls.cache_session_del(f"{cycle_id}:{uid}")
+
+                replay_msg_data = {
+                    "uid": uid,
+                    "cycle_id": cycle_id,
+                    "total_points": update_data.get("score", 0),
+                }
+            # 更新排行榜
+            await cls.push_task2worker(CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD, replay_msg_data)
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, "成功"

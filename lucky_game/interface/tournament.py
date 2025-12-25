@@ -65,6 +65,14 @@ class TournamentUserPoint(GameAuthApi):
         if not sta:
             user_point = {"cycle_id": cycle_id, "uid": uid, "score": 0, "rank_num": 0, "ticket": 100}
             await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
+        else:
+            # 计算用户排名
+            _, data = await TournamentUserPointRC.get_point_filter(cycle_id=cycle_id)
+            if data:
+                for item in data:
+                    if item["uid"] == uid:
+                        user_point["rank_num"] = data.index(item) + 1
+                        break
         return self.answer(data=user_point)
 
 class TournamentLeaderboard (GameAuthApi):
@@ -72,7 +80,6 @@ class TournamentLeaderboard (GameAuthApi):
         """
         获取赛事排行榜
         """
-        uid = kwargs.get("u_info").get("uid")
         cycle_id = self.check_int(req.args.get("cycle_id"), require=True, p_name="赛事周期ID")
         page = self.check_int(req.args.get("page"), require=False, default=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")

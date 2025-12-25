@@ -349,7 +349,7 @@ class Stores(DBModel):
     platform = fields.CharField(max_length=32, null=True,
                                 description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包')
+                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")
@@ -914,7 +914,6 @@ class TournamentUserPoints(DBModel):
     score = fields.IntField(default=0, description='得分')
     uid = fields.BigIntField(index=True, description='用户ID')
     ticket = fields.IntField(index=True, description='门票')
-    rank_num = fields.IntField(index=True, description='排名')
     updated = fields.BigIntField(default=0)
 
     class Meta:
@@ -927,9 +926,9 @@ class TournamentRegistration(DBModel):
     created = fields.BigIntField(default=0)
     id = fields.BigIntField(primary_key=True, description='报名ID')
     pid = fields.BigIntField(description='邀请用户ID')
-    register_status = fields.BooleanField(default=True, description='报名状态:1-已报名,2-已取消,3-已确认参赛')
+    register_status = fields.SmallIntField(default=1, description='报名状态:1-已报名,2-已取消,3-已确认参赛')
     register_time = fields.DatetimeField(description='报名时间')
-    register_type = fields.BooleanField(description='报名类型:1-主动报名,2-邀请报名')
+    register_type = fields.SmallIntField(description='报名类型:1-主动报名,2-邀请报名')
     cycle_id = fields.BigIntField(index=True, description='关联赛事周期ID')
     uid = fields.BigIntField(index=True, description='用户ID')
     updated = fields.BigIntField(default=0)
@@ -943,12 +942,9 @@ class TournamentRegistration(DBModel):
 class TournamentCycleLeaderboard(DBModel):
     """周期排行榜表"""
     cycle_id = fields.BigIntField(index=True, description='关联周期ID')
-    final_rank = fields.IntField(description='最终排名')
     id = fields.BigIntField(primary_key=True, description='排行榜ID')
-    is_qualified_final = fields.BooleanField(null=True, default=False, description='是否晋级总决赛:1-是,0-否')
-    participated_rounds = fields.BooleanField(null=True, default=False, description='参与场次数')
-    round_id = fields.BigIntField(description='关联场次ID')
-    total_points = fields.IntField(default=0, description='总积分(单场次累计)')
+    participated_rounds = fields.IntField(null=True, default=False, description='参与场次数')
+    total_points = fields.IntField(default=0, description='总积分')
     uid = fields.BigIntField(index=True, description='用户ID')
     updated = fields.BigIntField(default=0)
 
@@ -964,12 +960,12 @@ class TournamentUserHistory(DBModel):
     cycle_id = fields.BigIntField(index=True, description='周期ID')
     final_rank = fields.IntField(description='最终排名')
     id = fields.BigIntField(primary_key=True, description='历史ID')
-    is_qualified = fields.BooleanField(null=True, default=False, description='是否晋级/获奖:1-是,0-否')
+    is_qualified = fields.SmallIntField(null=True, default=0, description='是否晋级/获奖:1-是,0-否')
     participated_time = fields.DatetimeField(description='参赛时间')
     points_earned = fields.IntField(default=0, description='获得积分')
     reward_amount = fields.IntField(null=True, default=0, description='获得奖金')
     round_id = fields.BigIntField(index=True, description='场次ID')
-    round_type = fields.BooleanField(description='场次类型:1-周赛,2-总决赛')
+    round_type = fields.SmallIntField(description='场次类型:1-周赛,2-总决赛')
     uid = fields.BigIntField(index=True, description='用户ID')
 
     class Meta:

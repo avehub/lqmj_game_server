@@ -220,6 +220,7 @@ class CmdWorkers(BaseEnum):
     USER_EVENT_TRACKING = 28, "用户事件追踪"
     UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
     INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
+    UPDATE_CYCLE_POINT_LEADERBOARD = 31, "更新赛季积分排行榜"
 
 
 @unique
