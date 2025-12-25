@@ -1166,6 +1166,7 @@ class S2CCompetitionOver:
             rank_info.rank = data.get("rank") or 0
             rank_info.score = data.get("score") or 0
             rank_info.points = data.get("points") or 0
+            rank_info.ticket = data.get("ticket") or 0
         return obj
 
 class S2CStartCompetition:
