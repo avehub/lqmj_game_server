@@ -511,8 +511,9 @@ class BaseCardRoom(BaseRoom):
         round_idx = self.round_idx
         if self.__replay_msg_data:
             # 游戏结束一轮结束战绩插入
-            replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
-            await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
+            if self.__match_room_id == 0:
+                replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
+                await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
         else:
             if round_idx > 1:
                 round_idx = self.round_idx - 1
@@ -527,7 +528,8 @@ class BaseCardRoom(BaseRoom):
                         "tid": self.tid,
                         "is_all": False
                     }
-                    send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, data, p.uid))
+                    if self.__match_room_id == 0:
+                        send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, data, p.uid))
             # 战绩更新局数
             if send_list:
                 await asyncio.gather(*send_list)
@@ -569,7 +571,8 @@ class BaseCardRoom(BaseRoom):
             "is_dismiss": is_dismiss,
             "record_data_list": record_data_list
         }
-        await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
+        if self.__match_room_id == 0:
+            await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
 
         # 比赛房间结束
         if self.__match_room_id > 0:

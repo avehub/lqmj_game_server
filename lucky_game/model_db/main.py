@@ -936,7 +936,7 @@ class TournamentCycleLeaderboard(DBModel):
 
     class Meta:
         unique_together = (("round_id", "uid"),)  # 唯一索引
-        indexes = (("uid", "send_status"),("send_status", "send_time"),)  # 联合索引
+        indexes = (("cycle_id", "uid"), ("cycle_id", "final_rank"),)  # 修正的联合索引
         table = "tournament_user_history"
 
 class UserGoodExchange(DBModel):
