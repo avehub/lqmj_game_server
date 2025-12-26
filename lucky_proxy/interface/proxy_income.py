@@ -8,6 +8,7 @@ from lucky_proxy.base_api import ProxyAuthApi
 from sanic import Request
 
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter, PromotionOrderDataDTO, PromotionAddUserDTO
+from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
 
@@ -16,14 +17,18 @@ from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, Pro
 """
 
 
-class ProxyWallet(ProxyAuthApi):
+class ProxyIncomeQuery(ProxyAuthApi):
 
     async def get(self, req: Request, **kwargs):
-        wallet = await ProxyUserWallet.get_by_pk(kwargs.get("uid"),
-                                                 field=["assistance_program_income", "room_income"])
+        wallet = await ProxyUserWallet.get_by_pk(kwargs.get("uid"), field=["assistance_program_income", "room_income"])
+        today = datetime.now().strftime('%Y-%m-%d')
+        month = datetime.now().strftime('%Y-%m')
+        today_income = await ProxyOrderStatistics.proxy_today_income_query(kwargs.get("uid"), today)
+        month_income = await ProxyOrderStatistics.proxy_month_income_query(kwargs.get("uid"), month)
+
         income = {
-            "today_income": 0.00,
-            "current_month_income": 0.00,
+            "today_income": today_income.get("income"),
+            "current_month_income": month_income.get("income"),
             "assistance_program_income": wallet.get("assistance_program_income"),
             "room_income": wallet.get("room_income")
         }
@@ -89,8 +94,8 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
         order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
 
         last_id = self.check_int(req.args.get("last_id"), require=False, p_name="last_id")
-        page_size = self.check_int(req.args.get("page_size"), default=20, require=False
-                                   , p_name="page_size", minval=10, maxval=100)
+        page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10, maxval=100)
+
         sql_offset = ""
         order_day_query = ""
         if last_id and last_id > 0:
@@ -100,18 +105,20 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
         sql = f"""
             select 
                   t.proxy_id
-                  ,sum(t.level1_proxy_income) level1_total_income
+                 ,u.name
+                 ,u.avatar
+                 ,sum(t.level1_proxy_income) level1_total_income
                  ,sum(t.order_amount) total_amount
                  ,sum(t.proxy_income) total_income
                  ,sum(case when t.order_type=1 then t.proxy_income else 0 end) total_room_income
                  ,sum(case when t.order_type=2 then t.proxy_income else 0 end) total_assistance_program_income
                  ,sum(case when t.order_type=1 then t.order_amount else 0 end) total_room_amount
                  ,sum(case when t.order_type=2 then t.order_amount else 0 end) total_assistance_program_amount
-            from proxy_order_dividend_records t  where  t.level1_proxy_id={proxy_id}
-                  and  t.order_month='{order_month}'
+            from proxy_order_dividend_records t  LEFT JOIN  user u  on u.uid=t.proxy_id  
+                  where  t.level1_proxy_id={proxy_id} and  t.order_month='{order_month}'
                   {sql_offset}
                   {order_day_query}
-            group by t.proxy_id  order by t.proxy_id desc  limit {page_size}
+            group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
         """
         detail = await ProxyOrderDividendRecords.exec_sql(sql, query=True)
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
@@ -160,5 +167,7 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         """
         json = req.json
         p = PromotionOrderDataDTO(111, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
-        await  GameDataAdapter.sync_promotion_order_data(p)
+        p = Level1ProxyDTO(888,'888','19110988388')
+        #await  GameDataAdapter.sync_promotion_order_data(p)
+        await  GameDataAdapter.add_level1_proxy(p)
         self.answer(self.sta_code.PASS, {}, hint="查询成功!")

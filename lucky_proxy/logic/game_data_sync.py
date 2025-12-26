@@ -6,14 +6,27 @@ from nsanic.libs.component import LogMeta
 from tortoise.transactions import in_transaction
 
 from common.public.enum_const import DbKey
+from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel
-from lucky_proxy.interface.proxy_income import ProxyWallet
 from lucky_proxy.model_db.main import ProxyPromotionRelation, ProxyOrderDividendRecords, ProxyUser, ProxyUserWallet
 
 """
 订单数据
 """
+
+
+@dataclass
+class Level1ProxyDTO:
+    # 玩家id
+    player_id: int
+    # unionid
+    unionid: str
+    phone: int
+    # 昵称
+    name: int = None
+    # 头像
+    avatar: str = None
 
 
 @dataclass
@@ -58,7 +71,7 @@ class PromotionAddUserDTO:
 """
 
 
-class OrderSync(LogMeta):
+class GameDataSync(LogMeta):
     conf: ConfSrv = conf_srv
 
     @classmethod
@@ -119,7 +132,7 @@ class OrderSync(LogMeta):
                 await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount, data.order_type)
                 # TODO 增加 用户钱包数据
         except Exception as e:
-            cls.log_err(f"分销订单入库失败，error：{e},data:{data}")
+            cls.log_err(f"【重要日志】分销订单入库失败，error：{e},data:{data}")
 
     @classmethod
     async def update_wallet(cls, proxy_id, proxy_income, level1_proxy_income, order_amount, order_type):
@@ -128,22 +141,43 @@ class OrderSync(LogMeta):
             sql = f"""
                  update proxy_user_wallet 
                         set  total_player=total_player+1
-                         ,set  total_amount=total_amount+{order_amount}
-                        ,set  total_income=total_amount+{proxy_income}
-                        ,set  level1_proxy_income=level1_proxy_income+{level1_proxy_income}
-                        ,set   room_amount=room_amount+{order_amount}
-                        ,set  room_income=room_income+{proxy_income}
+                        , total_amount=total_amount+{order_amount}
+                        ,  total_income=total_income+{proxy_income}
+                        ,  room_amount=room_amount+{order_amount}
+                        ,  room_income=room_income+{proxy_income}
+                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
+                        ,  level1_room_income=level1_room_income+{level1_proxy_income}
                  where id={proxy_id}
                  """
-        if order_type == 1:
+        if order_type == 2:
             sql = f"""
                  update proxy_user_wallet 
                         set  total_player=total_player+1
-                         ,set  total_amount=total_amount+{order_amount}
-                        ,set  total_income=total_amount+{proxy_income}
-                        ,set  level1_proxy_income=level1_proxy_income+{level1_proxy_income}
-                        ,set   assistance_program_amount=assistance_program_amount+{order_amount}
-                        ,set  assistance_program_income=assistance_program_income+{proxy_income}
+                        ,  total_amount=total_amount+{order_amount}
+                        ,  total_income=total_income+{proxy_income}
+                        ,  assistance_program_amount=assistance_program_amount+{order_amount}
+                        ,  assistance_program_income=assistance_program_income+{proxy_income}
+                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
+                        ,  level1_assistance_program_income=level1_assistance_program_income+{level1_proxy_income}
                  where id={proxy_id}
                  """
-        return ProxyUserWallet.exec_sql(sql)
+        return await ProxyUserWallet.exec_sql(sql)
+
+    @classmethod
+    async def init_level1_proxy(cls, data: Level1ProxyDTO):
+        try:
+            add_param = {
+                "id": data.player_id,
+                "unionid": data.unionid,
+                "phone": data.phone,
+                "name": data.name,
+                "avatar": data.avatar,
+                "level": ProxyLevel.LEVEL_1,
+                "join_day": datetime.now().strftime("%Y-%m-%d"),
+                "promotion_code": UtilsTool.generate_invite_code(10),
+            }
+            await ProxyUser.add_one(add_param)
+        except Exception as e:
+            cls.log_err(f"【重要日志】初始化一级代理失败，error：{e},data:{data}")
+            return False, 'ERROR'
+        return True, ''

@@ -35,3 +35,18 @@ class ProxyOrderStatistics(LogMeta):
         if detail:
             return detail[0]
         return []
+
+    @classmethod
+    async def proxy_today_income_query(cls, proxy_id: int, today: str):
+        sql = f"""
+           select  ifnull(sum(t.proxy_income),0.00)  income  from proxy_order_dividend_records t 
+           where  t.proxy_id={proxy_id}  and  t.order_day='{today}' 
+        """
+        return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
+    @classmethod
+    async def proxy_month_income_query(cls, proxy_id: int, month: str):
+        sql = f"""
+           select  ifnull(sum(t.proxy_income),0.00)  income  from proxy_order_dividend_records t 
+           where  t.proxy_id={proxy_id}  and  t.order_month='{month}' 
+        """
+        return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)

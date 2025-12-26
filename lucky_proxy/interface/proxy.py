@@ -2,10 +2,14 @@
 import decimal
 from datetime import datetime
 
+from tortoise.transactions import in_transaction
+
+from common.public.enum_const import DbKey
+from common.utils.utils import UtilsTool
 from lucky_proxy.base_api import BaseApi, ProxyAuthApi
 from sanic import Request
 from lucky_proxy.logic.promotion_code import PromotionCode
-from lucky_proxy.model_db.main import ProxyUser, ProxyUserBankCard, ProxyPromotionRelation, GameUser
+from lucky_proxy.model_db.main import ProxyUser, ProxyUserBankCard, ProxyPromotionRelation, GameUser, ProxyUserWallet
 
 """
 代理设置相关控制器
@@ -20,14 +24,16 @@ class AddLevel2Proxy(ProxyAuthApi):
 
     async def post(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
+        member_id = self.check_int(req.json.get("uid"), require=True, p_name="uid")
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id)
         if not proxy_user and proxy_user.get("proxy_level") != 1:
             self.answer(self.sta_code.FAIL, {}, hint='无权限操作!')
         proxy_user_level2: ProxyUser = await ProxyUser.get_by_pk(req.json.get("uid"))
         if proxy_user_level2:
             self.answer(self.sta_code.FAIL, {}, hint='请勿重复绑定!')
+
         query_relation = {
-            "player_id": req.json.get("uid"),
+            "player_id": member_id,
             "proxy_id": proxy_id,
         }
         # 自己邀请的才能绑定为二级代理
@@ -36,13 +42,19 @@ class AddLevel2Proxy(ProxyAuthApi):
             self.answer(self.sta_code.FAIL, {}, hint='关系不存在!')
             # 自己邀请的才能绑定为二级代理
         query_user = {
-            "uid": req.json.get("uid")
+            "uid": member_id
         }
         user: GameUser = await GameUser.get_by_dict(query_user, ["uid", "phone", "unionid"], limit=1)
         if not user:
             self.answer(self.sta_code.FAIL, {}, hint='用户不存在!')
+        promotion_code = UtilsTool.generate_invite_code(10)
+        exists_user = ProxyUser.get_by_pk({"promotion_code": promotion_code}, field=["id"])
+        # 重试一次
+        if exists_user:
+            promotion_code = UtilsTool.generate_invite_code(10)
+
         level2_proxy = {
-            "id": self.check_int(req.json.get("uid")),
+            "id": member_id,
             "level1_proxy_id": proxy_id,
             "auth_status": 0,
             "total_player": 0,
@@ -56,11 +68,13 @@ class AddLevel2Proxy(ProxyAuthApi):
                                                         maxval=0.90, p_name="assistance_program_rate"),
             "proxy_level": 2,
             "create_by": proxy_id,
-            "promotion_code": PromotionCode.generate_invite_code(10),
+            "promotion_code": UtilsTool.generate_invite_code(10),
             "join_day": datetime.now().strftime("%Y-%m-%d")
         }
         try:
-            await ProxyUser.add_one(level2_proxy)
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                await ProxyUser.add_one(level2_proxy)
+                await ProxyUserWallet.add_one({"id": member_id})
         except Exception as e:
             self.log_err(f"设置二级代理出错err={e}")
             self.answer(self.sta_code.FAIL, {}, hint='设置失败，请重试!')
@@ -88,8 +102,8 @@ class ModifyLevel2ProxyRate(ProxyAuthApi):
             "level1_proxy_id": proxy_id
         }
         update_column = {
-            "room_card_rate": round(room_card_rate[0],2),
-            "assistance_program_rate":  round(assistance_program_rate[0],2)
+            "room_card_rate": round(room_card_rate[0], 2),
+            "assistance_program_rate": round(assistance_program_rate[0], 2)
         }
         res = await ProxyUser.update_by_cond(update_param, update_column)
         sta, hint = [self.sta_code.PASS, '操作成功'] if res else [self.sta_code.FAIL, '操作失败']
@@ -107,6 +121,7 @@ class RemoveLevel2Proxy(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         member_id = req.json.get("member_id")
         res = await  ProxyUser.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
+        res = await  ProxyUserR.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
         sta, hint = [self.sta_code.PASS, '操作成功'] if res else [self.sta_code.FAIL, '操作失败']
         self.answer(sta, {}, hint=hint)
 
@@ -142,15 +157,15 @@ class ProxyInfoQuery(ProxyAuthApi):
 
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "proxy_level","assistance_program_rate","room_card_rate"])
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone","proxy_level",
+                                                                           "assistance_program_rate", "room_card_rate"])
         user: GameUser = await GameUser.get_by_pk(proxy_id, ["name", "avatar"])
         info = {
             "auth_status": proxy_user.get("auth_status"),
             "proxy_level": proxy_user.get("proxy_level"),
             "assistance_program_rate": proxy_user.get("assistance_program_rate"),
             "room_card_rate": proxy_user.get("room_card_rate"),
-            "name": user.get("name"),
-            "name": user.get("name"),
+            "phone": proxy_user.get("phone"),
             "name": user.get("name"),
             "avatar": user.get("avatar"),
         }

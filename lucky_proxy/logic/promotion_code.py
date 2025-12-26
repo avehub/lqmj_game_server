@@ -19,14 +19,6 @@ class PromotionCode(LogMeta):
     conf: ConfSrv = conf_srv
 
     @classmethod
-    def generate_invite_code(cls, length=10):
-        # 定义可能出现的字符，包括大小写字母和数字
-        characters = string.ascii_letters + string.digits
-        # 生成指定长度的随机字符串
-        invite_code = ''.join(random.choice(characters) for _ in range(length))
-        return invite_code
-
-    @classmethod
     async def create_promotion_code(cls, proxy_id, promotion_code_name):
         promotion_code = {
             "proxy_id": proxy_id,

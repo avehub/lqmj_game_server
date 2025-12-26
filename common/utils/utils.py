@@ -1,4 +1,5 @@
 import asyncio
+import string
 from datetime import datetime
 from typing import AnyStr
 import hashlib
@@ -22,6 +23,14 @@ from typing import Optional
 
 
 class UtilsTool(metaclass=NoInstances):
+    @staticmethod
+    def generate_invite_code(cls, length=10):
+        # 定义可能出现的字符，包括大小写字母和数字
+        characters = string.ascii_letters + string.digits
+        # 生成指定长度的随机字符串
+        invite_code = ''.join(random.choice(characters) for _ in range(length))
+        return invite_code
+
     @staticmethod
     def filter_emoji(input_str, replace='*'):
         """
