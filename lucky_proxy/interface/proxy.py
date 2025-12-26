@@ -25,11 +25,19 @@ class AddLevel2Proxy(ProxyAuthApi):
     async def post(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         member_id = self.check_int(req.json.get("uid"), require=True, p_name="uid")
+        room_card_rate=self.check_float(req.json.get("room_card_rate"), keep_val=2, minval=0.01, require=True,
+                         maxval=0.90,
+                         p_name="room_card_rate"),
+        assistance_program_rate=self.check_float(req.json.get("assistance_program_rate"), keep_val=2,
+                                                require=True, minval=0.01,
+                                                maxval=0.90, p_name="assistance_program_rate"),
+
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id)
         if not proxy_user and proxy_user.get("proxy_level") != 1:
             self.answer(self.sta_code.FAIL, {}, hint='无权限操作!')
+
         proxy_user_level2: ProxyUser = await ProxyUser.get_by_pk(req.json.get("uid"))
-        if proxy_user_level2:
+        if proxy_user_level2 and proxy_user_level2.get("is_deleted") == 0:
             self.answer(self.sta_code.FAIL, {}, hint='请勿重复绑定!')
 
         query_relation = {
@@ -40,7 +48,7 @@ class AddLevel2Proxy(ProxyAuthApi):
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
             self.answer(self.sta_code.FAIL, {}, hint='关系不存在!')
-            # 自己邀请的才能绑定为二级代理
+
         query_user = {
             "uid": member_id
         }
@@ -48,11 +56,10 @@ class AddLevel2Proxy(ProxyAuthApi):
         if not user:
             self.answer(self.sta_code.FAIL, {}, hint='用户不存在!')
         promotion_code = UtilsTool.generate_invite_code(10)
-        exists_user = ProxyUser.get_by_pk({"promotion_code": promotion_code}, field=["id"])
+        exists_user = await ProxyUser.get_by_dict({"promotion_code": promotion_code}, field=["id"])
         # 重试一次
         if exists_user:
             promotion_code = UtilsTool.generate_invite_code(10)
-
         level2_proxy = {
             "id": member_id,
             "level1_proxy_id": proxy_id,
@@ -60,21 +67,23 @@ class AddLevel2Proxy(ProxyAuthApi):
             "total_player": 0,
             "phone": user.get("phone"),
             "unionid": user.get("unionid"),
-            "room_card_rate": self.check_float(req.json.get("room_card_rate"), keep_val=2, minval=0.01, require=True,
-                                               maxval=0.90,
-                                               p_name="room_card_rate"),
-            "assistance_program_rate": self.check_float(req.json.get("assistance_program_rate"), keep_val=2,
-                                                        require=True, minval=0.01,
-                                                        maxval=0.90, p_name="assistance_program_rate"),
+            "room_card_rate":str(room_card_rate[0]),
+            "assistance_program_rate": str(assistance_program_rate[0]),
             "proxy_level": 2,
             "create_by": proxy_id,
-            "promotion_code": UtilsTool.generate_invite_code(10),
-            "join_day": datetime.now().strftime("%Y-%m-%d")
+            "promotion_code": promotion_code,
+            "join_day": datetime.now().strftime("%Y-%m-%d"),
+            "is_deleted": 0
         }
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                await ProxyUser.add_one(level2_proxy)
-                await ProxyUserWallet.add_one({"id": member_id})
+
+                if proxy_user_level2 and proxy_user_level2.get("is_deleted") == 1:
+                    level2_proxy.pop('id')
+                    await ProxyUser.update_by_pk(member_id, level2_proxy)
+                else:
+                    await ProxyUser.add_one(level2_proxy)
+                    await ProxyUserWallet.add_one({"id": member_id})
         except Exception as e:
             self.log_err(f"设置二级代理出错err={e}")
             self.answer(self.sta_code.FAIL, {}, hint='设置失败，请重试!')
@@ -120,8 +129,7 @@ class RemoveLevel2Proxy(ProxyAuthApi):
     async def post(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         member_id = req.json.get("member_id")
-        res = await  ProxyUser.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
-        res = await  ProxyUserR.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
+        res = await  ProxyUser.update_by_cond({"id": member_id, "level1_proxy_id": proxy_id}, {"is_deleted": 1})
         sta, hint = [self.sta_code.PASS, '操作成功'] if res else [self.sta_code.FAIL, '操作失败']
         self.answer(sta, {}, hint=hint)
 
@@ -157,7 +165,7 @@ class ProxyInfoQuery(ProxyAuthApi):
 
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone","proxy_level",
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone", "proxy_level",
                                                                            "assistance_program_rate", "room_card_rate"])
         user: GameUser = await GameUser.get_by_pk(proxy_id, ["name", "avatar"])
         info = {

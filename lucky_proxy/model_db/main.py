@@ -31,6 +31,7 @@ class ProxyUser(DBModel):
     assistance_program_rate = fields.DecimalField(max_digits=4, decimal_places=2, null=False,
                                                   description='助农提成比例')
     status = fields.IntField(null=True, default=0, description='状态：0 被封禁 1：正常')
+    is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
 
     class Meta:
         table = "proxy_user"
@@ -59,8 +60,8 @@ class ProxyMonthIncome(DBModel):
 class ProxyUserWallet(DBModel):
     """代理用户钱包"""
     id = fields.IntField(max_length=20, pk=True, description='代理（服务商id）')
-    level1_proxy_id = fields.IntField(max_length=20,  description='一级代理id')
-    total_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,description='总收入累计总收益')
+    level1_proxy_id = fields.IntField(max_length=20, description='一级代理id')
+    total_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='总收入累计总收益')
     room_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='房卡收益（')
     assistance_program_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                                     description='助农收益')
@@ -75,7 +76,7 @@ class ProxyUserWallet(DBModel):
     level1_assistance_program_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                                            description='级代（上级）理获得的助农收益')
     level1_room_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
-                                                  description='一级代理（上级）获得的房卡收益')
+                                             description='一级代理（上级）获得的房卡收益')
 
     update_time = fields.BigIntField(description='更新时间')
     created = fields.BigIntField(description='创建时间')
@@ -136,7 +137,8 @@ class ProxyPromotionRelation(DBModel):
     promotion_year = fields.CharField(max_length=4, description='余订单年 yyyy')
     promotion_month = fields.CharField(max_length=8, description='余订单月 yyyyMM')
     promotion_day = fields.CharField(max_length=10, description='冗余订单日 yyyyMMdd')
-    total_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00,null=False, description='推广额度')
+    total_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=False,
+                                       description='推广额度')
     level = fields.IntField(default=1, description='绑定等级（1、一级代理邀请 2、二级代理邀请）')
     created = fields.BigIntField(description='创建时间')
 
@@ -205,6 +207,28 @@ class ProxyUserBankCard(DBModel):
 
 
 """
+代理结算日志
+"""
+
+
+class ProxySettlementLog(DBModel):
+    id = fields.BigIntField(max_length=20, pk=True, description='主键无意义')
+    month = fields.CharField(max_length=10, null=False, description='月份 yyyyMMdd')
+    year = fields.CharField(max_length=10, null=False, description='年份 yyyy')
+    total_amount = fields.DecimalField(max_digits=12, decimal_places=2, null=False, description='推广额度')
+    total_income = fields.DecimalField(max_digits=10, decimal_places=2, null=False, description='总收益')
+    total_order = fields.IntField(max_digits=10, null=False, description='订单数')
+    start_time = fields.BigIntField(description='开始时间')
+    end_time = fields.BigIntField(description='结束时间')
+    settlement_status = fields.IntField(description='结算状态 1、成功 2、失败')
+    platform_id = fields.BigIntField(max_length=20, description='平台id 暂无用', default=0)
+    created = fields.BigIntField(description='创建时间')
+
+    class Meta:
+        table = "proxy_settlement_log"
+
+
+"""
 代理每月结算记录
 """
 
@@ -216,6 +240,7 @@ class ProxyMonthSettlement(DBModel):
     year = fields.CharField(max_length=10, null=False, description='年份 yyyy')
     total_amount = fields.DecimalField(max_digits=12, decimal_places=2, null=False, description='推广额度')
     total_income = fields.DecimalField(max_digits=10, decimal_places=2, null=False, description='总收益')
+    total_order = fields.IntField(max_digits=10, null=False, description='订单数')
     status = fields.CharField(max_length=2, default=0, null=False, description='状态')
     created = fields.BigIntField(description='创建时间')
 
@@ -233,4 +258,3 @@ class ProxyMonthSettlement(DBModel):
             'created': self.created,
             # 其他属性
         }
-
