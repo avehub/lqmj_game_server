@@ -44,11 +44,11 @@ class ProxyLogin(BaseApi):
             status, wechat_map_user_data = await WeChatMpLogin.wechat_gzh_login(code)
             if not status:
                 self.log_info(f"代理端微信公众号授权登陆失败：{wechat_map_user_data}")
-                #elf.answer(StaCode.EXTERNAL_ERR, {}, hint='登录出错,请重试!')
+                # elf.answer(StaCode.EXTERNAL_ERR, {}, hint='登录出错,请重试!')
             if not wechat_map_user_data.get("unionid"):
                 self.log_err("代理端微信公众号授权登陆失败，没有获取unionid")
                 self.answer(StaCode.FAIL, hint="登陆失败")
-            unionid=wechat_map_user_data.get("unionid")
+            unionid = wechat_map_user_data.get("unionid")
             self.log_info(f"获取的unionid={unionid}")
             query_param = {"unionid": unionid}
             # TODO union 查询用户是否注册
@@ -60,7 +60,7 @@ class ProxyLogin(BaseApi):
             if sta is False:
                 self.answer(StaCode.FAIL, hint=e)
             query_param = {"phone": phone_number}
-        user: ProxyUser = await ProxyUser.get_by_dict(query_param)
+        user: ProxyUser = await ProxyUser.get_by_dict(query_param, limit=1)
 
         if not user:
             self.answer(self.sta_code.FORBID, {}, hint='无权限登录!')
@@ -74,6 +74,7 @@ class ProxyLogin(BaseApi):
                                  useful_life=JWType.AGENT.desc)
         login_info = {
             "token": token,
+            "id": user.get("id"),
             "proxy_name": user.get("proxy_name"),
             "proxy_level": user.get("proxy_level"),
             "auth_status": user.get("auth_status"),

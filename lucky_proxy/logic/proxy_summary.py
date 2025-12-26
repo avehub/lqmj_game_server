@@ -18,44 +18,37 @@ class ProxySummary(LogMeta):
     """
 
     @classmethod
-    async def query_player_page(cls, proxy_id: int, page_size: int, last_id: int,
-                                promotion_id=None, sort=None):
-        sql = f"select t.id,t.player_id,t.promotion_day ,0 total_player,0 total_amount , '' avatar,'' nick_name," \
+    async def query_player_page(cls, proxy_id: int
+                                , page_size: int
+                                , page: int
+                                , sort: int):
+        sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
               f"t.created from " \
-              f"proxy_promotion_relation t   where   t.proxy_id={proxy_id}"
+              f"proxy_promotion_relation t left join  user u  on u.uid=t.id    where   t.proxy_id={proxy_id}"
 
-        if last_id:
-            sql = sql + f" and t.id <{last_id}"
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
 
-        if promotion_id:
-            sql = sql + f" and t.promotion_id <{promotion_id}"
-
-        if sort:
-            sql = sql + f" order by {'total_amount desc' if sort == 1 else 'total_amount asc'}"
-        elif last_id:
-            sql = sql + f" order by t.id desc"
-
-        sql += f" limit {page_size} "
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
     @classmethod
-    async def query_team_member_page(cls, level1_proxy_id: int, page_size: int, last_id: int, promotion_id=None,
-                                     sort=None):
+    async def query_team_member_page(cls, level1_proxy_id: int
+                                     , page_size: int
+                                     , page: int
+                                     , sort: int):
         sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
               f" from proxy_user_wallet t left join  user u  on u.uid=t.id   " \
               f" where   t.level1_proxy_id={level1_proxy_id}"
-        if last_id:
-            sql = sql + f" and t.id <{last_id}"
 
-        if promotion_id:
-            sql = sql + f" and t.promotion_id <{promotion_id}"
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
 
-        if sort:
-            sql = sql + f" order by {'total_amount desc ' if sort == 1 else 'total_amount asc'},t.id desc"
-
-        elif last_id and last_id > 0:
-            sql = sql + f" and t.id <{last_id}"
-        sql += f" limit {page_size} "
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
 

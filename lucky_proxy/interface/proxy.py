@@ -121,6 +121,7 @@ class RemoveLevel2Proxy(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         member_id = req.json.get("member_id")
         res = await  ProxyUser.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
+        res = await  ProxyUserR.del_by_cond({"id": member_id, "level1_proxy_id": proxy_id})
         sta, hint = [self.sta_code.PASS, '操作成功'] if res else [self.sta_code.FAIL, '操作失败']
         self.answer(sta, {}, hint=hint)
 
@@ -156,7 +157,7 @@ class ProxyInfoQuery(ProxyAuthApi):
 
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "proxy_level",
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone","proxy_level",
                                                                            "assistance_program_rate", "room_card_rate"])
         user: GameUser = await GameUser.get_by_pk(proxy_id, ["name", "avatar"])
         info = {
@@ -164,8 +165,7 @@ class ProxyInfoQuery(ProxyAuthApi):
             "proxy_level": proxy_user.get("proxy_level"),
             "assistance_program_rate": proxy_user.get("assistance_program_rate"),
             "room_card_rate": proxy_user.get("room_card_rate"),
-            "name": user.get("name"),
-            "name": user.get("name"),
+            "phone": proxy_user.get("phone"),
             "name": user.get("name"),
             "avatar": user.get("avatar"),
         }

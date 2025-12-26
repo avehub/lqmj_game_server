@@ -136,6 +136,7 @@ class ProxyPromotionRelation(DBModel):
     promotion_year = fields.CharField(max_length=4, description='余订单年 yyyy')
     promotion_month = fields.CharField(max_length=8, description='余订单月 yyyyMM')
     promotion_day = fields.CharField(max_length=10, description='冗余订单日 yyyyMMdd')
+    total_amount = fields.DecimalField(max_digits=12, decimal_places=2, default=0.00,null=False, description='推广额度')
     level = fields.IntField(default=1, description='绑定等级（1、一级代理邀请 2、二级代理邀请）')
     created = fields.BigIntField(description='创建时间')
 
