@@ -11,9 +11,6 @@ from lucky_game.const import QuickChatType, PlatForm, MailSta, PullSta, AchieveT
     CellType, EventType, LvDefendType, SeasonStatus, AdEventType, FriendshipSta, InteractPropType, PlayTemplate
 from c_services.const.cs_enum_const import RoomStatus
 from c_services.cs_mahjong.const import PlayType
-from lucky_proxy.model_db.main import ProxyPromotionCode
-from lucky_proxy.model_db.main import ProxyPromotionRelation
-from lucky_proxy.model_db.main import ProxyUser
 
 
 class User(DBModel):
