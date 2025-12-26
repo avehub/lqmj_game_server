@@ -36,6 +36,35 @@ class ProxyChecker(BaseDecorator):
         return await self.call_method(req, *args, **kwargs)
 
 
+class RateLimiter(BaseDecorator):
+    """ 后台检测器 """
+    conf: ConfSrv = conf_srv
+
+    def __init__(self, func):
+        super().__init__(func)
+
+    async def __call__(self, req: Request, *args, **kwargs):
+        self.check_method(req)
+        token = req.headers.get("Authorization")
+        if not token:
+            return self.answer(self.sta_code.TOKEN_ERR, hint="Token error")
+        # 2.通过safe_key验签token合法性
+        # safe_key = u_info.get("safe_key")
+        # subject_info = f"{u_info.get('created')}_{phone}"
+        data, hint = tool_jwt.jdecode(jwt_str=token, jw_type=JWType.AGENT, client_info="h5")
+        (not data) and self.answer(self.sta_code.TOKEN_ERR, hint=hint)
+
+        """if u_info.get("permission") == ProxyPermission.P1:
+            route = req.path.strip('/').split('/')[-1]
+            if req.method != 'GET' and route != 'LoginByToken':
+                self.answer(self.sta_code.FAIL, hint="权限不足，该操作不允许，请联系超级管理员~")"""
+
+        kwargs.update({"uid": data.get("identify")})
+        kwargs.update({"jwt_info": data})
+        # TODO 限流检查
+        return await self.call_method(req, *args, **kwargs)
+
+
 def sensitive_data_handler(data: dict):
     """ 敏感数据处理 """
     if data.get("password"):

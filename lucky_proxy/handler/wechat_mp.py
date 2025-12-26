@@ -36,7 +36,7 @@ class WeChatMpLogin(LogMeta):
         errcode = req_data_json.get("errcode") or 0
         if errcode == 0:
             return await cls.wechat_userinfo(req_data_json["access_token"], req_data_json["openid"])
-        return False, req_data_json.get("errmsg")
+        return False, req_data_json
 
     @classmethod
     async def wechat_userinfo(cls, access_token, open_id):
