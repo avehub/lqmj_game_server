@@ -24,7 +24,7 @@ class GameDataAdapter(LogMeta):
         proxy_user: ProxyUser = await  ProxyUser.get_by_pk(data.player_id, field=["id"])
         if proxy_user:
             return False, "EXISTS"
-        return await GameDataSync.init_level1_proxy(Level1ProxyDTO)
+        return await GameDataSync.init_level1_proxy(data)
 
 
     """
@@ -38,7 +38,7 @@ class GameDataAdapter(LogMeta):
         }
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
-            cls.log_info(f"忽悠游戏同步代理订单数据uid={data.uid},order_id={data.order_id}")
+            cls.log_info(f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
             return 0
         proxy_id = relation.get("proxy_id")
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id,
@@ -46,7 +46,7 @@ class GameDataAdapter(LogMeta):
                                                            "assistance_program_rate"])
         if not proxy_user:
             cls.log_info(
-                f"忽悠游戏同步代理订单数据uid={data.uid},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
+                f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
             return 0
 
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
@@ -61,30 +61,30 @@ class GameDataAdapter(LogMeta):
             "promotion_code": data.promotion_code,
             "is_deleted": 0
         }
-        promotion_code: ProxyPromotionCode = await ProxyPromotionCode.get_by_dict(query, limit=1, with_del=False)
-        if not promotion_code:
-            cls.log_info(f"忽悠游戏同步邀请关系绑定uid={data.uid},promotion_code={data.promotion_code}"
+        proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1, with_del=False)
+        if not proxy_user:
+            cls.log_info(f"忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
             return 0
         query_relation = {
-            "promotion_id": promotion_code.get("id")
+            "player_id": data.player_id,
+            "proxy_id": proxy_user.get("id")
         }
         exists_relation: ProxyPromotionRelation = await  ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if exists_relation:
-            cls.log_info(f"游戏同步邀请关系已被绑定uid={data.uid},promotion_code={data.promotion_code}"
+            cls.log_info(f"游戏同步邀请关系已被绑定uid={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
             return 0
         data_date = datetime.fromtimestamp(data.promotion_time)
         relation = {
-            "player_id": data.uid,
+            "player_id": data.player_id,
             "promotion_time": data.promotion_time,
             "promotion_year": data_date.strftime("%Y"),
             "promotion_month": data_date.strftime("%Y-%m"),
             "promotion_day": data_date.strftime("%Y-%m-%d"),
             "promotion_type": data.promotion_type,
-            "promotion_id": promotion_code.get("id"),
-            "proxy_id": promotion_code.get("proxy_id"),
-            "level": promotion_code.get("level"),
+            "proxy_id": proxy_user.get("id"),
+            "level": proxy_user.get("proxy_level"),
 
         }
         # TODO 入库数据统计维度字段

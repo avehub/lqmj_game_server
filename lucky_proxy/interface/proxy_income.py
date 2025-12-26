@@ -10,6 +10,7 @@ from sanic import Request
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter, PromotionOrderDataDTO, PromotionAddUserDTO
 from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
+from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
 
 """
@@ -166,8 +167,16 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         order_time: int
         """
         json = req.json
-        p = PromotionOrderDataDTO(111, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
-        p = Level1ProxyDTO(888,'888','19110988388')
+        p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
+
         #await  GameDataAdapter.sync_promotion_order_data(p)
-        await  GameDataAdapter.add_level1_proxy(p)
+        await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
+
+        p1 = Level1ProxyDTO(888, '888', '19110988388')
+        res= await  GameDataAdapter.add_level1_proxy(p1)
+        processor = ProxySettlementProcessor(
+            batch_size=5,  # 每批处理100个代理
+            target_month='2025-12'  # 处理2023年12月的数据，如果为None则处理上个月
+        )
+        #await processor.process_monthly_settlement()
         self.answer(self.sta_code.PASS, {}, hint="查询成功!")
