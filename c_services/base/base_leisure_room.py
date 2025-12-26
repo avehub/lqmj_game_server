@@ -260,9 +260,9 @@ class BaseLeisureRoom(BaseRoom):
         """ 游戏结束 """
         self.set_room_status(RoomStatus.T_DISMISS)
         await self.inner_broadcast(CmdRoom.GAME_OVER)
-        not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
+        # not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
         # await self.update_game_states()  # 更新游戏胜场/总场等
-        await self.send_task()  # 发送任务
+        # await self.send_task()  # 发送任务
         # await self.tigger_big_win_announcement()
         await super().game_over()
 

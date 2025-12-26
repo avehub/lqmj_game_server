@@ -8,6 +8,7 @@ from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, USE_OBJ
 from common.public.enum_const import DbKey
 from common.utils.meta_class import SingleTon
 from .rmq_client import Rmq
+from common.utils.locker import ResourceLocker
 
 
 class BaseConf(metaclass=SingleTon):
@@ -44,6 +45,8 @@ class BaseConf(metaclass=SingleTon):
     rds: RdsClient = None
     log: NLogger = NLogger
     rmq: Rmq = None
+
+    locker = ResourceLocker()
 
     @classmethod
     def set_conf(cls, server_name, server_id):

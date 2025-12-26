@@ -15,11 +15,12 @@ import calendar
 from typing import Tuple, Union
 from c_services.const.cs_enum_const import CmdNotice
 from common.proto.py_pb2.common import common_pb2
+from dateutil.relativedelta import relativedelta
 
 
 class CommonApi(LogMeta):
     conf = BaseConf()
-
+    SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
     # def __init__(self):
     #     # 确保 conf 已初始化
     #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
@@ -33,10 +34,12 @@ class CommonApi(LogMeta):
     @classmethod
     async def get_player_join_gold(cls, uid):
         try:
-            gold = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+            user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+            gold = await cls.conf.rds.get_item(user_gold_key, jsparse=True)
+            if gold is None:
+                gold = {"gold": 0}
         except Exception as e:
             gold = {"gold": 0}
-        cls.conf.log.info(f"{uid} 获取待返还金币: {gold}")
         return gold
 
     @classmethod
@@ -89,6 +92,21 @@ class CommonApi(LogMeta):
         msg = msg or {}
         msg["secret"] = cls.conf.SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
+
+    async def publish_to_fanout(cls, cmd, uid = 1, msg= None):
+        """
+        向SUBSCRIBE_FANOUT频道发送消息
+        """
+        if not isinstance(msg, bytes):
+            msg = json_encode(msg, u_byte=True)
+        pack_data = UtilsTool.pack_inner_msg(cmd, uid, msg)
+        try:
+            await cls.conf.rmq.publish(
+                msg=pack_data,
+                exchange_name=cls.SUBSCRIBE_FANOUT,
+            )
+        except Exception as e:
+            cls.log_err(f"publish_to_fanout error: {e}")
 
     @classmethod
     async def inner_cs2ws(
@@ -295,3 +313,43 @@ class CommonApi(LogMeta):
         date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
                                         end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
         return date_range
+
+    @classmethod
+    async def get_month_start_timestamps(cls, start_timestamp: int, end_timestamp: int) -> list[int]:
+        """
+        使用 dateutil 库实现相同功能
+        Args:
+            start_timestamp (int): 起始时间戳(10位)
+            end_timestamp (int): 结束时间戳(10位)
+        Returns:
+            list[int]: 包含每个月第一天时间戳的列表
+        """
+        start_date = datetime.fromtimestamp(start_timestamp)
+        end_date = datetime.fromtimestamp(end_timestamp)
+        # 调整开始时间为当月第一天
+        current_date = start_date.replace(day=1)
+        result = []
+        while current_date <= end_date:
+            result.append(int(current_date.timestamp()))
+            # 增加一个月
+            current_date += relativedelta(months=1)
+        return result
+
+    @classmethod
+    async def get_month_end_timestamp(cls, start_timestamp: int) -> int:
+        """
+        使用dateutil获取月末时间戳
+        Args:
+            start_timestamp (int): 月份开始时间戳
+
+        Returns:
+            int: 月末23:59:59的时间戳
+        """
+        # 将时间戳转换为datetime对象
+        start_date = datetime.fromtimestamp(start_timestamp)
+
+        # 获取下个月第一天，然后减去一秒
+        next_month_first = start_date.replace(day=1) + relativedelta(months=1)
+        end_date = next_month_first - relativedelta(seconds=1)
+
+        return int(end_date.timestamp())

@@ -9,6 +9,7 @@ from nsanic.libs import tool
 
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from ..const.cs_enum_const import CmdRoom, RoomType
+from ..cs_mahjong.const import OverType
 
 
 class LeisureService():
@@ -55,6 +56,7 @@ class BaseLeisureService(BaseService, LeisureService):
             CmdRoom.GIVE_UP.val: self.__on_give_up,
             CmdRoom.RECHARGE.val: self.__on_recharge,
             CmdRoom.RECHARGE_ING.val: self.__on_recharge_ing,
+            CmdRoom.FORCE_DISMISS_ROOM.val: self.__force_dismiss_room,
         })
 
     async def get_level_conf(self, level, play_type=1) -> dict:
@@ -128,3 +130,9 @@ class BaseLeisureService(BaseService, LeisureService):
     async def __on_recharge_ing(player, room, _):
         """ 充值中回调 """
         await room.player_recharge_ing(player)
+
+    async def __force_dismiss_room(self, _, data):
+        tid = data.get("room_id")
+        room = self.get_room(tid)
+        if room:
+            await room.force_dismiss()

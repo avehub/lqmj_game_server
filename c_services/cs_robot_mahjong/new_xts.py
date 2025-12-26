@@ -7,7 +7,7 @@ from enum import IntEnum
 from copy import deepcopy
 from collections import defaultdict
 
-from c_services.cs_robot_mahjong.const import FcHuPaiType, ACTION_TYPE_MING_GANG, FcPileType, CardType
+from c_services.cs_robot_mahjong.const import FcHuPaiType, ACTION_TYPE_MING_GANG, FcPileType, CardType, ACTION_TYPE_ZHUAN_WAN_GANG
 from common.utils.utils import UtilsTool
 
 LOG_PRINT = True
@@ -1031,6 +1031,8 @@ class MoveGenerator:
         # 仅存在一张胡牌牌型
         if len(all_xts_cards) == 1:
             if all_xts_cards[0][1] < 0 or len(all_xts_cards) == 1:
+                if not ph_best_cards and not all_played_cards:
+                    return random.choice(self.hand_cards)
                 return random.choice(ph_best_cards or all_played_cards)
             xts_cards_res = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
             return self.control_play_card(ph_best_cards, xts_cards_res)

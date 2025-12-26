@@ -41,7 +41,7 @@ class RecordsAdEventRC(BaseCommonRC):
         year = year or datetime.now().year
         table_name = cls.get_table_name(year)
         db = Tortoise.get_connection(cls.db_alias)
-        return cls.db_model.filter(**filters).using_db(db)
+        return table_name.filter(**filters).using_db(db)
 
     @classmethod
     async def get_uid_login_last(cls, uid: Union[int, List[int]], platform: int = None, year: int = None):
@@ -54,7 +54,6 @@ class RecordsAdEventRC(BaseCommonRC):
             tuple: (结果列表, 消息字符串)
         """
         sql = f"SELECT DISTINCT ON (uid) * FROM {cls.tb_name} ORDER BY uid, id DESC"
-        print(sql)
         query = {}
         if uid is not None:
             query["uid__in" if isinstance(uid, list) else "uid"] = uid
@@ -66,25 +65,33 @@ class RecordsAdEventRC(BaseCommonRC):
         #     query["year"] = cls.now_year
         # queryset = await cls.get_queryset(**query)
         db = Tortoise.get_connection(cls.db_alias)
-        result = await db.filter(**query).order_by("uid", "-id").distinct().values()
+        result = await cls.db_model.filter(**query).order_by("uid", "-id").distinct().values()
 
         # result = await cls.db_model.exec_query(sql)
         msg = "暂无登录记录" if not result else "成功"
         return result, msg
 
     @classmethod
-    async def get_uid_login_list(cls, uid: int, start_time: int = None, end_time: int = None, platform: int = None):
+    async def get_uid_login_list(cls, uid: int = None, start_time: int = None, end_time: int = None, platform: int = None,
+                                 filtration: str = "*", group_by: str = None):
         """根据用户ID获取登录记录"""
-        query = {}
+        where = " 1=1 "
         if uid is not None:
-            query["uid"] = uid
+            where += f" AND uid = {uid}"
         if start_time is not None:
-            query["created__gte"] = start_time
+            where += f" AND created >= {start_time}"
         if end_time is not None:
-            query["created__lte"] = end_time
+            where += f" AND created <= {end_time}"
         if platform is not None:
-            query["platform"] = platform
-        result = records = await cls.db_model.filter(**query, year=cls.now_year).using_db(cls.tb_name).order_by("-id").values()
-        if not records:
-            return result, "暂无登录记录"
-        return result, "成功"
+            where += f" AND platform = {platform}"
+        order_field = "id"
+        order_type = "DESC"
+        sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where}"
+        if group_by:
+            sql += f" GROUP BY {group_by}"
+        if order_field:
+            sql += f" ORDER BY {order_field} {order_type}"
+        result = await cls.db_model.exec_query(sql)
+        if not result:
+            return False, result
+        return True, result
