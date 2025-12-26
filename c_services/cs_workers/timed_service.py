@@ -109,12 +109,11 @@ class TimedService:
         # 防沉迷过期时间检查
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
-        # self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
-        # # 赛季状态检查更新
-        # self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
+        # 赛季状态检查更新
+        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
 
-        self.__scheduler.add_date_job(self.check_tournament_cycle, minute='*/5')
-        self.__scheduler.add_date_job(self.check_tournament_settle, minute='*/10')
+   
 
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
