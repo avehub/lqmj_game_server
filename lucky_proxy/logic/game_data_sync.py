@@ -86,9 +86,9 @@ class GameDataSync(LogMeta):
         order_type = data.order_type
         now = datetime.now()
         proxy_income = (decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))).quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
         platform_income = (decimal.Decimal(str(data.order_amount)) - proxy_income).quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
         level2_proxy_income = decimal.Decimal("0.00")
         level1_proxy_income = decimal.Decimal("0.00")
         level2_dividend_rate = decimal.Decimal("0.00")
@@ -102,9 +102,9 @@ class GameDataSync(LogMeta):
                 level2_proxy_income = (proxy_income * assistance_program_rate).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             level1_proxy_income = (proxy_income - level2_proxy_income).quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             proxy_income = level2_proxy_income.quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
 
         monday_date = now - timedelta(days=now.weekday())
         records = {
@@ -182,6 +182,7 @@ class GameDataSync(LogMeta):
                 "promotion_code": UtilsTool.generate_invite_code(10),
             }
             await ProxyUser.add_one(add_param)
+            await ProxyUserWallet.add_one({"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1})
         except Exception as e:
             cls.log_err(f"【重要日志】初始化一级代理失败，error：{e},data:{data}")
             return False, 'ERROR'
