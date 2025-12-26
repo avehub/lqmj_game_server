@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from urllib import parse
 from urllib.parse import urlparse, urlunparse
+from nsanic.libs import tool_dt
 
 from sanic import Request, response
 
@@ -67,7 +68,7 @@ class TournamentUserPoint(GameAuthApi):
             await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
         else:
             # 计算用户排名
-            _, data = await TournamentUserPointRC.get_point_filter(cycle_id=cycle_id)
+            _, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id)
             if data:
                 for item in data:
                     if item["uid"] == uid:
@@ -100,6 +101,11 @@ class JoinTournament(GameAuthApi):
         cycle_id = self.check_int(req.json.get("cycle_id"), require=False, p_name="场次ID")
         pid = self.check_int(req.json.get("pid"), require=False, default=0, p_name="邀请用户ID")
         uid = kwargs.get("u_info").get("uid")
+        sta, rule = await TournamentRuleRC.get_rule_info(is_content=True)
+        range_time = rule["range_time"].split("-")
+        current_hour = datetime.now().hour
+        if current_hour < int(range_time[0].split(":")[0]) or current_hour > int(range_time[1].split(":")[0]):
+            return self.answer(StaCode.FAIL, hint=f"比赛时间为每日{rule['range_time']}点")
         has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
             return self.answer(StaCode.FAIL, hint="已报名")

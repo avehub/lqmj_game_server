@@ -7,8 +7,10 @@ from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 
+from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
 from common.model_rc.tournament_rewards import TournamentRewardRC
 from common.model_rc.tournament_rules import TournamentRuleRC
+from common.public.conf import R_UID_THRESHOLD
 from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_bag import UserBagRC
@@ -92,18 +94,20 @@ class TournamentLogic:
         return True
 
 
-    async def cycle_settel(self, cycle_id: int):
+    async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
-
+        sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
         # 统计赛季周期获奖用户
+        reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
+        if reward_sta and reward_user:
+            award_u_list = [item for item in reward_user["list"] if item["uid"] > R_UID_THRESHOLD]
+            # 发送榜奖励
+            await self.send_ranking_reward(award_u_list)
 
-        # 发送排行榜奖励
-        pass
 
-    async def cycle_point_reset(self, cycle_id: int):
-        """ 赛事周期游戏积分重置 """
-        pass
+
+
 
 
 
