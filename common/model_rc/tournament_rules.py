@@ -78,19 +78,19 @@ class TournamentRuleRC(BaseCommonRC):
         return True, data
 
     @classmethod
-    async def get_rule_info(cls, rule_id: int = 1):
+    async def get_rule_info(cls, rule_id: int = 1, is_content: bool = False):
         """获取赛事规则信息"""
         try:
             result = await cls.cache_session_get(rule_id)
-            if result:
-                return True, result
-            sta, data = await cls.get_rule_filter(rule_id=rule_id)
-            print("sta:", sta, "data:", data)
+            if not result:
+                sta, data = await cls.get_rule_filter(rule_id=rule_id)
+                if sta and data:
+                    result = data[0]
+                    await cls.cache_session_set(rule_id, result)
         except OperationalError as e:
             return None, f"查询失败:{e}"
-        if sta and data:
-            result = data[0]
-            await cls.cache_session_set(rule_id, result)
+        if is_content:
+            result = result["rule_content"]
         return True if result else False, result
 
     @classmethod

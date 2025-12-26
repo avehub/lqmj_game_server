@@ -133,7 +133,7 @@ class TournamentUserPointRC(BaseCommonRC):
         return True if result else False, result
 
     @classmethod
-    async def del_user_point(cls, cycle_id: int, uid: int):
+    async def del_user_point(cls, cycle_id: int, uid: int = None):
         """删除模板"""
         try:
             await cls.db_model.filter(cycle_id=cycle_id, uid=uid).delete()
@@ -179,6 +179,14 @@ class TournamentUserPointRC(BaseCommonRC):
             up = await cls.db_model.update_by_pk(data["id"], update_data)
             if not up:
                 return False, "更新失败"
+            if field_name == "score":
+                replay_msg_data = {
+                    "uid": uid,
+                    "cycle_id": cycle_id,
+                    "total_points": new_value,
+                }
+                # 更新排行榜
+                await cls.push_task2worker(CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD, replay_msg_data)
             await cls.cache_session_del(f"{cycle_id}:{uid}")
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"

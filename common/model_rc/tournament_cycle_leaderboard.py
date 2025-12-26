@@ -74,13 +74,13 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def get_leaderboard_filter(cls, cycle_id: int = None, status: int = None, uid: int = None, page: int = None,
+    async def get_leaderboard_filter(cls, cycle_id: int = None, total_points: int = None, uid: int = None, page: int = None,
                                      page_size: int = None):
         """获取排行榜记录"""
         try:
             query = {}
-            if status is not None:
-                query["status"] = status
+            if total_points is not None:
+                query["total_points__gle"] = total_points
             if cycle_id is not None:
                 query["cycle_id"] = cycle_id
             if uid is not None:
