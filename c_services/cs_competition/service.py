@@ -160,8 +160,9 @@ class CompetitionServer(BaseServer):
             if user_point.get("ticket") < price:
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足", req_id=req_id)
             # 扣费
-            await TournamentUserPointRC.update_int_field(uid,"ticket",price,"sub")
+            user_point["ticket"] -= price
             self.__player_info[uid] = user_point
+            await TournamentUserPointRC.update_int_field(uid,"ticket",price,"sub")
 
         await self.__join_competition(uid, competition_id, conf_data, req_id)
 
@@ -177,7 +178,7 @@ class CompetitionServer(BaseServer):
             if sta:
                 self.__player_info[uid] = user_point
             else:
-                self.__player_info[uid] = {"score": 0, "ticket": 100}
+                self.__player_info[uid] = {"score": 0, "ticket": 99}
         value_counts = Counter(self.__wait_player.values())
         send_list = []
         if value_counts[competition_id] <= max_match_player:
