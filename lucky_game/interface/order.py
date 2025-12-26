@@ -93,27 +93,27 @@ class CallbackAli(SpecialApi):
     """支付宝订单回调"""
 
     async def post(self, req: Request, **kwargs):
-        form = req.args
+        form = req.get_form()
+        self.loginfo(f"支付宝回调参数: {form}")
         app_id = form.get("app_id", "")
         sign = form.get("sign", "")
         if not sign or not app_id:
-            return response.json({"response": {"code": '40001', "msg": 'Param Error'}}, status=500)
+            return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数错误")
         pay_platform = "APP" if app_id == AliPayConf.PLATFORM.get("APP").get("APP_ID") else "H5"
         if hasattr(form, 'get'):
             form = dict(form)
         sta, data = AlipayPayment(pay_platform).verify_callback(form, sign)
         self.loginfo(f"支付宝回调验证结果: {sta}, {data}")
-        err_result = response.json({"response": {"code": '40004', "msg": 'Business Failed'}}, status=500)
         if not sta:
-            return err_result
+            return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数验证失败")
         order_no = data.get("order_no")
         trade_no = data.get("trade_no")
         trade_status = data.get("trade_status")
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)
         if not sta:
-            return err_result
-        return response.json({"response": {"code": '10000', "msg": 'Success'}})
+            return self.answer(code=self.sta_code.FAIL, hint=msg) if msg != "暂无数据" else response.text('success')
+        return response.text('success')
 
 
 class CallbackHf(SpecialApi):
@@ -211,7 +211,7 @@ class MiniProgramRecvPush(SpecialApi):
         event = payload_data.get('Event')
         session_from = payload_data.get("SessionFrom") or ""
         from_user_name = payload_data.get("FromUserName")  # 发送方账号（一个OpenID）
-        if not session_from:
+        if not session_from or session_from == "客服按钮":
             # session_from字段是个自用拓展字段，若是来自前端一定非空，则不处理即可，若为空则大可能来自客户聊天；
             # 目前重点处理支付，其他的客服人员处理
             return response.json({"ErrCode": 0, "ErrMsg": "Success"})

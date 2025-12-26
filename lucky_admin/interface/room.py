@@ -1,4 +1,6 @@
 from sanic import Request
+
+from common.public.enum_const import StaCode
 from lucky_admin.base_api import AdminAuthApi
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
@@ -17,7 +19,7 @@ class GameRoom(AdminAuthApi):
         return self.answer(data=data, hint=msg)
 
 class GameRecord(AdminAuthApi):
-    async def get(self, req: Request, **kwargs):
+    async def get(self, req: Request):
         """房间战绩"""
         room_id = self.check_int(req.args.get('room_id'), require=False, p_name='房间ID')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='建房者ID')
@@ -26,6 +28,7 @@ class GameRecord(AdminAuthApi):
         start_time = self.check_int(req.args.get('start_time'), require=False, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=False, p_name='结束时间')
         data, msg = await BaseRecordsGameRC.get_record_list(uid=uid, room_id=room_id, page=page, page_size=page_size,
-                                                            start_time=start_time, end_time=end_time)
+                                                        start_time=start_time, end_time=end_time)
         return self.answer(data=data, hint=msg)
+
 

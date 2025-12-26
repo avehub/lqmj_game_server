@@ -116,13 +116,10 @@ class StoreList(SpecialApi):
         type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
         status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
         store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
-        self.loginfo("store", store)
         if not store:
             return self.answer(data=store, hint=e)
         sid = [item.get("sid") for item in store]
-        self.loginfo("sid", sid)
         goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
-        self.loginfo("goods", goods)
         if not goods:
             return self.answer(data=goods, hint=e)
             # data = await self.list_by_group(goods, "sid", unordered=False)

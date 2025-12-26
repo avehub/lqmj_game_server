@@ -67,7 +67,7 @@ class MahjongServerFc(BaseLeisureService):
             if code != StaCode.PASS:
                 room.log_info(tid, "uid", uid, "cs_robot_mahjong不碰牌失败", code, msg)
                 return
-            if room.room_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
+            if room.flow_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
                 await room.check_action_end()
         else:
             code, msg = await room.on_player_peng(p)
