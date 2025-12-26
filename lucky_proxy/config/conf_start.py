@@ -65,7 +65,6 @@ class ConfSrv(BaseConf):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
         model_list = [f'lucky_proxy.model_db.{item}' for item in models]
-        model_list.append("lucky_game.model_db.main")
         db_conf = cls.makeup_db_conf(model_list) if cls.CONF_DB else None
         return db_conf
 
