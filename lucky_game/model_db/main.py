@@ -821,3 +821,19 @@ class ClubUserGroups(DBModel):
 
     class Meta:
         table = "club_user_groups"
+
+class DistributionSettleConf(DBModel):
+    """ 渠道结算分润配置表 """
+    id = fields.IntField(primary_key=True, description='分润结算ID')
+    level = fields.IntField(default=0, description='档位')
+    type = fields.SmallIntField(default=0, description='类型：1房卡 2赛事农产品')
+    range_min = fields.IntField(default=0, description='最小取值范围')
+    range_max = fields.IntField(default=0, description='最大取值范围')
+    profit_condition = fields.CharField(max_length=32, default="", description='分润条件')
+    profit_ratio = fields.FloatField(null=True, default=1.0000, description='分润比例')
+    desc = fields.CharField(max_length=256, null=True, default="", description='描述')
+    updated = fields.BigIntField(default=0, description='更新时间')
+
+    class Meta:
+        table = "distribution_settle_conf"
+

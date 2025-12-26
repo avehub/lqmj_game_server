@@ -14,7 +14,7 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, Room
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
-    WriteOff, UpWechatUserInfo
+    WriteOff, UpWechatUserInfo, UserInvite
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -106,6 +106,7 @@ class MainBp(BaseBlue):
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         Urls("/WriteOff/", WriteOff),  # 注销账号
+        Urls("/UserInvite/", UserInvite),  # 邀请用户
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
