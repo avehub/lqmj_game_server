@@ -169,10 +169,10 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         json = req.json
         p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
 
-        #await  GameDataAdapter.sync_promotion_order_data(p)
+        await  GameDataAdapter.sync_promotion_order_data(p)
         await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
 
-        p1 = Level1ProxyDTO(888, '888', '19110988388')
+        p1 = Level1ProxyDTO(888999, '888', '19110988388')
         res= await  GameDataAdapter.add_level1_proxy(p1)
         processor = ProxySettlementProcessor(
             batch_size=5,  # 每批处理100个代理

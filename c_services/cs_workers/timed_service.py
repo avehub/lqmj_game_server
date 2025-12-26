@@ -12,6 +12,7 @@ from lucky_admin.const import BackTaskSta
 from lucky_admin.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.script.timed_task import BaseTimed
+from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 
 
 class TimedService:
@@ -99,6 +100,7 @@ class TimedService:
         # 每日一次任务
         print("写入待执行任务")
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
+        self.__scheduler.add_cron_job(ProxysJobExecutor.every_month_summary, month="*",day=1,hour=1)
 
     async def __every_day_tasks(self):
         """ 每日一次任务 """
@@ -114,8 +116,10 @@ class TimedService:
         self.__scheduler.add_date_job(StatsExpert.stats_game_times, run_date=now_time + timedelta(minutes=5))
         self.__scheduler.add_date_job(StatsExpert.stats_user_data_analysis, run_date=now_time + timedelta(minutes=10))
         self.__scheduler.add_date_job(StatsExpert.stats_retention_user_own, run_date=now_time + timedelta(minutes=15))
-        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.JuLiang], run_date=now_time + timedelta(minutes=20))
-        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.DataNexus], run_date=now_time + timedelta(minutes=25))
+        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.JuLiang],
+                                      run_date=now_time + timedelta(minutes=20))
+        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.DataNexus],
+                                      run_date=now_time + timedelta(minutes=25))
 
     async def __order_do_tasks(self):
         """ 顺序执行任务 """
@@ -132,7 +136,6 @@ class TimedService:
 
         # 20分钟后执行邮件发奖
         self.__scheduler.add_date_job(self.__season_check_out, run_date=now_time + timedelta(minutes=20))
-
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -171,7 +174,6 @@ class TimedService:
                 message_url=CertificationConf.DOMAIN,
             )
 
-
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
         """ 从0点每个多少分钟执行一次 """
@@ -184,8 +186,6 @@ class TimedService:
         else:
             next_run_time = start_time
         return next_run_time
-
-
 
     def start(self):
         self.__scheduler = BaseTimed.new()
