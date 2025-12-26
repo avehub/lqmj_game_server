@@ -145,3 +145,8 @@ class TournamentCycleRC(BaseCommonRC):
             ex_time = 86400 - (tool_dt.cur_time()-tool_dt.day_begin())
             await cls.conf.rds.set_item("cycle_id", cycle_id, ex_time=ex_time)
         return cycle_id
+
+    @classmethod
+    async def get_last_cycle_id(cls) -> int:
+        cycle_id = await cls.get_current_cycle_id()
+        return cycle_id + 1

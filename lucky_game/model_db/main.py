@@ -13,7 +13,7 @@ from c_services.const.cs_enum_const import RoomStatus
 from c_services.cs_mahjong.const import PlayType
 
 from lucky_admin.const import AdminStatus, AdminPermission, UserGroup, AnnouncementsStatus, WeightEnum, \
-    BackTaskSta, MailSta
+    BackTaskSta
 
 
 class User(DBModel):
@@ -470,7 +470,7 @@ class Mails(DBModel):
     attachment = fields.JSONField(null=True, description="附件信息：如奖励ID和数量等")
     sender = fields.CharField(max_length=28, default='', description="发送者")
     receiver = fields.IntField(max_length=28, index=True, null=False, description='接收者：玩家ID')
-    mail_sta = fields.IntEnumField(enum_type=MailSta, index=True, default=MailSta.NORMAL, description="邮件状态")
+    mail_sta = fields.IntEnumField(enum_type=MailSta, index=True, default=MailSta.UNREAD, description="邮件状态")
     attachment_sta = fields.IntEnumField(enum_type=PullSta, index=True, default=PullSta.UN_PULL, description="附件状态")
     receive_time = fields.BigIntField(max_length=28, null=True, default=0, description="接收时间")
     exp_time = fields.BigIntField(max_length=28, null=True, default=0, description="过期时间")
@@ -860,26 +860,6 @@ class TournamentCycle(DBModel):
         indexes = (("cycle_start_date", "cycle_end_date"),)  # 联合索引
         table = "tournament_cycle"
 
-class TournamentRound(DBModel):
-    """赛事场次表 (周赛/总决赛)"""
-    current_participants = fields.IntField(default=0, description='当前报名人数')
-    cycle_id = fields.BigIntField(index=True, description='关联周期ID')
-    end_time = fields.DatetimeField(description='结束时间')
-    id = fields.BigIntField(primary_key=True, description='场次ID')
-    max_participants = fields.IntField(description='最大参赛人数')
-    register_end_time = fields.DatetimeField(description='报名截止时间')
-    register_start_time = fields.DatetimeField(description='报名开始时间')
-    round_name = fields.CharField(max_length=100, description='场次名称:第一周周赛')
-    round_number = fields.BooleanField(description='场次序号:1-4')
-    round_type = fields.BooleanField(description='场次类型:1-线上周赛,2-线下总决赛')
-    start_time = fields.DatetimeField(description='开始时间')
-    status = fields.BooleanField(default=False, description='状态:0-未开始,1-报名中,2-报名结束,3-比赛中,4-已结束')
-    updated = fields.BigIntField(default=0)
-
-    class Meta:
-        unique_together = (("cycle_id", "round_number"),)  # 唯一索引
-        indexes = (("status", "start_time"),("register_start_time", "register_end_time"),)  # 联合索引
-        table = "tournament_round"
 
 class TournamentRules(DBModel):
     """赛事规则表"""
@@ -953,20 +933,6 @@ class TournamentCycleLeaderboard(DBModel):
         unique_together = (("cycle_id", "uid"),)  # 唯一索引
         indexes = (("cycle_id", "total_points"),("cycle_id", "uid"),)  # 联合索引
         table = "tournament_cycle_leaderboard"
-
-
-class TournamentUserHistory(DBModel):
-    """用户参赛历史表"""
-    cycle_id = fields.BigIntField(index=True, description='周期ID')
-    final_rank = fields.IntField(description='最终排名')
-    id = fields.BigIntField(primary_key=True, description='历史ID')
-    is_qualified = fields.SmallIntField(null=True, default=0, description='是否晋级/获奖:1-是,0-否')
-    participated_time = fields.DatetimeField(description='参赛时间')
-    points_earned = fields.IntField(default=0, description='获得积分')
-    reward_amount = fields.IntField(null=True, default=0, description='获得奖金')
-    round_id = fields.BigIntField(index=True, description='场次ID')
-    round_type = fields.SmallIntField(description='场次类型:1-周赛,2-总决赛')
-    uid = fields.BigIntField(index=True, description='用户ID')
 
     class Meta:
         unique_together = (("round_id", "uid"),)  # 唯一索引
