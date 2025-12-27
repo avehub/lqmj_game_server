@@ -77,6 +77,18 @@ class ClubMsgType(BaseEnum):
     DISMISS_ROOM = 4, "解散茶馆游戏房间"
     UPDATE_ROOM = 5, "更新茶馆游戏房间"
 
+@unique
+class CmdCompetition(BaseEnum):
+    MATCH_COMPETITION = 1, "加入比赛"
+    QUIT_COMPETITION = 2, "退出比赛"
+    START_COMPETITION = 3, "开始比赛"
+    ROOM_FINISH = 4, "房间结束", CallCheck.INNER.val
+    MATCH_FINISH = 5, "比赛结束"
+    MATCH_BY_INNER = 6, "加入比赛（内部调用）", CallCheck.INNER.val
+    BACK_COMPETITION = 7, "返回比赛"
+    COMPETITION_INFO = 8, "比赛信息"
+    UPDATE_SCORE = 9, "更新比赛积分", CallCheck.INNER.val
+
 
 @unique
 class CmdRoom(BaseEnum):
@@ -210,6 +222,8 @@ class CmdWorkers(BaseEnum):
     USER_EVENT_TRACKING = 28, "用户事件追踪"
     UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
     INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
+    UPDATE_CYCLE_POINT_LEADERBOARD = 31, "更新赛季积分排行榜"
+    UPDATE_COMPETITION_RESULT = 32, "更新竞赛结果"
 
 
 @unique

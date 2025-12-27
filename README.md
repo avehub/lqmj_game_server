@@ -49,7 +49,9 @@ message S2CcService {
 }
 ~~~
 
-
+# 关于nsanic包安装
+pip uninstall nsanic
+pip install nsanic --index-url https://__token__:gldt-xfzc6gpYV6gHVfCV6G_Z@git.leqiku.com/api/v4/projects/135/packages/pypi/simple
 
 
 

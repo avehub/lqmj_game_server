@@ -47,12 +47,18 @@ class QueryUserIsInCService(GameAuthApi):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         cs_info = await self.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
+        match_info = await self.conf.rds.get_hash(CacheKey.IN_MATCH, uid, jsparse=True)
+        in_match = False
+        if match_info:
+            in_match = True
         if not cs_info:
             cs_info = {
-                "exist": False
+                "exist": False,
+                "in_match": in_match
             }
         else:
             cs_info["exist"] = True
+            cs_info["in_match"] = in_match
         self.answer(data=cs_info)
 
 

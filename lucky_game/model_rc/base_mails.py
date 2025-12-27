@@ -15,6 +15,8 @@ from lucky_game.const import MailSta
 from lucky_game.model_rc.base_award import AwardRC
 from nsanic.libs.tool import json_parse, json_encode
 
+from .base_store import GoodRC
+
 
 class MailsRC(BaseCommonRC):
     """ 邮件模型 """
@@ -99,6 +101,7 @@ class MailsRC(BaseCommonRC):
     @classmethod
     async def get_mail_awards(cls, mail_list: list):
         """获取邮件奖励"""
+        # 邮件奖励
         attachments = [i.get('attachment').get("award_ids") for i in mail_list]
         if attachments:
             award_ids = []
@@ -114,6 +117,19 @@ class MailsRC(BaseCommonRC):
                         i_award = award_dict.get(i_award_id)
                         if i_award:
                             i['attachment']['awards'].extend(i_award.get("content")["rewards"])
+        # 邮件商品
+        good_ids = [i.get('attachment').get("good_ids") for i in mail_list]
+        if good_ids:
+            good_data, e = await GoodRC.get_good_filter(good_id=good_ids)
+            if good_data:
+                good_dict = {item['good_id']: item for item in good_data}
+                for i in mail_list:
+                    i_good_ids = i.get('attachment').get("good_ids")
+                    i['attachment']['goods'] = []
+                    for i_good_id in i_good_ids:
+                        i_good = good_dict.get(i_good_id)
+                        if i_good:
+                            i['attachment']['goods'].extend(i_good.get("content"))
         return mail_list
 
 
