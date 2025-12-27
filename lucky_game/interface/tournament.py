@@ -68,12 +68,12 @@ class TournamentUserPoint(GameAuthApi):
             await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
         else:
             # 计算用户排名
-            _, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id)
-            if data:
-                for item in data:
-                    if item["uid"] == uid:
-                        user_point["rank_num"] = data.index(item) + 1
-                        break
+            user_point["rank_num"] = 0
+            _, rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_position(cycle_id, uid)
+            if rank_position:
+                rank_data = rank_position[0]
+                user_point["rank_num"] = rank_data["rank_position"]
+                user_point["score"] = rank_data["total_points"]
         return self.answer(data=user_point)
 
 class TournamentLeaderboard (GameAuthApi):
@@ -87,10 +87,9 @@ class TournamentLeaderboard (GameAuthApi):
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")
         sta, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=page, page_size=page_size)
         sta, rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_position(cycle_id, uid)
-        if sta:
+        data["rank_position"] = {"uid": uid, "rank_position": 0, "total_points": 0}
+        if rank_position:
             data["rank_position"] = rank_position[0]
-        else:
-            data["rank_position"] = {"uid": uid, "rank_position": 0, "total_points": 0}
         return self.answer(data=data)
 
 class JoinTournament(GameAuthApi):

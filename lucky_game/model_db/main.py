@@ -928,16 +928,11 @@ class TournamentCycleLeaderboard(DBModel):
     uid = fields.BigIntField(index=True, description='用户ID')
     updated = fields.BigIntField(default=0)
 
-
     class Meta:
         unique_together = (("cycle_id", "uid"),)  # 唯一索引
         indexes = (("cycle_id", "total_points"),("cycle_id", "uid"),)  # 联合索引
         table = "tournament_cycle_leaderboard"
 
-    class Meta:
-        unique_together = (("round_id", "uid"),)  # 唯一索引
-        indexes = (("cycle_id", "uid"), ("cycle_id", "final_rank"),)  # 修正的联合索引
-        table = "tournament_user_history"
 
 class UserGoodExchange(DBModel):
     """用户兑换记录表"""
