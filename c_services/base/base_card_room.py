@@ -377,6 +377,7 @@ class BaseCardRoom(BaseRoom):
         self.__replay_msg_data = []
         score_rank_map = self.get_player_ranking(account, True)
         round_over_time = tool_dt.cur_time()
+        player_score = {}
         for p in self.seats:
             if not p:
                 continue
@@ -401,6 +402,7 @@ class BaseCardRoom(BaseRoom):
             record_data["round_score"] = score
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
+            player_score[str(p.uid)] = p.total_score
             self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
@@ -408,7 +410,8 @@ class BaseCardRoom(BaseRoom):
         # if over_type != OverType.FORCE:
         data_model = S2CRoundOverInfo.pb_model(**data)
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
-
+        if self.__match_room_id > 0:
+            await self.send_player_score_to_competition(player_score, CmdCompetition.UPDATE_SCORE)
         if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
@@ -536,7 +539,6 @@ class BaseCardRoom(BaseRoom):
 
         is_dismiss = over_type == OverType.CLUB_OWNER_DISMISS or over_type == OverType.FORCE
         record_data_list = []
-        player_score = {}
         for idx, p in enumerate(self.seats):
             if not p:
                 continue
@@ -545,7 +547,6 @@ class BaseCardRoom(BaseRoom):
             final_grade = 1 if final_ranking == 1 else 0
             if final_ranking == 1 and p.total_score == 0:
                 final_grade = 0
-            player_score[str(p.uid)] = p.total_score
             if self.__record_id > 0:
                 if is_dismiss:
                     room_status = 1
@@ -576,7 +577,7 @@ class BaseCardRoom(BaseRoom):
 
         # 比赛房间结束
         if self.__match_room_id > 0:
-            await self.send_player_score_to_competition(player_score, CmdCompetition.ROOM_FINISH)
+            await self.send_player_score_to_competition(None, CmdCompetition.ROOM_FINISH)
 
         if self.club_id > 0:
             await self.cs2club_by_rmq(CmdClub.ROOM_INFO_CHANGE, self.club_room_info(ClubMsgType.DISMISS_ROOM))

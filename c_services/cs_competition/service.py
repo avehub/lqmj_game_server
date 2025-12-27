@@ -246,7 +246,7 @@ class CompetitionServer(BaseServer):
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
-        self.log_info("比赛开始前准备")
+        self.log_info(room.match_room_id,"比赛开始前准备")
         data = {
             "cs_type": conf_data.get("cs_type"),
             "total_round": conf_data.get("total_round"),
@@ -312,7 +312,7 @@ class CompetitionServer(BaseServer):
         room.set_game_room_info(room_id, {"status": sta, "players": players, "room_num": room_num})
         s2c_game_room_finish = S2CGameRoomFinish.pb_model(**data)
         await self.conf.rds.srem("game_room_number", room_id)
-        self.log_info("room_id", room_id, "该房间已结束")
+        self.log_info(match_room_id,"room_id", room_id, "该房间已结束")
         send_list = []
         if players:
             for uid in players:
@@ -338,8 +338,7 @@ class CompetitionServer(BaseServer):
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
         room.sort_players_by_score()
-        self.log_info("match_room_id", match_room_id, "该比赛已结束")
-        self.log_info("排名", room.get_rank_by_score())
+        self.log_info( match_room_id, "该比赛已结束","排名", room.get_rank_by_score())
         competition_result = []
         send_work_list = []
         total_players = len(room.members)
@@ -388,7 +387,7 @@ class CompetitionServer(BaseServer):
         if player_score:
             for uid, score in player_score.items():
                 room.update_player_score(int(uid), score)
-        self.log_info("match_room_id", match_room_id, "room_id", room_id, "更新积分", player_score)
+        self.log_info( match_room_id, "room_id", room_id, "更新积分", player_score)
         await self.__competition_info(match_room_id)
 
     async def __competition_info(self, match_room_id, is_init=False, is_finish=False):
