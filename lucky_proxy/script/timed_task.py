@@ -101,9 +101,9 @@ class BaseTimed:
         return self.__scheduler.add_job(task_func, Triggers.CRON, **kwargs)
 
     def __add_default_jobs(self):
-         # 每月1号凌晨1点执行
+        # 每月1号凌晨1点执行
         self.add_cron_job(self.every_month_proxy_summary, month="*", day=1, hour=1)
-        #self.add_cron_job(self.every_month_proxy_summary,second="*/1")
+        #self.add_cron_job(self.every_month_proxy_summary,second="*/30")
 
     def rm_job(self, job_id):
         self.__scheduler.remove_job(job_id)
@@ -114,8 +114,6 @@ class BaseTimed:
     async def start(self,*args):
         self.__scheduler.start()
         self.__add_default_jobs()
-        await asyncio.Future()
-
 
     @classmethod
     def new(cls):

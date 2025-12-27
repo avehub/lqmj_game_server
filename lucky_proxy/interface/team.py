@@ -2,7 +2,7 @@ from sanic import Request
 
 from lucky_proxy.base_api import ProxyAuthApi
 from lucky_proxy.logic.proxy_summary import ProxySummary
-from lucky_proxy.model_db.main import ProxyUser, GameUser
+from lucky_proxy.model_db.main import ProxyUser, GameUser, ProxyUserWallet
 
 """
 团队
@@ -13,8 +13,10 @@ class TeamSummary(ProxyAuthApi):
 
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        team_info = await ProxyUser.get_by_pk(proxy_id, ["total_player", "level2_total_player"])
-        self.answer(self.sta_code.PASS, team_info, hint='查询成功!')
+        team_info = await ProxyUserWallet.get_by_dict({"id": proxy_id}, field=["total_player", "level2_total_player"])
+        if team_info:
+            self.answer(self.sta_code.PASS, team_info[0], hint='查询成功!')
+        self.answer(self.sta_code.PASS, {}, hint='查询成功!')
 
 
 """
@@ -63,8 +65,8 @@ class TeamMemberInfoDetailQuery(ProxyAuthApi):
               f"proxy_user u,proxy_user_wallet w where u.id=w.id and u.id={member_id} and u.level1_proxy_id={proxy_id}"
         detail = await  ProxyUser.exec_sql(sql, query=True, for_one=True)
         user: GameUser = await GameUser.get_by_pk(member_id, ["name", "phone", "avatar"])
-        if user:
-            detail["name"] = user.get("name")
-            detail["phone"] = user.get("phone")
-            detail["avatar"] = user.get("avatar")
+        if user and isinstance(detail, dict):
+            detail.update({"name": user.get("name")})
+            detail.update({"phone": user.get("phone")})
+            detail.update({"avatar": user.get("avatar")})
         self.answer(self.sta_code.PASS, detail, hint='查询成功!')

@@ -40,8 +40,8 @@ class ProxySummary(LogMeta):
                                      , page: int
                                      , sort: int):
         sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
-              f" from proxy_user_wallet t left join  user u  on u.uid=t.id   " \
-              f" where   t.level1_proxy_id={level1_proxy_id}"
+              f" from  proxy_user_wallet t  JOIN proxy_user pu ON t.id = pu.id   left join  user u  on u.uid=t.id   " \
+              f" where  t.id=pu.id  and  pu.is_deleted=0   and t.level1_proxy_id={level1_proxy_id}"
 
         if sort == 1:
             sql = sql + f" order by t.total_amount  desc ,t.id desc"
