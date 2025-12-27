@@ -86,6 +86,8 @@ class CmdCompetition(BaseEnum):
     MATCH_FINISH = 5, "比赛结束"
     MATCH_BY_INNER = 6, "加入比赛（内部调用）", CallCheck.INNER.val
     BACK_COMPETITION = 7, "返回比赛"
+    COMPETITION_INFO = 8, "比赛信息"
+    UPDATE_SCORE = 9, "更新比赛积分", CallCheck.INNER.val
 
 
 @unique
@@ -221,6 +223,7 @@ class CmdWorkers(BaseEnum):
     UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
     INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
     UPDATE_CYCLE_POINT_LEADERBOARD = 31, "更新赛季积分排行榜"
+    UPDATE_COMPETITION_RESULT = 32, "更新竞赛结果"
 
 
 @unique

@@ -18,7 +18,7 @@ from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.kit_async import DelayCall, delay_func
 from c_services.const.cs_enum_const import CmdMatch, CmdRoom
-from common.public.enum_const import ServiceEnum, StaCode, GameType
+from common.public.enum_const import ServiceEnum, StaCode, GameType, CacheKey
 from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD
 from common.utils.kit_dt import KitDt
 from c_services.cs_matching.const import MatchingMode
@@ -243,6 +243,12 @@ class MatchServer(BaseServer, LeisureService):
         if conf and conf.get("status"):
             hint = "游戏玩法正在维护，喝杯茶，休息一下!"
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.FORBID, hint, req_id=req_id)
+
+        match_info = await self.conf.rds.get_hash(CacheKey.IN_MATCH, uid, jsparse=True)
+        if match_info:
+            hint = "您已在比赛匹配中"
+            return await self.cs2ws_by_rmq(cmd, uid, StaCode.FORBID, hint, req_id=req_id)
+
         forbid_str = self.__forbid_match_set.get(cs_type) or ""
         if forbid_str:
             hint = f'亲爱的玩家，该游戏正维护, 预计：{forbid_str}开放，敬请谅解！'
