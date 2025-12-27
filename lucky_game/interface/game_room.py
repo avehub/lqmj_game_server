@@ -52,6 +52,11 @@ class GameRoomAPI(RoomTemplateBase):
         if cs_info:
             cs_info["exist"] = True
             self.answer(self.sta_code.FAIL, data=cs_info, hint="已有加入的游戏房间")
+        # 是否在赛季匹配中
+        match_info = await self.conf.rds.get_hash(CacheKey.IN_MATCH, u_info.get("uid"), jsparse=True)
+        if match_info:
+            match_info["exist"] = True
+            self.answer(self.sta_code.FAIL, data=match_info, hint="已在比赛匹配队列中")
         # 判断是否维护
         conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
         if conf and conf.get("status"):
