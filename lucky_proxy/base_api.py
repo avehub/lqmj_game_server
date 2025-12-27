@@ -4,7 +4,7 @@ from nsanic.orm.rc_model import RCModel
 
 from common.public.common_class import CommonApi
 from lucky_proxy.config import conf_srv, ConfSrv
-from lucky_proxy.handler.decorator import ProxyChecker
+from lucky_proxy.handler.decorator import ProxyChecker, RateLimiter
 
 
 class BaseApi(BaseHttpApi, CommonApi):
@@ -13,5 +13,10 @@ class BaseApi(BaseHttpApi, CommonApi):
 
 
 class ProxyAuthApi(BaseApi):
-    # decorators = [ProxyChecker]
-    decorators = []
+    decorators = [ProxyChecker]
+    # decorators = []
+
+
+class ProxyRateLimiterAuthApi(BaseApi):
+    decorators = [ProxyChecker, RateLimiter]
+    # decorators = []
