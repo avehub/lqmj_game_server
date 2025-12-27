@@ -100,7 +100,8 @@ class TimedService:
         # 每日一次任务
         print("写入待执行任务")
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
-        self.__scheduler.add_cron_job(self.every_month_proxy_summary, month="*", hour=1, day=1)
+        #每月 1号凌晨1点执行
+        self.__scheduler.add_cron_job(self.every_month_proxy_summary, month="*", day=1, hour=1)
 
     async def every_month_proxy_summary(self):
         await ProxysJobExecutor.every_month_summary()

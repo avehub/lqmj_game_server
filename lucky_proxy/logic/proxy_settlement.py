@@ -16,13 +16,15 @@ from lucky_proxy.model_db.main import ProxyUser, ProxyMonthSettlement, ProxySett
 
 
 class ProxysJobExecutor(LogMeta):
+
+    @classmethod
     async def every_month_summary(self):
         try:
             month_processor = ProxySettlementProcessor(
                 batch_size=100,
                 target_month=_get_default_month()
             )
-            month_processor.process_monthly_settlement()
+            await month_processor.process_monthly_settlement()
         except Exception as ex:
             self.log_err(f"查询代理ID失败: {ex}")
             raise

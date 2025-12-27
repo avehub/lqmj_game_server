@@ -10,7 +10,7 @@ from sanic import Request
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter, PromotionOrderDataDTO, PromotionAddUserDTO
 from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
-from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor
+from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor, ProxysJobExecutor
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
 
 """
@@ -178,5 +178,6 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
             batch_size=5,  # 每批处理100个代理
             target_month='2025-12'  # 处理2023年12月的数据，如果为None则处理上个月
         )
+        await  ProxysJobExecutor.every_month_summary()
         #await processor.process_monthly_settlement()
         self.answer(self.sta_code.PASS, {}, hint="查询成功!")
