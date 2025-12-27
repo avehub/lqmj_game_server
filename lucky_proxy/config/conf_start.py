@@ -1,10 +1,12 @@
 # coding=utf-8
+import asyncio
 import os.path
 from nsanic.base_conf import BaseConf
 from c_services.base.rmq_client import Rmq
 from common.public.enum_const import StaCode, DbKey
 from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, SERVER_SECRET_KEY, C_SERVICE_SECRET_KEY, FileUploadConf
 from lucky_game.handler.sensitive_words import SensitiveWords
+from lucky_game.script.timed_task import BaseTimed
 
 
 class ConfSrv(BaseConf):
