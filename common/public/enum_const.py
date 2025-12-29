@@ -75,7 +75,7 @@ class JWType(BaseEnum):
     """
     MANAGER = 1, "system_manager", 7 * 86400
     '''管理账户'''
-    AGENT = 2, "sales_agent", 14 * 86400
+    AGENT = 2, "sales_agent", 30 * 86400
     '''分销用户'''
     USER = 3, "normal_user", 2 * 86400
     '''普通用户'''

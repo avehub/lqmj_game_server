@@ -1,6 +1,10 @@
+import logging
+
 from tortoise import Tortoise
 from tortoise.signals import post_save, post_delete
 from ..public.logging_config import tortoise_logger
+from common.public.conf import ENV
+
 
 async def log_model_creation(sender, instance, created, using_db, update_fields):
     """记录模型创建日志"""
@@ -16,11 +20,13 @@ async def log_model_creation(sender, instance, created, using_db, update_fields)
             f"Updated Fields: {update_fields}"
         )
 
+
 async def log_model_delete(sender, instance, using_db):
     """记录模型删除日志"""
     tortoise_logger.info(
         f"Tortoise DELETE - Model: {sender.__name__}, ID: {instance.pk}"
     )
+
 
 async def setup_tortoise_logging():
     """设置Tortoise ORM日志"""
@@ -30,6 +36,6 @@ async def setup_tortoise_logging():
 
     # 配置SQL查询日志
     Tortoise._log = tortoise_logger
-    Tortoise._log.setLevel(logging.INFO)
-
+    if ENV in ['test', 'dev']:
+        Tortoise._log.addHandler(logging.StreamHandler())
     return tortoise_logger

@@ -86,6 +86,8 @@ class CmdCompetition(BaseEnum):
     MATCH_FINISH = 5, "比赛结束"
     MATCH_BY_INNER = 6, "加入比赛（内部调用）", CallCheck.INNER.val
     BACK_COMPETITION = 7, "返回比赛"
+    COMPETITION_INFO = 8, "比赛信息"
+    UPDATE_SCORE = 9, "更新比赛积分", CallCheck.INNER.val
 
 
 @unique

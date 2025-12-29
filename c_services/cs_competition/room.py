@@ -17,6 +17,7 @@ class CompetitionRoom:
         self.__match_round = 1
         self.__total_match_round = 4
         self.__competition_id = 0
+        self.__game_room_info = {}
 
     @property
     def match_room_id(self):
@@ -85,6 +86,13 @@ class CompetitionRoom:
     def competition_id(self, competition_id):
         self.__competition_id = competition_id
 
+    @property
+    def game_room_info(self):
+        return self.__game_room_info
+
+    def set_game_room_info(self, room_id, info):
+        self.__game_room_info[room_id] = info
+
     def player_join_competition_room(self, uid, score = 0):
         self.__members.add(uid)
         self.__player_scores[uid] = score
@@ -140,6 +148,7 @@ class CompetitionRoom:
         self.__game_room_count = 0
         self.__cs_type = 0
         self.__total_match_round = 4
+        self.__game_room_info.clear()
 
     async def inner_broadcast(self, c_code, data):
         """ 广播消息成员 """

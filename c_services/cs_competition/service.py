@@ -8,21 +8,23 @@ from nsanic.verify import vint
 
 from c_services.base.base_server import BaseServer
 from c_services.const.cs_enum_const import CallCheck, CmdFanOut, CmdCompetition, CmdRoom, CmdWorkers
+from c_services.cs_competition.const import GameRoomStatus
 from c_services.cs_competition.room import CompetitionRoom
 from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
 from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.ws_c2s import join_competition_model
-from common.proto.py_pb2.ws_leisure import s2c_one_of_model, S2CCompetitionOver, S2CJoinCompetition, S2CStartCompetition, S2CGameRoomFinish
+from common.proto.py_pb2.ws_leisure import S2CCompetitionOver, S2CJoinCompetition, S2CStartCompetition, S2CGameRoomFinish, \
+    S2CCompetitionInfo
 from common.public.conf import ROBOT_BATTLE, R_UID_THRESHOLD
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
-from common.utils.kit_async import DelayCall
 from common.utils.utils import UtilsTool
 from lucky_game.const import CompetitionStatus, PriceType
 from lucky_game.handler.random_utils import generate_natural_random
 from lucky_game.model_rc.base_robot import BaseRobotRC
-from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 from common.utils.kit_async import DelayCall, delay_func
+from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
 class CompetitionServer(BaseServer):
@@ -35,7 +37,7 @@ class CompetitionServer(BaseServer):
             CmdCompetition.ROOM_FINISH: self.__room_finish,
             CmdCompetition.MATCH_FINISH: self.__match_finish,
             CmdCompetition.BACK_COMPETITION: self.__back_competition,
-
+            CmdCompetition.UPDATE_SCORE: self.__update_score,
         })
 
         self.__rooms = {}
@@ -109,6 +111,7 @@ class CompetitionServer(BaseServer):
 
     async def __match_competition(self, uid, data):
         """ 进入 """
+
         req_id = ""
         if isinstance(data, dict):
             competition_id = data.get("competition_id")
@@ -118,6 +121,12 @@ class CompetitionServer(BaseServer):
             competition_id = join_competition_model.competition_id
             req_id = join_competition_model.req_id
             self.log_info("进入比赛信息", uid, competition_id, req_id)
+
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
+        if conf and conf.get("status"):
+            hint = "游戏玩法正在维护，喝杯茶，休息一下!"
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FORBID, hint, req_id=req_id)
+
         result, competition_id = vint(competition_id, require=True, minval=1)
         if not result:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛id有误")
@@ -207,6 +216,7 @@ class CompetitionServer(BaseServer):
                 self.__wait_player.pop(p_uid)
                 score = self.__player_info[p_uid].get("score", 0)
                 room.player_join_competition_room(p_uid, score)
+                await self.__save_match_room_id(p_uid, match_room_id)
 
             await self.__competition_before_start(conf_data, room, req_id)
 
@@ -220,16 +230,23 @@ class CompetitionServer(BaseServer):
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         if conf_data.get("status") == CompetitionStatus.CLOSED:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已关闭", req_id=req_id)
+        join_info = await self.__get_player_in_match(uid)
+        if not join_info:
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家未加入比赛", req_id=req_id)
         max_match_player = conf_data.get("max_match_player")
         players = [p_uid for p_uid, comp_id in self.__wait_player.items() if comp_id == competition_id]
         for p_uid in players:
             data = {"players": players, "max_match_player": max_match_player}
             data_model = S2CJoinCompetition.pb_model(**data)
             await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, p_uid, msg=data_model, req_id=req_id)
+        match_room_id = join_info.get("match_room_id")
+        if not match_room_id:
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家未加入比赛房间", req_id=req_id)
+        await self.__competition_info(match_room_id)
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
-        self.log_info("比赛开始前准备")
+        self.log_info(room.match_room_id,"比赛开始前准备")
         data = {
             "cs_type": conf_data.get("cs_type"),
             "total_round": conf_data.get("total_round"),
@@ -250,13 +267,24 @@ class CompetitionServer(BaseServer):
 
         group_list = room.get_players_by_score()
         player_list = list(room.members)
+        room_num = 1
+        is_init = room.match_round == 1
         for group in group_list:
             data["room_id"] = await self.unique_room_id()
+            game_room_info = {
+                "status": GameRoomStatus.PLAYING,
+                "players": group,
+                "room_num": room_num,
+            }
+            room.set_game_room_info(data["room_id"], game_room_info)
+            room_num += 1
             for p_uid in group:
-                data["player_score"] = 0 if room.match_round == 1 else room.get_player_score(p_uid)
+                data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
                 await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
 
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
+        if is_init:
+            await self.__competition_info(room.match_room_id, is_init)
 
     async def __start_competition(self, player_list, data_model, req_id=""):
         """ 开始比赛 """
@@ -273,37 +301,44 @@ class CompetitionServer(BaseServer):
         if not room:
             self.log_info("match_room_id", match_room_id, "比赛房间不存在")
         room.add_finish_room_count()
-        player_score = data.get("player_score")
         is_all_room_finish = room.finish_room_count == room.game_room_count
         data = {"need_wait": not is_all_room_finish}
+        room_info = room.game_room_info[room_id]
+        sta = GameRoomStatus.PLAYING
+        if not is_all_room_finish:
+            sta = GameRoomStatus.WAITING
+        players = room_info.get("players") or []
+        room_num = room_info.get("room_num") or 0
+        room.set_game_room_info(room_id, {"status": sta, "players": players, "room_num": room_num})
         s2c_game_room_finish = S2CGameRoomFinish.pb_model(**data)
-
         await self.conf.rds.srem("game_room_number", room_id)
-        self.log_info("room_id", room_id, "该房间已结束", "player_score", player_score)
+        self.log_info(match_room_id,"room_id", room_id, "该房间已结束")
         send_list = []
-        if player_score:
-            for uid, score in player_score.items():
-                room.update_player_score(int(uid), score)
-                if int(uid) > R_UID_THRESHOLD:
-                    send_list.append(self.cs2ws_by_rmq(CmdCompetition.ROOM_FINISH, int(uid), msg=s2c_game_room_finish))
+        if players:
+            for uid in players:
+                if uid > R_UID_THRESHOLD:
+                    send_list.append(self.cs2ws_by_rmq(CmdCompetition.ROOM_FINISH, uid, msg=s2c_game_room_finish))
         if send_list:
             await asyncio.gather(*send_list)
-
+        is_competition_finish = False
         if is_all_room_finish:
-            room.finish_room_count = 0
             if room.match_round == room.total_match_round:
-                await self.__match_finish(match_room_id, room)
+                is_competition_finish = True
             else:
+                room.finish_room_count = 0
+                room.game_room_info.clear()
                 room.add_match_round()
                 conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(room.competition_id)
                 await delay_func(10, self.__competition_before_start, conf_data, room, "")
 
+        await self.__competition_info(match_room_id, is_finish=is_competition_finish)
+        if is_competition_finish:
+            await self.__match_finish(match_room_id, room)
+
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
         room.sort_players_by_score()
-        self.log_info("match_room_id", match_room_id, "该比赛已结束")
-        await self.__delete_player_in_match(list(room.members))
-        self.log_info("排名", room.get_rank_by_score())
+        self.log_info( match_room_id, "该比赛已结束","排名", room.get_rank_by_score())
         competition_result = []
         send_work_list = []
         total_players = len(room.members)
@@ -322,19 +357,76 @@ class CompetitionServer(BaseServer):
             send_data = {
                 "cycle_id": self.__current_cycle_id,
                 "up_data": {
-                "score": points,
-                "ticket": score #正分不扣门票，负分输多少扣多少门票
+                    "score": points,
+                    "ticket": score  # 正分不扣门票，负分输多少扣多少门票
                 }
             }
             send_work_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_COMPETITION_RESULT, send_data, uid))
-        data = {"competition_result": competition_result}
+        # await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
+        data = {
+            "competition_result": competition_result,
+        }
         s2c_competition_over = S2CCompetitionOver.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         if send_work_list:
             await asyncio.gather(*send_work_list)
+        await self.__delete_player_in_match(list(room.members))
         room.clear_competition()
         await self.conf.rds.srem("match_room_number", match_room_id)
         self.remove_room(match_room_id)
+
+    async def __update_score(self, uid, data):
+        """ 更新比赛积分 """
+        match_room_id = data.get("match_room_id")
+        room_id = data.get("room_id")
+        room = self.get_room(match_room_id)
+        if not room:
+            self.log_info("match_room_id", match_room_id, "比赛房间不存在")
+            return
+        player_score = data.get("player_score")
+        if player_score:
+            for uid, score in player_score.items():
+                room.update_player_score(int(uid), score)
+        self.log_info( match_room_id, "room_id", room_id, "更新积分", player_score)
+        await self.__competition_info(match_room_id)
+
+    async def __competition_info(self, match_room_id, is_init=False, is_finish=False):
+        room = self.get_room(match_room_id)
+        if not room:
+            self.log_info("match_room_id", match_room_id, "比赛房间不存在")
+            return
+        player_rank = []
+        award_list = []
+        total_players = len(room.members)
+        for rank, uid, score in room.get_rank_by_score():
+            rank_info = {
+                "rank": rank,
+                "uid": uid,
+                "score": 0 if is_init else score,
+            }
+            points = total_players - rank + 1
+            player_rank.append(rank_info)
+            award_list.append({
+                "rank": rank,
+                "points": points,
+            })
+        game_room_list = []
+        for room_id, info in room.game_room_info.items():
+            game_room_status = {
+                "room_num": info.get("room_num", 0),
+                "room_status": GameRoomStatus.FINISH if is_finish else info.get("status", GameRoomStatus.PLAYING),
+                "tid": room_id,
+            }
+            game_room_list.append(game_room_status)
+
+        data = {
+            "player_rank": player_rank,
+            "award_list": award_list,
+            "game_room_list": game_room_list,
+        }
+        print("比赛信息", data)
+        s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
+        await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
 
     async def __sava_player_in_match(self, uid, competition_id):
         info = {
@@ -342,6 +434,15 @@ class CompetitionServer(BaseServer):
             "timestamp": tool_dt.cur_time()
         }
         await self.conf.rds.set_hash(CacheKey.IN_MATCH, uid, info)
+
+    async def __save_match_room_id(self, uid, match_room_id):
+        """
+        为玩家追加保存比赛房间ID
+        """
+        match_info = await self.conf.rds.get_hash(CacheKey.IN_MATCH, uid, jsparse=True)
+        if match_info:
+            match_info["match_room_id"] = match_room_id
+        await self.conf.rds.set_hash(CacheKey.IN_MATCH, uid, match_info)
 
     async def __delete_player_in_match(self, uid_list):
         await self.conf.rds.drop_hash_bulk(CacheKey.IN_MATCH, uid_list)
