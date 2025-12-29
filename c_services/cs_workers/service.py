@@ -6,7 +6,6 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_server import JsonBaseServer
 from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, CmdWs, GameAnnouncement
 from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
-from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
@@ -74,7 +73,6 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_GAME_RECORD_TIMES: self.__update_game_record_times,
             CmdWorkers.INSERT_GAME_RECORD_TOTAL: self.__insert_game_record_total,
             CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD: self.__update_tournament_cycle_leaderboard,
-            CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -697,8 +695,3 @@ class WorkersServer(JsonBaseServer):
             sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)
         self.log_info(f"赛季单场次结束排行榜更新：{sta}")
 
-    async def __update_competition_result(self,uid,data):
-        cycle_id = data.get("cycle_id")
-        up_data = data.get("up_data")
-        sta,result = await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
-        self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
