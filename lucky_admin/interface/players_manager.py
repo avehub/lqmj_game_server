@@ -9,7 +9,7 @@ from common.public.conf import R_UID_THRESHOLD, C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum
 from common.utils.utils import UtilsTool
 from lucky_admin.base_api import AdminAuthApi
-from lucky_game.model_db.main import RecordsAdminOperates, Admins
+from lucky_admin.model_db.main import RecordsAdminOperates, Admins
 from lucky_admin.model_rc.base_admin import BaseAdminRC
 from lucky_game.model_rc.base_ranking import UserRankingRC
 from lucky_game.model_rc.base_user import BaseUserRC
