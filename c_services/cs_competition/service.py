@@ -362,14 +362,25 @@ class CompetitionServer(BaseServer):
                 }
             }
             send_work_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_COMPETITION_RESULT, send_data, uid))
-        # await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
         data = {
             "competition_result": competition_result,
         }
-        s2c_competition_over = S2CCompetitionOver.pb_model(**data)
-        await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         if send_work_list:
             await asyncio.gather(*send_work_list)
+        for item in competition_result:
+            uid = item.get("uid")
+            if uid > R_UID_THRESHOLD:
+                rank_info = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
+                now_rank = rank_info.get("rank_position", 0)
+                last_rank_info = await self.__get_player_in_match(uid)
+                last_rank = last_rank_info.get("rank", 0)
+                item["difference"] = rank_info.get("difference", 0)
+                item["last_rank"] = last_rank
+                item["now_rank"] = now_rank
+
+        print("competition_result", competition_result)
+        s2c_competition_over = S2CCompetitionOver.pb_model(**data)
+        await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         await self.__delete_player_in_match(list(room.members))
         room.clear_competition()
         await self.conf.rds.srem("match_room_number", match_room_id)
@@ -429,9 +440,15 @@ class CompetitionServer(BaseServer):
         await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
 
     async def __sava_player_in_match(self, uid, competition_id):
+        if uid > R_UID_THRESHOLD:
+            rank_info = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
+            rank = rank_info.get("rank_position", 0)
+        else:
+            rank = 0
         info = {
             "competition_id": competition_id,
-            "timestamp": tool_dt.cur_time()
+            "timestamp": tool_dt.cur_time(),
+            "rank":rank
         }
         await self.conf.rds.set_hash(CacheKey.IN_MATCH, uid, info)
 
