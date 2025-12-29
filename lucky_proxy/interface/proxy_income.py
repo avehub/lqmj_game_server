@@ -168,7 +168,7 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         order_time: int
         """
         json = req.json
-        p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
+        p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 0.1, 0.7, time.time())
 
         await  GameDataAdapter.sync_promotion_order_data(p)
         #await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))

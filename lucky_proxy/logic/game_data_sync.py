@@ -148,24 +148,24 @@ class GameDataSync(LogMeta):
             sql = f"""
                  update proxy_user_wallet 
                         set  total_player=total_player+1
-                        , total_amount=total_amount+{order_amount}
-                        ,  total_income=total_income+{proxy_income}
-                        ,  room_amount=room_amount+{order_amount}
-                        ,  room_income=room_income+{proxy_income}
-                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
-                        ,  level1_room_income=level1_room_income+{level1_proxy_income}
+                        , total_amount=total_amount+{str(order_amount)}
+                        ,  total_income=total_income+{str(proxy_income)}
+                        ,  room_amount=room_amount+{str(order_amount)}
+                        ,  room_income=room_income+{str(proxy_income)}
+                        ,  level1_total_income=level1_total_income+{str(level1_proxy_income)}
+                        ,  level1_room_income=level1_room_income+{str(level1_proxy_income)}
                  where id={proxy_id}
                  """
         if order_type == 2:
             sql = f"""
                  update proxy_user_wallet 
                         set  total_player=total_player+1
-                        ,  total_amount=total_amount+{order_amount}
-                        ,  total_income=total_income+{proxy_income}
-                        ,  assistance_program_amount=assistance_program_amount+{order_amount}
-                        ,  assistance_program_income=assistance_program_income+{proxy_income}
-                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
-                        ,  level1_assistance_program_income=level1_assistance_program_income+{level1_proxy_income}
+                        ,  total_amount=total_amount+{str(order_amount)}
+                        ,  total_income=total_income+{str(proxy_income)}
+                        ,  assistance_program_amount=assistance_program_amount+{str(order_amount)}
+                        ,  assistance_program_income=assistance_program_income+{str(proxy_income)}
+                        ,  level1_total_income=level1_total_income+{str(level1_proxy_income)}
+                        ,  level1_assistance_program_income=level1_assistance_program_income+{str(level1_proxy_income)}
                  where id={proxy_id}
                  """
         return await ProxyUserWallet.exec_sql(sql)
