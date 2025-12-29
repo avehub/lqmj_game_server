@@ -135,10 +135,10 @@ class GameDataSync(LogMeta):
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
                 await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount, data.order_type)
-                # TODO 增加 用户钱包数据
         except Exception as e:
             cls.log_err(f"【重要日志】分销订单入库失败，error：{e},data:{data}")
-
+            return 0
+        return 1
     @classmethod
     async def update_wallet(cls, proxy_id, proxy_income, level1_proxy_income, order_amount, order_type):
         sql = ""
