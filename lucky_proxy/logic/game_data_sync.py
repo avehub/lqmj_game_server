@@ -135,6 +135,8 @@ class GameDataSync(LogMeta):
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
                 await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount, data.order_type)
+                await ProxyPromotionRelation.exec_sql(f" update proxy_promotion_relation  "
+                                                      f"set total_amount=total_amount+{str(data.order_amount)} where player_id={data.player_id}")
         except Exception as e:
             cls.log_err(f"【重要日志】分销订单入库失败，error：{e},data:{data}")
             return 0

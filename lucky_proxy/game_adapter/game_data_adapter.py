@@ -71,7 +71,6 @@ class GameDataAdapter(LogMeta):
             return 0
         query_relation = {
             "player_id": data.player_id,
-            "proxy_id": proxy_user.get("id")
         }
         exists_relation: ProxyPromotionRelation = await  ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if exists_relation:
