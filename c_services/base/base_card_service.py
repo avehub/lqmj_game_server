@@ -54,7 +54,7 @@ class BaseCardService(BaseService):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
         player = self.get_or_create_player(uid, self.PLAYER)
         if player.seat_id <= 0:
-            room.online_group_user = data.get("online_group_user")
+            room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)

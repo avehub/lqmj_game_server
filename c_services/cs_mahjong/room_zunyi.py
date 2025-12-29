@@ -647,6 +647,6 @@ class RoomZY(RoomBJ):
 
     def clear_room(self):
         super().clear_room()
-        self.__fan_ji_score = {}
+        self.__fan_ji_score.clear()
 
 
