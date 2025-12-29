@@ -338,11 +338,12 @@ class CompetitionServer(BaseServer):
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
         room.sort_players_by_score()
-        self.log_info( match_room_id, "该比赛已结束","排名", room.get_rank_by_score())
+        rank_by_score = room.get_rank_by_score()
+        self.log_info( match_room_id, "该比赛已结束","排名", rank_by_score)
         competition_result = []
         send_work_list = []
         total_players = len(room.members)
-        for rank, uid, score in room.get_rank_by_score():
+        for rank, uid, score in rank_by_score:
             points = total_players - rank + 1
             ticket = self.__player_info[uid].get("ticket", 0)
             score = 0 if score >= 0 else score
@@ -354,14 +355,23 @@ class CompetitionServer(BaseServer):
                 "ticket": ticket if score >= 0 else ticket + score
             })
             self.__player_info.pop(uid)
-            send_data = {
-                "cycle_id": self.__current_cycle_id,
-                "up_data": {
+
+            # send_data = {
+            #     "cycle_id": self.__current_cycle_id,
+            #     "up_data": {
+            #         "score": points,
+            #         "ticket": score  # 正分不扣门票，负分输多少扣多少门票
+            #     }
+            # }
+            # send_work_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_COMPETITION_RESULT, send_data, uid))
+
+            #暂时不通过worker更新
+            up_data = {
                     "score": points,
                     "ticket": score  # 正分不扣门票，负分输多少扣多少门票
                 }
-            }
-            send_work_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_COMPETITION_RESULT, send_data, uid))
+            sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
+            self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
         data = {
             "competition_result": competition_result,
         }
