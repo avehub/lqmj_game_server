@@ -24,6 +24,9 @@ from lucky_game.handler.wechat import WeChat
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from common.aliyun.pay_service import AlipayPayment
 from lucky_game.model_rc.vip_level import UserVipRC
+from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
+from lucky_proxy.logic.game_data_sync import PromotionOrderDataDTO
+from lucky_game.model_rc.distribution_settle_conf import DistributionSettleConfRC
 
 
 class PaymentLogic:
@@ -512,6 +515,22 @@ class PaymentLogic:
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
                 if order_status == OrderStatus.PAID:
+
+                    # 临时处理 dev分支已经封装方法等合并后优化
+                    room_card_ids = [17, 18, 19, 20, 21, 22, 23, 24]
+                    fink_ids = [59]
+                    order_type = 0
+                    # 房卡分成
+                    if order_info["good_id"] in room_card_ids:
+                        order_type = 1
+                    elif order_info["good_id"] in fink_ids:
+                        order_type = 2
+                    if order_type:
+                        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(order_info["num"], order_type)
+                        promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_no, player_id=order_info["uid"], order_type=order_type, goods_number=order_info["num"], price=float(order_info["amount"]/order_info["num"]), order_amount=order_info["amount"], dividend_rate=dividend_rate, order_time=order_info["created"])
+                        sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
+                        NLogger.info(f"订单分销结果：{sta}")
+
                     await self.pay_success(order_info)
                 else:
                     await self.pay_fail(order_info)

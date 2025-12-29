@@ -65,3 +65,15 @@ class MailSta(BaseEnum):
     OUT_OF_DATE = 0, "已失效"
     NORMAL = 1, "正常"
     CANCELED = 2, "已撤销"
+
+
+class ProxyLoginType(BaseEnum):
+    """ 方式 """
+    PHONE_LOGIN = 1, "手机号登录"
+    WECHAT_MP_LOGIN = 2, "微信公众号授权登陆"
+
+
+class ProxyLevel(BaseEnum):
+    """ 代理等级 """
+    LEVEL_1 = 1, "一级代理"
+    LEVEL_2 = 2, "二级代理"
