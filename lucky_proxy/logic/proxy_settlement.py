@@ -15,24 +15,40 @@ from lucky_proxy.model_db.main import ProxyUser, ProxyMonthSettlement, ProxySett
 """
 
 
+class ProxysJobExecutor(LogMeta):
+
+    @classmethod
+    async def every_month_summary(self):
+        try:
+            month_processor = ProxySettlementProcessor(
+                batch_size=100,
+                target_month=_get_default_month()
+            )
+            await month_processor.process_monthly_settlement()
+        except Exception as ex:
+            self.log_err(f"查询代理ID失败: {ex}")
+            raise
+
+
+def _get_default_month() -> str:
+    """获取默认月份（上个月）"""
+    today = datetime.now()
+    # 获取上个月
+    if today.month == 1:
+        last_month = 12
+        year = today.year - 1
+    else:
+        last_month = today.month - 1
+        year = today.year
+
+    return f"{year}-{last_month:02d}"
+
+
 class ProxySettlementProcessor(LogMeta):
     def __init__(self, batch_size: int, target_month: str):
         self.batch_size = batch_size
         self.target_month = target_month
         self.log_info(f"初始化结算处理器: batch_size={batch_size}, target_month={target_month}")
-
-    def _get_default_month(self) -> str:
-        """获取默认月份（上个月）"""
-        today = datetime.now()
-        # 获取上个月
-        if today.month == 1:
-            last_month = 12
-            year = today.year - 1
-        else:
-            last_month = today.month - 1
-            year = today.year
-
-        return f"{year}{last_month:02d}"
 
     async def fetch_proxy_ids_batch(self, last_id: int = 0) -> List[int]:
         """
@@ -133,7 +149,7 @@ class ProxySettlementProcessor(LogMeta):
 
         # 记录开始时间
         start_time = time.time()
-        status=1
+        status = 1
         while True:
             batch_count += 1
             self.log_info(f"处理第 {batch_count} 批次...")

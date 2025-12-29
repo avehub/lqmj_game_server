@@ -16,7 +16,6 @@ from lucky_game.base_api import GameAuthApi, SpecialApi
 from lucky_game.handler.huifu import DouGongPay
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.handler.wechat import WeChat
-from lucky_game.interface.some_pay import BaseSomePay
 from lucky_game.model_rc.base_activity import ConfActivityRC, UserActivityRC
 from lucky_game.model_rc.base_award import AwardRC
 from lucky_game.model_rc.base_store import GoodRC

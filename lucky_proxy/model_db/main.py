@@ -77,7 +77,8 @@ class ProxyUserWallet(DBModel):
                                                            description='级代（上级）理获得的助农收益')
     level1_room_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                              description='一级代理（上级）获得的房卡收益')
-
+    level2_total_player = fields.IntField(max_length=20, default=0, description='二级道理数量')
+    total_player = fields.IntField(max_length=20, default=0, description='总玩家')
     update_time = fields.BigIntField(description='更新时间')
     created = fields.BigIntField(description='创建时间')
 

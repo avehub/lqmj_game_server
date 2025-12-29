@@ -10,6 +10,7 @@ from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.handler.vivo_pay import vivo_payment
 from lucky_game.logic.activity import FirstCharge
+from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -81,7 +82,7 @@ class PaymentLogic:
         currency = express.get("currency")
         price = express.get("price")
         # 确保 price 是 Decimal 类型
-        if isinstance(price, (int, float)):
+        if isinstance(price, (int, float, str)):
             price = decimal.Decimal(price)
         elif not isinstance(price, decimal.Decimal):
             return False, '商品价格格式不正确', {}
@@ -158,8 +159,9 @@ class PaymentLogic:
             # 充值处理
             pass
         # 扣除商品数量
-        if express.get("total") > 0:
-            await GoodRC.update_int_field(sku, "total", 1, "sub")
+        if express.get("kind") and express.get("total") > 0:
+            order = data_before.get("order")
+            await GoodRC.update_int_field(express["good_id"], "total", order["order"].get("num"), "sub")
 
         return sta, msg, result
 
@@ -305,6 +307,7 @@ class PaymentLogic:
             "trade_time": order.created,
             "trade_amount": order.amount,
             "pay_mode": order.pay_mode,
+            "num": order.num,
         }
         return True, return_data
 
@@ -512,7 +515,7 @@ class PaymentLogic:
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
                 if order_status == OrderStatus.PAID:
-                    await FirstCharge().charge_order(order_info)
+
                     # 临时处理 dev分支已经封装方法等合并后优化
                     room_card_ids = [17, 18, 19, 20, 21, 22, 23, 24]
                     fink_ids = [59]
@@ -527,6 +530,10 @@ class PaymentLogic:
                         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_no, player_id=order_info["uid"], order_type=order_type, goods_number=order_info["num"], price=float(order_info["amount"]/order_info["num"]), order_amount=order_info["amount"], dividend_rate=dividend_rate, order_time=order_info["created"])
                         sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
                         NLogger.info(f"订单分销结果：{sta}")
+
+                    await self.pay_success(order_info)
+                else:
+                    await self.pay_fail(order_info)
         except Exception as e:
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
@@ -548,6 +555,33 @@ class PaymentLogic:
             if not add_sta:
                 return False, e
         return True, "OK"
+
+    async def pay_fail(self, order: dict) -> bool:
+        """订单支付失败"""
+        express = await GoodRC.get_good_info(order["sku"])
+        # 商品库存-退回
+        if express:
+            if express.get("total") > 0:
+                await GoodRC.update_int_field(express["good_id"], "total", order["num"], "add")
+        return True
+
+    async def pay_success(self, order: dict) -> bool:
+        """订单支付成功"""
+        express = await GoodRC.get_good_info(order["sku"])
+        # 商品类型判断-方便后续操作
+        # 商品为活动订单：10金币补足 11复仇礼包 12返还礼包
+        good_type = express.get("type")
+        if good_type in [10, 11, 12]:
+            await FirstCharge().charge_order(order)
+        # 商品为赛事订单：15 农产品
+        elif good_type == 15:
+            # 发送农产品邮件
+            await TournamentLogic().distribute_order_good(order)
+            # 发放赛事积分
+            await TournamentLogic().distribute_order_point(order)
+
+        return True
+
 
 
 

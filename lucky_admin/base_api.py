@@ -13,5 +13,6 @@ class BaseApi(BaseHttpApi, CommonApi):
 
 
 class AdminAuthApi(BaseApi):
-    # decorators = [AdminChecker]
-    decorators = []
+    decorators = [AdminChecker]
+
+

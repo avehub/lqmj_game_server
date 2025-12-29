@@ -4,7 +4,6 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ConfCompetition
 from lucky_game.model_rc.base_rc import BaseCommonRC
-from lucky_game.const import CompetitionStatus
 from nsanic.libs.tool import json_encode
 
 

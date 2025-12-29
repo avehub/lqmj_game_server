@@ -5,6 +5,8 @@ from nsanic.libs.tool import json_encode
 from tortoise.transactions import in_transaction
 from c_services.base.base_server import JsonBaseServer
 from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, CmdWs, GameAnnouncement
+from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
@@ -12,7 +14,7 @@ from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
@@ -71,6 +73,8 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.INSERT_GAME_GRADE: self.__insert_game_grade,
             CmdWorkers.UPDATE_GAME_RECORD_TIMES: self.__update_game_record_times,
             CmdWorkers.INSERT_GAME_RECORD_TOTAL: self.__insert_game_record_total,
+            CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD: self.__update_tournament_cycle_leaderboard,
+            CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -677,3 +681,24 @@ class WorkersServer(JsonBaseServer):
                 "event_time": tool_dt.cur_time()
             })
 
+
+    async def __update_tournament_cycle_leaderboard(self, uid, data):
+        total_points = data.get("total_points")
+        uid = data.get("uid")
+        cycle_id = data.get("cycle_id")
+        has, leaderboard_data = await TournamentCycleLeaderboardRC.get_uid_leaderboard(cycle_id, uid)
+        if not has:
+            sta, _ = await TournamentCycleLeaderboardRC.add_leaderboard(cycle_id, uid, total_points)
+        else:
+            up_data = {
+                "total_points": total_points + leaderboard_data.get("total_points"),
+                "participated_rounds": 1 + leaderboard_data.get("participated_rounds"),
+            }
+            sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)
+        self.log_info(f"赛季单场次结束排行榜更新：{sta}")
+
+    async def __update_competition_result(self,uid,data):
+        cycle_id = data.get("cycle_id")
+        up_data = data.get("up_data")
+        sta,result = await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+        self.log_info(f"更新比赛结果：{sta} 玩家{uid}")

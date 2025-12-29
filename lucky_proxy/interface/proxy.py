@@ -25,15 +25,15 @@ class AddLevel2Proxy(ProxyAuthApi):
     async def post(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         member_id = self.check_int(req.json.get("uid"), require=True, p_name="uid")
-        room_card_rate=self.check_float(req.json.get("room_card_rate"), keep_val=2, minval=0.01, require=True,
-                         maxval=0.90,
-                         p_name="room_card_rate"),
-        assistance_program_rate=self.check_float(req.json.get("assistance_program_rate"), keep_val=2,
-                                                require=True, minval=0.01,
-                                                maxval=0.90, p_name="assistance_program_rate"),
+        room_card_rate = self.check_float(req.json.get("room_card_rate"), keep_val=2, minval=0.01, require=True,
+                                          maxval=0.90,
+                                          p_name="room_card_rate"),
+        assistance_program_rate = self.check_float(req.json.get("assistance_program_rate"), keep_val=2,
+                                                   require=True, minval=0.01,
+                                                   maxval=0.90, p_name="assistance_program_rate"),
 
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id)
-        if not proxy_user and proxy_user.get("proxy_level") != 1:
+        if not proxy_user or proxy_user.get("proxy_level") != 1:
             self.answer(self.sta_code.FAIL, {}, hint='无权限操作!')
 
         proxy_user_level2: ProxyUser = await ProxyUser.get_by_pk(req.json.get("uid"))
@@ -67,7 +67,7 @@ class AddLevel2Proxy(ProxyAuthApi):
             "total_player": 0,
             "phone": user.get("phone"),
             "unionid": user.get("unionid"),
-            "room_card_rate":str(room_card_rate[0]),
+            "room_card_rate": str(room_card_rate[0]),
             "assistance_program_rate": str(assistance_program_rate[0]),
             "proxy_level": 2,
             "create_by": proxy_id,
@@ -83,7 +83,9 @@ class AddLevel2Proxy(ProxyAuthApi):
                     await ProxyUser.update_by_pk(member_id, level2_proxy)
                 else:
                     await ProxyUser.add_one(level2_proxy)
-                    await ProxyUserWallet.add_one({"id": member_id})
+                    await ProxyUserWallet.add_one({"id": member_id, "AddLevel2Proxy": 2, "level1_proxy_id": proxy_id})
+                await ProxyUser.exec_sql(
+                    f"update  proxy_user_wallet set level2_total_player=level2_total_player+1 where id={proxy_id}")
         except Exception as e:
             self.log_err(f"设置二级代理出错err={e}")
             self.answer(self.sta_code.FAIL, {}, hint='设置失败，请重试!')
@@ -129,9 +131,16 @@ class RemoveLevel2Proxy(ProxyAuthApi):
     async def post(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         member_id = req.json.get("member_id")
-        res = await  ProxyUser.update_by_cond({"id": member_id, "level1_proxy_id": proxy_id}, {"is_deleted": 1})
-        sta, hint = [self.sta_code.PASS, '操作成功'] if res else [self.sta_code.FAIL, '操作失败']
-        self.answer(sta, {}, hint=hint)
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                res = await  ProxyUser.update_by_cond({"id": member_id, "level1_proxy_id": proxy_id}, {"is_deleted": 1})
+                if res:
+                    await ProxyUser.exec_sql(
+                        f"update  proxy_user_wallet set level2_total_player=level2_total_player-1 where id={proxy_id}")
+        except Exception as e:
+            self.log_err(f"删除二级代理出错err={e}")
+            self.answer(self.sta_code.FAIL, {}, hint='删除失败，请重试!')
+        self.answer(self.sta_code.PASS, {}, hint="操作成功!")
 
 
 """

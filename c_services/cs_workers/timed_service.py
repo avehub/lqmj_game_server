@@ -5,13 +5,17 @@ from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier
+from common.model_rc.tournament_cycle import TournamentCycleRC
 from common.public.conf import LIVE_SERVER, CertificationConf
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.logic.tournament import TournamentLogic
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.script.timed_task import BaseTimed
+from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
+
 
 
 class TimedService:
@@ -97,7 +101,6 @@ class TimedService:
         # self.__scheduler.add_cron_job(self.__stats_data_tasks, minute='*/3')  # 每5分钟执行一次 测试
 
         # 每日一次任务
-        print("写入待执行任务")
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
 
     async def __every_day_tasks(self):
@@ -106,6 +109,12 @@ class TimedService:
         self.log_info(f"每日一次任务开始 {now_time}")
         # 防沉迷过期时间检查
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
+        # 赛季状态检查更新
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
+        # 赛季状态检查更新
+        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+
+   
 
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
@@ -114,8 +123,10 @@ class TimedService:
         self.__scheduler.add_date_job(StatsExpert.stats_game_times, run_date=now_time + timedelta(minutes=5))
         self.__scheduler.add_date_job(StatsExpert.stats_user_data_analysis, run_date=now_time + timedelta(minutes=10))
         self.__scheduler.add_date_job(StatsExpert.stats_retention_user_own, run_date=now_time + timedelta(minutes=15))
-        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.JuLiang], run_date=now_time + timedelta(minutes=20))
-        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.DataNexus], run_date=now_time + timedelta(minutes=25))
+        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.JuLiang],
+                                      run_date=now_time + timedelta(minutes=20))
+        self.__scheduler.add_date_job(StatsExpert.stats_retention_user_ads, args=[UserSource.DataNexus],
+                                      run_date=now_time + timedelta(minutes=25))
 
     async def __order_do_tasks(self):
         """ 顺序执行任务 """
@@ -132,7 +143,6 @@ class TimedService:
 
         # 20分钟后执行邮件发奖
         self.__scheduler.add_date_job(self.__season_check_out, run_date=now_time + timedelta(minutes=20))
-
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -171,6 +181,30 @@ class TimedService:
                 message_url=CertificationConf.DOMAIN,
             )
 
+    @classmethod
+    async def check_tournament_cycle(self):
+        """ 检查赛季周期是否过期 """
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
+        if cycle_data:
+            now = tool_dt.cur_time()
+            end_time = datetime.strptime(cycle_data["cycle_end_date"], "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            if now > end_time_tamp:
+                sta = await TournamentLogic().up_cycle_status(cycle_id)
+                self.log_info(f"赛季周期{cycle_id}已结束，更新赛季周期状态：{sta}")
+
+    @classmethod
+    async def check_tournament_settle(self):
+        """ 赛季周期结算 """
+        last_cycle_id = await TournamentCycleRC.get_last_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(last_cycle_id)
+        if cycle_data and cycle_data["status"] == TournamentCycleRC.CYCLE_STATUS_END:
+            if await TournamentLogic().cycle_settle(last_cycle_id):
+                await TournamentCycleRC.update_cycle(last_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
+            self.log_info(f"赛季周期{last_cycle_id}已结算归档")
+
+
 
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
@@ -184,8 +218,6 @@ class TimedService:
         else:
             next_run_time = start_time
         return next_run_time
-
-
 
     def start(self):
         self.__scheduler = BaseTimed.new()
