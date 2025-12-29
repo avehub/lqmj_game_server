@@ -4,7 +4,7 @@ from tortoise.expressions import Q
 
 from lucky_admin.const import UserGroup, AnnouncementsStatus, WeightEnum
 from lucky_admin.handler.decorator import filter_not_out_of_date_data
-from lucky_game.model_db.main import ConfAnnouncements
+from lucky_admin.model_db.main import ConfAnnouncements
 
 
 class ConfAnnouncementsRC(RCModel):
