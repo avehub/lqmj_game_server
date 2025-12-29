@@ -86,6 +86,7 @@ class GameDataAdapter(LogMeta):
             "promotion_day": data_date.strftime("%Y-%m-%d"),
             "promotion_type": data.promotion_type,
             "proxy_id": proxy_user.get("id"),
+            "level1_proxy_id": proxy_user.get("level1_proxy_id"),
             "level": proxy_user.get("proxy_level"),
 
         }
