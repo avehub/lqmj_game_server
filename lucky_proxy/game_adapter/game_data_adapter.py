@@ -52,6 +52,7 @@ class GameDataAdapter(LogMeta):
             return 0
 
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
+        return 1
 
     """
     同步邀请新增用户
