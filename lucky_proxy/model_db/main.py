@@ -27,8 +27,8 @@ class ProxyUser(DBModel):
     level1_proxy_id = fields.IntField(max_length=20, default=0, description='一级代理id')
     promotion_code = fields.CharField(max_length=10, null=False, description='专属邀请码/推广码')
     join_day = fields.CharField(max_length=10, null=False, description='加入时间 yyyy-MM-dd')
-    room_card_rate = fields.DecimalField(max_digits=4, decimal_places=2, null=False, description='房卡提成比例')
-    assistance_program_rate = fields.DecimalField(max_digits=4, decimal_places=2, null=False,
+    room_card_rate = fields.DecimalField(max_digits=4, default=0.00,decimal_places=2, null=False, description='房卡提成比例')
+    assistance_program_rate = fields.DecimalField(max_digits=4, default=0.00,decimal_places=2, null=False,
                                                   description='助农提成比例')
     status = fields.IntField(null=True, default=0, description='状态：0 被封禁 1：正常')
     is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
