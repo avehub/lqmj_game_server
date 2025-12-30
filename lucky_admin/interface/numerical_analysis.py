@@ -13,7 +13,7 @@ from lucky_admin.logic.good_logic import GoodLogic
 class BuyBaseData(AdminAuthApi):
     """ 收入看板-基础数据 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         week_start_time = date_time - 86400 * 7
@@ -71,7 +71,7 @@ class BuyBaseData(AdminAuthApi):
 class AddUserPayData(AdminAuthApi):
     """ 收入看板-新增用户付费率 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         result = {}
@@ -95,7 +95,7 @@ class AddUserPayData(AdminAuthApi):
 class RepeatPayData(AdminAuthApi):
     """ 收入看板-每日复购率 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         result = {}
@@ -134,7 +134,7 @@ class RepeatPayData(AdminAuthApi):
 class PaySituation(AdminAuthApi):
     """ 收入看板-付费金额局势 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=False, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=False, p_name='结束时间')
         if start_time is None or end_time is None:
@@ -162,7 +162,7 @@ class PaySituation(AdminAuthApi):
 class PayUserActivate(AdminAuthApi):
     """ 收入看板-付费用户留存 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         result = {}
@@ -217,7 +217,7 @@ class PayUserActivate(AdminAuthApi):
 class PayUserGap(AdminAuthApi):
     """ 收入看板-付费用户间隔时长 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit = {
@@ -280,7 +280,7 @@ class PayUserGap(AdminAuthApi):
 class GiftPayData(AdminAuthApi):
     """ 收入看板-礼包购买情况 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit_gift = {
@@ -338,7 +338,7 @@ class GiftPayData(AdminAuthApi):
 class PlatformBaseData(AdminAuthApi):
     """ 渠道统计-基础数据 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
 
@@ -370,7 +370,7 @@ class PlatformBaseData(AdminAuthApi):
 class PlatformData(AdminAuthApi):
     """ 渠道统计-渠道数据报表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time, end_time = await self.get_time_range(period="day")
         unit = {
             "platform": 0,
@@ -437,7 +437,7 @@ class PlatformData(AdminAuthApi):
 
 class PlatformAddUserRecord(AdminAuthApi):
     """ 渠道统计-新增用户（按平台） """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit = {
@@ -464,7 +464,7 @@ class PlatformAddUserRecord(AdminAuthApi):
 class PlatformPayMoneyRecord(AdminAuthApi):
     """ 渠道统计-付费金额（按平台） """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = end_time = None
         type = self.check_int(req.args.get('type'), require=True, p_name='类型') # 全部:0 新1 老2
         if type == 1:
@@ -494,7 +494,7 @@ class PlatformPayMoneyRecord(AdminAuthApi):
 class PlatformPayUserRecord(AdminAuthApi):
     """ 渠道统计-付费用户（按平台） """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = end_time = None
         type = self.check_int(req.args.get('type'), require=True, p_name='类型') # 全部:0 新1 老2
         if type == 1:
@@ -524,7 +524,7 @@ class PlatformPayUserRecord(AdminAuthApi):
 class PlatformActivateUserRecord(AdminAuthApi):
     """ 渠道统计-活跃用户（按平台） """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = end_time = None
         type = self.check_int(req.args.get('type'), require=True, p_name='类型')  # 全部:0 新1 老2
         if type == 1:
@@ -557,7 +557,7 @@ class PlatformActivateUserRecord(AdminAuthApi):
 class PlatformAddUser(AdminAuthApi):
     """ 渠道统计-新增用户统计详情 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         platform_x = {
@@ -610,7 +610,7 @@ class PlatformAddUser(AdminAuthApi):
 class PlatformPayUser(AdminAuthApi):
     """ 渠道统计-充值用户统计详情 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         platform_x = {
@@ -665,7 +665,7 @@ class PlatformPayUser(AdminAuthApi):
 class PlatformPayMoney(AdminAuthApi):
     """ 渠道统计-充值金额统计详情 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         platform_x = {
@@ -725,7 +725,7 @@ class PlatformPayMoney(AdminAuthApi):
 class PlatformActivateUser(AdminAuthApi):
     """ 渠道统计-活跃用户统计详情 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         platform_x = {
@@ -803,7 +803,7 @@ class PlatformActivateUser(AdminAuthApi):
 class RoomcardBaseStatistics(AdminAuthApi):
     """ 房卡统计-基础数据 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         data = {
             "total_money": 0,
             "total_count": 0,
@@ -818,7 +818,7 @@ class RoomcardBaseStatistics(AdminAuthApi):
 class RoomcardListStatistics(AdminAuthApi):
     """ 房卡统计-列表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit = {
@@ -854,7 +854,7 @@ class RoomcardListStatistics(AdminAuthApi):
 class PropertyRankingList(AdminAuthApi):
     """ 资产排行-列表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         currency = self.check_int(req.args.get('currency'), require=True, p_name='货币类型')
@@ -876,7 +876,7 @@ class PropertyRankingList(AdminAuthApi):
 class PropertyRankingRecord(AdminAuthApi):
     """ 资产排行-用户资产事迹轨迹 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         uid = self.check_int(req.args.get('uid'), require=True, p_name='用户ID')
@@ -891,7 +891,7 @@ class PropertyRankingRecord(AdminAuthApi):
 class UserPortrait(AdminAuthApi):
     """ 用户画像-地区分布/性别统计 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         unit = {
             "address": "",
             "count": 0,
@@ -923,7 +923,7 @@ class UserPortrait(AdminAuthApi):
 
 class UserPortraitDiff(AdminAuthApi):
     """ 用户画像-新老用户对比 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         end_time, _ = await self.get_time_range(period="day")
         start_time = end_time - 86400 * 7
         unit = {
@@ -967,7 +967,7 @@ class UserPortraitDiff(AdminAuthApi):
 class UserActivityChart(AdminAuthApi):
     """ 用户生命周期-周期图表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit = {
@@ -1003,7 +1003,7 @@ class UserActivityChart(AdminAuthApi):
 class UserActivityList(AdminAuthApi):
     """ 用户生命周期-列表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         unit = {
@@ -1052,7 +1052,7 @@ class UserActivityList(AdminAuthApi):
 
 class UserActivityValue(AdminAuthApi):
     """ 用户生命周期-用户生命价值"""
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         result = {}
