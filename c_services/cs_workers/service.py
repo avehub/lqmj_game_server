@@ -14,7 +14,7 @@ from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
 from lucky_game.interface.user import UserInvite
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
