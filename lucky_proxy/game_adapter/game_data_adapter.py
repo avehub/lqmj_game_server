@@ -34,7 +34,7 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def sync_promotion_order_data(cls, data: PromotionOrderDataDTO):
-        cls.log_info("接收到分销订单同步数据data={data}")
+        cls.log_info(f"接收到分销订单同步数据data={data}")
         query_relation = {
             "player_id": data.player_id
         }
