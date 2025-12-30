@@ -43,7 +43,11 @@ class GameDataAdapter(LogMeta):
             cls.log_info(f"【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
             return 0
         proxy_id = relation.get("proxy_id")
-        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id,
+        query_user = {
+            "id": proxy_id,
+            "is_deleted": 0,
+        }
+        proxy_user: ProxyUser = await ProxyUser.get_by_dict(query_user,
                                                           ["level1_proxy_id", "room_card_rate",
                                                            "assistance_program_rate"])
         if not proxy_user:
