@@ -26,11 +26,11 @@ class AddLevel2Proxy(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         member_id = self.check_int(req.json.get("uid"), require=True, p_name="uid")
         room_card_rate = self.check_float(req.json.get("room_card_rate"), keep_val=2, minval=0.01, require=True,
-                                          maxval=0.90,
+                                          maxval=1,
                                           p_name="room_card_rate"),
         assistance_program_rate = self.check_float(req.json.get("assistance_program_rate"), keep_val=2,
                                                    require=True, minval=0.01,
-                                                   maxval=0.90, p_name="assistance_program_rate"),
+                                                   maxval=1, p_name="assistance_program_rate"),
 
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id)
         if not proxy_user or proxy_user.get("proxy_level") != 1:

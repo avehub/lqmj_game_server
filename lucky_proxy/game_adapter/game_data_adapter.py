@@ -34,12 +34,13 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def sync_promotion_order_data(cls, data: PromotionOrderDataDTO):
+        cls.log_info("接收到分销订单同步数据data={data}")
         query_relation = {
             "player_id": data.player_id
         }
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
-            cls.log_info(f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
+            cls.log_info(f"【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
             return 0
         proxy_id = relation.get("proxy_id")
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id,
@@ -51,6 +52,7 @@ class GameDataAdapter(LogMeta):
             return 0
 
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
+        return 1
 
     """
     同步邀请新增用户
@@ -58,6 +60,7 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def sync_promotion_user(cls, data: PromotionAddUserDTO):
+        cls.log_info("接收到分销用户同步数据data={data}")
         query = {
             "promotion_code": data.promotion_code,
             "is_deleted": 0
@@ -69,7 +72,6 @@ class GameDataAdapter(LogMeta):
             return 0
         query_relation = {
             "player_id": data.player_id,
-            "proxy_id": proxy_user.get("id")
         }
         exists_relation: ProxyPromotionRelation = await  ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if exists_relation:
@@ -85,6 +87,7 @@ class GameDataAdapter(LogMeta):
             "promotion_day": data_date.strftime("%Y-%m-%d"),
             "promotion_type": data.promotion_type,
             "proxy_id": proxy_user.get("id"),
+            "level1_proxy_id": proxy_user.get("level1_proxy_id"),
             "level": proxy_user.get("proxy_level"),
 
         }

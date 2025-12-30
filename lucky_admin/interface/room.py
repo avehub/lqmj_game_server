@@ -9,7 +9,7 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class GameRoom(AdminAuthApi):
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 开启的房间 """
         room_id = self.check_int(req.args.get('room_id'), require=False, p_name='房间ID')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='建房者ID')
@@ -19,7 +19,7 @@ class GameRoom(AdminAuthApi):
         return self.answer(data=data, hint=msg)
 
 class GameRecord(AdminAuthApi):
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """房间战绩"""
         room_id = self.check_int(req.args.get('room_id'), require=False, p_name='房间ID')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='建房者ID')
