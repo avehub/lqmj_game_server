@@ -134,7 +134,7 @@ class GameDataSync(LogMeta):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
-                await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount, data.order_type)
+                await cls.update_wallet(proxy_id, level1_proxy_id,proxy_income, level1_proxy_income, data.order_amount, data.order_type)
                 await ProxyPromotionRelation.exec_sql(f" update proxy_promotion_relation  "
                                                       f"set total_amount=total_amount+{str(data.order_amount)} where player_id={data.player_id}")
         except Exception as e:
@@ -142,7 +142,7 @@ class GameDataSync(LogMeta):
             return 0
         return 1
     @classmethod
-    async def update_wallet(cls, proxy_id, proxy_income, level1_proxy_income, order_amount, order_type):
+    async def update_wallet(cls, proxy_id, level1_proxy_id,proxy_income, level1_proxy_income, order_amount, order_type):
         sql = ""
         if order_type == 1:
             sql = f"""
