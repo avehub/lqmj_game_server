@@ -11,7 +11,7 @@ from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
 from lucky_game.logic.tournament import TournamentLogic
-from lucky_game.model_db.main import RecordsAdminTimedTask
+from lucky_admin.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
