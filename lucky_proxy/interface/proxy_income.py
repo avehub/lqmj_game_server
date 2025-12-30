@@ -28,7 +28,7 @@ class ProxyIncomeQuery(ProxyAuthApi):
         month = datetime.now().strftime('%Y-%m')
         month_income = await ProxyOrderStatistics.proxy_month_income_query(kwargs.get("uid"), month, today)
         if ProxyLevel.LEVEL_1 == wallet.get("proxy_level"):
-            level2_month_income = await ProxyOrderStatistics.proxy_level2_income_query(kwargs.get("uid"), month,today)
+            level2_month_income = await ProxyOrderStatistics.proxy_level2_income_query(kwargs.get("uid"), month, today)
             income = {
                 "today_income": month_income.get("today_income") + level2_month_income.get("today_income"),
                 "current_month_income": month_income.get("income") + level2_month_income.get("income"),
@@ -237,4 +237,35 @@ class TestOrder(BaseApi):
         )
         # await  ProxysJobExecutor.every_month_summary()
         # await processor.process_monthly_settlement()
+        self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
+
+
+class TestInvite(BaseApi):
+    async def post(self, req: Request, **kwargs):
+        """
+                 order_id: int
+                # 订单号
+                order_no: int
+                player_id: int
+                # 订单类型  1:房卡 2:助农收益
+                order_type: int
+                # 商品数量
+                goods_number: int
+                # 单价 如：18.00 28.00
+                price: Decimal
+                # 订单总金额
+                order_amount: Decimal
+                # 代理分成比例 0.6 0.8
+                dividend_rate: Decimal
+                # 订单时间（创建时间）
+                order_time: int
+                """
+
+        data = req.json
+        p = PromotionAddUserDTO(data.get("player_id")
+                                , data.get("promotion_code")
+                                , 1
+                                , time.time()
+                                )
+        sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_user(p)
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")

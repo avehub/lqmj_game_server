@@ -67,7 +67,7 @@ class GameDataAdapter(LogMeta):
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1, with_del=False)
         if not proxy_user:
-            cls.log_info(f"忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
+            cls.log_info(f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
             return 0
         query_relation = {
