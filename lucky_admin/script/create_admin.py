@@ -42,18 +42,18 @@ async def create_super_admin():
         'permission': permission,
     }
 
-    async def init_db():
-        await Tortoise.init(
-            config={
-                'apps': {
-                    "lucky_game": {'models': ["lucky_game.model_db.main", "lucky_game.model_db.extra"]}},
-                'connections': CONF_DB,
-                'use_tz': False,
-                'timezone': "UTC"
-            }
-        )
-
-    await init_db()
+    # async def init_db():
+    #     await Tortoise.init(
+    #         config={
+    #             'apps': {
+    #                 "lucky_game": {'models': ["lucky_game.model_db.main", "lucky_game.model_db.extra"]}},
+    #             'connections': CONF_DB,
+    #             'use_tz': False,
+    #             'timezone': "UTC"
+    #         }
+    #     )
+    #
+    # await init_db()
 
     u_info = await Admins.get_by_dict({'username': arg.u}, limit=1)
     if u_info:
