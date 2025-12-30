@@ -1,6 +1,8 @@
 from datetime import datetime
 from nsanic.libs.component import LogMeta
+from tortoise.transactions import in_transaction
 
+from common.public.enum_const import DbKey
 from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel
@@ -25,7 +27,6 @@ class GameDataAdapter(LogMeta):
         if proxy_user:
             return False, "EXISTS"
         return await GameDataSync.init_level1_proxy(data)
-
 
     """
      同步分销订单数据
@@ -87,8 +88,15 @@ class GameDataAdapter(LogMeta):
             "level": proxy_user.get("proxy_level"),
 
         }
-        # TODO 入库数据统计维度字段
-        await ProxyPromotionRelation.add_one(relation)
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                proxy_id = proxy_user.get("id")
+                await ProxyUser.exec_sql(
+                    f"update  proxy_user_wallet set total_player=total_player+1 where id={proxy_id}")
+                await ProxyPromotionRelation.add_one(relation)
+        except Exception as e:
+            cls.log_err(f"同步分销用户绑定关系失败err={e},data={data}")
+            return 0
         return 1
 
 

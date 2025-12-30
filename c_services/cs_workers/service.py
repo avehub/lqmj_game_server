@@ -13,6 +13,7 @@ from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
+from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
@@ -45,8 +46,8 @@ from common.utils.utils import UtilsTool
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
-
-
+from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
+from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO
 
 
 class WorkersServer(JsonBaseServer):
@@ -73,6 +74,8 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_GAME_RECORD_TIMES: self.__update_game_record_times,
             CmdWorkers.INSERT_GAME_RECORD_TOTAL: self.__insert_game_record_total,
             CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD: self.__update_tournament_cycle_leaderboard,
+            CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
+            CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -695,3 +698,19 @@ class WorkersServer(JsonBaseServer):
             sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)
         self.log_info(f"赛季单场次结束排行榜更新：{sta}")
 
+    async def __update_competition_result(self,uid,data):
+        cycle_id = data.get("cycle_id")
+        up_data = data.get("up_data")
+        sta,result = await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+        self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
+
+    async def __invite_bind_user(self, uid, data):
+        invite_code = data.get("invite_code")
+        created = data.get("created") if data.get("created") else tool_dt.cur_time()
+        # 调用分销模块接口
+        # invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+        #                                   promotion_time=created, promotion_type=0)
+        # sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta = await UserInvite().invite_bind_user(uid, created, invite_code)
+        if not sta:
+            self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
