@@ -107,7 +107,7 @@ class MainBp(BaseBlue):
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         Urls("/WriteOff/", WriteOff),  # 注销账号
-        Urls("/UserInvite/", UserInvite),  # 邀请用户
+        # Urls("/UserInvite/", UserInvite),  # 邀请用户
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
