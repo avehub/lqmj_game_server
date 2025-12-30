@@ -9,7 +9,7 @@ from common.utils.utils import UtilsTool
 class Email(AdminAuthApi):
     """ 新增单条邮件 """
 
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         title = self.check_str(req.json.get('title'), require=True, maxlen=64, p_name='标题')
         content = self.check_str(req.json.get('content'), require=True, maxlen=255, p_name='内容')
         attachment = self.check_str(req.json.get('attachment'), require=True, p_name='附件')
@@ -25,7 +25,7 @@ class Email(AdminAuthApi):
 
         self.answer(data=email)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         title = self.check_str(req.json.get('title'), require=False, maxlen=64, p_name='标题')
         content = self.check_str(req.json.get('content'), require=False, maxlen=255, p_name='内容')
         attachment = self.check_str(req.json.get('attachment'), require=False, p_name='附件')
@@ -37,7 +37,7 @@ class Email(AdminAuthApi):
 
         self.answer()
 
-    async def delete(self, req: Request):
+    async def delete(self, req: Request, **kwargs):
         mail_id = self.check_str(req.json.get('mail_id'), require=True, p_name='邮件ID')
         sta, email = await MailsRC.del_mail(mail_id)
         if not sta:
@@ -45,7 +45,7 @@ class Email(AdminAuthApi):
 
         self.answer()
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         uid = self.check_int(req.args.get('uid'), require=False, p_name='玩家ID')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
