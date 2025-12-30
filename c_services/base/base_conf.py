@@ -80,6 +80,7 @@ class BaseConf(metaclass=SingleTon):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
         model_list = [f'lucky_game.model_db.{item}' for item in models]
+        model_list.append("lucky_proxy.model_db.main")
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
 

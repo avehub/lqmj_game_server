@@ -14,6 +14,7 @@ from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
 from common.utils.kit_async import DelayCall
 from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
+from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
@@ -708,8 +709,9 @@ class WorkersServer(JsonBaseServer):
         invite_code = data.get("invite_code")
         created = data.get("created") if data.get("created") else tool_dt.cur_time()
         # 调用分销模块接口
-        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
-                                          promotion_time=created, promotion_type=0)
-        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        # invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+        #                                   promotion_time=created, promotion_type=0)
+        # sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta = await UserInvite().invite_bind_user(uid, created, invite_code)
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
