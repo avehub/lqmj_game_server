@@ -30,7 +30,7 @@ class Good(AdminAuthApi):
             return self.answer(self.sta_code.FAIL, hint=new)
         return self.answer(data={"award_id": new.award_id})
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 商品列表 """
         good_id = self.check_str(req.args.get('good_id'), require=False, p_name='商品ID')
         sku = self.check_str(req.args.get("sku"), require=False, p_name="商品SKU")
@@ -42,7 +42,7 @@ class Good(AdminAuthApi):
                                                       page=page, page_size=page_size)
         return self.answer(data=data, hint=msg)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         """ 编辑商品 """
         good_id = self.check_str(req.json.get("good_id"), require=True, p_name="商品ID")
         currency = self.check_str(req.json.get("currency"), require=False, p_name="货币类型")
