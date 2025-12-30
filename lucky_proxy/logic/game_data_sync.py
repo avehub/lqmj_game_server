@@ -147,8 +147,7 @@ class GameDataSync(LogMeta):
         if order_type == 1:
             sql = f"""
                  update proxy_user_wallet 
-                        set  total_player=total_player+1
-                        , total_amount=total_amount+{str(order_amount)}
+                        set total_amount=total_amount+{str(order_amount)}
                         ,  total_income=total_income+{str(proxy_income)}
                         ,  room_amount=room_amount+{str(order_amount)}
                         ,  room_income=room_income+{str(proxy_income)}
@@ -159,8 +158,7 @@ class GameDataSync(LogMeta):
         if order_type == 2:
             sql = f"""
                  update proxy_user_wallet 
-                        set  total_player=total_player+1
-                        ,  total_amount=total_amount+{str(order_amount)}
+                         set total_amount=total_amount+{str(order_amount)}
                         ,  total_income=total_income+{str(proxy_income)}
                         ,  assistance_program_amount=assistance_program_amount+{str(order_amount)}
                         ,  assistance_program_income=assistance_program_income+{str(proxy_income)}
