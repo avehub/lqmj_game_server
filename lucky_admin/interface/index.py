@@ -12,7 +12,7 @@ from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
 class IndexBaseData(AdminAuthApi):
     """ 顶部基础数据 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         # try:
         start_time, end_time = await self.get_time_range("day")
         yesterday_start_time = start_time - 86400
@@ -81,7 +81,7 @@ class IndexBaseData(AdminAuthApi):
 
 class IndexUserData(AdminAuthApi):
     """ 用户基础数据 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time, end_time = await self.get_time_range("day")
         week_start_time = start_time - 86400 * 7
         yesterday_start_time = start_time - 86400
@@ -149,7 +149,7 @@ class IndexUserData(AdminAuthApi):
 class IndexBaseTable(AdminAuthApi):
     """ 基础数据报表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         date_range = await self.date_time_range(start_time, end_time)
@@ -209,7 +209,7 @@ class IndexBaseTable(AdminAuthApi):
 
 class IndexGameData(AdminAuthApi):
     """ 游戏玩法数据 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='用户ID')
         yesterday_start_time = date_time - 86400
@@ -233,7 +233,7 @@ class IndexGameData(AdminAuthApi):
 
 class IndexGameUserChart(AdminAuthApi):
     """ 游戏对局人数折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         data, msg = await RecordsGameTotalRC.get_record_total_by_filter(start_time=start_time, end_time=end_time)
@@ -259,7 +259,7 @@ class IndexGameUserChart(AdminAuthApi):
 
 class IndexOnlineUserChart(AdminAuthApi):
     """ 实时在线人数折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         now_online = await BaseUserRC.get_online_uid()
@@ -301,7 +301,7 @@ class IndexOnlineUserChart(AdminAuthApi):
 
 class IndexPayMoneyRealTime(AdminAuthApi):
     """ 实时付费金额折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         date_time = self.check_int(req.args.get('date_time'), require=True, p_name='时间')
         end_time = date_time + 86400 - 1
         now_time = int(datetime.now().timestamp())
@@ -343,7 +343,7 @@ class IndexPayMoneyRealTime(AdminAuthApi):
 
 class IndexPayMoneyTotalChart(AdminAuthApi):
     """ 累计付费金额折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         now_time = int(datetime.now().timestamp())
         hour = int(tool_dt.dt_str(now_time, '%H'))
         hours = range(0, hour, 1)
@@ -374,7 +374,7 @@ class IndexPayMoneyTotalChart(AdminAuthApi):
 class IndexAddUserTable(AdminAuthApi):
     """ 过去七日新增用户报表 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         platform = self.check_int(req.args.get('platform'), require=False, p_name='平台')
@@ -434,7 +434,7 @@ class IndexAddUserTable(AdminAuthApi):
 
 class IndexAddUserChart(AdminAuthApi):
     """ 过去七日留存率折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         sta, user_data = await BaseUserRC.get_user_filter(start_time=start_time, end_time=end_time)
@@ -468,7 +468,7 @@ class IndexAddUserChart(AdminAuthApi):
 
 class IndexPayMoneyChart(AdminAuthApi):
     """ 过去七日充值金额折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5, status=99)
@@ -494,7 +494,7 @@ class IndexPayMoneyChart(AdminAuthApi):
 
 class IndexPayUserChart(AdminAuthApi):
     """ 过去七日充值用户折线图 """
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5, status=99)
