@@ -290,7 +290,7 @@ class Player(BaseLeisurePlayer):
         self.__mo_pai = 0
         self.__shang_ga_score = 0
         self.__operates.clear()
-        self.__ting_list.clear()
+        self.__ting_list =[]
         self.__fang_pao = 0
         self.__hu_type = 0
         self.__ji_pai.clear()
@@ -321,6 +321,7 @@ class Player(BaseLeisurePlayer):
         self.__jian_next_player_card = 0
         self.__is_ready = False
         self.__hu_path.clear()
+
 
 
         self.__chu_cards.clear()
@@ -638,6 +639,13 @@ class Player(BaseLeisurePlayer):
         self.__zi_mo_count = 0
         self.__dian_pao_count = 0
         self.__jie_pao_count = 0
+        self.__ting_list.clear()
+        self.__ji_pai.clear()
+        self.__men_cards.clear()
+        self.__lock_cards.clear()
+        self.__hu_info.clear()
+        self.__han_dou_cards.clear()
+        self.__hu_path.clear()
 
     def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """
