@@ -3,7 +3,7 @@ from tortoise import fields
 from lucky_game.const import MailType
 from lucky_admin.const import AdminStatus, AdminPermission, UserGroup, AnnouncementsStatus, WeightEnum, \
     BackTaskSta, MailSta
-
+from  lucky_game.model_db.main import User
 
 class Admins(DBModel):
     """ 后台管理员 """
