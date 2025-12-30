@@ -324,6 +324,7 @@ class Player(BaseLeisurePlayer):
 
 
 
+
         self.__chu_cards.clear()
         self.__all_chu_cards.clear()
         self.__table_cards.clear()
