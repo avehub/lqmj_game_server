@@ -6,7 +6,6 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_server import JsonBaseServer
 from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, CmdWs, GameAnnouncement
 from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
-from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK

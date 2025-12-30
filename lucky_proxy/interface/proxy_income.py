@@ -169,15 +169,15 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         json = req.json
         p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 100.00, 0.65, time.time())
 
-        await  GameDataAdapter.sync_promotion_order_data(p)
-        await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
+        #await  GameDataAdapter.sync_promotion_order_data(p)
+        #await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
 
-        p1 = Level1ProxyDTO(888999, '888', '19110988388')
+        p1 = Level1ProxyDTO(150689, '150689', '18188591260')
         res= await  GameDataAdapter.add_level1_proxy(p1)
         processor = ProxySettlementProcessor(
             batch_size=5,  # 每批处理100个代理
             target_month='2025-12'  # 处理2023年12月的数据，如果为None则处理上个月
         )
-        await  ProxysJobExecutor.every_month_summary()
+        #await  ProxysJobExecutor.every_month_summary()
         #await processor.process_monthly_settlement()
         self.answer(self.sta_code.PASS, {}, hint="查询成功!")
