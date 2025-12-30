@@ -6,7 +6,7 @@ from nsanic import verify
 from common.public.conf import CONF_DB, SERVER_SECRET_KEY
 from tortoise import Tortoise
 from lucky_admin.const import AdminStatus, AdminPermission
-from lucky_game.model_db.main import Admins
+from lucky_admin.model_db.main import Admins
 
 
 def init_args():
