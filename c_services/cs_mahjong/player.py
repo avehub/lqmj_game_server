@@ -290,13 +290,13 @@ class Player(BaseLeisurePlayer):
         self.__mo_pai = 0
         self.__shang_ga_score = 0
         self.__operates.clear()
-        self.__ting_list.clear()
+        self.__ting_list =[]
         self.__fang_pao = 0
         self.__hu_type = 0
         self.__ji_pai.clear()
         self.__que = 0
         self.__yuan_que = 0
-        self.__men_cards.clear()
+        self.__men_cards = []
         self.__chong_feng_ji = 0
         self.__chong_feng_wgj = 0
         self.__chong_feng_yi_tong = 0
@@ -310,17 +310,17 @@ class Player(BaseLeisurePlayer):
         self.__can_tian_ting = 0
         self.__han_bao_dou_an_gang_count = 0
         self.__han_bao_dou_zhuan_wan_gang_count = 0
-        self.__lock_cards.clear()
+        self.__lock_cards = []
         self.__zha_hu = 0
         self.__tian_hu = 0
         self.__eight_card_tian_hu = 0
-        self.__hu_info.clear()
-        self.__han_dou_cards.clear()
+        self.__hu_info = {}
+        self.__han_dou_cards = set()
         self.__shao_tong_xing_zheng = 0
         self.__tui_zhang_ke_kai = 0
         self.__jian_next_player_card = 0
         self.__is_ready = False
-        self.__hu_path.clear()
+        self.__hu_path = []
 
 
         self.__chu_cards.clear()
@@ -638,6 +638,13 @@ class Player(BaseLeisurePlayer):
         self.__zi_mo_count = 0
         self.__dian_pao_count = 0
         self.__jie_pao_count = 0
+        self.__ting_list.clear()
+        self.__ji_pai.clear()
+        self.__men_cards.clear()
+        self.__lock_cards.clear()
+        self.__hu_info.clear()
+        self.__han_dou_cards.clear()
+        self.__hu_path.clear()
 
     def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """
