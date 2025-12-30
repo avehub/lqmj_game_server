@@ -59,6 +59,8 @@ class ProxyUserLogic(LogMeta):
         valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted"}
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
+                if update_data:
+                    update_data += ", "
                 update_data += f" {k}={v}"
         if update_data:
             sql = f"UPDATE {cls.table_name} SET {update_data} WHERE id={player_id}"
