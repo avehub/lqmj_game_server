@@ -145,7 +145,8 @@ class BaseLogin(GameAuthApi):
             login_info: dict,
             req_user_info=None,
             cache_key="",
-            platform=None
+            platform=None,
+            invite_code=None,
     ):
         ip_info = await self.request_get_ip_geo(req)
         login_info.update(ip_info)
@@ -181,6 +182,9 @@ class BaseLogin(GameAuthApi):
         # 赠送金币记录入库
         await ExtraUserResourceChangesRC.bulk_register_change_record(uid, asset_gift)
         await self.push_task2worker(CmdWorkers.FETCH_ACTIVE_MAILS, uid=uid)
+        # 邀请绑定
+        if invite_code:
+            await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=uid, msg={'invite_code': invite_code, 'created': u_info.get('created')})
         u_info["new_user"] = True
         return u_info
 
@@ -201,6 +205,7 @@ class LoginByGuest(BaseLogin):
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台ID")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
         # platform = PlatForm.WEBPAGE
         q_params = {
             "dev_ident": dev_ident,
@@ -209,7 +214,7 @@ class LoginByGuest(BaseLogin):
         u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_DEVICE_ID)
         login_info = await self.get_login_info(req, LoginWay.GUEST, dev_ident=dev_ident)
         if not u_info:
-            u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform)
+            u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform=platform, invite_code=invite_code)
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
 
@@ -231,7 +236,7 @@ class LoginByWechat(BaseLogin):
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
         dev_ident = req.json.get('device_id') or req.headers.get('device_id')
         (not code or not dev_ident) and self.answer(StaCode.ERR_ARG, hint='Failed to login')
-
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
         errcode, req_data = await WeChat.wechat_login(code, platform)
         self.log_info('Wechat wechat_app_login result:', errcode, req_data)
         if errcode > 0:
@@ -270,7 +275,7 @@ class LoginByWechat(BaseLogin):
             req_data["wechat"] = 1
             req_data["unionid"] = req_data.get('unionid')
             u_info = await self.create_new_user(
-                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform)
+                req, 'openid', login_info, req_data, BaseUserRC.KEY_OPENID, platform=platform, invite_code=invite_code)
             self.log_info('Wechat Reg u_info:', u_info)
         # 老用户 登录
         else:
@@ -347,6 +352,7 @@ class LoginByPhone(BaseLogin):
         code = self.check_str(req.json.get('code'), require=True, p_name="验证码")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
         device_id = self.check_str(dev_ident, require=True, minlen=3, maxlen=18, p_name="device_id")
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
         sta, e = await AliVerification.verify_code(phone_number, code, scene)
         if sta is False:
             return self.answer(StaCode.FAIL, hint=e)
@@ -363,7 +369,7 @@ class LoginByPhone(BaseLogin):
             # 手机号注册
             req_user = await BaseUserRC.get_default_user_info("phone", phone=phone_number, device_id=device_id, platform=platform)
             u_info = await self.create_new_user(
-                req, 'phone', login_info, req_user, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform)
+                req, 'phone', login_info, req_user, cache_key=BaseUserRC.KEY_PHONE_CACHE, platform=platform, invite_code=invite_code)
             self.log_info('phone number Reg u_info:', u_info)
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
@@ -386,6 +392,7 @@ class LoginByApple(BaseLogin):
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
         device_id = self.check_str(req.json.get('device_id'), require=True, maxlen=18, p_name="设备ID")
         apple_id = self.check_str(req.json.get('apple_id'), require=True, p_name="苹果用户ID")
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
         if not apple_id:
             return self.answer(StaCode.ERR_ARG, hint="缺少必要参数")
         u_info = await BaseUserRC.cache_by_unique({'apple_id': apple_id, "platform": platform}, BaseUserRC.KEY_APPLE_ID)
@@ -421,7 +428,8 @@ class LoginByApple(BaseLogin):
                     'nickname': nickname,
                 },
                 'apple_id',
-                platform=PlatForm.NATIVE_APP
+                platform=PlatForm.NATIVE_APP,
+                invite_code=invite_code,
             )
             self.log_info('Apple Reg u_info:', u_info)
         else:
