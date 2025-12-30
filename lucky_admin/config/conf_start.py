@@ -71,6 +71,7 @@ class ConfSrv(BaseConf):
     @classmethod
     def makeup_db_conf(cls, model_list: list):
         model_list.append("lucky_proxy.model_db.main")
+        model_list.append("lucky_game.model_db.main")
         return {
             'apps': {
                 cls.SERVER_NAME: {'models': model_list},
