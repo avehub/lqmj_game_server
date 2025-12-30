@@ -708,9 +708,8 @@ class WorkersServer(JsonBaseServer):
         invite_code = data.get("invite_code")
         created = data.get("created") if data.get("created") else tool_dt.cur_time()
         # 调用分销模块接口
-        # invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
-        #                                   promotion_time=created, promotion_type=0)
-        # sta = await GameDataAdapter.sync_promotion_user(invite_data)
-        sta = await UserInvite().invite_bind_user(uid, created, invite_code)
+        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+                                          promotion_time=created, promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
