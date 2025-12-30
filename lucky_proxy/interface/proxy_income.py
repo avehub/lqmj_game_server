@@ -32,8 +32,8 @@ class ProxyIncomeQuery(ProxyAuthApi):
             income = {
                 "today_income": month_income.get("today_income") + level2_month_income.get("today_income"),
                 "current_month_income": month_income.get("income") + level2_month_income.get("income"),
-                "assistance_program_income": wallet.get("assistance_program_income"),
-                "room_income": wallet.get("room_income")
+                "assistance_program_income": wallet.get("assistance_program_income") + level2_month_income.get("assistance_program_income"),
+                "room_income": wallet.get("room_income")+ level2_month_income.get("income"),
             }
         else:
             income = {
