@@ -1,3 +1,5 @@
+import decimal
+
 from nsanic.orm.db_model import DBModel
 from tortoise import fields
 
@@ -259,3 +261,6 @@ class ProxyMonthSettlement(DBModel):
             'created': self.created,
             # 其他属性
         }
+if __name__ == '__main__':
+    print(decimal.Decimal("0.035").quantize(
+                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP))

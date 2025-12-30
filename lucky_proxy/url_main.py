@@ -1,4 +1,6 @@
 # coding=utf-8
+import decimal
+
 from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
 
