@@ -280,3 +280,4 @@ class UserInvite(GameAuthApi):
             self.log_err(f"用户{u_info.get('uid')}绑定邀请关系{invite_code}失败")
             return self.answer(code=self.sta_code.FAIL, hint="绑定邀请关系失败")
         return self.answer()
+

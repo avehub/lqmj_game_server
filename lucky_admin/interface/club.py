@@ -24,7 +24,7 @@ class Club(AdminAuthApi):
             return self.answer(self.sta_code.FAIL, hint=e)
         return self.answer(data={"club_id": new.id})
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 茶馆列表 """
         club_id = self.check_int(req.args.get('club_id'), require=False, p_name='茶馆ID')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='馆主ID(玩家ID)')
@@ -34,7 +34,7 @@ class Club(AdminAuthApi):
         sta, data = await BaseClubRC.get_club_filter(uid=uid, club_id=club_id, status=status, page=page, page_size=page_size)
         return self.answer(data=data)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         """ 编辑茶馆 """
         club_id = self.check_int(req.json.get('club_id'), require=True, p_name='茶馆ID')
         name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="茶馆名称")
@@ -52,8 +52,8 @@ class Club(AdminAuthApi):
             return self.answer(self.sta_code.FAIL, hint=msg)
         return self.answer()
 
-    async def delete(self, req: Request):
-        """ 更新茶馆信息 """
+    async def delete(self, req: Request, **kwargs):
+        """ 删除茶馆信息 """
         club_id = self.check_int(req.json.get('club_id'), require=True, p_name='茶馆ID')
         club, msg = await BaseClubRC.get_club_by_id(club_id)
         if not club:

@@ -15,7 +15,7 @@ class Award(AdminAuthApi):
             return self.answer(self.sta_code.FAIL, hint=new)
         return self.answer(data={"award_id": new.award_id})
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 奖励列表 """
         award_id = self.check_str(req.args.get('award_id'), require=False, p_name='奖励ID')
         name = self.check_str(req.args.get("name"), require=False, p_name="奖励名称")
@@ -29,7 +29,7 @@ class Award(AdminAuthApi):
                                                       page=page, page_size=page_size)
         return self.answer(data=data)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         """ 编辑奖励 """
         award_id = self.check_int(req.json.get('award_id'), require=True, p_name='奖励ID')
         name = self.check_str(req.json.get("name"), require=False, minlen=2, maxlen=10, p_name="奖励名称")
