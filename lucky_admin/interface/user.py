@@ -17,7 +17,7 @@ from lucky_admin.logic.order_logic import OrderLogic
 
 class User(AdminAuthApi):
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 用户列表 """
         is_vip = self.check_int(req.args.get('is_vip'), require=False, p_name='是否是会员')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='玩家ID')
@@ -33,7 +33,7 @@ class User(AdminAuthApi):
             item['is_online'] = 1 if item['uid'] in online_uid else 0
         return self.answer(data=data if sta else [])
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         """ 更新用户信息 """
         uid = self.check_int(req.json.get('uid'), require=True, p_name='玩家ID')
         name = self.check_str(req.json.get('name'), require=False, p_name='玩家昵称')
@@ -74,7 +74,7 @@ class User(AdminAuthApi):
 class UserStatus(AdminAuthApi):
     """ 用户状态 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         uid = self.check_int(req.args.get('uid'), require=True, p_name='玩家ID')
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
@@ -90,7 +90,7 @@ class UserStatus(AdminAuthApi):
 class OrderList(AdminAuthApi):
     """ 充值记录 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         order_no = self.check_str(req.args.get('order_no'), require=False, p_name='订单号')
         status = self.check_int(req.args.get('status'), require=False, p_name='订单状态')
         pay_mode = self.check_int(req.args.get('pay_mode'), require=False, p_name='支付方式')
@@ -109,7 +109,7 @@ class OrderList(AdminAuthApi):
 class OrderStatistics(AdminAuthApi):
     """ 充值统计 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=True, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=True, p_name='结束时间')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
@@ -156,7 +156,7 @@ class OrderStatistics(AdminAuthApi):
 class ResourceChanges(AdminAuthApi):
     """ 资产流水 """
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         start_time = self.check_int(req.args.get('start_time'), require=False, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=False, p_name='结束时间')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='用户ID')
