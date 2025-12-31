@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from decimal import Decimal
 
 from nsanic.libs import tool_jwt, tool_dt
 
@@ -32,8 +33,9 @@ class ProxyIncomeQuery(ProxyAuthApi):
             income = {
                 "today_income": month_income.get("today_income") + level2_month_income.get("today_income"),
                 "current_month_income": month_income.get("income") + level2_month_income.get("income"),
-                "assistance_program_income": wallet.get("assistance_program_income") + level2_month_income.get("assistance_program_income"),
-                "room_income": wallet.get("room_income")+ level2_month_income.get("room_income"),
+                "assistance_program_income": wallet.get("assistance_program_income") + level2_month_income.get(
+                    "assistance_program_income"),
+                "room_income": wallet.get("room_income") + level2_month_income.get("room_income"),
             }
         else:
             income = {
@@ -226,17 +228,15 @@ class TestOrder(BaseApi):
                                   , data.get("dividend_rate")
                                   , data.get("order_time")
                                   )
+        p = PromotionOrderDataDTO(order_id=1543, order_no='00012025123103233159015052960741'
+                                  , player_id=151058
+                                  , order_type=1
+                                  , goods_number=1
+                                  , price=0.1
+                                  , order_amount=Decimal("0.1")
+                                  , dividend_rate=0.7
+                                  , order_time=1767151411)
         sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
-        # await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
-
-        p1 = Level1ProxyDTO(150689, '150689', '18188591260')
-        res = await  GameDataAdapter.add_level1_proxy(p1)
-        processor = ProxySettlementProcessor(
-            batch_size=5,  # 每批处理100个代理
-            target_month='2025-12'  # 处理2023年12月的数据，如果为None则处理上个月
-        )
-        # await  ProxysJobExecutor.every_month_summary()
-        # await processor.process_monthly_settlement()
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
 
 
