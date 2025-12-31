@@ -102,7 +102,6 @@ class TeamMemberIncomeDetailQuery(ProxyAuthApi):
 class TeamMemberIncomeQuery(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        proxy_id = 150689
         order_month = self.check_str(req.args.get("order_month"), require=True, p_name="order_month")
         order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
 
