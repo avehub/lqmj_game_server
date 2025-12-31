@@ -724,7 +724,7 @@ class WorkersServer(JsonBaseServer):
         dividend_rate = await DistributionSettleConfRC.get_profit_ratio(order_info["num"], order_info["order_type"])
         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
                                               order_type=order_info["order_type"], goods_number=order_info["num"],
-                                              price=float(order_info["amount"] / order_info["num"]),
+                                              price=float(float(order_info["amount"]) / order_info["num"]),
                                               order_amount=order_info["amount"], dividend_rate=dividend_rate,
                                               order_time=order_info["created"])
         sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
