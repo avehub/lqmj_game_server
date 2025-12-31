@@ -49,7 +49,7 @@ class GameDataAdapter(LogMeta):
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query_user,
                                                           ["level1_proxy_id", "room_card_rate",
-                                                           "assistance_program_rate"])
+                                                           "assistance_program_rate"],limit=1)
         if not proxy_user:
             cls.log_info(
                 f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
