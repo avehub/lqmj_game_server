@@ -185,7 +185,6 @@ class BaseLogin(GameAuthApi):
         # 邀请绑定
         self.log_info('新用户注册邀请码:', invite_code)
         if invite_code:
-            self.log_info('新用户注册邀请调用绑定消息')
             await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=uid, msg={'invite_code': invite_code, 'created': u_info.get('created')})
         u_info["new_user"] = True
         return u_info
