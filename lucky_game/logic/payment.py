@@ -6,6 +6,8 @@ from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
+
+from c_services.const.cs_enum_const import CmdWorkers
 from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.handler.vivo_pay import vivo_payment
@@ -526,11 +528,8 @@ class PaymentLogic:
                     elif order_info["good_id"] in fink_ids:
                         order_type = 2
                     if order_type:
-                        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(order_info["num"], order_type)
-                        promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_no, player_id=order_info["uid"], order_type=order_type, goods_number=order_info["num"], price=float(order_info["amount"]/order_info["num"]), order_amount=order_info["amount"], dividend_rate=dividend_rate, order_time=order_info["created"])
-                        sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
-                        NLogger.info(f"订单分销结果：{sta}")
-
+                        order_info["order_type"] = order_type
+                        await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order_info["uid"], msg=order_info)
                     await self.pay_success(order_info)
                 else:
                     await self.pay_fail(order_info)
