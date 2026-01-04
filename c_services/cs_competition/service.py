@@ -176,7 +176,7 @@ class CompetitionServer(BaseServer):
 
     async def __join_competition(self, uid, competition_id, conf_data, req_id=""):
         """ 加入比赛 """
-        await self.__sava_player_in_match(uid, competition_id)
+        await self.__save_player_in_match(uid, competition_id)
         self.__wait_player[uid] = competition_id
         max_player = conf_data.get("max_player")
         max_match_player = conf_data.get("max_match_player")
@@ -278,9 +278,13 @@ class CompetitionServer(BaseServer):
             }
             room.set_game_room_info(data["room_id"], game_room_info)
             room_num += 1
+            send_list = []
             for p_uid in group:
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
-                await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
+                send_list.append(self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid))
+
+            if send_list:
+                await asyncio.gather(*send_list)
 
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:
@@ -337,7 +341,6 @@ class CompetitionServer(BaseServer):
 
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
-        room.sort_players_by_score()
         rank_by_score = room.get_rank_by_score()
         self.log_info( match_room_id, "该比赛已结束","排名", rank_by_score)
         competition_result = []
@@ -419,7 +422,7 @@ class CompetitionServer(BaseServer):
         player_rank = []
         award_list = []
         total_players = len(room.members)
-        playe_in_room_num = {}
+        player_in_room_num = {}
         game_room_list = []
         for room_id, info in room.game_room_info.items():
             game_room_status = {
@@ -430,7 +433,7 @@ class CompetitionServer(BaseServer):
             game_room_list.append(game_room_status)
             #
             for uid in info.get("players", []):
-                playe_in_room_num.setdefault(uid, info.get("room_num", 0))
+                player_in_room_num.setdefault(uid, info.get("room_num", 0))
 
         data = {
             "player_rank": player_rank,
@@ -443,7 +446,7 @@ class CompetitionServer(BaseServer):
                 "rank": rank,
                 "uid": uid,
                 "score": 0 if is_init else score,
-                "room_num": playe_in_room_num.get(uid, 0),
+                "room_num": player_in_room_num.get(uid, 0),
             }
             points = total_players - rank + 1
             player_rank.append(rank_info)
@@ -457,7 +460,7 @@ class CompetitionServer(BaseServer):
         s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
 
-    async def __sava_player_in_match(self, uid, competition_id):
+    async def __save_player_in_match(self, uid, competition_id):
         if uid > R_UID_THRESHOLD:
             rank_info = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
             rank = rank_info.get("rank_position", 0)
