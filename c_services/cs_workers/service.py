@@ -502,6 +502,14 @@ class WorkersServer(JsonBaseServer):
         else:
             is_dismiss = data.get("is_dismiss")
             record_data_list =data.get("record_data_list")
+            replay_msg_data = data.get("replay_msg_data") or None
+            if replay_msg_data:
+                for replay_msg in replay_msg_data:
+                    msg = replay_msg.get("replay_msg")
+                    for i, m in enumerate(msg):
+                        msg[i] = UtilsTool.base64_to_bytes(m, log_fun=self.log_info)
+                result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
+                self.log_info(tid, "update_record游戏结束一轮结束战绩插入", result_data)
             for record_data in record_data_list:
                 final_grade = record_data.get("final_grade")
                 final_ranking = record_data.get("final_ranking")
@@ -514,7 +522,7 @@ class WorkersServer(JsonBaseServer):
                 up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
                                                                               , final_ranking, final_grade, game_over_data, num,
                                                                               room_status)
-                self.log_info(tid, "插入游戏战绩总分结果", up_result)
+                self.log_info(tid, "update_record插入游戏战绩总分结果", up_result)
             if is_dismiss:
                 up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(record_id, round_num=round_idx)
                 self.log_info(tid, "玩家", uid, "战绩更新结果", data)

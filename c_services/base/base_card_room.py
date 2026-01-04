@@ -486,10 +486,15 @@ class BaseCardRoom(BaseRoom):
 
         # 游戏结束后在这里更新战绩以及回放数据
         round_idx = self.round_idx
+        record_data = {
+            "record_id": self.__record_id,
+            "tid": self.tid,
+        }
         if self.__replay_msg_data:
             # 游戏结束一轮结束战绩插入
-            replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
-            await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
+            record_data["replay_msg_data"] = self.__replay_msg_data
+            # replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
+            # await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
         else:
             if round_idx > 1:
                 round_idx = self.round_idx - 1
@@ -536,14 +541,10 @@ class BaseCardRoom(BaseRoom):
                 }
                 record_data_list.append(data)
 
-        record_data = {
-            "record_id": self.__record_id,
-            "round_idx": round_idx,
-            "tid": self.tid,
-            "is_all": True,
-            "is_dismiss": is_dismiss,
-            "record_data_list": record_data_list
-        }
+        record_data["round_idx"] = round_idx
+        record_data["is_all"] = True
+        record_data["is_dismiss"] = is_dismiss
+        record_data["record_data_list"] = record_data_list
         await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
 
         if self.club_id > 0:
