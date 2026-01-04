@@ -2577,7 +2577,7 @@ class Room(BaseCardRoom):
         if not player.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
             if self.__have_men_jian_hu:
                 self.log_info(self.tid, player.uid, "胡牌提示版本没有炸捡!")
-                return StaCode.RULE_ERR
+                return StaCode.RULE_ERR,"胡牌提示版本没有炸捡!"
                 # todo: 诈胡算分  自己的分，加别人的牌型分
             player.is_zha_hu = 1
             self.log_info(self.tid, player.uid, player.uid, "选择炸捡", player.operates)
