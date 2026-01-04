@@ -35,7 +35,7 @@ class User(DBModel):
     yellow_diamond = fields.IntField(max_digits=20, null=True, default=0, description="黄钻")
     vip = fields.SmallIntField(max_length=2, default=0, null=True, description="VIP等级")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True,
-                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     dev_ident = fields.CharField(max_length=32, null=True, default='', description='设备标识')
     safe_key = fields.CharField(max_length=18, null=True, default='', description='安全密钥')
     valid_key = fields.CharField(max_length=16, null=True, default='', description='验证密钥')
@@ -183,7 +183,8 @@ class ClubRoomTemplates(DBModel):
     """茶馆房间模版表"""
     id = fields.IntField(max_length=10, pk=True, default=0, description='房间ID')
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
-    platform = fields.SmallIntField(max_length=2, null=True, description='平台: 1微信小游戏 2APP 3H5')
+    platform = fields.IntEnumField(enum_type=PlatForm, index=True,
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     cs_type = fields.IntField(max_length=10, default=0, description="子服务类型")
     play_type = fields.IntEnumField(enum_type=PlayType, default=PlayType.AN_LONG_XUE_ZHAN, description="玩法类型")
     rule_details = fields.JSONField(null=True, description='房间玩法规则：JSON存储')
@@ -204,7 +205,8 @@ class GameRooms(DBModel):
     room_id = fields.IntField(max_length=6, unique=True, description='房间ID')
     club_id = fields.IntField(max_length=6, index=True, default=0, description='茶馆ID,无茶馆为0')
     creator = fields.IntField(max_length=28, null=True, description='房主ID(玩家ID)')
-    platform = fields.SmallIntField(max_length=2, null=True, description='平台: 1微信小游戏 2APP 3H5')
+    platform = fields.IntEnumField(enum_type=PlatForm, index=True,
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     pay_type = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description='支付方式：0房主 1冠军支付 2茶馆基金 3AA支付')
     price = fields.SmallIntField(max_length=6, null=True, default=0, description='费用')
@@ -346,7 +348,7 @@ class Stores(DBModel):
     """商店信息表"""
     sid = fields.IntField(max_length=10, pk=True, description='商店ID')
     platform = fields.CharField(max_length=32, null=True,
-                                description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+                                description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     type = fields.SmallIntField(max_length=2, null=True, default=0,
                                 description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
@@ -396,7 +398,7 @@ class Orders(DBModel):
     good_id = fields.IntField(max_length=28, index=True, description='商品ID')
     sku = fields.CharField(max_length=64, index=True, default=0, description="商品唯一标识")
     platform = fields.IntEnumField(enum_type=PlatForm, index=True,
-                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     amount = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="支付金额")
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
@@ -651,7 +653,7 @@ class ConfActivity(DBModel):
     act_id = fields.IntField(max_length=10, pk=True, default=3000, description='充值活动ID')
     act_type = fields.IntEnumField(enum_type=ActivityType, index=True, default=0, description='活动类型')
     platform = fields.CharField(max_length=32, null=True,
-                                description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+                                description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     act_name = fields.CharField(max_length=32, null=True, default='', description='活动名称')
     act_level = fields.SmallIntField(max_length=4, null=True, default=0, description='活动级别')
     repetition = fields.SmallIntField(max_length=2, null=True, default=0, description='重复类型：0否 1是')
@@ -800,7 +802,7 @@ class AppVersions(DBModel):
     id = fields.BigIntField(pk=True, description='主键ID', )
     min_support_version = fields.CharField(max_length=20, null=True, description='最低支持版本', )
     platform = fields.IntEnumField(enum_type=PlatForm, index=True,
-                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏")
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     release_notes = fields.TextField(null=True, description='版本更新说明', )
     release_time = fields.BigIntField(index=True, description='发布时间', )
     status = fields.SmallIntField(null=True, default=1, max_length=2, description='状态：0-下线，1-正常，2-灰度', )

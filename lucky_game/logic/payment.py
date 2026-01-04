@@ -519,7 +519,7 @@ class PaymentLogic:
                 if order_status == OrderStatus.PAID:
 
                     # 临时处理 dev分支已经封装方法等合并后优化
-                    room_card_ids = [17, 18, 19, 20, 21, 22, 23, 24]
+                    room_card_ids = [17, 18, 19, 20, 21, 22, 23, 24, 62, 63, 64, 65, 66, 67, 68, 69, 71, 72]
                     fink_ids = [59]
                     order_type = 0
                     # 房卡分成
