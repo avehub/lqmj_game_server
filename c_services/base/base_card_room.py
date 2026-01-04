@@ -256,7 +256,7 @@ class BaseCardRoom(BaseRoom):
     async def player_change_connect(self, player, data):
         data_connect = {"seat_id": player.seat_id, "offline": data}
         data_model = S2CChangeConnect.pb_model(**data_connect)
-        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model, exclude_uid=player.uid)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model, exclude_uid=player.uid,record_round_log = False)
 
     @property
     def game_began(self):

@@ -419,11 +419,31 @@ class CompetitionServer(BaseServer):
         player_rank = []
         award_list = []
         total_players = len(room.members)
+        playe_in_room_num = {}
+        game_room_list = []
+        for room_id, info in room.game_room_info.items():
+            game_room_status = {
+                "room_num": info.get("room_num", 0),
+                "status": GameRoomStatus.FINISH if is_finish else info.get("status", GameRoomStatus.PLAYING),
+                "tid": room_id,
+            }
+            game_room_list.append(game_room_status)
+            #
+            for uid in info.get("players", []):
+                playe_in_room_num.setdefault(uid, info.get("room_num", 0))
+
+        data = {
+            "player_rank": player_rank,
+            "award_list": award_list,
+            "game_room_list": game_room_list,
+        }
+
         for rank, uid, score in room.get_rank_by_score():
             rank_info = {
                 "rank": rank,
                 "uid": uid,
                 "score": 0 if is_init else score,
+                "room_num": playe_in_room_num.get(uid, 0),
             }
             points = total_players - rank + 1
             player_rank.append(rank_info)
@@ -431,20 +451,8 @@ class CompetitionServer(BaseServer):
                 "rank": rank,
                 "points": points,
             })
-        game_room_list = []
-        for room_id, info in room.game_room_info.items():
-            game_room_status = {
-                "room_num": info.get("room_num", 0),
-                "room_status": GameRoomStatus.FINISH if is_finish else info.get("status", GameRoomStatus.PLAYING),
-                "tid": room_id,
-            }
-            game_room_list.append(game_room_status)
 
-        data = {
-            "player_rank": player_rank,
-            "award_list": award_list,
-            "game_room_list": game_room_list,
-        }
+
         print("比赛信息", data)
         s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
