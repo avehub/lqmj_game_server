@@ -337,7 +337,7 @@ class IndexPayMoneyRealTime(AdminAuthApi):
                         key["y"] = hour_money[hour_time]
                 result["total"] += order["amount"]
                 result["last_money"] = order["amount"]
-                result["last_time"] = int(order["created"].timestamp())
+                result["last_time"] = int(order["created"])
             result["avg"] = result["total"] / len(hours)
         return self.answer(data=result)
 
