@@ -240,12 +240,12 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 msg = "同意"
                 if item["status"] == cls.BEHAVIOR_STATUS_REFUSE:
                     msg = "拒绝"
-                explain = f"{check_info['name']}{msg}了{u_info['name']}的加入申请"
+                explain = f"{check_info['name']}{msg}了{u_info['name']}加入茶馆"
             # 黑名单
             elif item["type"] == cls.BEHAVIOR_BLACK_INDEX:
                 msg = "加入"
                 if item["status"] == cls.BEHAVIOR_STATUS_CANCEL:
-                    msg = "移除"
+                    msg = "移出"
                 explain = f"{check_info['name']}将{u_info['name']}{msg}黑名单"
             # 隔离组
             elif item["type"] == cls.BEHAVIOR_ISOLATION_INDEX:
@@ -261,9 +261,11 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                     explain = f"{check_info['name']}{msg}隔离组"
             # 退出茶馆
             elif item["type"] == cls.BEHAVIOR_OUT_INDEX:
-                msg = "退出"
-                explain = f"{u_info['name']}{msg}了茶馆"
-                if item["check_uid"]:
+                msg = "同意"
+                if item["status"] == cls.BEHAVIOR_STATUS_REFUSE:
+                    msg = "拒绝"
+                explain = f"{check_info['name']}{msg}{u_info['name']}退出茶馆"
+                if item["created"] == item["updated"]:
                     msg = "移出"
                     explain = f"{check_info['name']}将{u_info['name']}{msg}了茶馆"
             elif item["type"] == cls.BEHAVIOR_MANAGE_INDEX:
