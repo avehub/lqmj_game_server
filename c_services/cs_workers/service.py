@@ -16,6 +16,7 @@ from lucky_admin.const import BackTaskSta, WeightEnum
 from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
@@ -78,7 +79,7 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
             CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
-
+            CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -692,6 +693,9 @@ class WorkersServer(JsonBaseServer):
                 "event_desc": et_enum.phrase,
                 "event_time": tool_dt.cur_time()
             })
+            
+    async def __insert_club_event(self, uid, data):
+        await ClubLogic.insert_club_event(data["club_id"], data["event_type"], uid, num=data["num"], room_id=data["room_id"], check_uid=data["check_uid"])
 
 
     async def __update_tournament_cycle_leaderboard(self, uid, data):

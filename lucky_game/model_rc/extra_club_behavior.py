@@ -3,11 +3,13 @@
 """
 
 from tortoise.exceptions import OperationalError
+
 from lucky_game.model_db.main import ExtraClubBehavior
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
 
 class ExtraClubBehaviorRC(BaseCommonRC):
@@ -25,8 +27,8 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         2: "小黑屋",
         3: "隔离",
         4: "退出茶馆",
-        5: "管理员",
-        6: "玩法"
+        5: "管理员变更",
+        6: "模板玩法变更"
     }
 
     BEHAVIOR_STATUS_DEFAULT = 0
@@ -159,7 +161,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_behavior_by_filter(cls, club_id: any = None, type: int = None, uid: int = None, status: int = None,
+    async def get_behavior_by_filter(cls, club_id: any = None, type: any = None, uid: int = None, status: int = None,
                                      page: int = None, page_size: int = None, status_range: int = None):
         """多条件查询茶馆操作行为列表"""
         try:
@@ -176,7 +178,10 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             if uid is not None:
                 query["uid"] = uid
             if type is not None:
-                query["type"] = type
+                if isinstance(type, list):
+                    query["type__in"] = type
+                else:
+                    query["type"] = type
             if page and page_size:
                 total = await cls.db_model.get_count(query)
                 data = []
@@ -201,7 +206,7 @@ class ExtraClubBehaviorRC(BaseCommonRC):
             club_id = behavior_data.get("club_id")
             uid = behavior_data.get("uid")
             behavior_type = behavior_data.get("type")
-            if up_status == cls.BEHAVIOR_STATUS_SUCCEED or behavior_type == cls.BEHAVIOR_APPLY_INDEX:
+            if up_status == cls.BEHAVIOR_STATUS_SUCCEED and behavior_type == cls.BEHAVIOR_APPLY_INDEX:
                 # 加入茶馆用户关系
                 up_club_user = await ClubUsersRC.create_club_user(uid, club_id)
                 if not up_club_user:
@@ -210,6 +215,8 @@ class ExtraClubBehaviorRC(BaseCommonRC):
                 up_club = await BaseClubRC.update_club_int_field(club_id, "num", 1, "add")
                 if not up_club:
                     return False, "更新茶馆信息失败"
+                from lucky_game.logic.club import ClubLogic
+                await ClubLogic.club_event(club_id, ExtraClubEventRC.EVENT_TYPE["APPROVAL_LOG"], uid, check_uid=behavior_data["check_uid"])
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"

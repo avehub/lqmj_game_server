@@ -156,15 +156,6 @@ class ClubUsersRC(BaseCommonRC):
                     await cls.db_model.del_by_pk(data.id)
                     await cls.cache_session_uid_drop(data.uid)
                     await cls.cache_session_clubid_drop(data.club_id)
-                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
-                    ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
-                    data.uid,
-                    data.club_id,
-                    check_uid=0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
-                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
-                )
-                if not sta:
-                    return False, e
         except OperationalError as e:
             return False, e
         return True, "删除成功"
