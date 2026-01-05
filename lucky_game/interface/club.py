@@ -221,7 +221,7 @@ class ClubCheck(BaseClub):
         event_type = ExtraClubEventRC.EVENT_TYPE["APPROVAL_LOG"]
         if behavior.get('type') == ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX:
             relation_info, _ = await ClubUsersRC.get_club_user_by_one(behavior.get("uid"), behavior.get("club_id"))
-            event_type = ExtraClubEventRC.EVENT_TYPE["KICK_CLUB"]
+            event_type = ExtraClubEventRC.EVENT_TYPE["OUT_CLUB"]
             if status == ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED:
                 await ClubLogic.leave_club_after(relation_info, check_uid)
         await ClubLogic.send_red_dot_manager(behavior.get("club_id"), check_uid=check_uid, cmd=RedDotType.RD_CLUB_CHECK_REFRESH)
