@@ -202,7 +202,6 @@ class PayUserActivate(AdminAuthApi):
                 for date, item in user_dict.items():
                     if date not in items:
                         items[date] = unit.copy()
-                        items[date] = set()
                     if date not in data:
                         data[date] = set()
                     items[date]["one"] = len(data[date] & user_dict[date])
@@ -247,7 +246,6 @@ class PayUserGap(AdminAuthApi):
             max_len = len(order_data)
             all_amount = []
             for order in order_data:
-                max_len -= 1
                 date = tool_dt.dt_str(order["created"], '%Y-%m-%d')
                 if date not in data:
                     data[date] = unit.copy()
@@ -267,14 +265,10 @@ class PayUserGap(AdminAuthApi):
                     data[date]["min"] = min_amount
                 else:
                     data[date]["min"] = order["amount"]
-                if max_len == 0:
-                    data[date]["up_quantile"] = 0
-                    down_quantile = numpy.percentile(all_amount, 25)
-                    median = numpy.percentile(all_amount, 50)
-                    up_quantile = numpy.percentile(all_amount, 75)
-                    data[date]["down_quantile"] = down_quantile
-                    data[date]["median"] = median
-                    data[date]["up_quantile"] = up_quantile
+                down_quantile, median, up_quantile = await self.calculate_quartiles(all_amount)
+                data[date]["down_quantile"] = down_quantile
+                data[date]["median"] = median
+                data[date]["up_quantile"] = up_quantile
 
             result["list"] = [value for value in data.values()]
         return self.answer(data=result)
