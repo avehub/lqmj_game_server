@@ -258,7 +258,7 @@ class PayUserGap(AdminAuthApi):
                 data[date]["pay_user"] = len(pay_user)
                 data[date]["total"] += order["amount"]
                 data[date]["age"] = ("%.2f" % (order["amount"] / len(pay_user)))
-                all_amount.append(order["amount"])
+                all_amount.append(int(order["amount"]))
                 if max_amount < order["amount"]:
                     data[date]["max"] = order["amount"]
                 if min_amount < order["amount"]:
