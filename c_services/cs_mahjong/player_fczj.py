@@ -154,9 +154,9 @@ class PlayerFCZJ(Player):
     def clear_player(self):
         self.__first_down = 0
         self.__quan_count = 0
-        self.__record_account = []
+        self.__record_account.clear()
         self.__fan_ji = 0
         self.__hua_zhu = 0
-        self.__ji_score = []
+        self.__ji_score.clear()
         self.__recharge_sta = 0
         super().clear_player()

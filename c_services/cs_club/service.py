@@ -181,7 +181,7 @@ class ClubServer(BaseServer):
             return
         room.clear_club()
         self.remove_room(club_id)
-        self.log_info("club_id", club_id, "俱乐部主解散房间")
+        self.log_info("club_id", club_id, "uid",uid,"俱乐部主解散房间")
 
     async def __player_ready_except_owner(self,uid,data):
         club_id = data.get("club_id")

@@ -18,15 +18,16 @@ from lucky_proxy.model_db.main import ProxyUser, ProxyMonthSettlement, ProxySett
 class ProxysJobExecutor(LogMeta):
 
     @classmethod
-    async def every_month_summary(self):
+    async def every_month_summary(cls):
         try:
+            cls.log_info(f"开始执行每月结算统计date={datetime.now()}")
             month_processor = ProxySettlementProcessor(
                 batch_size=100,
                 target_month=_get_default_month()
             )
             await month_processor.process_monthly_settlement()
         except Exception as ex:
-            self.log_err(f"查询代理ID失败: {ex}")
+            cls.log_err(f"查询代理ID失败: {ex}")
             raise
 
 
@@ -91,18 +92,46 @@ class ProxySettlementProcessor(LogMeta):
             id_placeholders = ','.join(map(str, proxy_ids))
 
             sql = f"""
-                    SELECT 
-                        pu.id as proxy_id,
-                        '{self.target_month}' month,
-                        COALESCE(SUM(podr.order_amount), 0)  total_amount,
-                        COALESCE(SUM(podr.proxy_income + podr.level1_proxy_income), 0)  total_income,
-                        COUNT(podr.id)  total_order  
-                    FROM proxy_user pu
-                    LEFT JOIN proxy_order_dividend_records podr 
-                        ON pu.id = podr.proxy_id 
-                        AND podr.order_month = '{self.target_month}'
-                    WHERE pu.id IN ({id_placeholders})
-                    GROUP BY pu.id
+                    SELECT
+                        b.proxy_id,
+                        b.month,
+                        sum( total_amount ) total_amount,
+                        sum( total_income ) total_income ,
+                        sum( total_order ) total_order 
+                    FROM
+                        (
+                        SELECT
+                            pu.id AS proxy_id,
+                            '{self.target_month}' month,
+                            COALESCE ( SUM( podr.order_amount ), 0 ) total_amount,
+                            COALESCE ( SUM( podr.proxy_income ), 0 ) total_income,
+                            COUNT( podr.id ) total_order 
+                        FROM
+                            proxy_user pu
+                            LEFT JOIN proxy_order_dividend_records podr ON pu.id = podr.proxy_id 
+                            AND podr.order_month = '{self.target_month}' 
+                        WHERE
+                            pu.id IN ( {id_placeholders} ) 
+                        GROUP BY
+                            pu.id UNION ALL
+                        SELECT
+                            podr.level1_proxy_id AS proxy_id,
+                            '{self.target_month}' month,
+                            COALESCE ( SUM( podr.order_amount ), 0 ) total_amount,
+                            COALESCE ( SUM( podr.level1_proxy_income ), 0 ) total_income,
+                            COUNT( podr.id ) total_order 
+                        FROM
+                            proxy_user pu
+                            LEFT JOIN proxy_order_dividend_records podr ON pu.id = podr.proxy_id 
+                            AND podr.order_month = '{self.target_month}' 
+                        WHERE
+                            podr.level1_proxy_id IN ( {id_placeholders}) 
+                        GROUP BY
+                            podr.level1_proxy_id 
+                        ) b 
+                    GROUP BY
+                        b.proxy_id,
+                        b.month
                 """
             settlements = await ProxyUser.exec_sql(sql, query=True)
 

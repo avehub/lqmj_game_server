@@ -26,12 +26,18 @@ class StoreHandler(GameAuthApi):
 
     async def get(self, req: Request, **kwargs):
         platform = self.check_str(req.args.get("platform"), require=False, p_name="平台ID")
+        os = self.check_str(req.args.get("c_os"), require=False, p_name="APP系统")
         type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
         status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         if not platform:
             platform = PlatForm.all_values()
+        if int(platform) == PlatForm.NATIVE_APP.val and os:
+            platform = PlatForm.ANDROID_APP.val
+            if os == "ios":
+                platform = PlatForm.IOS_APP.val
+
         store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
         self.loginfo("store", store)
         if not store:

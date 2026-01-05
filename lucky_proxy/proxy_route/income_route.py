@@ -3,7 +3,7 @@ from nsanic.handler_http import Urls
 from lucky_proxy.interface.promotion import PromotionCreator, PromotionCodeQuery
 from lucky_proxy.interface.proxy_income import ProxyMonthIncome, \
     ProxyMonthSettlementQuery, MyIncomeDetailQuery, TeamMemberIncomeDetailQuery, GameDataAdapterOrderTest, \
-    TeamMemberIncomeQuery, ProxyIncomeQuery, TestOrder
+    TeamMemberIncomeQuery, ProxyIncomeQuery, TestOrder, TestInvite
 
 """
 代理收入、统计相关
@@ -27,7 +27,5 @@ INCOME_APIS = [
 
     # 我的收益明细查询
     Urls("proxy/MyIncomeDetailQuery", MyIncomeDetailQuery),
-
-    #
-    Urls("proxy/TestOrder", TestOrder)    #
+    Urls("proxy/TestOrder", TestOrder),
 ]

@@ -18,6 +18,8 @@ class ProxyUser(AdminAuthApi):
         name = self.check_str(req.json.get('name'), require=False, p_name='代理名称')
         avatar = self.check_str(req.json.get('avatar'), require=False, p_name='代理头像')
         u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            self.answer(self.sta_code.FAIL, hint="用户不存在")
         add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=phone, name=name, avatar=avatar)
         sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
         if not sta:

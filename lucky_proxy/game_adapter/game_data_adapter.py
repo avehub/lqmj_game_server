@@ -34,7 +34,7 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def sync_promotion_order_data(cls, data: PromotionOrderDataDTO):
-        cls.log_info("接收到分销订单同步数据data={data}")
+        cls.log_info(f"接收到分销订单同步数据data={data}")
         query_relation = {
             "player_id": data.player_id
         }
@@ -43,9 +43,13 @@ class GameDataAdapter(LogMeta):
             cls.log_info(f"【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
             return 0
         proxy_id = relation.get("proxy_id")
-        proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id,
+        query_user = {
+            "id": proxy_id,
+            "is_deleted": 0,
+        }
+        proxy_user: ProxyUser = await ProxyUser.get_by_dict(query_user,
                                                           ["level1_proxy_id", "room_card_rate",
-                                                           "assistance_program_rate"])
+                                                           "assistance_program_rate"],limit=1)
         if not proxy_user:
             cls.log_info(
                 f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
@@ -67,7 +71,7 @@ class GameDataAdapter(LogMeta):
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1, with_del=False)
         if not proxy_user:
-            cls.log_info(f"忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
+            cls.log_info(f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
             return 0
         query_relation = {
