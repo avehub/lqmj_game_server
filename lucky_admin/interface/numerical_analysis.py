@@ -39,8 +39,8 @@ class BuyBaseData(AdminAuthApi):
                 "week_ratio": 0,
             },
         }
-        all_good_ids = GoodLogic.get_gift_good_ids()
-        first_good_ids = GoodLogic.get_gift_good_ids("first")
+        all_good_ids = await GoodLogic.get_gift_good_ids()
+        first_good_ids = await GoodLogic.get_gift_good_ids("first")
         order_data, msg = await OrderRC.get_order_filter(start_time=last_week_start_time, end_time=end_time, currency=5,
                                                          status=99)
         if order_data:
@@ -203,6 +203,8 @@ class PayUserActivate(AdminAuthApi):
                     if date not in items:
                         items[date] = unit.copy()
                         items[date] = set()
+                    if date not in data:
+                        data[date] = set()
                     items[date]["one"] = len(data[date] & user_dict[date])
                     items[date]["two"] = len(data[date] & user_dict[date])
                     items[date]["three"] = len(data[date] & user_dict[date])
