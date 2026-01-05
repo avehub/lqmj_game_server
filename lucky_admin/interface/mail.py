@@ -50,7 +50,4 @@ class Email(AdminAuthApi):
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         sta, data = await MailsRC.get_mails_list(uid=uid, page=page, page_size=page_size, exp_time=0)
-        if not sta:
-            self.answer(self.sta_code.FAIL, hint='获取邮件列表失败')
-
         self.answer(data=data)
