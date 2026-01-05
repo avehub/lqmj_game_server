@@ -26,13 +26,25 @@ class ClubLogic(CommonApi):
     async def leave_club_before(cls, uid: int, club_id: int, check_uid: int = None,
                                 status: int = ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT):
         """ 离开茶馆前业务处理 """
-        sta, e = await ExtraClubBehaviorRC.create_club_behavior(
-            ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
-            uid,
-            club_id,
-            check_uid=0 if check_uid == uid else check_uid,  # 主动离开check_id=0
-            status=status,
-        )
+        has, msg = await ExtraClubBehaviorRC.get_behavior_by_filter(uid=uid, club_id=club_id, status=status, type=ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX)
+        if not has:
+            sta, e = await ExtraClubBehaviorRC.create_club_behavior(
+                ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
+                uid,
+                club_id,
+                check_uid=0 if check_uid == uid else check_uid,  # 主动离开check_id=0
+                status=status,
+            )
+            if not sta:
+                return False, e
+        return True, "OK"
+
+    @classmethod
+    async def leave_club_check(cls, behavior_info: dict, check_uid: int = None,
+                               status: int = ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED):
+        """ 离开茶馆审批处理 """
+        sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_info["id"],
+                                                                {"status": status, "check_uid": check_uid})
         if not sta:
             return False, e
         return True, "OK"
@@ -113,7 +125,7 @@ class ClubLogic(CommonApi):
                           ExtraClubEventRC.EVENT_TYPE["KICK_CLUB"]):
             event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
                 check_uid=check_uid,
-                room_id=room_id,
+                uid=uid,
             )
         sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, uid, event_msg)
         if not sta:
