@@ -44,7 +44,7 @@ class BaseCardRoom(BaseRoom):
         self.__pai_xing_score_map = self.get_pai_xing_score_map()
         self.__record_id = 0
         self.__not_playing_room_status = RoomStatus.T_IDLE
-        self.__not_playing_dismiss = False #没开始游戏就解散
+        self.__not_playing_dismiss = False  # 没开始游戏就解散
         self.__deal_cards_count = 13
         if self.play_type == PlayType.BI_JIE_MJ:
             self.__deal_cards_count = 10

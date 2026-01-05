@@ -14,7 +14,7 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, Room
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
-    WriteOff, UpWechatUserInfo
+    WriteOff, UpWechatUserInfo, UserInvite
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -30,6 +30,9 @@ from lucky_game.interface.order import OrderDetail, CallbackAli, UnclaimedOrder,
 from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWechatCode, GetGameRecord, DissolveRoom
 from lucky_game.interface.ad_event import CreateAdRecord
 from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
+from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament, \
+    CompetitionConfig
+from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList, DropBagItem
 
 
 class MainBp(BaseBlue):
@@ -59,8 +62,6 @@ class MainBp(BaseBlue):
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
         Urls("/BindByPhone/", BindByPhone),  # 绑定手机号
-
-
 
         # 茶馆
         Urls("/ClubCreate/", ClubCreate),  # 茶馆创建
@@ -106,6 +107,7 @@ class MainBp(BaseBlue):
         Urls("/QueryUserInfo/", UserInfo),  # 查询用户信息
         Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         Urls("/WriteOff/", WriteOff),  # 注销账号
+        # Urls("/UserInvite/", UserInvite),  # 邀请用户
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
@@ -146,4 +148,17 @@ class MainBp(BaseBlue):
         Urls("/UnclaimedOrder/", UnclaimedOrder),  # 未领取订单
         Urls("/GainOrder/", GainOrder),  # 领取订单
         Urls("/MiniProgramRecvPush/", MiniProgramRecvPush),  # 小程序订单（小程序回调创建订单）
+
+        # 赛事相关
+        Urls("/TournamentConfig/", TournamentConfig),  # 获取赛事配置
+        Urls("/TournamentUserPoint/", TournamentUserPoint),  # 获取用户赛事积分
+        Urls("/TournamentLeaderboard/", TournamentLeaderboard),  # 获取赛事排行榜
+        Urls("/JoinTournament/", JoinTournament),  # 加入赛事
+        Urls("/CompetitionConfig/", CompetitionConfig),  # 获取赛事玩法配置
+
+        # 背包相关
+        Urls("/BagList/", BagList),  # 获取背包列表
+        Urls("/UserExchangeList/", UserExchangeList),  # 获取用户兑换列表
+        Urls("/UserInformationGather/", UserInformationGather),  # 道具兑换
+        Urls("/DropBagItem/", DropBagItem),  # 删除背包过期道具
     ]

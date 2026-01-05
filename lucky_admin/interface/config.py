@@ -10,7 +10,7 @@ from common.utils.utils import UtilsTool
 class Config(AdminAuthApi):
     """ 新增/更新/删除/查询 配置 """
 
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         conf_id = self.check_str(req.json.get('conf_id'), require=True, maxlen=128, p_name='配置名')
         desc = self.check_str(req.json.get('desc'), require=True, maxlen=255, p_name='描述')
         conf_data = self.check_str(req.json.get('conf_data'), require=True, p_name='具体配置')
@@ -20,7 +20,7 @@ class Config(AdminAuthApi):
 
         self.answer(data=data)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         conf_id = self.check_str(req.json.get('conf_id'), require=True, maxlen=128, p_name='配置名')
         desc = self.check_str(req.json.get('desc'), require=False, maxlen=255, p_name='描述')
         conf_data = self.check_str(req.json.get('conf_data'), require=False, p_name='具体配置')
@@ -29,7 +29,7 @@ class Config(AdminAuthApi):
             self.answer(self.sta_code.FAIL, hint='更新配置失败')
         self.answer()
 
-    async def delete(self, req: Request):
+    async def delete(self, req: Request, **kwargs):
         conf_id = self.check_str(req.json.get('conf_id'), require=True, p_name='配置名')
         sta, data = await ConfJsonRC.del_conf(conf_id)
         if not sta:
@@ -37,7 +37,7 @@ class Config(AdminAuthApi):
 
         self.answer()
 
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         desc = self.check_str(req.args.get('desc'), require=False, p_name='描述')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')

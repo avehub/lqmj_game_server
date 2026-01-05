@@ -21,7 +21,7 @@ class LoginByAccount(AdminAuthApi):
 
     decorators = []
 
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         username = req.json.get('username')
         username = self.check_str(username, require=True, minlen=5, maxlen=20, p_name='用户名')
         u_info = await BaseAdminRC.cache_by_unique({'username': username}, BaseAdminRC.KEY_USERNAME)

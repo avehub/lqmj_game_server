@@ -9,6 +9,7 @@ from lucky_game.handler.sensitive_words import SensitiveWords
 
 class ConfSrv(BaseConf):
     SERVER_NAME = 'lucky_admin'
+    DATABASE_NAME = 'lucky_game'
     SERVER_ID = 'A0001'
     RUN_PORT = 8990
     HOST = '0.0.0.0'
@@ -64,41 +65,30 @@ class ConfSrv(BaseConf):
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
-        model_list = [f'lucky_game.model_db.{item}' for item in models]
+        model_list = [f'{cls.DATABASE_NAME}.model_db.{item}' for item in models]
         db_conf = cls.makeup_db_conf(model_list) if cls.CONF_DB else None
         return db_conf
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
-        # server_name = "lucky_game"
+        # model_list.append("lucky_proxy.model_db.main")
         # return {
         #     'apps': {
-        #         server_name: {'models': model_list},
-        #         f'{server_name}_log': {'models': [f'{server_name}.model_db.log'], 'default_connection': DbKey.LOG}
-        #     },
-        #     'connections': cls.CONF_DB,
-        #     'use_tz': False,
-        #     'timezone': "UTC"
-        # }
-        server_name = "lucky_game"
-        return {
-            'apps': {
-                server_name: {'models': model_list},
-                f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
-                                           'default_connection': DbKey.LOG}
-            },
-            'connections': cls.CONF_DB,
-            'use_tz': cls.USE_TZ,
-            'timezone': cls.TIME_ZONE
-        }
-        # server_name = "lucky_game"
-        # return {
-        #     'apps': {
-        #         server_name: {'models': model_list},
-        #         f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
-        #                                    'default_connection': DbKey.LOG}
+        #         cls.DATABASE_NAME: {'models': model_list},
         #     },
         #     'connections': cls.CONF_DB,
         #     'use_tz': cls.USE_TZ,
         #     'timezone': cls.TIME_ZONE
         # }
+        model_list.append("lucky_proxy.model_db.main")
+        return {
+            'apps': {
+                cls.DATABASE_NAME: {'models': model_list},
+                f'{cls.DATABASE_NAME}_log': {'models': [f'{cls.DATABASE_NAME}.model_db.log'],
+                                       'default_connection': DbKey.LOG}
+            },
+            'connections': cls.CONF_DB,
+            'use_tz': cls.USE_TZ,
+            'timezone': cls.TIME_ZONE
+        }
+

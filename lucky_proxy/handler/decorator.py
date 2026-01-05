@@ -1,4 +1,5 @@
 from nsanic.libs import tool_jwt
+from nsanic.libs.mult_log import NLogger
 from sanic.request import Request
 from common.public.enum_const import JWType
 from lucky_proxy.const import ProxyPermission
@@ -16,27 +17,51 @@ class ProxyChecker(BaseDecorator):
 
     async def __call__(self, req: Request, *args, **kwargs):
         self.check_method(req)
-        token = req.headers.get("Authorization") or (req.json and req.json.get("token")) or ""
+        token = req.headers.get("Authorization")
         if not token:
-            return self.answer(self.sta_code.FAIL, hint="Token error")
-        # 1.获取载荷信息
-        phone, _ = tool_jwt.get_jwinfo(token)
-        phone = self.check_str(phone, require=True, minlen=6, maxlen=20)
-        u_info = await BaseUserRC.cache_by_unique({'phone': phone}, BaseUserRC.KEY_PHONE_CACHE)
-        not u_info and self.answer(self.sta_code.FORBID, hint='非法用户')
+            return self.answer(self.sta_code.TOKEN_ERR, hint="Token error")
         # 2.通过safe_key验签token合法性
-        safe_key = u_info.get("safe_key")
-        subject_info = f"{u_info.get('created')}_{phone}"
-        data, hint = tool_jwt.jdecode(token, JWType.MANAGER, safe_key, subject_info)
-        (not data) and self.answer(self.sta_code.FAIL, hint=hint)
+        # safe_key = u_info.get("safe_key")
+        # subject_info = f"{u_info.get('created')}_{phone}"
+        data, hint = tool_jwt.jdecode(jwt_str=token, jw_type=JWType.AGENT, client_info="h5")
+        (not data) and self.answer(self.sta_code.TOKEN_ERR, hint=hint)
 
-        if u_info.get("permission") == ProxyPermission.P1:
+        """if u_info.get("permission") == ProxyPermission.P1:
             route = req.path.strip('/').split('/')[-1]
             if req.method != 'GET' and route != 'LoginByToken':
-                self.answer(self.sta_code.FAIL, hint="权限不足，该操作不允许，请联系超级管理员~")
+                self.answer(self.sta_code.FAIL, hint="权限不足，该操作不允许，请联系超级管理员~")"""
 
-        kwargs.update({"u_info": u_info})
+        kwargs.update({"uid": data.get("identify")})
         kwargs.update({"jwt_info": data})
+        return await self.call_method(req, *args, **kwargs)
+
+
+class RateLimiter(BaseDecorator):
+    """ 后台检测器 """
+    conf: ConfSrv = conf_srv
+
+    def __init__(self, func):
+        super().__init__(func)
+
+    async def __call__(self, req: Request, *args, **kwargs):
+        self.check_method(req)
+        token = req.headers.get("Authorization")
+        if not token:
+            return self.answer(self.sta_code.TOKEN_ERR, hint="Token error")
+        # 2.通过safe_key验签token合法性
+        # safe_key = u_info.get("safe_key")
+        # subject_info = f"{u_info.get('created')}_{phone}"
+        data, hint = tool_jwt.jdecode(jwt_str=token, jw_type=JWType.AGENT, client_info="h5")
+        (not data) and self.answer(self.sta_code.TOKEN_ERR, hint=hint)
+
+        """if u_info.get("permission") == ProxyPermission.P1:
+            route = req.path.strip('/').split('/')[-1]
+            if req.method != 'GET' and route != 'LoginByToken':
+                self.answer(self.sta_code.FAIL, hint="权限不足，该操作不允许，请联系超级管理员~")"""
+
+        kwargs.update({"uid": data.get("identify")})
+        kwargs.update({"jwt_info": data})
+        # TODO 限流检查
         return await self.call_method(req, *args, **kwargs)
 
 

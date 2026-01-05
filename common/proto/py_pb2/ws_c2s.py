@@ -37,3 +37,6 @@ player_position_model = ws_leisure_pb2.C2SPlayerPosition()
 #茶馆
 leave_club_model = ws_leisure_pb2.C2SLeaveClubRoom()
 club_room_set_model = ws_leisure_pb2.C2SClubRoomSetInfo()
+
+# 比赛
+join_competition_model = ws_leisure_pb2.C2SJoinCompetition()

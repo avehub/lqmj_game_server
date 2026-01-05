@@ -21,7 +21,7 @@ class AdminChecker(BaseDecorator):
             return self.answer(self.sta_code.FAIL, hint="Token error")
         # 1.获取载荷信息
         username, _ = tool_jwt.get_jwinfo(token)
-        username = self.check_str(username, require=True, minlen=6, maxlen=20)
+        username = self.check_str(username, require=True, minlen=2, maxlen=20, p_name="必要参数")
         u_info = await BaseAdminRC.cache_by_unique({'username': username}, BaseAdminRC.KEY_USERNAME)
         not u_info and self.answer(self.sta_code.FORBID, hint='非法用户')
         # 2.通过safe_key验签token合法性

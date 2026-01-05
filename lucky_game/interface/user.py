@@ -1,3 +1,4 @@
+from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 from sanic import Request
 from common.utils import tool_certification
@@ -12,6 +13,8 @@ from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.logic.activity import Base
 from lucky_game.handler.wechat import WeChat
+from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
+from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO
 
 
 class BaseUserInfo(GameAuthApi):
@@ -260,3 +263,21 @@ class UpWechatUserInfo(GameAuthApi):
         if not data:
             return self.answer(code=self.sta_code.FAIL, hint=u_data.get("errmsg", "已是最新用户信息，无需更新"))
         return self.answer(data=data)
+
+class UserInvite(GameAuthApi):
+    """ 邀请用户 """
+    async def post(self, req: Request, **kwargs):
+        u_info = kwargs.get("u_info")
+        invite_code = self.check_str(
+            req.json.get("invite"),
+            require=True,
+            p_name="invite"
+        )
+        # 调用分销模块接口
+        invite_data = PromotionAddUserDTO(player_id=u_info.get("uid"), promotion_code=invite_code, promotion_time=tool_dt.cur_time(), promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        if not sta:
+            self.log_err(f"用户{u_info.get('uid')}绑定邀请关系{invite_code}失败")
+            return self.answer(code=self.sta_code.FAIL, hint="绑定邀请关系失败")
+        return self.answer()
+

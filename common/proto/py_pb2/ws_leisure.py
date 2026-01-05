@@ -600,6 +600,9 @@ class S2CRoomInfo04Mahjong:
         obj.club_id = kwargs.get("club_id") or 0
         obj.pay_type = kwargs.get("pay_type") or 0
         obj.lai_zi = kwargs.get("lai_zi") or 0
+        obj.match_room_id = kwargs.get("match_room_id") or 0
+        obj.match_round = kwargs.get("match_round") or 0
+        obj.total_match_round = kwargs.get("total_match_round") or 0
         return obj
 
 def pack_table_cards(obj, **kwargs):
@@ -1141,6 +1144,75 @@ class S2CCheckInGame:
 
 
 # ################################## 茶馆通知 ##################################
+
+# ################################## 比赛通知 ##################################
+
+class S2CJoinCompetition:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CJoinCompetition()
+        obj.players.extend(kwargs.get("players") or [])
+        obj.max_match_player = kwargs.get("max_match_player") or 0
+        return obj
+
+class S2CCompetitionOver:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CCompetitionOver()
+        competition_result = kwargs.get("competition_result") or []
+        for data in competition_result:
+            rank_info = obj.competition_result.add()
+            rank_info.uid = data.get("uid") or 0
+            rank_info.rank = data.get("rank") or 0
+            rank_info.score = data.get("score") or 0
+            rank_info.points = data.get("points") or 0
+            rank_info.ticket = data.get("ticket") or 0
+            rank_info.difference = data.get("difference") or 0
+            rank_info.last_rank = data.get("last_rank") or 0
+            rank_info.now_rank = data.get("now_rank") or 0
+        return obj
+
+class S2CStartCompetition:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CStartCompetition()
+        obj.competition_id = kwargs.get("competition_id") or 0
+        obj.cs_type = kwargs.get("cs_type") or 0
+        return obj
+
+class S2CGameRoomFinish:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CGameRoomFinish()
+        obj.need_wait = kwargs.get("need_wait") or False
+        return obj
+
+class S2CCompetitionInfo:
+    @classmethod
+    def pb_model(cls,**kwargs):
+        obj = ws_leisure_pb2.S2CCompetitionInfo()
+        player_rank = kwargs.get("player_rank") or []
+        for data in player_rank:
+            rank_info = obj.player_rank.add()
+            rank_info.uid = data.get("uid") or 0
+            rank_info.rank = data.get("rank") or 0
+            rank_info.score = data.get("score") or 0
+            rank_info.points = data.get("points") or 0
+            rank_info.ticket = data.get("ticket") or 0
+        award_list = kwargs.get("award_list") or []
+        for data in award_list:
+            award_info = obj.award_list.add()
+            award_info.rank = data.get("rank") or 0
+            award_info.points = data.get("points") or 0
+        game_room_list = kwargs.get("game_room_list") or []
+        for data in game_room_list:
+            game_room_status = obj.game_room_list.add()
+            game_room_status.room_num = data.get("room_num") or 0
+            game_room_status.status = data.get("status") or 0
+
+        return obj
+
+# ################################## 比赛通知 ##################################
 
 
 # ################################## ws大厅通知 ##################################

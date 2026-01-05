@@ -9,7 +9,7 @@ from common.public.conf import R_UID_THRESHOLD
 from common.public.enum_const import DbKey, ServiceEnum
 from lucky_admin.base_api import AdminAuthApi
 from lucky_admin.handler.pack_msg import pack_background_timed_task
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.conf_announcements import ConfAnnouncementsRC
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.const import MailSender, MailType, GoodsType

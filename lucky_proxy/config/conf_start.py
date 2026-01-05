@@ -1,10 +1,12 @@
 # coding=utf-8
+import asyncio
 import os.path
 from nsanic.base_conf import BaseConf
 from c_services.base.rmq_client import Rmq
 from common.public.enum_const import StaCode, DbKey
 from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, SERVER_SECRET_KEY, C_SERVICE_SECRET_KEY, FileUploadConf
 from lucky_game.handler.sensitive_words import SensitiveWords
+from lucky_game.script.timed_task import BaseTimed
 
 
 class ConfSrv(BaseConf):
@@ -64,18 +66,16 @@ class ConfSrv(BaseConf):
     def db_conf(cls):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
-        model_list = [f'lucky_game.model_db.{item}' for item in models]
+        model_list = [f'lucky_proxy.model_db.{item}' for item in models]
         db_conf = cls.makeup_db_conf(model_list) if cls.CONF_DB else None
         return db_conf
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
-        server_name = "lucky_game"
+        server_name = "lucky_proxy"
         return {
             'apps': {
                 server_name: {'models': model_list},
-                f'{server_name}_log': {'models': [f'{server_name}.model_db.log'],
-                                           'default_connection': DbKey.LOG}
             },
             'connections': cls.CONF_DB,
             'use_tz': cls.USE_TZ,

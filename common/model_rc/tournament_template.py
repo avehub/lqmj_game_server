@@ -1,23 +1,16 @@
 """
-赛事模板表
+赛事模板表 (支持多赛事并行)
 """
 from nsanic.libs import tool_dt
-from common.public.enum_const import LevelType, Switch
-from common.utils.kit_dt import KitDt
 from nsanic.libs.tool import json_encode, json_parse
-from lucky_game.handler.douyin import DouYin
-from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_rc.goods_manager import GoodsManagerRC
 from common.model_rc.base_rc import BaseCommonRC
-from lucky_game.model_db.main import ConfActivity, UserActivityProgress
-from lucky_game.model_rc.conf_json import ConfJsonRC
-from lucky_game.const import ActivitySta, ConditionType, ActivityItem, ActivityType, RandType
+from lucky_game.model_db.main import TournamentTemplate
 from tortoise.exceptions import OperationalError
 
 
 class TournamentTemplateRC(BaseCommonRC):
-    db_model = ConfActivity
-    tb_name = "tournament_template"
+    db_model = TournamentTemplate
+    tb_name = db_model.sheet_name()
     expired_mode = 0
 
 
@@ -127,5 +120,5 @@ class TournamentTemplateRC(BaseCommonRC):
             await cls.db_model.filter(template_id=template_id).delete()
             await cls.cache_session_del(template_id)
         except OperationalError as e:
-            return None, f"查询失败:{e}"
+            return None, f"操作失败:{e}"
         return True, "成功"

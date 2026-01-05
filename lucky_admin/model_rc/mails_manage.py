@@ -2,7 +2,7 @@ from nsanic.libs import tool_dt
 from nsanic.orm.rc_model import RCModel
 from tortoise.expressions import Q
 
-from lucky_admin.const import MailSta
+from lucky_game.const import MailSta
 from lucky_admin.handler.decorator import filter_not_out_of_date_data
 
 
@@ -18,7 +18,7 @@ class RecordsAdminMailsRC(RCModel):
         """
         async def from_db():
             db_info = await cls.db_model.filter(
-                Q(status=MailSta.NORMAL),
+                Q(status=MailSta.UNREAD),
                 Q(start_time__lte=cur_time),
                 Q(end_time__gte=cur_time)
             ).values()
@@ -31,7 +31,7 @@ class RecordsAdminMailsRC(RCModel):
             # 过滤
             info_list, update = filter_not_out_of_date_data(info_list, cur_time)
             if update:
-                await cls.db_model.filter(end_time__lt=cur_time).update(status=MailSta.OUT_OF_DATE)
+                await cls.db_model.filter(end_time__lt=cur_time).update(status=MailSta.DELETED)
                 await cls.conf.rds.set_item(cls.tb_name, info_list)
             return info_list
         return await cls.conf.rds.locked(cls.tb_name, from_db)
@@ -64,7 +64,7 @@ class RecordsAdminMailsRC(RCModel):
     @classmethod
     async def cancel_mail(cls, job_id):
         """ 更新邮件信息 """
-        sta = await cls.db_model.update_by_cond({"job_id": job_id}, {"status": MailSta.CANCELED})
+        sta = await cls.db_model.update_by_cond({"job_id": job_id}, {"status": MailSta.DELETED})
         if sta:
             info_list = await cls.conf.rds.get_item(cls.tb_name, jsparse=True)
             new_info_list = []

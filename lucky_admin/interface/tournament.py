@@ -3,19 +3,17 @@ from sanic import Request
 from common.public.enum_const import StaCode
 from lucky_admin.base_api import AdminAuthApi
 from common.model_rc.tournament_template import TournamentTemplateRC
-from lucky_game.model_rc.game_rooms import GameRoomsRC
-from lucky_game.model_rc.base_clubs import BaseClubRC
 
 
 class TournamentTemplate(AdminAuthApi):
-    async def get(self, req: Request):
+    async def get(self, req: Request, **kwargs):
         """ 获取模板列表 """
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         sta, data = await TournamentTemplateRC.get_template_filter(page=page, page_size=page_size)
         return self.answer(data=data)
 
-    async def post(self, req: Request):
+    async def post(self, req: Request, **kwargs):
         """ 创建模板 """
         template_name = self.check_str(req.json.get('template_name'), require=True, p_name='模板名称')
         template_type = self.check_int(req.json.get('template_type'), require=True, p_name='模板类型')
@@ -33,7 +31,7 @@ class TournamentTemplate(AdminAuthApi):
             return self.answer(code=StaCode.FAIL, hint=data)
         return self.answer(data=data)
 
-    async def put(self, req: Request):
+    async def put(self, req: Request, **kwargs):
         """ 更新模板 """
         template_id = self.check_int(req.json.get('template_id'), require=True, p_name='模板ID')
         template_name = self.check_str(req.json.get('template_name'), require=False, p_name='模板名称')
@@ -67,7 +65,7 @@ class TournamentTemplate(AdminAuthApi):
             return self.answer(code=StaCode.FAIL, hint=data)
         return self.answer(data=data)
 
-    async def delete(self, req: Request):
+    async def delete(self, req: Request, **kwargs):
         """ 删除模板 """
         template_id = self.check_int(req.json.get('template_id'), require=True, p_name='模板ID')
         sta, msg = await TournamentTemplateRC.del_template(template_id)
