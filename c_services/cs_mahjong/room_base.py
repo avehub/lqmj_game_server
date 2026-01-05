@@ -449,9 +449,9 @@ class Room(BaseCardRoom):
         self.clear_room_init()
 
     def clear_room_init(self):
-        self.__win_seat_list = []
-        self.__gang_hou_mo_pai = []
-        self.__gang_hou_chu_pai = []
+        self.__win_seat_list.clear()
+        self.__gang_hou_mo_pai.clear()
+        self.__gang_hou_chu_pai.clear()
         self.__round_first_ji = 0
         self.__round_first_wgj = 0
         self.__chong_feng_ji_seat_id = 0
@@ -462,20 +462,20 @@ class Room(BaseCardRoom):
         self.__ze_ren_wgj_win_seat_id = 0
         self.__jie_pao_count = 0
         self.__is_yi_pao_duo_xiang = 0
-        self.__men_record = []
-        self.__exchange_cards_info = {}
+        self.__men_record.clear()
+        self.__exchange_cards_info.clear()
         self.clear_table_actions()
-        self.__record_operates = {}
-        self.__kai_pai_hu_info = []
-        self.__shao_ji_gang_seats = set()
-        self.__zha_jian_seats = set()
+        self.__record_operates.clear()
+        self.__kai_pai_hu_info.clear()
+        self.__shao_ji_gang_seats.clear()
+        self.__zha_jian_seats.clear()
         self.__ji_cards = None
         self.__record_cfj = 0
         self.__record_cfwgj = 0
         self.__men_in_tian_ting = False
         self.__dice_num = None
-        self.__fan_jin_ji_cards = set()
-        self.__fan_yin_ji_cards = set()
+        self.__fan_jin_ji_cards.clear()
+        self.__fan_yin_ji_cards.clear()
         self.__zhuo_ji_card = 0
 
     def is_exchange_three(self):
@@ -2069,6 +2069,8 @@ class Room(BaseCardRoom):
         """ 获取玩家手牌信息 """
         cards_info = []
         for p in self.seats:
+            if not p:
+                continue
             if not is_zi_mo and hu_list and p.seat_id in hu_list:
                 p.rev_card(self.__curr_card)  # 非自摸将当前牌放到玩家手牌中
             cards_info.append({"seat_id": p.seat_id, "hand_cards": p.cards})
@@ -4655,11 +4657,13 @@ class Room(BaseCardRoom):
         self.__init__(self.tid, service, room_conf)
 
     def clear_room(self):
-        self.__winner_list = []
-        self.__gang_hou_mo_pai = []
-        self.__gang_hou_chu_pai = []
+        self.__winner_list.clear()
+        self.__gang_hou_mo_pai.clear()
+        self.__gang_hou_chu_pai.clear()
+        self.__que_list.clear()
+        self.__shang_ga_list.clear()
         self.clear_table_actions()
         self.clear_room_init()
-        self.__ji_pai_score = None
-        self.__default_ji = None
+        self.__ji_pai_score.clear()
+        self.__default_ji.clear()
         super().clear_room()

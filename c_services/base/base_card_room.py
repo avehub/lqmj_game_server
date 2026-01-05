@@ -260,8 +260,8 @@ class BaseCardRoom(BaseRoom):
 
     def clear_room_round_start(self):
         """ 小局开始清理 """
-        self.__round_msg_records = []
-        self.__replay_msg_data = []
+        self.__round_msg_records.clear()
+        self.__replay_msg_data.clear()
         self.__add_room_info_msg()
         self.__add_player_info_msg()
 
@@ -447,9 +447,9 @@ class BaseCardRoom(BaseRoom):
     async def game_start(self):
         if not self.room_status_is_equal(RoomStatus.T_READY):
             return
+        self.set_game_began()
         await self.async_set_room_status(RoomStatus.T_PLAYING)
         await self.inner_broadcast(CmdRoom.GAME_START)
-        self.set_game_began()
         if self.round_idx == 1:
             uid_list = [p.uid for p in self.seats if p and p.uid != self.owner]
             sta, e = await GameRoomsRC.room_start_sub(self.tid, uid_list)
@@ -592,16 +592,16 @@ class BaseCardRoom(BaseRoom):
 
     def clear_room(self):
         """ 房间回收清理 """
-        self.__round_msg_records = []  # 每局消息记录
-        self.__replay_msg_data = []  # 存入战绩数据
-        self.__online_group_user = []
+        self.__round_msg_records.clear()  # 每局消息记录
+        self.__replay_msg_data.clear()  # 存入战绩数据
+        self.__online_group_user.clear()
         self.__timer_dismiss = None
-        self.__agree_dismiss_seats = set()
+        self.__agree_dismiss_seats.clear()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
-        self.__rule_details = None
-        self.__extra_score_map = None
-        self.__pai_xing_score_map = None
+        self.__rule_details.clear()
+        self.__extra_score_map.clear()
+        self.__pai_xing_score_map.clear()
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):

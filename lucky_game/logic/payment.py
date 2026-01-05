@@ -107,12 +107,10 @@ class PaymentLogic:
                 if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP]:
                     return False, "支付方式错误", {}
                 # 购买房卡时获取用户折扣价格
-
-
                 discount = u_info.get("discount")
                 if purchase_uid:
-                    u_info = await BaseUserRC.cache_by_pk(purchase_uid)
-                    discount = u_info.get("discount")
+                    purchase_info = await BaseUserRC.cache_by_pk(purchase_uid)
+                    discount = purchase_info.get("discount")
                 if express.get("type") == StoreType.SKIN and discount < 1:
                     if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP] or (platform == PlatForm.NATIVE_APP and os == OperatingSystem.Android):
                         # 安卓、H5购买房卡才享受折扣
