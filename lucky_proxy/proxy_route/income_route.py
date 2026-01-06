@@ -28,4 +28,5 @@ INCOME_APIS = [
     # 我的收益明细查询
     Urls("proxy/MyIncomeDetailQuery", MyIncomeDetailQuery),
     Urls("proxy/TestOrder", TestOrder),
+    Urls("proxy/GameDataAdapterOrderTest", GameDataAdapterOrderTest),
 ]

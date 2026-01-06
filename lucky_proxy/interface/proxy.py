@@ -175,9 +175,11 @@ class ProxyInfoQuery(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone", "proxy_level",
-                                                                           "assistance_program_rate", "room_card_rate"])
+                                                                           "assistance_program_rate", "room_card_rate", "vip_expire_time", "vip_level"])
         user: GameUser = await GameUser.get_by_pk(proxy_id, ["name", "avatar"])
         info = {
+            "vip_expire_time": proxy_user.get("vip_expire_time"),
+            "vip_level": proxy_user.get("vip_level"),
             "auth_status": proxy_user.get("auth_status"),
             "proxy_level": proxy_user.get("proxy_level"),
             "assistance_program_rate": proxy_user.get("assistance_program_rate"),
