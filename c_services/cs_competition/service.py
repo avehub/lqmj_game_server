@@ -16,7 +16,7 @@ from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.ws_c2s import join_competition_model
 from common.proto.py_pb2.ws_leisure import S2CCompetitionOver, S2CJoinCompetition, S2CStartCompetition, S2CGameRoomFinish, \
     S2CCompetitionInfo
-from common.public.conf import ROBOT_BATTLE, R_UID_THRESHOLD, C_SERVICE_SECRET_KEY
+from common.public.conf import ROBOT_BATTLE, R_UID_THRESHOLD
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.utils.utils import UtilsTool
 from lucky_game.const import CompetitionStatus, PriceType
@@ -257,7 +257,7 @@ class CompetitionServer(BaseServer):
             "match_room_id": room.match_room_id,
             "match_round": room.match_round,
             "total_match_round": room.total_match_round,
-            "secret": C_SERVICE_SECRET_KEY,
+            "secret": self.conf.SECRET_KEY,
         }
         cs_type = conf_data.get("cs_type")
         room.cs_type = cs_type
