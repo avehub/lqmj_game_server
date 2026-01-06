@@ -5,7 +5,7 @@ from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
-from lucky_proxy.const import ProxyLevel
+from lucky_proxy.const import ProxyLevel, ProxyVipLevel
 from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
 from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser
 
@@ -48,13 +48,19 @@ class GameDataAdapter(LogMeta):
             "is_deleted": 0,
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query_user,
-                                                          ["level1_proxy_id", "room_card_rate",
-                                                           "assistance_program_rate"],limit=1)
+                                                            ["level1_proxy_id", "room_card_rate",
+                                                             "assistance_program_rate"], limit=1)
         if not proxy_user:
             cls.log_info(
                 f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
             return 0
-
+        # 非永久会员 会员过期
+        if proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
+                and proxy_user.get("vip_expire_time") < data.order_time:
+            cls.log_info(
+                f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}"
+                f",order_time={data.order_time},reason={proxy_id} 会员已过期")
+            return 0
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
         return 1
 
@@ -71,8 +77,9 @@ class GameDataAdapter(LogMeta):
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1, with_del=False)
         if not proxy_user:
-            cls.log_info(f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
-                         f",promotion_type={data.promotion_type}")
+            cls.log_info(
+                f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
+                f",promotion_type={data.promotion_type}")
             return 0
         query_relation = {
             "player_id": data.player_id,

@@ -23,7 +23,7 @@ class Level1ProxyDTO:
     # unionid
     unionid: str
     phone: str
-    # VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、4（永久会员）
+    # VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）
     vip_level: int
     # 过期时间转换为秒
     vip_expire_time: int
@@ -188,7 +188,7 @@ class GameDataSync(LogMeta):
                 "join_day": datetime.now().strftime("%Y-%m-%d"),
                 "promotion_code": UtilsTool.generate_invite_code(10),
                 "vip_level": data.vip_level,
-                "vip_expire_time": data.vip_expire_time
+                "vip_expire_time": data.vip_expire_time if data.vip_expire_time else 0
             }
             await ProxyUser.add_one(add_param)
             await ProxyUserWallet.add_one({"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1})

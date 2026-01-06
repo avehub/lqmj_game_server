@@ -38,7 +38,7 @@ class ProxyUser(DBModel):
     is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
 
     vip_expire_time = fields.BigIntField(null=True, default=0, description='会员过期时间')
-    vip_level = fields.IntField(null=True, default=1, description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、4（永久会员）')
+    vip_level = fields.IntField(null=True, default=1, description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）')
     class Meta:
         table = "proxy_user"
 
