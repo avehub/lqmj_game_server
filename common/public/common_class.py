@@ -21,7 +21,7 @@ from dateutil.relativedelta import relativedelta
 
 
 class CommonApi(LogMeta):
-    conf = base_conf
+    conf = BaseConf()
     SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
     # def __init__(self):
     #     # 确保 conf 已初始化
