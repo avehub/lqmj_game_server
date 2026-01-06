@@ -1,5 +1,6 @@
 # coding=utf-8
 import decimal
+import time
 from datetime import datetime
 
 from tortoise.transactions import in_transaction
@@ -8,6 +9,8 @@ from common.public.enum_const import DbKey
 from common.utils.utils import UtilsTool
 from lucky_proxy.base_api import BaseApi, ProxyAuthApi
 from sanic import Request
+
+from lucky_proxy.const import ProxyVipLevel
 from lucky_proxy.logic.promotion_code import PromotionCode
 from lucky_proxy.model_db.main import ProxyUser, ProxyUserBankCard, ProxyPromotionRelation, GameUser, ProxyUserWallet
 
@@ -35,6 +38,10 @@ class AddLevel2Proxy(ProxyAuthApi):
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id)
         if not proxy_user or proxy_user.get("proxy_level") != 1:
             self.answer(self.sta_code.FAIL, {}, hint='无权限操作!')
+        # 非永久会员 会员过期
+        if proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
+                and proxy_user.get("vip_expire_time") < time.time():
+            self.answer(self.sta_code.FAIL, {}, hint='会员已过期请联系客服!')
 
         proxy_user_level2: ProxyUser = await ProxyUser.get_by_pk(req.json.get("uid"))
         if proxy_user_level2 and proxy_user_level2.get("is_deleted") == 0:
@@ -175,7 +182,8 @@ class ProxyInfoQuery(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(proxy_id, field=["auth_status", "phone", "proxy_level",
-                                                                           "assistance_program_rate", "room_card_rate", "vip_expire_time", "vip_level"])
+                                                                           "assistance_program_rate", "room_card_rate",
+                                                                           "vip_expire_time", "vip_level"])
         user: GameUser = await GameUser.get_by_pk(proxy_id, ["name", "avatar"])
         info = {
             "vip_expire_time": proxy_user.get("vip_expire_time"),
