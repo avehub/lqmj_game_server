@@ -40,7 +40,7 @@ class GameDataAdapter(LogMeta):
         }
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
-            cls.log_info(f"【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
+            cls.log_info(f"【重要日志】【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
             return 0
         proxy_id = relation.get("proxy_id")
         query_user = {
@@ -49,17 +49,30 @@ class GameDataAdapter(LogMeta):
         }
         proxy_user: ProxyUser = await ProxyUser.get_by_dict(query_user,
                                                             ["level1_proxy_id", "room_card_rate",
-                                                             "assistance_program_rate"], limit=1)
+                                                             "assistance_program_rate", "vip_level",
+                                                             "vip_expire_time", "proxy_level"],
+                                                            limit=1)
         if not proxy_user:
             cls.log_info(
-                f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
+                f"【重要日志】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
             return 0
-        # 非永久会员 会员过期
-        if proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
-                and proxy_user.get("vip_expire_time") < data.order_time:
+
+        level1_proxy_user = proxy_user
+        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
+            level1_proxy_user = await ProxyUser.get_by_pk(proxy_user.get("level1_proxy_id"),
+                                                          ["vip_level", "vip_expire_time"])
+        if not level1_proxy_user:
             cls.log_info(
-                f"忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}"
-                f",order_time={data.order_time},reason={proxy_id} 会员已过期")
+                f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略订单同步，订单={data}")
+            return 0
+
+        vip_expire_time = level1_proxy_user.get("vip_expire_time")
+        # 非永久会员 会员过期
+        if level1_proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
+                and vip_expire_time < data.order_time:
+            cls.log_info(
+                f"【重要日志】会员已过期，忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}"
+                f",order_time={data.order_time},vip_expire_time={vip_expire_time},reason={proxy_id} 会员已过期或所属的一级代理会员已过期")
             return 0
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
         return 1
