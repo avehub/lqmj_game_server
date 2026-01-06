@@ -39,24 +39,24 @@ class BuyBaseData(AdminAuthApi):
                 "week_ratio": 0,
             },
         }
-        all_good_ids = GoodLogic.get_gift_good_ids()
-        first_good_ids = GoodLogic.get_gift_good_ids("first")
+        all_good_ids = await GoodLogic.get_gift_good_ids()
+        first_good_ids = await GoodLogic.get_gift_good_ids("first")
         order_data, msg = await OrderRC.get_order_filter(start_time=last_week_start_time, end_time=end_time, currency=5,
                                                          status=99)
         if order_data:
             buy_num = set()
             for order in order_data:
                 # 今日
-                if order.get("create_time") >= date_time and order.get("create_time") <= end_time:
+                if order.get("created") >= date_time and order.get("created") <= end_time:
                     data["gift_count"] += order.get("num")
                 # 昨天
-                if order.get("create_time") >= yesterday_start_time and order.get("create_time") <= yesterday_end_time:
+                if order.get("created") >= yesterday_start_time and order.get("created") <= yesterday_end_time:
                     data["gift_count"] += order.get("num")
                 # 本周
-                if order.get("create_time") >= week_start_time and order.get("create_time") <= end_time:
+                if order.get("created") >= week_start_time and order.get("created") <= end_time:
                     data["gift_count"] += order.get("num")
                 # 上周
-                if order.get("create_time") >= last_week_start_time and order.get("create_time") <= week_start_time:
+                if order.get("created") >= last_week_start_time and order.get("created") <= week_start_time:
                     data["gift_count"] += order.get("num")
                 if order.get("good_id") in all_good_ids:
                     data["gift_count"] += order.get("num")
@@ -200,8 +200,9 @@ class PayUserActivate(AdminAuthApi):
             if user_dict:
                 items = {}
                 for date, item in user_dict.items():
+                    if date not in items:
+                        items[date] = unit.copy()
                     if date not in data:
-                        data[date] = unit.copy()
                         data[date] = set()
                     items[date]["one"] = len(data[date] & user_dict[date])
                     items[date]["two"] = len(data[date] & user_dict[date])
@@ -245,7 +246,6 @@ class PayUserGap(AdminAuthApi):
             max_len = len(order_data)
             all_amount = []
             for order in order_data:
-                max_len -= 1
                 date = tool_dt.dt_str(order["created"], '%Y-%m-%d')
                 if date not in data:
                     data[date] = unit.copy()
@@ -258,20 +258,17 @@ class PayUserGap(AdminAuthApi):
                 data[date]["pay_user"] = len(pay_user)
                 data[date]["total"] += order["amount"]
                 data[date]["age"] = ("%.2f" % (order["amount"] / len(pay_user)))
-                all_amount.append(order["amount"])
+                all_amount.append(int(order["amount"]))
                 if max_amount < order["amount"]:
                     data[date]["max"] = order["amount"]
                 if min_amount < order["amount"]:
                     data[date]["min"] = min_amount
                 else:
                     data[date]["min"] = order["amount"]
-                if max_len == 0:
-                    data[date]["up_quantile"] = 0
-                    quartiles = numpy.percentile(all_amount, [25, 50, 75])
-                    self.log_info("quartiles:", quartiles)
-                    data[date]["down_quantile"] = quartiles[0]
-                    data[date]["median"] = quartiles[1]
-                    data[date]["up_quantile"] = quartiles[2]
+                down_quantile, median, up_quantile = await self.calculate_quartiles(all_amount)
+                data[date]["down_quantile"] = down_quantile
+                data[date]["median"] = median
+                data[date]["up_quantile"] = up_quantile
 
             result["list"] = [value for value in data.values()]
         return self.answer(data=result)
@@ -296,10 +293,10 @@ class GiftPayData(AdminAuthApi):
             "buy_gift": []
         }
         result = {}
-        first_good_ids = GoodLogic.get_gift_good_ids("first")
-        replenish_good_ids = GoodLogic.get_gift_good_ids("replenish")
-        reviver_good_ids = GoodLogic.get_gift_good_ids("reviver")
-        return_good_ids = GoodLogic.get_gift_good_ids("return")
+        first_good_ids = await GoodLogic.get_gift_good_ids("first")
+        replenish_good_ids = await GoodLogic.get_gift_good_ids("replenish")
+        reviver_good_ids = await GoodLogic.get_gift_good_ids("reviver")
+        return_good_ids = await GoodLogic.get_gift_good_ids("return")
         order_data, msg = await OrderRC.get_order_filter(start_time=start_time, end_time=end_time, currency=5,
                                                          status=99)
         if order_data:
@@ -360,8 +357,8 @@ class PlatformBaseData(AdminAuthApi):
         if order_data:
             buy_user = set()
             for order in order_data:
-                if order["user_id"] not in buy_user:
-                    buy_user.add(order["user_id"])
+                if order["uid"] not in buy_user:
+                    buy_user.add(order["uid"])
                 data["buy_money"] += order["amount"]
             data["buy_user"] += len(buy_user)
         return self.answer(data=data)

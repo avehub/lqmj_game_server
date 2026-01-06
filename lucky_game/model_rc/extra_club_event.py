@@ -16,13 +16,17 @@ class ExtraClubEventRC(BaseCommonRC):
         'FUND_RECHARGE': 1,  # 基金充值
         'FUND_CONSUME': 2,   # 基金消耗
         'APPROVAL_LOG': 3,    # 入馆审批
-        'CLOSE_LOG': 4    # 茶馆解散
+        'CLOSE_LOG': 4,    # 茶馆解散
+        'OUT_CLUB': 5,   # 主动退出茶馆
+        'KICK_CLUB': 6,   # 踢出茶馆
     }
     EVENT_MSG = {
         1: "茶馆基金充值 {price}",
         2: "茶馆基金消耗 {price}, 创建房间（ID: {room_id}）",
         3: "管理员（ID：{check_uid}）审批（ID：{uid}）加入茶馆",
         4: "茶馆基金消耗 {price}, 解散茶馆",
+        5: "管理员（ID：{check_uid}）审批（ID：{uid}）退出茶馆",
+        6: "管理员（ID：{check_uid}）将（ID：{uid}）踢出茶馆",
     }
 
     @classmethod

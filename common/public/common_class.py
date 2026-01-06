@@ -353,3 +353,44 @@ class CommonApi(LogMeta):
         end_date = next_month_first - relativedelta(seconds=1)
 
         return int(end_date.timestamp())
+
+    @classmethod
+    async def calculate_quartiles(cls, data):
+        """
+        计算下四分位数(Q1)、中位数(Q2)、上四分位数(Q3)
+        支持浮点数和Decimal类型
+
+        参数:
+            data: 数值列表，可以是float或Decimal类型
+
+        返回:
+            包含下四分位、中位、上四分位值的元组 (q1, q2, q3)
+        """
+        if not data:
+            return 0, 0, 0
+
+        # 确保数据是列表并排序
+        sorted_data = sorted(data)
+        n = len(sorted_data)
+
+        def get_percentile(p):
+            """
+            获取指定百分位的值
+            p: 百分位 (0-1)
+            """
+            if not (0 <= p <= 1):
+                raise ValueError("百分位必须在0到1之间")
+
+            k = (n - 1) * p
+            f = int(k)
+            c = k - f
+
+            if f + 1 >= n:
+                return sorted_data[-1]
+            return sorted_data[f] + c * (sorted_data[f + 1] - sorted_data[f])
+
+        q1 = get_percentile(0.25)
+        q2 = get_percentile(0.5)
+        q3 = get_percentile(0.75)
+
+        return q1, q2, q3

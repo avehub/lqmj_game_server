@@ -232,7 +232,7 @@ class ExtraClubEvent(DBModel):
     id = fields.IntField(max_length=10, pk=True, description='事件ID')
     club_id = fields.IntField(max_length=6, index=True, description='茶馆ID')
     type = fields.SmallIntField(max_length=2, index=True, default=0,
-                                description='类型：1基金充值 2基金消耗 3入馆审批记录 4茶馆解散')
+                                description='类型：1基金充值 2基金消耗 3入馆审批记录 4茶馆解散 5退出茶馆 6踢出茶馆')
     uid = fields.IntField(max_length=28, index=True, description='玩家ID（发起方）')
     explain = fields.CharField(max_length=256, null=True, default='',
                                description='说明:记录XX管理员（ID：xx）通过XX玩家（ID：xx）加入茶馆; XX玩家（ID：xx）消耗XX基金创建了xx玩法（房间号：xx）; XX玩家（ID：xx）为茶馆充值基金xx')
