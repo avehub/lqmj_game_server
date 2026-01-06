@@ -275,3 +275,14 @@ class RecordsGameTotalRC(BaseCommonRC):
         if settle_info["uid"] == 0 or settle_info["uid"] != uid:
             price = 0
         return price
+
+    @classmethod
+    async def delete_many_record(cls, record_rids: list):
+        """删除房间战绩记录"""
+        try:
+            record = await cls.db_model.filter(record_rid__in=record_rids).delete()
+            if not record:
+                return record, "删除失败"
+        except OperationalError as e:
+            return False, f"删除失败: {str(e)}"
+        return record, "删除成功"
