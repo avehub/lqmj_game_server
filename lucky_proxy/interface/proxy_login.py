@@ -64,6 +64,8 @@ class ProxyLogin(BaseApi):
 
         if not user:
             self.answer(self.sta_code.FORBID, {}, hint='无权限登录!')
+        if user.get("status") == 0:
+            self.answer(self.sta_code.FORBID, {}, hint='账号已被封禁，请联系客服!')
         extra = {
             "proxy_name": user.get("proxy_name"),
             "proxy_level": user.get("proxy_level"),
@@ -95,6 +97,8 @@ class ProxyRefreshToken(ProxyAuthApi):
         }
         if not user:
             self.answer(self.sta_code.FORBID, {}, hint='无权限登录!')
+        if user.get("status") == 0:
+            self.answer(self.sta_code.FORBID, {}, hint='账号已被封禁，请联系客服!')
         token = tool_jwt.jencode(user_id=user.get("id"), jw_type=JWType.AGENT, client_info="h5",
                                  extra=extra,
                                  useful_life=JWType.AGENT.desc)
