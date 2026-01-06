@@ -3,10 +3,13 @@ from typing import Optional
 from aio_pika import DeliveryMode
 from nsanic.base_conf import BaseConf
 from nsanic.libs import tool_dt
+from nsanic.libs.rds_client import RdsClient
+
 from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
+from c_services.base.rmq_client import Rmq
 from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
@@ -21,10 +24,10 @@ from dateutil.relativedelta import relativedelta
 class CommonApi(LogMeta):
     conf = base_conf
     SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
-    # def __init__(self):
-    #     # 确保 conf 已初始化
-    #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
-    #         CommonApi.conf = BaseConf()
+    if not conf.rds:
+        conf.rds = RdsClient.init(conf.CONF_RDS['default'], logs=conf.log)
+    if not conf.rmq:
+        conf.rmq = Rmq.init(conf.CONF_AMQP['default'], logs=conf.log)
 
     @classmethod
     async def get_player_ws_id(cls, uid):
