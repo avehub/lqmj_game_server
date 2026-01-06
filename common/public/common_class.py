@@ -3,7 +3,7 @@ from typing import Optional
 from aio_pika import DeliveryMode
 from nsanic.base_conf import BaseConf
 from nsanic.libs import tool_dt
-# from c_services.base.base_conf import BaseConf, base_conf
+from c_services.base.base_conf import BaseConf, base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
@@ -19,7 +19,7 @@ from dateutil.relativedelta import relativedelta
 
 
 class CommonApi(LogMeta):
-    conf = BaseConf()
+    conf = base_conf
     SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
     # def __init__(self):
     #     # 确保 conf 已初始化
