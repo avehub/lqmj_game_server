@@ -1,9 +1,9 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-from nsanic.base_conf import BaseConf
+# from nsanic.base_conf import BaseConf
 from nsanic.libs import tool_dt
-from c_services.base.base_conf import base_conf
+from c_services.base.base_conf import BaseConf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
 
