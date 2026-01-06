@@ -107,4 +107,4 @@ class ProxyRefreshToken(ProxyAuthApi):
             "proxy_name": user.get("proxy_name"),
             "proxy_level": user.get("proxy_level"),
         }
-        self.answer(self.sta_code.PASS, login_info, hint='刷新成功成功!')
+        self.answer(self.sta_code.PASS, login_info, hint='刷新成功!')
