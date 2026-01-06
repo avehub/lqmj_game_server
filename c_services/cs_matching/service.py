@@ -19,7 +19,7 @@ from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.kit_async import DelayCall, delay_func
 from c_services.const.cs_enum_const import CmdMatch, CmdRoom
 from common.public.enum_const import ServiceEnum, StaCode, GameType, CacheKey
-from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD
+from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD, C_SERVICE_SECRET_KEY
 from common.utils.kit_dt import KitDt
 from c_services.cs_matching.const import MatchingMode
 # from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
@@ -67,7 +67,7 @@ class MatchServer(BaseServer, LeisureService):
         })
 
     async def test_rpc(self):
-        req_data = {"cs_type": self.service_type, "secret": self.conf.SECRET_KEY}
+        req_data = {"cs_type": self.service_type, "secret": C_SERVICE_SECRET_KEY}
         print("开始测试请求")
         import time
         s = time.time()
@@ -209,7 +209,7 @@ class MatchServer(BaseServer, LeisureService):
             "level": session.level,
             "pt": session.play_type,
             "platform": self.__platform,
-            "secret": self.conf.SECRET_KEY,
+            "secret": C_SERVICE_SECRET_KEY,
             # 房间信息（类似于开房选项）
             "extra_room_info": {
                 # 排行榜信息

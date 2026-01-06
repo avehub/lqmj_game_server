@@ -15,6 +15,7 @@ from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.enum_const import Channel, StaCode, ServiceEnum, CacheKey
 from c_services.base.base_conf import BaseConf, base_conf
 from common.public.pub_base_service import BasePubService
+from common.public.conf import C_SERVICE_SECRET_KEY
 
 
 class BaseServer(BasePubService, CommonApi):
@@ -349,7 +350,7 @@ class BaseServer(BasePubService, CommonApi):
     def check_inner_call(self, data, cmd=0, uid=0):
         """ 检查是否是服务器内部调用 """
         data = json_parse(data, self.log_err)
-        if data.get("secret", "") != self.conf.SECRET_KEY:
+        if data.get("secret", "") != C_SERVICE_SECRET_KEY:
             self.log_info("非法调用！！！", cmd, uid, data)
             return {}
         # data.pop("secret")
