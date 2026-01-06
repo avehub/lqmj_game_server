@@ -2,6 +2,8 @@
 游戏房间模型
 """
 from tortoise.exceptions import OperationalError
+
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_db.main import GameRooms
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
@@ -336,16 +338,12 @@ class GameRoomsRC(BaseCommonRC):
                     reason=ReasonCostGold.CLUB_ROOM_CARD_TICKETS
                 )
             # 记录茶馆事件
-            event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-            event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                price=price,
-                room_id=room_data["room_id"],
-            )
-            add_club_behavior, _ = await ExtraClubEventRC.create_event(
+            await ClubLogic.club_event(
                 room_data["club_id"],
-                event_type,
+                ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
                 room_data["creator"],
-                event_msg,
+                num=price,
+                room_id=room_data["room_id"],
             )
         else:
             if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
@@ -390,16 +388,11 @@ class GameRoomsRC(BaseCommonRC):
                     "sub"
                 )
                 # 记录茶馆事件
-                event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                    price=price,
-                    room_id=room_data["room_id"],
-                )
-                add_club_behavior, _ = await ExtraClubEventRC.create_event(
+                await ClubLogic.club_event(
                     room_data["club_id"],
-                    event_type,
+                    ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
                     room_data["creator"],
-                    event_msg,
+                    num=price,
                 )
             else:
                 reason = ReasonCostGold.CLUB_ROOM_CARD_TICKETS if key == "room_card" else ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS

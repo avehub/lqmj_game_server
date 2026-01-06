@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 
 from lucky_game.const import ReasonCostGold
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_db.main import Clubs
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from lucky_game.model_rc.club_group import ClubGroupRC
@@ -148,24 +149,20 @@ class BaseClubRC(BaseCommonRC):
             return None, f"失败：{str(e)}"
         if room_card:
             #TODO事件记录写入消费队列
-            event = event_type = event_msg = None
+            event = None
+            event_type = None
+            num = 0
             if room_card > club["room_card"]:
                 event = True
                 event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]
-                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                    price=room_card - club["room_card"],
-                )
+                num = room_card - club["room_card"]
             elif room_card < club["room_card"]:
                 event = True
                 event_type = ExtraClubEventRC.EVENT_TYPE["CLOSE_LOG"]
-                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                    price=club["room_card"]-room_card,
-                )
+                num = club["room_card"] - room_card
             if event:
                 uid = 0
-                sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, uid, event_msg)
-                if not sta:
-                    return False, "写入事件记录失败"
+                await ClubLogic.club_event(club_id, event_type, uid, num)
         return club, "成功"
 
     @classmethod
@@ -264,17 +261,9 @@ class BaseClubRC(BaseCommonRC):
                 # 写入茶馆事件记录
                 if operation == "add":
                     event_type = ExtraClubEventRC.EVENT_TYPE["FUND_RECHARGE"]
-                    event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        price=num,
-                    )
                 elif operation == "sub":
                     event_type = ExtraClubEventRC.EVENT_TYPE["CLOSE_LOG"]
-                    event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                        price=num,
-                    )
-                sta, _ = await ExtraClubEventRC.create_event(club_id, event_type, u_info.get("uid"), event_msg)
-                if not sta:
-                    return False, "写入事件记录失败"
+                await ClubLogic.club_event(club_id, event_type, u_info.get("uid"), num=num)
         except OperationalError as e:
             return False, f"失败：{str(e)}"
         return True, "成功"

@@ -137,7 +137,7 @@ class CompetitionRoom:
         return groups
 
     def clear_competition(self):
-        self.__service = 0
+        self.__service = None
         self.__members.clear()
         self.__player_scores.clear()
         self.__finish_room_count = 0
