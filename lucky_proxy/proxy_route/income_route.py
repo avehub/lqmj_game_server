@@ -29,4 +29,5 @@ INCOME_APIS = [
     Urls("proxy/MyIncomeDetailQuery", MyIncomeDetailQuery),
     #Urls("proxy/TestOrder", TestOrder),
     #Urls("proxy/GameDataAdapterOrderTest", GameDataAdapterOrderTest),
+    #Urls("proxy/TestInvite", TestInvite),
 ]

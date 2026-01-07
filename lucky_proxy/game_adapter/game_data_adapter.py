@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from nsanic.libs.component import LogMeta
 from tortoise.transactions import in_transaction
@@ -88,12 +89,34 @@ class GameDataAdapter(LogMeta):
             "promotion_code": data.promotion_code,
             "is_deleted": 0
         }
-        proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1, with_del=False)
+        proxy_user: ProxyUser = await ProxyUser.get_by_dict(query, limit=1)
         if not proxy_user:
             cls.log_info(
                 f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
                 f",promotion_type={data.promotion_type}")
             return 0
+
+        level1_proxy_user = proxy_user
+        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
+            level1_proxy_user = await ProxyUser.get_by_pk(proxy_user.get("level1_proxy_id"),
+                                                          ["vip_level", "vip_expire_time"])
+
+        proxy_id = proxy_user.get("id")
+        if not level1_proxy_user:
+            cls.log_info(
+                f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略邀请用户同步，data={data}")
+            return 0
+
+        vip_expire_time = level1_proxy_user.get("vip_expire_time")
+
+        # 非永久会员 会员过期
+        if level1_proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
+                and vip_expire_time < data.promotion_time:
+            cls.log_info(
+                f"【重要日志】会员已过期，忽略邀请用户同步uid={data.player_id},"
+                f",now={data.promotion_time},vip_expire_time={vip_expire_time},reason=[{proxy_id}]会员已过期或所属的一级代理会员已过期")
+            return 0
+
         query_relation = {
             "player_id": data.player_id,
         }
