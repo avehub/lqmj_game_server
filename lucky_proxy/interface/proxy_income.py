@@ -227,14 +227,6 @@ class TestOrder(BaseApi):
                                   , data.get("dividend_rate")
                                   , data.get("order_time")
                                   )
-        p = PromotionOrderDataDTO(order_id=1543, order_no='00012025123103233159015052960741'
-                                  , player_id=151058
-                                  , order_type=1
-                                  , goods_number=1
-                                  , price=0.1
-                                  , order_amount=Decimal("0.1")
-                                  , dividend_rate=0.7
-                                  , order_time=1767151411)
         sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
 
