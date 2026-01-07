@@ -13,6 +13,7 @@ from lucky_admin.const import BackTaskSta
 from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
+from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 
@@ -102,6 +103,8 @@ class TimedService:
 
         # 每日一次任务
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
+        # 每小时一次任务
+        self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
 
     async def __every_day_tasks(self):
         """ 每日一次任务 """
@@ -130,19 +133,13 @@ class TimedService:
 
     async def __order_do_tasks(self):
         """ 顺序执行任务 """
-        # 半小时刷新排行榜
-        await self.__refresh_ranking_list()
-
         now_time = datetime.now()
-        # 5分钟后执行历史写入数据
-        self.__scheduler.add_date_job(self.__move_to_ranked_history, run_date=now_time + timedelta(minutes=5))
+        # 删除历史战绩（7天外）
+        self.__scheduler.add_date_job(self.__del_to_game_record_history, run_date=now_time)
 
-        # 10分钟后开始统计抖音用户广告数据
-        if LIVE_SERVER:
-            self.__scheduler.add_date_job(self.__stats_juliang_ads_data, run_date=now_time + timedelta(minutes=10))
 
-        # 20分钟后执行邮件发奖
-        self.__scheduler.add_date_job(self.__season_check_out, run_date=now_time + timedelta(minutes=20))
+
+
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -180,6 +177,11 @@ class TimedService:
                 text=f"过期时间：{CertificationConf.USEFUL_TIME} 请及时登录网络游戏防沉迷实名认证系统进行更新，否则将无法使用实名认证功能。",
                 message_url=CertificationConf.DOMAIN,
             )
+
+    @classmethod
+    async def __del_to_game_record_history(cls):
+        """ 删除历史战绩（7天外） """
+        await BaseRecordsGameRC.del_history_game_record()
 
     @classmethod
     async def check_tournament_cycle(self):

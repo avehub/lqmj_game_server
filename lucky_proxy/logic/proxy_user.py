@@ -27,7 +27,7 @@ class ProxyUserLogic(LogMeta):
         if phone is not None:
             where += f" AND phone = {phone}"
         if promotion_code is not None:
-            where += f" AND promotion_code = {promotion_code}"
+            where += f" AND promotion_code = '{promotion_code}'"
         try:
             sql = f"SELECT * FROM {cls.table_name} WHERE {where}"
             total = 0
@@ -56,12 +56,18 @@ class ProxyUserLogic(LogMeta):
         if not proxy_user:
             return sta, "更新的代理不存在"
         update_data = ""
-        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted"}
+        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted", "vip_level", "vip_expire_time"}
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
+                if update_data:
+                    update_data += ", "
+                if k == 'promotion_code':
+                    v = f"'{v}'"
                 update_data += f" {k}={v}"
         if update_data:
             sql = f"UPDATE {cls.table_name} SET {update_data} WHERE id={player_id}"
+            cls.log_info(f"代理SQL: {sql}")
+
             sta = await ProxyUser.exec_sql(sql)
         return sta, "更新成功"
 

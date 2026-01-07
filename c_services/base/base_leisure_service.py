@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict
 
 from c_services.base.base_service import BaseService
@@ -103,7 +104,8 @@ class BaseLeisureService(BaseService, LeisureService):
             self.log_info("休闲场创建房间失败",err,"参数",platform,user_list[0].get("uid"),play_type,room_data)
             return
         extra_room_info["tid"] = new_room
-        room = self.create_room(room, room_conf, **extra_room_info)
+        copy_room_conf = deepcopy(room_conf)
+        room = self.create_room(room, copy_room_conf, **extra_room_info)
         self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)
         player_list = []
         for u_info in user_list:

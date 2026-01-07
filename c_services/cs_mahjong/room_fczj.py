@@ -3006,12 +3006,12 @@ class RoomFCZJ(BaseLeisureRoom):
 
     def clear_round_over(self):
         self.__recharge_wait = 0
-        self.__wait_recharge_seats = []
-        self.__gang_hou_mo_pai = []
-        self.__gang_hou_chu_pai = []
-        self.__fan_ji_cards = []  # 记录所有玩家翻的鸡牌
-        self.__fan_ji_result = []  # 记录所有玩家翻的鸡牌，已计算+1或者金鸡
-        self.__zhuo_ji_cards = {}  # 记录捉鸡结算信息
+        self.__wait_recharge_seats.clear()
+        self.__gang_hou_mo_pai.clear()
+        self.__gang_hou_chu_pai.clear()
+        self.__fan_ji_cards.clear()  # 记录所有玩家翻的鸡牌
+        self.__fan_ji_result.clear()  # 记录所有玩家翻的鸡牌，已计算+1或者金鸡
+        self.__zhuo_ji_cards.clear()  # 记录捉鸡结算信息
         self.__chong_feng_ji_seat_id = 0  # 冲锋幺鸡玩家
         self.__chong_feng_wgj_seat_id = 0  # 冲锋乌骨鸡玩家
         self.__round_first_ji = 0  # 记录冲锋鸡
@@ -3022,14 +3022,14 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__ze_ren_wgj_win_seat_id = 0
         self.__before_seat_id = 0
         self.__after_peng = False
-        self.__shao_ji_gang_seats = set()
-        self.__player_actions = []  # 玩家动作
+        self.__shao_ji_gang_seats.clear()
+        self.__player_actions.clear()  # 玩家动作
         self.__curr_card_exist = 0  # 当前牌是否存在
-        self.__can_fan_ji_seats = []
-        self.__no_jiao_pai_seats = []
-        self.__hua_zhu_seats = []
+        self.__can_fan_ji_seats.clear()
+        self.__no_jiao_pai_seats.clear()
+        self.__hua_zhu_seats.clear()
         self.__record_id = 0
-        self.__win_seat_list = []
+        self.__win_seat_list.clear()
         self.__is_mo_pai_scheduled = False
 
     async def record_game(self):
@@ -3098,21 +3098,38 @@ class RoomFCZJ(BaseLeisureRoom):
             HuType.SAN_AN_KE: 8,  # 三暗刻
             HuType.JIN_GOU_DIAO: 8,  # 金钩钓
         })
-        last_base_score = map_copy[last_hu_type] or 0
-        curr_base_score = map_copy[curr_hu_type] or 0
-        if last_base_score >= curr_base_score:
-            return last_hu_type, HuType.find_member_by_val(last_hu_type).phrase
+        #额外hu_type
+        extra_hu_type = {
+            ExtraHuPai.TIAN_HU: {"score":20,"desc":"天胡"},
+            ExtraHuPai.GANG_SHANG_HUA: {"score":6,"desc":"杠上花"},
+            ExtraHuPai.SEA_MOON: {"score":8,"desc":"海底捞月"},
+        }
+        if extra_hu_type.get(curr_hu_type):
+            curr_base_score = extra_hu_type[curr_hu_type].get("score") or 0
+            curr_desc = extra_hu_type[curr_hu_type].get("desc") or ""
         else:
-            return curr_hu_type, HuType.find_member_by_val(curr_hu_type).phrase
+            curr_base_score = map_copy[curr_hu_type] or 0
+            curr_desc = HuType.find_member_by_val(curr_hu_type).phrase
+        if extra_hu_type.get(last_hu_type):
+            last_base_score = extra_hu_type[last_hu_type].get("score") or 0
+            last_desc = extra_hu_type[last_hu_type].get("desc") or ""
+        else:
+            last_base_score = map_copy[last_hu_type] or 0
+            last_desc = HuType.find_member_by_val(last_hu_type).phrase
+
+        if last_base_score >= curr_base_score:
+            return last_hu_type, last_desc
+        else:
+            return curr_hu_type, curr_desc
 
 
     def clear_room(self):
         self.clear_table_actions()
         self.clear_round_over()
-        self.__default_ji = None
-        self.__ji_pai_score_map = None
-        self.__pai_xing_score_map = None
-        self.__extra_score_map = None
+        self.__default_ji.clear()
+        self.__ji_pai_score_map.clear()
+        self.__pai_xing_score_map.clear()
+        self.__extra_score_map.clear()
         self.__is_mo_pai_scheduled = False
         super().clear_room()
 

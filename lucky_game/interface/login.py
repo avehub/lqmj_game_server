@@ -183,6 +183,7 @@ class BaseLogin(GameAuthApi):
         await ExtraUserResourceChangesRC.bulk_register_change_record(uid, asset_gift)
         await self.push_task2worker(CmdWorkers.FETCH_ACTIVE_MAILS, uid=uid)
         # 邀请绑定
+        self.log_info('新用户注册邀请码:', invite_code)
         if invite_code:
             await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=uid, msg={'invite_code': invite_code, 'created': u_info.get('created')})
         u_info["new_user"] = True
