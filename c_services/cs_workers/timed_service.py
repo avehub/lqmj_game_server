@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
-from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier
+from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
@@ -14,6 +14,8 @@ from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.order import OrderRC
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 
@@ -105,6 +107,15 @@ class TimedService:
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
+        # 测试任务
+        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+
+
+    async def __test_tasks(self):
+        # 统计数据推送
+        now_time = datetime.now()
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+
 
     async def __every_day_tasks(self):
         """ 每日一次任务 """
@@ -116,6 +127,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+        # # 统计数据推送
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
 
    
 
@@ -228,3 +241,18 @@ class TimedService:
 
     def close(self):
         self.__scheduler.close()
+
+    @classmethod
+    async def send_ding_statistics(cls):
+        """ 每日统计房间订单数据发送至钉钉 """
+        count_data, sum_data = await OrderRC.statistics_order()
+        count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
+        DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
+        ding_server = DingTalkNotifier().get_service()
+        content = f"时间：{tool_dt.dt_str(tool_dt.cur_time(), fmt='%Y-%m-%d')}\n" \
+                   f"订单数：{count_data}\n" \
+                   f"订单金额：{sum_data}\n" \
+                   f"房间统计：\n" \
+                   f"房间数：{group_data}\n" \
+                   f"房间金额：{sum_data}"
+        ding_server.send_text_message(content)

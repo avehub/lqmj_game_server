@@ -12,7 +12,7 @@ from typing import List, Callable, Type, Any, Optional, Union, Dict
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
-from common.public.conf import DINGTALK_SECRET, DINGTALK_WEBHOOK
+from common.public.conf import DINGTALK_SECRET, DINGTALK_WEBHOOK, DINGTALK_STATISTICS_WEBHOOK
 
 
 # 配置日志
