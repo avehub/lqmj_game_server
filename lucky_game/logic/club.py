@@ -8,8 +8,8 @@ from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 from common.public.conf import ENV, C_SERVICE_SECRET_KEY
 
-class ClubLogic:
 
+class ClubLogic:
     @classmethod
     async def send_club_rmq_by_game(cls, msg_cmd: int, club_id: int, uid: int):
         """ 发送茶馆消息到游戏服务 """
@@ -55,6 +55,7 @@ class ClubLogic:
         await ClubUsersRC.delete_club_user(relation_info["id"], check_uid=check_uid)
         from lucky_game.model_rc.base_clubs import BaseClubRC
         sta, msg = await BaseClubRC.update_club_int_field(relation_info["club_id"], "num", 1, "sub")
+
         await CommonApi.send_red_dot(
             relation_info["uid"],
             RedDotType.RD_CLUB_KICK,
@@ -95,6 +96,7 @@ class ClubLogic:
             "check_uid": check_uid,
         }
         await CommonApi.push_task2worker(CmdWorkers.CLUB_EVENT_LOG, msg, uid)
+        
 
     @classmethod
     async def insert_club_event(cls, club_id, event_type, uid, num: int = None, room_id: int = None, check_uid: int = None):
