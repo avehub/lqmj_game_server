@@ -350,7 +350,7 @@ class Stores(DBModel):
     platform = fields.CharField(max_length=32, null=True,
                                 description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
     type = fields.SmallIntField(max_length=2, null=True, default=0,
-                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品')
+                                description='类型：1首充 2金币 3钻石 4房卡 5黄钻 6VIP 7周卡 8月卡 9终身卡 10金币补足 11复仇礼包 12返还礼包 13赛事-代金券 14赛事-晋级资格 15赛事-农产品 16 代理礼包')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
                                     description="货币类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     rank = fields.IntField(max_length=10, null=True, default=0, description="排序：越大越靠前")

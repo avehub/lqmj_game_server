@@ -729,3 +729,20 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"服务处理失败: {str(e)}"
         return True, failed_ids
+
+    @classmethod
+    async def check_uid_club_room(cls, uid: int, club_id: int = None) -> bool:
+        """检查用户是否在茶馆房间"""
+        result = False
+        cs_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
+        if cs_info:
+            tid = cs_info.get("tid") or 0
+            if tid:
+                room_data, _ = await cls.get_game_room_by_room_id(tid)
+                if club_id is not None:
+                    if room_data and room_data["club_id"] == club_id:
+                        result = True
+                else:
+                    if room_data:
+                        result = True
+        return result
