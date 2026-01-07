@@ -80,6 +80,7 @@ class GameDataAdapter(LogMeta):
 
     """
     同步邀请新增用户
+    会员过期直接忽略
     """
 
     @classmethod
@@ -106,9 +107,7 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略邀请用户同步，data={data}")
             return 0
-
         vip_expire_time = level1_proxy_user.get("vip_expire_time")
-
         # 非永久会员 会员过期
         if level1_proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
                 and vip_expire_time < data.promotion_time:
