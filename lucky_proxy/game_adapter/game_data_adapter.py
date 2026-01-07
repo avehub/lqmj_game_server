@@ -84,7 +84,7 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def sync_promotion_user(cls, data: PromotionAddUserDTO):
-        cls.log_info("接收到分销用户同步数据data={data}")
+        cls.log_info(f"接收到分销用户同步数据data={data}")
         query = {
             "promotion_code": data.promotion_code,
             "is_deleted": 0
