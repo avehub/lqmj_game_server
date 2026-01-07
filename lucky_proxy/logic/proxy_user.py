@@ -56,7 +56,7 @@ class ProxyUserLogic(LogMeta):
         if not proxy_user:
             return sta, "更新的代理不存在"
         update_data = ""
-        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted"}
+        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted", "vip_level", "vip_expire_time"}
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
                 if update_data:
