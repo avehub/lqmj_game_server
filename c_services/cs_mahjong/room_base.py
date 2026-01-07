@@ -278,6 +278,18 @@ class Room(BaseCardRoom):
     def week_ji(self):
         return self.__week_ji
 
+    @property
+    def di_long_qi(self):
+        return self.__di_long_qi
+
+    @property
+    def four_card_tian_hu(self):
+        return self.__four_card_tian_hu
+
+    @property
+    def four_card_no_near(self):
+        return self.__four_card_no_near
+
     def serialize_room_info(self):
         room_info = self.room_info()
         if self.room_status in (RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
@@ -1006,7 +1018,7 @@ class Room(BaseCardRoom):
             data["lock_cards"] = p.lock_cards
             data_model = S2CTurnToMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting):
+            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting or p.is_robot):
                 return self.call_flow(0.5, self.robot_play_card_by_suo_pai, p)
         else:
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
