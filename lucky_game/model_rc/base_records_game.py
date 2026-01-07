@@ -284,7 +284,7 @@ class BaseRecordsGameRC(BaseCommonRC):
             # 默认删除7天前的数据
             if date_time is None:
                 date_time = int((datetime.now() - timedelta(days=7)).timestamp())
-            record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_time=date_time)
+            record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_start_time=date_time)
             if record_room:
                 async with in_transaction(connection_name=DbKey.DEFAULT):
                     record_rids = [item["record_rid"] for item in record_room]
