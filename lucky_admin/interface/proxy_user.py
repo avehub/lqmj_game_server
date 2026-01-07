@@ -17,10 +17,12 @@ class ProxyUser(AdminAuthApi):
         phone = self.check_phone_number(req.json.get('phone'), require=True)
         name = self.check_str(req.json.get('name'), require=False, p_name='代理名称')
         avatar = self.check_str(req.json.get('avatar'), require=False, p_name='代理头像')
+        vip_level = self.check_int(req.json.get('vip_level'), require=True, p_name='VIP等级')
+        vip_expire_time = self.check_int(req.json.get('vip_expire_time'), require=True, p_name='VIP过期时间')
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             self.answer(self.sta_code.FAIL, hint="用户不存在")
-        add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=phone, name=name, avatar=avatar)
+        add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=phone, name=name, avatar=avatar, vip_level=vip_level, vip_expire_time=vip_expire_time)
         sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
@@ -36,7 +38,17 @@ class ProxyUser(AdminAuthApi):
         phone = self.check_phone_number(req.json.get('phone'), require=False)
         is_deleted = self.check_int(req.json.get('is_deleted'), require=False, p_name='删除')
         status = self.check_int(req.json.get('status'), require=False, p_name='状态')
-        sta, msg = await ProxyUserLogic.update_proxy_user(player_id, {"phone": phone, "promotion_code": promotion_code, "is_deleted": is_deleted, "status": status})
+        vip_level = self.check_int(req.json.get('vip_level'), require=False, p_name='VIP等级')
+        vip_expire_time = self.check_int(req.json.get('vip_expire_time'), require=False, p_name='VIP过期时间')
+        up_data = {
+            "promotion_code": promotion_code,
+            "phone": phone,
+            "is_deleted": is_deleted,
+            "status": status,
+            "vip_level": vip_level,
+            "vip_expire_time": vip_expire_time,
+        }
+        sta, msg = await ProxyUserLogic.update_proxy_user(player_id, up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
         self.answer()
