@@ -13,7 +13,8 @@ class ProxyUserLogic(LogMeta):
     @classmethod
     async def get_proxy_user_filter(cls, player_id: int = None, status: int = None, proxy_level: int = None,
                                     phone: str = None, promotion_code: str = None, page: int = None,
-                                    page_size: int = None):
+                                    page_size: int = None, vip_start_time: int = None, vip_end_time: int = None,
+                                    vip_level: int = None):
         """
         获取proxy_user列表页
         """
@@ -28,6 +29,12 @@ class ProxyUserLogic(LogMeta):
             where += f" AND phone = {phone}"
         if promotion_code is not None:
             where += f" AND promotion_code = '{promotion_code}'"
+        if vip_start_time is not None:
+            where += f" AND vip_expire_time >= '{vip_start_time}'"
+        if vip_end_time is not None:
+            where += f" AND vip_expire_time < '{vip_end_time}'"
+        if vip_level is not None:
+            where += f" AND vip_level = {vip_level}"
         try:
             sql = f"SELECT * FROM {cls.table_name} WHERE {where}"
             total = 0
@@ -66,7 +73,6 @@ class ProxyUserLogic(LogMeta):
                 update_data += f" {k}={v}"
         if update_data:
             sql = f"UPDATE {cls.table_name} SET {update_data} WHERE id={player_id}"
-            cls.log_info(f"代理SQL: {sql}")
 
             sta = await ProxyUser.exec_sql(sql)
         return sta, "更新成功"

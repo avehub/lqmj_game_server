@@ -25,6 +25,7 @@ class ConfJsonRC(BaseCommonRC):
     CONF_NOTICE = "CONF_NOTICE"  # 系统公告
     CONF_MAINTAIN = "CONF_MAINTAIN"  # 维护配置
     CONF_ROOM_STOP = "CONF_ROOM_STOP"  # 停止创建加入房间配置
+    CONF_PROXY_VIP_DISCOUNT = "CONF_PROXY_VIP_DISCOUNT"  # 渠道代理商消费折扣
 
     @classmethod
     async def cache_conf_data_by_pk(cls, pk_val) -> dict:
