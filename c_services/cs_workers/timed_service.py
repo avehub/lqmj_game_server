@@ -14,9 +14,10 @@ from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
-
+from lucky_proxy.logic.proxy_user import ProxyUserLogic
 
 
 class TimedService:
@@ -114,8 +115,10 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
-        # 赛季状态检查更新
+        # 赛季结算更新
         self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+        # 代理商状态检查
+        self.__scheduler.add_date_job(self.check_proxy_vip, run_date=now_time + timedelta(hours=0))
 
    
 
@@ -228,3 +231,15 @@ class TimedService:
 
     def close(self):
         self.__scheduler.close()
+
+    async def check_proxy_vip(self):
+        # 检查代理vip是否过期
+        date = tool_dt.dt_str()
+        today = tool_dt.day_begin(date)
+        data = await ProxyUserLogic.get_proxy_user_filter(vip_end_time=today)
+        self.log_info(f"【检查代理vip】{date} 代理商vip过期数：{len(data)}")
+        if data:
+            u_ids = [d["id"] for d in data]
+            sta, msg = await BaseUserRC.many_update_user(u_ids, discount=1)
+            if not sta:
+                self.log_info(f"【检查代理vip】更新用户{u_ids}折扣失败：{msg}")

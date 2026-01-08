@@ -10,33 +10,22 @@ from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
 from common.public.conf import ROBOT_RANK
 from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
-from common.utils.kit_async import DelayCall
-from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
-from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
-# from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.base_mails import MailsRC
-# from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-# from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.distribution_settle_conf import DistributionSettleConfRC
-from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
+from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
-# from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
 from lucky_game.model_db.main import Mails, Orders
-from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
-    CompleteSta, EventTracking, OrderStatus, GoodsSku
+from lucky_game.const import ActivityItem, TaskType, AwardType,  ActivityType, EventTracking, OrderStatus, GoodsSku
 from lucky_game.logic.activity import act_count, Base, Package, FirstCharge, InfinitePlay
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
@@ -743,3 +732,5 @@ class WorkersServer(JsonBaseServer):
         self.log_info(f"订单分销结果：{sta}")
         if not sta:
             self.log_err(f"用户{uid}分销失败")
+
+
