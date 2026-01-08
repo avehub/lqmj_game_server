@@ -47,7 +47,7 @@ class CompetitionServer(BaseServer):
         self.__player_info = {}
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall(2, self.__loop_match_competition).loop_start()
+        DelayCall((2,5), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -278,13 +278,9 @@ class CompetitionServer(BaseServer):
             }
             room.set_game_room_info(data["room_id"], game_room_info)
             room_num += 1
-            send_list = []
             for p_uid in group:
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
-                send_list.append(self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid))
-
-            if send_list:
-                await asyncio.gather(*send_list)
+                await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
 
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:

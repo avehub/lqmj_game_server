@@ -6,6 +6,7 @@ from c_services.cs_mahjong.const import ActionType, FlowStatus, TimerDelay, Card
 from c_services.cs_mahjong.room_base import Room
 from c_services.cs_mahjong.rule import Rule
 from common.proto.py_pb2.ws_c2s import gang_model
+from common.proto.py_pb2.ws_leisure import s2c_one_of_model
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.utils import UtilsTool
@@ -95,6 +96,21 @@ class RoomRobot(Room):
                 await self.time_out_with_player_operates(p)
         self.record_operates.clear()
         await self.check_action_end()
+
+    async def time_out_with_player_operates(self, p):
+        code = await self.on_player_pass(p)
+        if code != StaCode.PASS:
+            p.operates = []
+            one_of_model = s2c_one_of_model()
+            one_of_model.seat_id = self.curr_seat_id
+            await self.inner_send(p, CmdRoom.PLAYER_PASS, one_of_model)
+        if self.flow_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
+                                FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_FOUR_BAO_TING, FlowStatus.T_IN_MING_GANG_PAI_CALL,
+                                FlowStatus.T_IN_TIAN_HU, FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_EIGHT_TIAN_HU):
+            self.clear_record_operates(p.seat_id)
+            if not self.record_operates:
+                await self.check_action_end()
+                return
 
     async def deal_enter_chu_pai_call_time_out(self):
         self.call_flow_robot(TimerDelay.ROBOT_TIME, self.check_robot_operate)
