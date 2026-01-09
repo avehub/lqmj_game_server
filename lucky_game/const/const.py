@@ -73,8 +73,8 @@ class PayType(BaseEnum):
     BY_ROOM_CARD = 3, "房卡兑换"
     BY_YELLOW_DIAMOND = 4, "黄钻兑换"
     BY_RMB = 5, "人民币"
-    BY_WATCH_AD = 6, "看广告领取"
-    BY_DY_DIAMOND = 7, "抖音钻石"
+    BY_FUTURE_VALUE = 6, "福袋兑换"
+    BY_WATCH_AD = 7, "看广告领取"
 
 
 class CurrencyType(BaseEnum):
@@ -85,7 +85,7 @@ class CurrencyType(BaseEnum):
     BY_ROOM_CARD = 3, "房卡"
     BY_YELLOW_DIAMOND = 4, "黄钻"
     BY_RMB = 5, "人民币"
-    BY_WATCH_AD = 6, "看广告"
+    BY_FUTURE_VALUE = 6, "福袋"
 
 
 @unique
