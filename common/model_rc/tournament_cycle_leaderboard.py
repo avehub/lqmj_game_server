@@ -107,7 +107,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         """获取用户在赛事周期内的排行榜信息"""
         result = None
         try:
-            data, msg = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
+            sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
