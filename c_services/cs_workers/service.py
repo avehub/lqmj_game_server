@@ -692,7 +692,7 @@ class WorkersServer(JsonBaseServer):
             sta, _ = await TournamentCycleLeaderboardRC.add_leaderboard(cycle_id, uid, total_points)
         else:
             up_data = {
-                "total_points": total_points + leaderboard_data.get("total_points"),
+                "total_points": total_points,
                 "participated_rounds": 1 + leaderboard_data.get("participated_rounds"),
             }
             sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)
