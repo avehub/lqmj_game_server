@@ -7,7 +7,8 @@ from common.public.enum_const import DbKey
 from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel, ProxyVipLevel
-from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
+from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO, \
+    UpgradeProxyDTO
 from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser
 
 """
@@ -24,10 +25,23 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def add_level1_proxy(cls, data: Level1ProxyDTO):
-        proxy_user: ProxyUser = await  ProxyUser.get_by_pk(data.player_id, field=["id"])
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(data.player_id, field=["id"])
         if proxy_user:
             return False, "EXISTS"
         return await GameDataSync.init_level1_proxy(data)
+
+    @classmethod
+    async def upgrade_level1_proxy(cls, data: UpgradeProxyDTO):
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(data.player_id,
+                                                          field=["id", "proxy_level", "is_deleted", "status"])
+        if not proxy_user:
+            return False, "PROXY_NOT_EXISTS"
+        if proxy_user.get("proxy_level") != ProxyLevel.LEVEL_2:
+            return False, "PROXY_LEVEL_ERROR"
+        if proxy_user.get("is_deleted") == 1 or proxy_user.get("status") == 0:
+            return False, "PROXY_DELETED_OR_BANNED"
+
+        return await GameDataSync.upgrade_level1_proxy(data)
 
     """
      同步分销订单数据
@@ -57,9 +71,9 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【重要日志】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
             return 0
-
+        level1_proxy_id = proxy_user.get("level1_proxy_id")
         level1_proxy_user = proxy_user
-        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
+        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2 or (level1_proxy_id and level1_proxy_id > 0):
             level1_proxy_user = await ProxyUser.get_by_pk(proxy_user.get("level1_proxy_id"),
                                                           ["vip_level", "vip_expire_time"])
         if not level1_proxy_user:
@@ -135,6 +149,7 @@ class GameDataAdapter(LogMeta):
             "proxy_id": proxy_user.get("id"),
             "level1_proxy_id": proxy_user.get("level1_proxy_id"),
             "level": proxy_user.get("proxy_level"),
+            "upgrade_flag": 0,
 
         }
         try:

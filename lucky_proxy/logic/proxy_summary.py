@@ -23,7 +23,7 @@ class ProxySummary(LogMeta):
                                 , page: int
                                 , sort: int):
         sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
-              f"t.created from " \
+              f"t.created,t.upgrade_flag from " \
               f"proxy_promotion_relation t left join  user u  on u.uid=t.id    where   t.proxy_id={proxy_id}"
 
         if sort == 1:
@@ -39,9 +39,10 @@ class ProxySummary(LogMeta):
                                      , page_size: int
                                      , page: int
                                      , sort: int):
+        # 过滤已经升级为一级代理的用户
         sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
               f" from  proxy_user_wallet t  JOIN proxy_user pu ON t.id = pu.id   left join  user u  on u.uid=t.id   " \
-              f" where  t.id=pu.id  and  pu.is_deleted=0   and t.level1_proxy_id={level1_proxy_id}"
+              f" where  t.id=pu.id  and pu.proxy_level=2 and  pu.is_deleted=0   and t.level1_proxy_id={level1_proxy_id}"
 
         if sort == 1:
             sql = sql + f" order by t.total_amount  desc ,t.id desc"
