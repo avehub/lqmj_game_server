@@ -92,19 +92,9 @@ class PaymentLogic:
         field = field_name = ""
         if price > 0:
             if currency != CurrencyType.BY_RMB:
-                match currency:
-                    case CurrencyType.BY_GOLD:
-                        field = "gold"
-                        field_name = "金币"
-                    case CurrencyType.BY_DIAMOND:
-                        field = "diamond"
-                        field_name = "钻石"
-                    case CurrencyType.BY_YELLOW_DIAMOND:
-                        field = "yellow_diamond"
-                        field_name = "黄钻"
-                    case CurrencyType.BY_ROOM_CARD:
-                        field = "room_card"
-                        field_name = "房卡"
+                if currency in ExtraUserResourceChangesRC.CURRENCY_MAP.keys():
+                    field = ExtraUserResourceChangesRC.CURRENCY_MAP[currency]
+                    field_name = ExtraUserResourceChangesRC.CURRENCY_DESC[field]
                 amount = u_info.get(field)
                 if amount < price:
                     return False, f'{field_name}不足', {}
@@ -143,7 +133,7 @@ class PaymentLogic:
         currency = express.get("currency")
         sku = express.get("sku")
         price = express.get("price") or 0
-        if currency in [CurrencyType.BY_GOLD, CurrencyType.BY_DIAMOND, CurrencyType.BY_YELLOW_DIAMOND, CurrencyType.BY_ROOM_CARD]:
+        if currency not in [CurrencyType.DEFAULT, CurrencyType.BY_RMB]:
             # 扣除资源
             change_field = data_before.get("field", "")
             if change_field:
@@ -225,7 +215,7 @@ class PaymentLogic:
         bag_type = express.get("bag_type")
         order, msg = await OrderRC.get_order_info(order_no)
         async with in_transaction(connection_name=DbKey.DEFAULT):
-            if bag_type:
+            if bag_type == GoodRC.BAG_TYPE_DELAY:
                 pass
             else:
                 # 当为兑换商品时，直接修改订单状态

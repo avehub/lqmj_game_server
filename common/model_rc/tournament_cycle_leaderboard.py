@@ -64,7 +64,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
     async def update_leaderboard(cls, leaderboard_id, up_data: dict):
         """更新排行榜"""
         try:
-            query = {"leaderboard_id": leaderboard_id}
+            query = {"id": leaderboard_id}
             valid_fields = {"cycle_id", "uid", "total_points", "updated", "participated_rounds"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
