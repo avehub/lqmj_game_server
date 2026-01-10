@@ -224,8 +224,6 @@ class PaymentLogic:
                     'count': order.get('num', 1),
                     'end_time': express.get("down_time"),
                 }
-                print("bag_goods", bag_good)
-                print("uid", uid)
                 await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
             # 更新用户资源
             if express["currency"] != CurrencyType.BY_RMB:
