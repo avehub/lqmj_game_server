@@ -282,11 +282,15 @@ class GameDataSync(LogMeta):
         """
         try:
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict({"player_id": data.player_id},
-                                                                                        field=["id"], limit=1)
+                                                                                        field=["id","level"], limit=1)
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyUser.update_by_pk(data.player_id, update_data)
-                await ProxyUserWallet.update_by_pk(data.player_id,
-                                                   param={"proxy_level": ProxyLevel.LEVEL_1, "upgrade_flag": 1})
+
+                await ProxyUserWallet.exec_sql(
+                    f"update proxy_user_wallet  set proxy_level=1"
+                    f",upgrade_flag=1"
+                    f",level2_total_player=level2_total_player-1 "
+                    f" where id={data.player_id}")
                 if relation and relation.get("level") == ProxyLevel.LEVEL_1:
                     await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param={"upgrade_flag": 1})
                 cls.log_info(f"升级一级代理结束,data={data}")
