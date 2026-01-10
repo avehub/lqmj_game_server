@@ -22,7 +22,11 @@ class Level1ProxyDTO:
     player_id: int
     # unionid
     unionid: str
-    phone: int
+    phone: str
+    # VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）
+    vip_level: int
+    # 过期时间转换为秒
+    vip_expire_time: int
     # 昵称
     name: int = None
     # 头像
@@ -134,36 +138,39 @@ class GameDataSync(LogMeta):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
-                await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount, data.order_type)
-                # TODO 增加 用户钱包数据
+                await cls.update_wallet(proxy_id, level1_proxy_id, proxy_income, level1_proxy_income, data.order_amount,
+                                        data.order_type)
+                await ProxyPromotionRelation.exec_sql(f" update proxy_promotion_relation  "
+                                                      f"set total_amount=total_amount+{str(data.order_amount)} where player_id={data.player_id}")
         except Exception as e:
             cls.log_err(f"【重要日志】分销订单入库失败，error：{e},data:{data}")
+            return 0
+        return 1
 
     @classmethod
-    async def update_wallet(cls, proxy_id, proxy_income, level1_proxy_income, order_amount, order_type):
+    async def update_wallet(cls, proxy_id, level1_proxy_id, proxy_income, level1_proxy_income, order_amount,
+                            order_type):
         sql = ""
         if order_type == 1:
             sql = f"""
                  update proxy_user_wallet 
-                        set  total_player=total_player+1
-                        , total_amount=total_amount+{order_amount}
-                        ,  total_income=total_income+{proxy_income}
-                        ,  room_amount=room_amount+{order_amount}
-                        ,  room_income=room_income+{proxy_income}
-                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
-                        ,  level1_room_income=level1_room_income+{level1_proxy_income}
+                        set total_amount=total_amount+{str(order_amount)}
+                        ,  total_income=total_income+{str(proxy_income)}
+                        ,  room_amount=room_amount+{str(order_amount)}
+                        ,  room_income=room_income+{str(proxy_income)}
+                        ,  level1_total_income=level1_total_income+{str(level1_proxy_income)}
+                        ,  level1_room_income=level1_room_income+{str(level1_proxy_income)}
                  where id={proxy_id}
                  """
         if order_type == 2:
             sql = f"""
                  update proxy_user_wallet 
-                        set  total_player=total_player+1
-                        ,  total_amount=total_amount+{order_amount}
-                        ,  total_income=total_income+{proxy_income}
-                        ,  assistance_program_amount=assistance_program_amount+{order_amount}
-                        ,  assistance_program_income=assistance_program_income+{proxy_income}
-                        ,  level1_total_income=level1_total_income+{level1_proxy_income}
-                        ,  level1_assistance_program_income=level1_assistance_program_income+{level1_proxy_income}
+                         set total_amount=total_amount+{str(order_amount)}
+                        ,  total_income=total_income+{str(proxy_income)}
+                        ,  assistance_program_amount=assistance_program_amount+{str(order_amount)}
+                        ,  assistance_program_income=assistance_program_income+{str(proxy_income)}
+                        ,  level1_total_income=level1_total_income+{str(level1_proxy_income)}
+                        ,  level1_assistance_program_income=level1_assistance_program_income+{str(level1_proxy_income)}
                  where id={proxy_id}
                  """
         return await ProxyUserWallet.exec_sql(sql)
@@ -180,6 +187,8 @@ class GameDataSync(LogMeta):
                 "level": ProxyLevel.LEVEL_1,
                 "join_day": datetime.now().strftime("%Y-%m-%d"),
                 "promotion_code": UtilsTool.generate_invite_code(10),
+                "vip_level": data.vip_level,
+                "vip_expire_time": data.vip_expire_time if data.vip_expire_time else 0
             }
             await ProxyUser.add_one(add_param)
             await ProxyUserWallet.add_one({"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1})

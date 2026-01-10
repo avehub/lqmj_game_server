@@ -4,15 +4,18 @@ from datetime import datetime, timedelta
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
-from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier
+from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
 from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
+from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.order import OrderRC
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 
@@ -102,6 +105,17 @@ class TimedService:
 
         # 每日一次任务
         self.__scheduler.add_cron_job(self.__every_day_tasks, hour=0, minute=0)
+        # 每小时一次任务
+        self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
+        # 测试任务
+        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+
+
+    async def __test_tasks(self):
+        # 统计数据推送
+        now_time = datetime.now()
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+
 
     async def __every_day_tasks(self):
         """ 每日一次任务 """
@@ -113,6 +127,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+        # # 统计数据推送
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
 
    
 
@@ -130,19 +146,13 @@ class TimedService:
 
     async def __order_do_tasks(self):
         """ 顺序执行任务 """
-        # 半小时刷新排行榜
-        await self.__refresh_ranking_list()
-
         now_time = datetime.now()
-        # 5分钟后执行历史写入数据
-        self.__scheduler.add_date_job(self.__move_to_ranked_history, run_date=now_time + timedelta(minutes=5))
+        # 删除历史战绩（7天外）
+        self.__scheduler.add_date_job(self.__del_to_game_record_history, run_date=now_time)
 
-        # 10分钟后开始统计抖音用户广告数据
-        if LIVE_SERVER:
-            self.__scheduler.add_date_job(self.__stats_juliang_ads_data, run_date=now_time + timedelta(minutes=10))
 
-        # 20分钟后执行邮件发奖
-        self.__scheduler.add_date_job(self.__season_check_out, run_date=now_time + timedelta(minutes=20))
+
+
 
     @classmethod
     async def scan_all_string_key_del(cls, pattern='user_ranking:*', count=100):
@@ -180,6 +190,11 @@ class TimedService:
                 text=f"过期时间：{CertificationConf.USEFUL_TIME} 请及时登录网络游戏防沉迷实名认证系统进行更新，否则将无法使用实名认证功能。",
                 message_url=CertificationConf.DOMAIN,
             )
+
+    @classmethod
+    async def __del_to_game_record_history(cls):
+        """ 删除历史战绩（7天外） """
+        await BaseRecordsGameRC.del_history_game_record()
 
     @classmethod
     async def check_tournament_cycle(self):
@@ -226,3 +241,18 @@ class TimedService:
 
     def close(self):
         self.__scheduler.close()
+
+    @classmethod
+    async def send_ding_statistics(cls):
+        """ 每日统计房间订单数据发送至钉钉 """
+        count_data, sum_data = await OrderRC.statistics_order()
+        count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
+        DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
+        ding_server = DingTalkNotifier().get_service()
+        content = f"时间：{tool_dt.dt_str(tool_dt.cur_time(), fmt='%Y-%m-%d')}\n" \
+                   f"订单数：{count_data}\n" \
+                   f"订单金额：{sum_data}\n" \
+                   f"房间统计：\n" \
+                   f"房间数：{group_data}\n" \
+                   f"房间金额：{sum_data}"
+        ding_server.send_text_message(content)

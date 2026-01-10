@@ -1,13 +1,15 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-from nsanic.base_conf import BaseConf
+# from nsanic.base_conf import BaseConf
 from nsanic.libs import tool_dt
-# from c_services.base.base_conf import BaseConf, base_conf
+from nsanic.libs.rds_client import RdsClient
+from c_services.base.base_conf import base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
-
+from c_services.base.rmq_client import Rmq
 from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
 from datetime import datetime
@@ -18,13 +20,14 @@ from common.proto.py_pb2.common import common_pb2
 from dateutil.relativedelta import relativedelta
 
 
+
 class CommonApi(LogMeta):
-    conf = BaseConf()
+    conf = base_conf
     SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
-    # def __init__(self):
-    #     # 确保 conf 已初始化
-    #     if not hasattr(CommonApi, 'conf') or CommonApi.conf is None:
-    #         CommonApi.conf = BaseConf()
+    if not conf.rds:
+        conf.rds = RdsClient.init(conf.CONF_RDS['default'], logs=conf.log)
+    if not conf.rmq:
+        conf.rmq = Rmq.init(conf.CONF_AMQP['default'], logs=conf.log)
 
     @classmethod
     async def get_player_ws_id(cls, uid):
@@ -81,7 +84,7 @@ class CommonApi(LogMeta):
         推送消息到worker服务，该服务的消息不会过期
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
     @classmethod
@@ -90,7 +93,7 @@ class CommonApi(LogMeta):
         推送消息到chat服务
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
     async def publish_to_fanout(cls, cmd, uid = 1, msg= None):
@@ -353,3 +356,44 @@ class CommonApi(LogMeta):
         end_date = next_month_first - relativedelta(seconds=1)
 
         return int(end_date.timestamp())
+
+    @classmethod
+    async def calculate_quartiles(cls, data):
+        """
+        计算下四分位数(Q1)、中位数(Q2)、上四分位数(Q3)
+        支持浮点数和Decimal类型
+
+        参数:
+            data: 数值列表，可以是float或Decimal类型
+
+        返回:
+            包含下四分位、中位、上四分位值的元组 (q1, q2, q3)
+        """
+        if not data:
+            return 0, 0, 0
+
+        # 确保数据是列表并排序
+        sorted_data = sorted(data)
+        n = len(sorted_data)
+
+        def get_percentile(p):
+            """
+            获取指定百分位的值
+            p: 百分位 (0-1)
+            """
+            if not (0 <= p <= 1):
+                raise ValueError("百分位必须在0到1之间")
+
+            k = (n - 1) * p
+            f = int(k)
+            c = k - f
+
+            if f + 1 >= n:
+                return sorted_data[-1]
+            return sorted_data[f] + c * (sorted_data[f + 1] - sorted_data[f])
+
+        q1 = get_percentile(0.25)
+        q2 = get_percentile(0.5)
+        q3 = get_percentile(0.75)
+
+        return q1, q2, q3

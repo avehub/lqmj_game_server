@@ -43,10 +43,26 @@ class ProxyOrderStatistics(LogMeta):
            where  t.proxy_id={proxy_id}  and  t.order_day='{today}' 
         """
         return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
+
     @classmethod
-    async def proxy_month_income_query(cls, proxy_id: int, month: str):
+    async def proxy_level2_income_query(cls, proxy_id: int, month: str, today: str):
         sql = f"""
-           select  ifnull(sum(t.proxy_income),0.00)  income  from proxy_order_dividend_records t 
+                 select  ifnull(sum(t.level1_proxy_income),0.00)  income
+                   , ifnull(sum(case when t.order_day='{today}'  then t.level1_proxy_income else 0 end),0.00) today_income
+                    , ifnull(sum(case when t.order_type=1  then t.level1_proxy_income else 0 end),0.00) room_income
+                    , ifnull(sum(case when t.order_type=2  then t.level1_proxy_income else 0 end),0.00) assistance_program_income
+                   from proxy_order_dividend_records t 
+                 where  t.level1_proxy_id={proxy_id}  and  t.order_month='{month}' and t.level=2
+              """
+        return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
+    @classmethod
+    async def proxy_month_income_query(cls, proxy_id: int, month: str, today: str):
+        sql = f"""
+           select  ifnull(sum(t.proxy_income),0.00)  income
+             , ifnull(sum(case when t.order_day='{today}'  then t.proxy_income else 0 end),0.00) today_income
+             , ifnull(sum(case when t.order_type=1  then t.proxy_income else 0 end),0.00) room_income
+              , ifnull(sum(case when t.order_type=2  then t.proxy_income else 0 end),0.00) assistance_program_income
+             from proxy_order_dividend_records t 
            where  t.proxy_id={proxy_id}  and  t.order_month='{month}' 
         """
         return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)

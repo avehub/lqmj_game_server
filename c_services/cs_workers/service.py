@@ -16,6 +16,7 @@ from lucky_admin.const import BackTaskSta, WeightEnum
 from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
@@ -28,6 +29,7 @@ from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
 # from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
+from lucky_game.model_rc.distribution_settle_conf import DistributionSettleConfRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
@@ -47,7 +49,7 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
-from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO
+from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO
 
 
 class WorkersServer(JsonBaseServer):
@@ -76,6 +78,8 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD: self.__update_tournament_cycle_leaderboard,
             CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
             CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
+            CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
+            CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -507,6 +511,14 @@ class WorkersServer(JsonBaseServer):
         else:
             is_dismiss = data.get("is_dismiss")
             record_data_list =data.get("record_data_list")
+            replay_msg_data = data.get("replay_msg_data") or None
+            if replay_msg_data:
+                for replay_msg in replay_msg_data:
+                    msg = replay_msg.get("replay_msg")
+                    for i, m in enumerate(msg):
+                        msg[i] = UtilsTool.base64_to_bytes(m, log_fun=self.log_info)
+                result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
+                self.log_info(tid, "update_record游戏结束一轮结束战绩插入", result_data)
             for record_data in record_data_list:
                 final_grade = record_data.get("final_grade")
                 final_ranking = record_data.get("final_ranking")
@@ -519,7 +531,7 @@ class WorkersServer(JsonBaseServer):
                 up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
                                                                               , final_ranking, final_grade, game_over_data, num,
                                                                               room_status)
-                self.log_info(tid, "插入游戏战绩总分结果", up_result)
+                self.log_info(tid, "update_record插入游戏战绩总分结果", up_result)
             if is_dismiss:
                 up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(record_id, round_num=round_idx)
                 self.log_info(tid, "玩家", uid, "战绩更新结果", data)
@@ -681,6 +693,9 @@ class WorkersServer(JsonBaseServer):
                 "event_desc": et_enum.phrase,
                 "event_time": tool_dt.cur_time()
             })
+            
+    async def __insert_club_event(self, uid, data):
+        await ClubLogic.insert_club_event(data["club_id"], data["event_type"], uid, num=data["num"], room_id=data["room_id"], check_uid=data["check_uid"])
 
 
     async def __update_tournament_cycle_leaderboard(self, uid, data):
@@ -708,9 +723,23 @@ class WorkersServer(JsonBaseServer):
         invite_code = data.get("invite_code")
         created = data.get("created") if data.get("created") else tool_dt.cur_time()
         # 调用分销模块接口
-        # invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
-        #                                   promotion_time=created, promotion_type=0)
-        # sta = await GameDataAdapter.sync_promotion_user(invite_data)
-        sta = await UserInvite().invite_bind_user(uid, created, invite_code)
+        self.log_info(f"用户{uid}绑定邀请关系{invite_code}")
+        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+                                          promotion_time=created, promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
+
+    async def __proxy_order_sync(self, uid, order_info):
+        # 调用分销模块接口
+        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(order_info["num"], order_info["order_type"])
+        promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
+                                              order_type=order_info["order_type"], goods_number=order_info["num"],
+                                              price=float(float(order_info["amount"]) / order_info["num"]),
+                                              order_amount=order_info["amount"], dividend_rate=dividend_rate,
+                                              order_time=order_info["created"])
+        sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
+        self.log_info(f"订单分销结果：{sta}")
+        if not sta:
+            self.log_err(f"用户{uid}分销失败")

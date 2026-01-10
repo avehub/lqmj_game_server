@@ -18,6 +18,8 @@ class PlatForm(BaseEnum):
     WECHAT_MINI_GAME = 4, "minigame_wechat", '微信小游戏'
     ALI_MINI_GAME = 5, "minigame_alipay", '支付宝小游戏'
     DOUYIN_MINI_GAME = 6, "minigame_douyin", '抖音小游戏'
+    ANDROID_APP = 7, "android", '安卓app'
+    IOS_APP = 8, "ios", '苹果app'
 
     @classmethod
     def get_val_by_phrase(cls, phrase):

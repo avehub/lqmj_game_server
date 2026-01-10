@@ -175,7 +175,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
         self.__gold = 0
         self.__timer = None
         self.__ranking_score = 0
-        self.__check_info_ranking = {}
+        self.__check_info_ranking.clear()
 
         self.__skin_addition_num = 0
         self.__multiple_card_addition_num = 0

@@ -3,6 +3,7 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
@@ -10,7 +11,7 @@ from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus, CmdClub, RedDotType
-from common.public.enum_const import StaCode, ServiceEnum
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
@@ -177,7 +178,7 @@ class ClubCheckList(BaseClub):
         data = []
         if club_ids:
             data, e = await ExtraClubBehaviorRC.get_behavior_by_filter(
-                type=ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX,
+                type=[ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX, ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX],
                 club_id=club_ids,
                 status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_DEFAULT
             )
@@ -211,20 +212,27 @@ class ClubCheck(BaseClub):
             manage_uid = [item.get("uid") for item in club_manage]
             if check_uid not in manage_uid:
                 return self.answer(StaCode.FAIL, hint="无权限审批")
+        if behavior.get('type') == ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX and status == ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED:
+            # 判断玩家是否在茶馆游戏中
+            cs_sta = await GameRoomsRC.check_uid_club_room(behavior.get("uid"), behavior.get("club_id"))
+            if cs_sta:
+                return self.answer(StaCode.FAIL, hint="玩家正在游戏中")
         sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
         if not sta:
-            return self.answer(StaCode.FAIL, hint=e)
+            return self.answer(StaCode.FAIL, hint="审批失败")
         # 红点通知茶馆用户申请结果
-        await self.send_red_dot(
-            e.get("uid"),
-            RedDotType.RD_CLUB_CHECK,
-        )
-        for manage in club_manage:
-            if manage.get("uid") != check_uid:
-                await self.send_red_dot(
-                    manage.get("uid"),
-                    RedDotType.RD_CLUB_APPLY,
-                )
+        if behavior.get('type') == ExtraClubBehaviorRC.BEHAVIOR_APPLY_INDEX:
+            await self.send_red_dot(behavior.get("uid"), RedDotType.RD_CLUB_CHECK)
+        event_type = ExtraClubEventRC.EVENT_TYPE["APPROVAL_LOG"]
+        if behavior.get('type') == ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX:
+            relation_info, _ = await ClubUsersRC.get_club_user_by_one(behavior.get("uid"), behavior.get("club_id"))
+            event_type = ExtraClubEventRC.EVENT_TYPE["OUT_CLUB"]
+            if status == ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED:
+                await ClubLogic.leave_club_after(relation_info, check_uid)
+        await ClubLogic.send_red_dot_manager(behavior.get("club_id"), check_uid=check_uid, cmd=RedDotType.RD_CLUB_CHECK_REFRESH)
+        # 异步添加茶馆事件
+        if status == ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED:
+            await ClubLogic.club_event(behavior.get("club_id"), event_type, behavior.get('uid'), check_uid=check_uid)
         return self.answer()
 
 
@@ -249,13 +257,7 @@ class ClubApply(BaseClub):
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
         # 红点通知茶馆管理员审批
-        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=club_id)
-        if club_manage:
-            for manage in club_manage:
-                await self.send_red_dot(
-                    manage.get("uid"),
-                    RedDotType.RD_CLUB_APPLY,
-                )
+        await ClubLogic.send_red_dot_manager(club_id)
         return self.answer()
 
 

@@ -47,7 +47,7 @@ class CompetitionServer(BaseServer):
         self.__player_info = {}
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall(2, self.__loop_match_competition).loop_start()
+        DelayCall((2,5), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -176,7 +176,7 @@ class CompetitionServer(BaseServer):
 
     async def __join_competition(self, uid, competition_id, conf_data, req_id=""):
         """ 加入比赛 """
-        await self.__sava_player_in_match(uid, competition_id)
+        await self.__save_player_in_match(uid, competition_id)
         self.__wait_player[uid] = competition_id
         max_player = conf_data.get("max_player")
         max_match_player = conf_data.get("max_match_player")
@@ -337,7 +337,6 @@ class CompetitionServer(BaseServer):
 
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
-        room.sort_players_by_score()
         rank_by_score = room.get_rank_by_score()
         self.log_info( match_room_id, "该比赛已结束","排名", rank_by_score)
         competition_result = []
@@ -371,7 +370,7 @@ class CompetitionServer(BaseServer):
                     "ticket": score  # 正分不扣门票，负分输多少扣多少门票
                 }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
-            self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
+            self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
         data = {
             "competition_result": competition_result,
         }
@@ -419,11 +418,31 @@ class CompetitionServer(BaseServer):
         player_rank = []
         award_list = []
         total_players = len(room.members)
+        player_in_room_num = {}
+        game_room_list = []
+        for room_id, info in room.game_room_info.items():
+            game_room_status = {
+                "room_num": info.get("room_num", 0),
+                "status": GameRoomStatus.FINISH if is_finish else info.get("status", GameRoomStatus.PLAYING),
+                "tid": room_id,
+            }
+            game_room_list.append(game_room_status)
+            #
+            for uid in info.get("players", []):
+                player_in_room_num.setdefault(uid, info.get("room_num", 0))
+
+        data = {
+            "player_rank": player_rank,
+            "award_list": award_list,
+            "game_room_list": game_room_list,
+        }
+
         for rank, uid, score in room.get_rank_by_score():
             rank_info = {
                 "rank": rank,
                 "uid": uid,
                 "score": 0 if is_init else score,
+                "room_num": player_in_room_num.get(uid, 0),
             }
             points = total_players - rank + 1
             player_rank.append(rank_info)
@@ -431,25 +450,13 @@ class CompetitionServer(BaseServer):
                 "rank": rank,
                 "points": points,
             })
-        game_room_list = []
-        for room_id, info in room.game_room_info.items():
-            game_room_status = {
-                "room_num": info.get("room_num", 0),
-                "room_status": GameRoomStatus.FINISH if is_finish else info.get("status", GameRoomStatus.PLAYING),
-                "tid": room_id,
-            }
-            game_room_list.append(game_room_status)
 
-        data = {
-            "player_rank": player_rank,
-            "award_list": award_list,
-            "game_room_list": game_room_list,
-        }
+
         print("比赛信息", data)
         s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
 
-    async def __sava_player_in_match(self, uid, competition_id):
+    async def __save_player_in_match(self, uid, competition_id):
         if uid > R_UID_THRESHOLD:
             rank_info = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
             rank = rank_info.get("rank_position", 0)

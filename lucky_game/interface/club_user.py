@@ -3,12 +3,15 @@
 """
 from sanic import Request
 from lucky_game.base_api import GameAuthApi
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from c_services.const.cs_enum_const import CmdClub, RedDotType
 from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.base_clubs import BaseClubRC
+from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 
 
 class JoinBlack(GameAuthApi):
@@ -73,24 +76,29 @@ class KickRelation(GameAuthApi):
     async def post(self, req: Request, **kwargs):
         check_uid = kwargs.get("u_info").get("uid")
         relation_id = self.check_int(req.json.get("relation_id"), require=True, p_name="关系ID")
-        relation_info, _ = await ClubUsersRC.get_club_user_by_id(relation_id)
-        behavior, e = await ClubUsersRC.delete_club_user(relation_id, check_uid=check_uid)
-        if not behavior:
-            return self.answer(StaCode.FAIL, hint=e)
-        cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)
-        await BaseClubRC.update_club_int_field(relation_info["club_id"], "num", 1, "sub")
-        data = {"secret": C_SERVICE_SECRET_KEY, "club_id": relation_info["club_id"], "uid": relation_info["uid"]}
-        await self.cs2cs_by_rmq(
-            cs_enum,
-            CmdClub.QUIT_CLUB,
-            data,
-            relation_info["uid"],
-        )
-        await self.send_red_dot(
-            relation_info["uid"],
-            RedDotType.RD_CLUB_KICK,
-        )
-        return self.answer()
+        relation_info, msg = await ClubUsersRC.get_club_user_by_id(relation_id)
+        if not relation_info:
+            return self.answer(StaCode.FAIL, hint=msg)
+        # 判断玩家是否在茶馆游戏中
+        cs_sta = await GameRoomsRC.check_uid_club_room(relation_info["uid"], relation_info["club_id"])
+        if cs_sta:
+            return self.answer(StaCode.FAIL, hint="正在游戏中,无法退出")
+        # 校验操作人
+        if check_uid == relation_info["uid"]:
+            # 操作人为普通用户
+            sta, msg = await ClubLogic.leave_club_before(check_uid, relation_info["club_id"], check_uid)
+            # 发送待审批红点消息
+            await ClubLogic.send_red_dot_manager(relation_info["club_id"], cmd=RedDotType.RD_CLUB_APPLY)
+        else:
+            # 操作人为管理员直接删除
+            sta, msg = await ClubLogic.kick_club(relation_info, check_uid)
+            await ClubLogic.club_event(relation_info["club_id"], ExtraClubEventRC.EVENT_TYPE["KICK_CLUB"],
+                                 relation_info["uid"],
+                                 check_uid=check_uid)
+        code = StaCode.FAIL
+        if sta:
+            code = StaCode.PASS
+        return self.answer(code=code, hint=msg)
 
 
 class GetClubUser(GameAuthApi):

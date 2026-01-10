@@ -56,7 +56,7 @@ class BaseCardService(BaseService):
         player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
         match_room_id = data.get("match_room_id") or 0
         if player.seat_id <= 0:
-            room.online_group_user = data.get("online_group_user")
+            room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
         await room.inner_send(player, CmdRoom.NEW_MATCH)
@@ -65,7 +65,6 @@ class BaseCardService(BaseService):
             match_round = data.get("match_round") or 0
             total_match_round = data.get("total_match_round") or 0
             player_score = data.get("player_score") or 0
-            print("player_score", player_score)
             player.round_score = player_score
             room.match_competition(player, match_room_id, match_round, total_match_round)
 
@@ -82,7 +81,7 @@ class BaseCardService(BaseService):
         if code != StaCode.PASS:
             return await self.cs2ws_by_rmq(CmdRoom.REQ_DISMISS, player.uid, code, msg)
 
-    async def __club_owner_dismiss(self, _, data):
+    async def __club_owner_dismiss(self, uid, data):
         tid = data.get("room_id")
         room = self.get_room(tid)
         if not room:
@@ -90,13 +89,17 @@ class BaseCardService(BaseService):
             return
         club_id = data.get("club_id")
         req_id = data.get("req_id")
-        uid = data.get("uid")
+        if uid == 1:
+            uid = data.get("uid") or 1
         from_club = data.get("from_club") or False
         if room.club_id != club_id:
             self.log_info("__club_owner_dismiss, club id对不上", room.club_id, club_id)
             return
-        room.set_not_playing_dismiss(room.room_status, True)
+        if not room.timer_dismiss:
+            room.set_not_playing_dismiss(room.room_status, True)
+            await room.async_set_room_status(RoomStatus.T_DISMISS)
         await room.force_dismiss(OverType.CLUB_OWNER_DISMISS)
+        self.log_info("茶馆解散游戏房间", "tid",room.tid, "club_id", room.club_id, "uid", uid)
         if from_club:
             data = {"req_id": req_id, "secret": C_SERVICE_SECRET_KEY}
             await self.cs2cs_by_rmq(ServiceEnum.C_CLUB, CmdClub.JOIN_NEW_GAME_SUC, data, uid)

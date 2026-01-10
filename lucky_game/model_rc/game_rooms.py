@@ -2,6 +2,8 @@
 游戏房间模型
 """
 from tortoise.exceptions import OperationalError
+
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_db.main import GameRooms
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
@@ -336,16 +338,12 @@ class GameRoomsRC(BaseCommonRC):
                     reason=ReasonCostGold.CLUB_ROOM_CARD_TICKETS
                 )
             # 记录茶馆事件
-            event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-            event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                price=price,
-                room_id=room_data["room_id"],
-            )
-            add_club_behavior, _ = await ExtraClubEventRC.create_event(
+            await ClubLogic.club_event(
                 room_data["club_id"],
-                event_type,
+                ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
                 room_data["creator"],
-                event_msg,
+                num=price,
+                room_id=room_data["room_id"],
             )
         else:
             if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
@@ -390,16 +388,11 @@ class GameRoomsRC(BaseCommonRC):
                     "sub"
                 )
                 # 记录茶馆事件
-                event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-                event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                    price=price,
-                    room_id=room_data["room_id"],
-                )
-                add_club_behavior, _ = await ExtraClubEventRC.create_event(
+                await ClubLogic.club_event(
                     room_data["club_id"],
-                    event_type,
+                    ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
                     room_data["creator"],
-                    event_msg,
+                    num=price,
                 )
             else:
                 reason = ReasonCostGold.CLUB_ROOM_CARD_TICKETS if key == "room_card" else ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
@@ -634,8 +627,8 @@ class GameRoomsRC(BaseCommonRC):
         try:
             room_data, e = await cls.get_game_room_by_room_id(room_id)
             if room_data:
-                if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
-                    return False, "房间正在游戏中"
+                # if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
+                #     return False, "房间正在游戏中"
                 if room_data['creator'] == uid:
                     # 删除房间
                     await cls.delete_game_room(room_id, True)
@@ -736,3 +729,20 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"服务处理失败: {str(e)}"
         return True, failed_ids
+
+    @classmethod
+    async def check_uid_club_room(cls, uid: int, club_id: int = None) -> bool:
+        """检查用户是否在茶馆房间"""
+        result = False
+        cs_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
+        if cs_info:
+            tid = cs_info.get("tid") or 0
+            if tid:
+                room_data, _ = await cls.get_game_room_by_room_id(tid)
+                if club_id is not None:
+                    if room_data and room_data["club_id"] == club_id:
+                        result = True
+                else:
+                    if room_data:
+                        result = True
+        return result

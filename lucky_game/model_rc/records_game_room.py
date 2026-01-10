@@ -82,7 +82,7 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
                                         , end_time: any = None, play_type: any = None, cs_type: any = None,
                                         creator: any = None, record_rid: any = None, order_field: any = None,
-                                        page: int = None, page_size: int = None, field: any = None):
+                                        page: int = None, page_size: int = None, field: any = None, end_start_time: any = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -118,6 +118,8 @@ class RecordsGameRoomRC(BaseCommonRC):
                     query["creator"] = creator
             if start_time is not None:
                 query["start_time__gte"] = start_time
+            if end_start_time is not None:
+                query["start_time__lte"] = end_start_time
             if end_time is not None:
                 query["end_time__lte"] = end_time
             if order_field is None:
@@ -159,5 +161,31 @@ class RecordsGameRoomRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
         return record, "删除成功"
+
+    @classmethod
+    async def delete_many_record(cls, record_rids: list):
+        """删除房间战绩记录"""
+        try:
+            record = await cls.db_model.filter(record_rid__in=record_rids).delete()
+            if not record:
+                return record, "删除失败"
+        except OperationalError as e:
+            return False, f"删除失败: {str(e)}"
+        return record, "删除成功"
+
+    @classmethod
+    async def statistics_game_room(cls, start_time: int = None, end_time: int = None) -> tuple:
+        """获取昨日游戏房间统计数据"""
+        today_start_time, today_end_time = await cls.get_time_range("day")
+        if end_time is None:
+            end_time = today_start_time
+        if start_time is None:
+            start_time = today_end_time - 86400
+        where = f" created > {start_time} AND created < {end_time}"
+        group_sql = f"SELECT cs_type, COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY cs_type"
+        group_data = await cls.db_model.exec_query(group_sql)
+        count_sql = f"SELECT COUNT(*) FROM {cls.tb_name} WHERE {where}"
+        count_data = await cls.db_model.exec_query(count_sql)
+        return count_data, group_data
 
 

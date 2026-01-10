@@ -248,7 +248,7 @@ class BaseRecordsGameRC(BaseCommonRC):
                 date_time = int((datetime.now() - timedelta(hours=1)).timestamp())
             # 查询1小时前未完善的战绩
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(start_time=date_time)
+                record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_time=date_time)
                 if record_room:
                     record_rid = [item["record_rid"] for item in record_room]
                     record_segment, _ = await RecordsGameSegmentRC.query_record_segment_by_sql(
@@ -273,6 +273,30 @@ class BaseRecordsGameRC(BaseCommonRC):
                         )
                         if not sta:
                             cls.log_info(f"总局战绩更新失败record_rid:{item['record_rid']}, uid:{item['uid']}")
+        except OperationalError as e:
+            return None, f"失败: {str(e)}"
+        return True, "成功"
+
+    @classmethod
+    async def del_history_game_record(cls, date_time: int = None):
+        """删除历史游戏战绩数据"""
+        try:
+            # 默认删除7天前的数据
+            if date_time is None:
+                date_time = int((datetime.now() - timedelta(days=7)).timestamp())
+            record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_start_time=date_time)
+            if record_room:
+                async with in_transaction(connection_name=DbKey.DEFAULT):
+                    record_rids = [item["record_rid"] for item in record_room]
+                    record = await RecordsGameSegmentRC.delete_many_record(record_rids)
+                    if not record:
+                        return False, "子局战绩删除失败"
+                    record = await RecordsGameTotalRC.delete_many_record(record_rids)
+                    if not record:
+                        return False, "总局战绩删除失败"
+                    record_room, msg = await RecordsGameRoomRC.delete_many_record(record_rids)
+                    if not record_room:
+                        return False, "房间战绩删除失败"
         except OperationalError as e:
             return None, f"失败: {str(e)}"
         return True, "成功"
