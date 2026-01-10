@@ -227,6 +227,7 @@ class UserBagRC(RCModel):
             return
 
         new_items = await BaseUserRC.deal_user_update_goods(uid, key_name=cls.KEY_NEWLY)  # 没缓存消什么消
+        print("new_items", new_items)
         if not new_items:
             return
         new_items_set = set(new_items)
