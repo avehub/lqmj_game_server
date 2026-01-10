@@ -186,7 +186,7 @@ class DouYin(LogMeta):
     def adjust_payment_for_douyin(cls, item: dict, platform: str, os: str) -> None:
         """调整抖音平台的支付类型和价格"""
         if platform == PlatForm.DOUYIN_MINI_GAME.phrase and os == 'ios' and item.get('pay_type') == PayType.BY_RMB:
-            item['pay_type'] = PayType.BY_DY_DIAMOND
+            item['pay_type'] = 7
             item['price'] = int(item.get('price', 0)) * cls.DOUYIN_DIAMOND_RATE
             item['orig_price'] = int(item.get('orig_price', 0)) * cls.DOUYIN_DIAMOND_RATE
             item['discount_price'] = int(item.get('discount_price', 0)) * cls.DOUYIN_DIAMOND_RATE

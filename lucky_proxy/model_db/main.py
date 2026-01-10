@@ -24,7 +24,9 @@ class ProxyUser(DBModel):
     phone = fields.CharField(max_length=20, null=True, default='', description='手机号')
     unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
     created = fields.BigIntField(null=True, default=0, description='更新时间')
+
     proxy_level = fields.IntField(null=True, default=1, description='代理等级')
+
     auth_status = fields.IntField(null=True, default=0, description='认证状态 1、已认证 0、未认证')
     level1_proxy_id = fields.IntField(max_length=20, default=0, description='一级代理id')
     promotion_code = fields.CharField(max_length=10, null=False, description='专属邀请码/推广码')
@@ -35,6 +37,8 @@ class ProxyUser(DBModel):
     status = fields.IntField(null=True, default=0, description='状态：0 被封禁 1：正常')
     is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
 
+    vip_expire_time = fields.BigIntField(null=True, default=0, description='会员过期时间')
+    vip_level = fields.IntField(null=True, default=1, description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）')
     class Meta:
         table = "proxy_user"
 

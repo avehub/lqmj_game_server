@@ -53,7 +53,7 @@ class TournamentRewardRC(BaseCommonRC):
     async def update_reward(cls, reward_id, up_data: dict):
         """更新赛事奖励"""
         try:
-            query = {"reward_id": reward_id}
+            query = {"id": reward_id}
             valid_fields = {"round_type", "rank_start", "rank_end", "updated", "reward_content", "reward_description"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:

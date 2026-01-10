@@ -64,7 +64,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
     async def update_leaderboard(cls, leaderboard_id, up_data: dict):
         """更新排行榜"""
         try:
-            query = {"leaderboard_id": leaderboard_id}
+            query = {"id": leaderboard_id}
             valid_fields = {"cycle_id", "uid", "total_points", "updated", "participated_rounds"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
@@ -107,7 +107,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         """获取用户在赛事周期内的排行榜信息"""
         result = None
         try:
-            data, msg = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
+            sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
