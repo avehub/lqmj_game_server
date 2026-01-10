@@ -158,7 +158,7 @@ class MyIncomeDetailQuery(ProxyAuthApi):
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
 
 
-class GameDataAdapterOrderTest(ProxyAuthApi):
+class GameDataAdapterOrderTest(BaseApi):
     async def get(self, req: Request, **kwargs):
         """
          order_id: int
@@ -181,10 +181,10 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         json = req.json
         p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 0.1, 0.7, time.time())
 
-        sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
+        #sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         # await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
 
-        p1 = Level1ProxyDTO(150689, '150689', '18188591260')
+        p1 = Level1ProxyDTO(100000, '100000', '100000',1,1000)
         res = await  GameDataAdapter.add_level1_proxy(p1)
         processor = ProxySettlementProcessor(
             batch_size=5,  # 每批处理100个代理
@@ -192,7 +192,7 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         )
         # await  ProxysJobExecutor.every_month_summary()
         # await processor.process_monthly_settlement()
-        self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="查询成功!")
+        self.answer(self.sta_code.PASS, res, hint="查询成功!")
 
 
 class TestOrder(BaseApi):
@@ -227,14 +227,6 @@ class TestOrder(BaseApi):
                                   , data.get("dividend_rate")
                                   , data.get("order_time")
                                   )
-        p = PromotionOrderDataDTO(order_id=1543, order_no='00012025123103233159015052960741'
-                                  , player_id=151058
-                                  , order_type=1
-                                  , goods_number=1
-                                  , price=0.1
-                                  , order_amount=Decimal("0.1")
-                                  , dividend_rate=0.7
-                                  , order_time=1767151411)
         sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
 

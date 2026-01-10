@@ -54,7 +54,7 @@ class TournamentUserPointRC(BaseCommonRC):
 
     @classmethod
     async def up_user_point(cls, cycle_id, uid, up_data: dict):
-        """更新模板"""
+        """更新赛事积分"""
         try:
             query = {"cycle_id": cycle_id, "uid": uid}
             has = await cls.db_model.filter(**query).first()
@@ -91,7 +91,7 @@ class TournamentUserPointRC(BaseCommonRC):
 
     @classmethod
     async def get_point_filter(cls, uid: int = None, cycle_id: int = None, page: int = None, page_size: int = None):
-        """获取模板记录"""
+        """获取赛事用户积分列表"""
         try:
             query = {}
             if cycle_id is not None:

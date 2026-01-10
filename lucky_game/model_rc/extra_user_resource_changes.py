@@ -20,10 +20,18 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
 
     # 资源类型映射（与User表字段对应）
     CURRENCY_MAP = {
-        1: "gold",           # 金币
-        2: "diamond",        # 钻石
-        3: "room_card",      # 房卡
-        4: "yellow_diamond"  # 黄钻
+        1: "gold",            # 金币
+        2: "diamond",         # 钻石
+        3: "room_card",       # 房卡
+        4: "yellow_diamond",  # 黄钻
+        6: "future_value",    # 福袋
+    }
+    CURRENCY_DESC = {
+        "gold": "金币",
+        "diamond": "钻石",
+        "room_card": "房卡",
+        "yellow_diamond": "黄钻",
+        "future_value": "福袋",
     }
     OPERATION_MAP = {
         "sub": 0,

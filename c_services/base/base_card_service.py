@@ -65,7 +65,6 @@ class BaseCardService(BaseService):
             match_round = data.get("match_round") or 0
             total_match_round = data.get("total_match_round") or 0
             player_score = data.get("player_score") or 0
-            print("player_score", player_score)
             player.round_score = player_score
             room.match_competition(player, match_room_id, match_round, total_match_round)
 

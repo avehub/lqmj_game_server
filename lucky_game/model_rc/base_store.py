@@ -74,7 +74,7 @@ class StoreRC(BaseCommonRC):
                 item["buy_times"] = buy_record.get("buy_times") if buy_record else 0
 
         # 充值商品查询首单奖
-        if pay_type in (PayType.BY_RMB.val, PayType.BY_DY_DIAMOND.val):
+        if pay_type in (PayType.BY_RMB.val,):
             is_first = await UserBehaviorsRC.query_is_first_buy(uid, store_id)
             item["first_gifts_sta"] = Switch.OPEN if is_first else Switch.CLOSE
 
@@ -182,6 +182,9 @@ class GoodRC(BaseCommonRC):
 
     EXPIRED_DEFAULT = 0
     EXPIRED_PERMANENT = -1
+
+    BAG_TYPE_DEFAULT = 0  # 无需发放
+    BAG_TYPE_DELAY = 1   # 延时发放至背包
 
     @classmethod
     async def cache_session_set(cls, query, value):
