@@ -57,7 +57,7 @@ class ProxyUser(AdminAuthApi):
             u_info = await BaseUserRC.cache_by_pk(player_id)
             conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
             if u_info["discount"] != conf.get("discount"):
-                await BaseUserRC.update_info(player_id, {"discount": conf.get("discount")})
+                await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
         self.answer()
 
     async def get(self, req: Request, **kwargs):
