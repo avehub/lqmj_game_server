@@ -627,8 +627,8 @@ class GameRoomsRC(BaseCommonRC):
         try:
             room_data, e = await cls.get_game_room_by_room_id(room_id)
             if room_data:
-                if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
-                    return False, "房间正在游戏中"
+                # if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
+                #     return False, "房间正在游戏中"
                 if room_data['creator'] == uid:
                     # 删除房间
                     await cls.delete_game_room(room_id, True)

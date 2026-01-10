@@ -1819,7 +1819,6 @@ class Room(BaseCardRoom):
 
     async def men_da_notify(self, hu_list):
         """ 胡牌通知客户端 """
-        print("hu_list",hu_list)
         for seat_id in hu_list:
             p = self.get_player_by_seat_id(seat_id)
             hu_info, _, _ = self.get_hu_type(p)

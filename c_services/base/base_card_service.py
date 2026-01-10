@@ -96,7 +96,9 @@ class BaseCardService(BaseService):
         if room.club_id != club_id:
             self.log_info("__club_owner_dismiss, club id对不上", room.club_id, club_id)
             return
-        room.set_not_playing_dismiss(room.room_status, True)
+        if not room.timer_dismiss:
+            room.set_not_playing_dismiss(room.room_status, True)
+            await room.async_set_room_status(RoomStatus.T_DISMISS)
         await room.force_dismiss(OverType.CLUB_OWNER_DISMISS)
         self.log_info("茶馆解散游戏房间", "tid",room.tid, "club_id", room.club_id, "uid", uid)
         if from_club:

@@ -177,7 +177,6 @@ class ClubServer(BaseServer):
         if not room:
             return
         if uid != room.owner:
-            print("该玩家不是茶馆主",uid,room.owner)
             return
         room.clear_club()
         self.remove_room(club_id)
