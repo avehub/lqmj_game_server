@@ -231,6 +231,7 @@ class GameDataSync(LogMeta):
             "join_day": datetime.now().strftime("%Y-%m-%d"),
             "promotion_code": UtilsTool.generate_invite_code(10),
             "vip_level": data.vip_level,
+            "status": 1,
             "vip_expire_time": data.vip_expire_time if data.vip_expire_time else 0
         }
         try:
