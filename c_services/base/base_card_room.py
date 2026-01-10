@@ -349,7 +349,6 @@ class BaseCardRoom(BaseRoom):
         """ 随机出牌 """
 
     async def round_over(self, over_type, **kwargs):
-        print("进入round_over")
         self.set_flow_status(FlowStatus.T_IN_CHECK_OUT)
         await self.async_set_room_status(RoomStatus.T_CHECK_OUT)
         account = kwargs.pop("account")
@@ -411,7 +410,6 @@ class BaseCardRoom(BaseRoom):
 
     async def check_round_start(self):
         """ 检查下一局是否要开始了 """
-        print("进入check_round_start")
         if not self.room_status_is_equal(RoomStatus.T_CHECK_OUT):
             return False
         if self.in_room_count != self.max_player_count:
@@ -616,10 +614,10 @@ class BaseCardRoom(BaseRoom):
         self.__create_time = room_conf.get("created") or tool_dt.cur_time()
         self.__cur_round = room_conf.get("cur_round") or 1
 
-        self.__round_msg_records = []  # 每局消息记录
-        self.__replay_msg_data = []
+        self.__round_msg_records.clear()  # 每局消息记录
+        self.__replay_msg_data.clear()  # 每局消息记录
         self.__timer_dismiss = None
-        self.__agree_dismiss_seats = set()
+        self.__agree_dismiss_seats.clear()
 
     def get_extra_score_map(self) -> dict:
         map_copy = EXTRA_SCORE_MAP.copy()
@@ -855,6 +853,7 @@ class BaseCardRoom(BaseRoom):
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss, over_type)
+        self.clear_agree_dismiss()
         if over_type == OverType.ULTIMATE_DISMISS:
             return await super(BaseCardRoom, self).game_over()
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
