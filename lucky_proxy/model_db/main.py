@@ -31,14 +31,20 @@ class ProxyUser(DBModel):
     level1_proxy_id = fields.IntField(max_length=20, default=0, description='一级代理id')
     promotion_code = fields.CharField(max_length=10, null=False, description='专属邀请码/推广码')
     join_day = fields.CharField(max_length=10, null=False, description='加入时间 yyyy-MM-dd')
-    room_card_rate = fields.DecimalField(max_digits=4, default=0.00,decimal_places=2, null=False, description='房卡提成比例')
-    assistance_program_rate = fields.DecimalField(max_digits=4, default=0.00,decimal_places=2, null=False,
+    room_card_rate = fields.DecimalField(max_digits=4, default=0.00, decimal_places=2, null=False,
+                                         description='房卡提成比例')
+    assistance_program_rate = fields.DecimalField(max_digits=4, default=0.00, decimal_places=2, null=False,
                                                   description='助农提成比例')
     status = fields.IntField(null=True, default=0, description='状态：0 被封禁 1：正常')
     is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
 
     vip_expire_time = fields.BigIntField(null=True, default=0, description='会员过期时间')
-    vip_level = fields.IntField(null=True, default=1, description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）')
+    vip_level = fields.IntField(null=True, default=1,
+                                description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）')
+
+    upgrade_time = fields.BigIntField(null=True, default=0, description='升级成为一级代理时间')
+    opt_user_id = fields.BigIntField(null=True, default=0, description='升级一级代理操作用户')
+
     class Meta:
         table = "proxy_user"
 
@@ -136,7 +142,7 @@ class ProxyOrderDividendRecords(DBModel):
 
 class ProxyPromotionRelation(DBModel):
     id = fields.BigIntField(max_length=20, pk=True, description='主键无意义')
-    player_id = fields.BigIntField(max_length=28, description='订玩家id')
+    player_id = fields.BigIntField(max_length=28, unique=True, description='玩家id')
     proxy_id = fields.BigIntField(max_length=20, null=False, description='代理商id')
     level1_proxy_id = fields.BigIntField(max_length=20, null=False, description='一级代理id')
     promotion_type = fields.BigIntField(max_length=20, null=False, description='平台（厂商ID）（如有的话）')
@@ -149,10 +155,10 @@ class ProxyPromotionRelation(DBModel):
     level = fields.IntField(default=1, description='绑定等级（1、一级代理邀请 2、二级代理邀请）')
     created = fields.BigIntField(description='创建时间')
 
+    upgrade_flag = fields.IntField(null=True, default=0, description='升级成为一级代标志')
+
     class Meta:
         table = "proxy_promotion_relation"
-
-        unique_together = ("player_id", "proxy_id")
 
 
 class ProxyPromotionCode(DBModel):
@@ -265,6 +271,8 @@ class ProxyMonthSettlement(DBModel):
             'created': self.created,
             # 其他属性
         }
+
+
 if __name__ == '__main__':
     print(decimal.Decimal("0.035").quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP))
+        decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP))
