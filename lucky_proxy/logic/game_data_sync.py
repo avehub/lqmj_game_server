@@ -238,24 +238,26 @@ class GameDataSync(LogMeta):
                 "player_id": data.player_id
             }
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
-            proxy_id = relation.get("proxy_id")
-            proxy_level = relation.get("level")
-            """
-              若存在邀请关系
-              1、如果是二级用户邀请的用户则直接成为1级，则该用户的充值原上级还能正常享受分佣，但该用户成为代理后邀请的用户和原来的上级代理脱离关系()
-              2、若是二级用户升级一级代理 则原来的一级代理只享受0.05一张房卡的收益提成
-            """
             level1_proxy_id = None
-            if relation and proxy_level == ProxyLevel.LEVEL_1:
-                level1_proxy_id = proxy_id
-                add_param.update({"level1_proxy_id": level1_proxy_id})
+            if relation:
+                proxy_id = relation.get("proxy_id")
+                proxy_level = relation.get("level")
+                """
+                  若存在邀请关系
+                  1、如果是二级用户邀请的用户则直接成为1级，则该用户的充值原上级还能正常享受分佣，但该用户成为代理后邀请的用户和原来的上级代理脱离关系()
+                  2、若是二级用户升级一级代理 则原来的一级代理只享受0.05一张房卡的收益提成
+                """
+
+                if relation and proxy_level == ProxyLevel.LEVEL_1:
+                    level1_proxy_id = proxy_id
+                    add_param.update({"level1_proxy_id": level1_proxy_id})
 
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyUser.add_one(add_param)
                 await ProxyUserWallet.add_one(
                     {"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1, "level1_proxy_id": level1_proxy_id})
                 if relation and relation.get("level") == ProxyLevel.LEVEL_1:
-                    await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param={"upgrade_flag", 1})
+                    await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param={"upgrade_flag":1})
         except Exception as e:
             cls.log_err(f"【重要日志】初始化一级代理失败，error：{e},data:{data}")
             return False, 'ERROR'
