@@ -11,7 +11,7 @@ from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from nsanic.libs.tool import json_parse
 from c_services.const.cs_enum_const import RoomStatus, CmdClub, RedDotType
-from common.public.enum_const import StaCode, ServiceEnum
+from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
 
@@ -212,6 +212,11 @@ class ClubCheck(BaseClub):
             manage_uid = [item.get("uid") for item in club_manage]
             if check_uid not in manage_uid:
                 return self.answer(StaCode.FAIL, hint="无权限审批")
+        if behavior.get('type') == ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX and status == ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED:
+            # 判断玩家是否在茶馆游戏中
+            cs_sta = await GameRoomsRC.check_uid_club_room(behavior.get("uid"), behavior.get("club_id"))
+            if cs_sta:
+                return self.answer(StaCode.FAIL, hint="玩家正在游戏中")
         sta, e = await ExtraClubBehaviorRC.update_club_behavior(behavior_id, {"status": status, "check_uid": check_uid})
         if not sta:
             return self.answer(StaCode.FAIL, hint="审批失败")

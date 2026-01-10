@@ -1,16 +1,15 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-from nsanic.base_conf import BaseConf
+# from nsanic.base_conf import BaseConf
 from nsanic.libs import tool_dt
 from nsanic.libs.rds_client import RdsClient
-
-from c_services.base.base_conf import BaseConf, base_conf
+from c_services.base.base_conf import base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
-
 from c_services.base.rmq_client import Rmq
 from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
 from datetime import datetime
@@ -19,6 +18,7 @@ from typing import Tuple, Union
 from c_services.const.cs_enum_const import CmdNotice
 from common.proto.py_pb2.common import common_pb2
 from dateutil.relativedelta import relativedelta
+
 
 
 class CommonApi(LogMeta):
@@ -84,7 +84,7 @@ class CommonApi(LogMeta):
         推送消息到worker服务，该服务的消息不会过期
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
     @classmethod
@@ -93,7 +93,7 @@ class CommonApi(LogMeta):
         推送消息到chat服务
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
     async def publish_to_fanout(cls, cmd, uid = 1, msg= None):

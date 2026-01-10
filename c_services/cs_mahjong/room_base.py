@@ -7,7 +7,6 @@ from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjo
     S2CShangGaMahjong, S2CShangGaBeginMahjong, S2CDealCardsMahjong, s2c_one_of_model, S2CPublicOperatesMahjong, S2CTurnToMahjong, \
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
     S2CHuBaseInfo, S2CExchangeCardsInfo, S2CTianTingInfo, S2CStartDingQueInfo, S2CNotifyPosition, S2CStartExchangeCards, S2CRoomDismissInfo
-from common.public.conf import C_SERVICE_SECRET_KEY
 from common.utils import earth_position
 from common.utils.utils import UtilsTool
 from . import const
@@ -465,9 +464,9 @@ class Room(BaseCardRoom):
         self.clear_room_init()
 
     def clear_room_init(self):
-        self.__win_seat_list = []
-        self.__gang_hou_mo_pai = []
-        self.__gang_hou_chu_pai = []
+        self.__win_seat_list.clear()
+        self.__gang_hou_mo_pai.clear()
+        self.__gang_hou_chu_pai.clear()
         self.__round_first_ji = 0
         self.__round_first_wgj = 0
         self.__chong_feng_ji_seat_id = 0
@@ -478,20 +477,20 @@ class Room(BaseCardRoom):
         self.__ze_ren_wgj_win_seat_id = 0
         self.__jie_pao_count = 0
         self.__is_yi_pao_duo_xiang = 0
-        self.__men_record = []
-        self.__exchange_cards_info = {}
+        self.__men_record.clear()
+        self.__exchange_cards_info.clear()
         self.clear_table_actions()
-        self.__record_operates = {}
-        self.__kai_pai_hu_info = []
-        self.__shao_ji_gang_seats = set()
-        self.__zha_jian_seats = set()
+        self.__record_operates.clear()
+        self.__kai_pai_hu_info.clear()
+        self.__shao_ji_gang_seats.clear()
+        self.__zha_jian_seats.clear()
         self.__ji_cards = None
         self.__record_cfj = 0
         self.__record_cfwgj = 0
         self.__men_in_tian_ting = False
         self.__dice_num = None
-        self.__fan_jin_ji_cards = set()
-        self.__fan_yin_ji_cards = set()
+        self.__fan_jin_ji_cards.clear()
+        self.__fan_yin_ji_cards.clear()
         self.__zhuo_ji_card = 0
         self.__ji_and_gang_score = 0
 
@@ -1834,7 +1833,6 @@ class Room(BaseCardRoom):
 
     async def men_da_notify(self, hu_list):
         """ 胡牌通知客户端 """
-        print("hu_list", hu_list)
         for seat_id in hu_list:
             p = self.get_player_by_seat_id(seat_id)
             hu_info, _, _ = self.get_hu_type(p)
@@ -4680,15 +4678,15 @@ class Room(BaseCardRoom):
         self.__init__(self.tid, service, room_conf)
 
     def clear_room(self):
-        self.__winner_list = []
-        self.__gang_hou_mo_pai = []
-        self.__gang_hou_chu_pai = []
-        self.__que_list = []
-        self.__shang_ga_list = []
+        self.__winner_list.clear()
+        self.__gang_hou_mo_pai.clear()
+        self.__gang_hou_chu_pai.clear()
+        self.__que_list.clear()
+        self.__shang_ga_list.clear()
         self.clear_table_actions()
         self.clear_room_init()
-        self.__ji_pai_score = None
-        self.__default_ji = None
+        self.__ji_pai_score.clear()
+        self.__default_ji.clear()
         super().clear_room()
 
     @staticmethod
