@@ -282,7 +282,7 @@ class GameDataSync(LogMeta):
         """
         try:
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict({"player_id": data.player_id},
-                                                                                        field=["id"], limit=1)
+                                                                                        field=["id","level"], limit=1)
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyUser.update_by_pk(data.player_id, update_data)
                 await ProxyUserWallet.update_by_pk(data.player_id,
