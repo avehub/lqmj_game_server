@@ -231,7 +231,6 @@ class UserBagRC(RCModel):
         if not new_items:
             return
         new_items_set = set(new_items)
-
         bag_items = await cls.cache_user_bag(uid=uid)
         if not bag_items:
             return
@@ -240,6 +239,7 @@ class UserBagRC(RCModel):
             g.get("id") for g in bag_items
             if g.get("good_id") in goods_list and g.get("id") in new_items_set
         }
+
         if bag_id_set:
             await BaseUserRC.deal_user_update_goods(uid, id_list=bag_id_set, is_del=True, key_name=cls.KEY_NEWLY)
 

@@ -346,7 +346,8 @@ class WorkersServer(JsonBaseServer):
         if not good_data:
             return
         await UserBagRC.update_user_bag(uid, [good_data])
-        await UserBagRC.batch_deal_new_props(uid, [good_data.get('good_id')])
+        # await UserBagRC.batch_deal_new_props(uid, [good_data.get('good_id')])
+        await BaseUserRC.deal_user_update_goods(uid, id_list=[good_data.get('good_id')])
         await self.__notice_by_bag(uid)
         self.log_info(uid, "更新背包物品", good_data)
 
