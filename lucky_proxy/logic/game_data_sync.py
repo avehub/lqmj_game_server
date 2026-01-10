@@ -12,6 +12,10 @@ from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel, ChargeOrderType
 from lucky_proxy.model_db.main import ProxyPromotionRelation, ProxyOrderDividendRecords, ProxyUser, ProxyUserWallet
 
+# 房卡固定分佣金额0.05 一张
+
+ROOM_FIXED_COMMISSION_AMOUNT = decimal.Decimal("0.05")
+
 """
 订单数据
 """
@@ -91,6 +95,7 @@ class GameDataSync(LogMeta):
     async def save_dividend_records(cls, data: PromotionOrderDataDTO
                                     , relation: ProxyPromotionRelation
                                     , proxy_user: ProxyUser):
+
         proxy_id = relation.get("proxy_id")
         level1_proxy_id = relation.get("level1_proxy_id")
         proxy_level = relation.get("level")
@@ -98,19 +103,26 @@ class GameDataSync(LogMeta):
         assistance_program_rate = proxy_user.get("assistance_program_rate")
         order_type = data.order_type
         now = datetime.now()
+
         proxy_income = decimal.Decimal("0.00")
         platform_income = decimal.Decimal("0.00")
+        # 原一级收入
+        original_level1_proxy_income= decimal.Decimal("0.00")
         # 一级代理邀请的用户升级为一级代理后产生订单 如果是房卡则按照0.05一张给原一级分佣 否则不进行分佣
         if relation.get("upgrade_flag") == 1 and ProxyLevel.LEVEL_1 == proxy_level:
+            if order_type == ChargeOrderType.TYPE_1 and ROOM_FIXED_COMMISSION_AMOUNT > decimal.Decimal(str(data.price)):
+                cls.log_info(f"固定房卡分成比例时固定金额={ROOM_FIXED_COMMISSION_AMOUNT}大于订单单价={data.price},不进行分佣")
+                return 1
             if order_type == ChargeOrderType.TYPE_1:
-                proxy_income = (decimal.Decimal(str(data.order_amount)) * decimal.Decimal("0.05")).quantize(
+                original_level1_proxy_income = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
-                platform_income = (decimal.Decimal(str(data.order_amount)) - proxy_income).quantize(
+                proxy_income=original_level1_proxy_income
+                platform_income = (decimal.Decimal(str(data.order_amount)) - original_level1_proxy_income).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             if order_type == ChargeOrderType.TYPE_2:
                 cls.log_info(
                     f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单不再给原代理产生分佣，data={data}")
-                return 0
+                return 1
         else:
             proxy_income = (
                     decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))).quantize(
@@ -131,6 +143,7 @@ class GameDataSync(LogMeta):
                 level2_dividend_rate = assistance_program_rate
                 level2_proxy_income = (proxy_income * assistance_program_rate).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+
             level1_proxy_income = (proxy_income - level2_proxy_income).quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             proxy_income = level2_proxy_income.quantize(
@@ -164,17 +177,22 @@ class GameDataSync(LogMeta):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
-                await cls.update_wallet(proxy_id, level1_proxy_id, proxy_income, level1_proxy_income, data.order_amount,
+                if relation.get("upgrade_flag") == 1 and ProxyLevel.LEVEL_1 == proxy_level:
+                    await cls.update_wallet(proxy_id, original_level1_proxy_income, decimal.Decimal("0.00"),
+                                            data.order_amount, ChargeOrderType.TYPE_1)
+                else:
+                    await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount,
                                         data.order_type)
                 await ProxyPromotionRelation.exec_sql(f" update proxy_promotion_relation  "
                                                       f"set total_amount=total_amount+{str(data.order_amount)} where player_id={data.player_id}")
         except Exception as e:
+            e.with_traceback()
             cls.log_err(f"【重要日志】分销订单入库失败，error：{e},data:{data}")
             return 0
         return 1
 
     @classmethod
-    async def update_wallet(cls, proxy_id, level1_proxy_id, proxy_income, level1_proxy_income, order_amount,
+    async def update_wallet(cls, proxy_id, proxy_income, level1_proxy_income, order_amount,
                             order_type):
         sql = ""
         if order_type == 1:
@@ -251,7 +269,7 @@ class GameDataSync(LogMeta):
     async def upgrade_level1_proxy(cls, data: UpgradeProxyDTO):
         update_data = {
             "opt_user_id": data.opt_user_id,
-            "proxy_level": ProxyLevel.LEVEL_2,
+            "proxy_level": ProxyLevel.LEVEL_1,
             "upgrade_time": time.time()
         }
         """
@@ -263,10 +281,12 @@ class GameDataSync(LogMeta):
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict({"player_id": data.player_id},
                                                                                         field=["id"], limit=1)
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                res = await ProxyUser.update_by_pk(data.player_id, update_data)
+                await ProxyUser.update_by_pk(data.player_id, update_data)
+                await ProxyUserWallet.update_by_pk(data.player_id,
+                                                   param={"proxy_level": ProxyLevel.LEVEL_1, "upgrade_flag": 1})
                 if relation and relation.get("level") == ProxyLevel.LEVEL_1:
-                    await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param={"upgrade_flag", 1})
-                cls.log_info(f"升级一级代理结果={res},data={data}")
+                    await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param={"upgrade_flag": 1})
+                cls.log_info(f"升级一级代理结束,data={data}")
 
         except Exception as e:
             cls.log_err(f"【重要日志】升级代理等级失败，error：{e},data:{data}")
