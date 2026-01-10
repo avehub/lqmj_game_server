@@ -13,6 +13,7 @@ from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.logic.activity import Base
 from lucky_game.handler.wechat import WeChat
+from lucky_game.model_rc.logout_user import LogoutUserRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO
 
@@ -195,9 +196,8 @@ class WriteOff(GameAuthApi):
             u_info = kwargs.get("u_info") or {}
             if id_card != u_info.get("id_card") or real_name != u_info.get("real_name"):
                 return self.answer(self.sta_code.ERR_ARG, hint="身份信息认证错误")
-        new_data = {"status": status}
-        data = await BaseUserRC.update_info(u_info, new_data)
-        if not data:
+        sta, data = await LogoutUserRC.create_logout_user(u_info, status=status)
+        if not sta:
             return self.answer(code=self.sta_code.FAIL)
         return self.answer()
 

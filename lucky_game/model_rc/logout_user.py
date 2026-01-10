@@ -8,6 +8,8 @@ from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
 from datetime import datetime
 
+from lucky_game.model_rc.base_user import BaseUserRC
+
 
 class LogoutUserRC(BaseCommonRC):
     db_model = LogoutUser
@@ -15,44 +17,47 @@ class LogoutUserRC(BaseCommonRC):
 
 
     @classmethod
-    async def create_logout_user(cls, **kwargs):
+    async def create_logout_user(cls, u_info: dict, **kwargs):
         """创建战绩总局记录"""
         try:
-            data = {
-                "uid": kwargs.get("uid"),
-                "name": kwargs.get("name"),
-                "avatar": kwargs.get("avatar"),
-                "sex": kwargs.get("sex"),
-                "phone": kwargs.get("phone"),
-                "email": kwargs.get("email"),
-                "address": kwargs.get("address"),
-                "id_card": kwargs.get("id_card"),
-                "real_name": kwargs.get("real_name"),
-                "pi": kwargs.get("pi"),
-                "discount": kwargs.get("discount"),
-                "gold": kwargs.get("gold"),
-                "diamond": kwargs.get("diamond"),
-                "room_card": kwargs.get("room_card"),
-                "yellow_diamond": kwargs.get("yellow_diamond"),
-                "vip": kwargs.get("vip"),
-                "platform": kwargs.get("platform"),
-                "dev_ident": kwargs.get("dev_ident"),
-                "ip": kwargs.get("ip"),
-                "region": kwargs.get("region"),
-                "country": kwargs.get("country"),
-                "openid": kwargs.get("openid"),
-                "unionid": kwargs.get("unionid"),
-                "wechat": kwargs.get("wechat"),
-                "apple_id": kwargs.get("apple_id"),
-                "future_value": kwargs.get("future_value"),
-                "status": kwargs.get("status"),
-            }
-            new = await cls.db_model.add_one(data)
-            if not new:
-                return False, "创建失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                data = {
+                    "uid": u_info.get("uid"),
+                    "name": u_info.get("name"),
+                    "avatar": u_info.get("avatar"),
+                    "sex": u_info.get("sex"),
+                    "phone": u_info.get("phone"),
+                    "email": u_info.get("email"),
+                    "address": u_info.get("address"),
+                    "id_card": u_info.get("id_card"),
+                    "real_name": u_info.get("real_name"),
+                    "pi": u_info.get("pi"),
+                    "discount": u_info.get("discount"),
+                    "gold": u_info.get("gold"),
+                    "diamond": u_info.get("diamond"),
+                    "room_card": u_info.get("room_card"),
+                    "yellow_diamond": u_info.get("yellow_diamond"),
+                    "vip": u_info.get("vip"),
+                    "platform": u_info.get("platform"),
+                    "dev_ident": u_info.get("dev_ident"),
+                    "ip": u_info.get("ip"),
+                    "region": u_info.get("region"),
+                    "country": u_info.get("country"),
+                    "openid": u_info.get("openid"),
+                    "unionid": u_info.get("unionid"),
+                    "wechat": u_info.get("wechat"),
+                    "apple_id": u_info.get("apple_id"),
+                    "future_value": u_info.get("future_value"),
+                    "status": kwargs.get("status"),
+                }
+                new = await cls.db_model.add_one(data)
+                if not new:
+                    return False, "创建失败"
+                new_data = {"status": data["status"]}
+                data = await BaseUserRC.update_info(u_info, new_data)
         except OperationalError as e:
             return False, f"失败原因:{str(e)}"
-        return True, new
+        return True, data
 
     @classmethod
     async def get_logout_user(cls, uid: int):
@@ -104,11 +109,21 @@ class LogoutUserRC(BaseCommonRC):
     async def delete_logout_user(cls, uid: int, status: int = 2):
         """ 正式注销 删除User表信息 """
         try:
-            sta = await cls.db_model.filter(uid=uid).delete()
-            if not sta:
-                return False, "失败"
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                sta = await cls.db_model.filter(uid=uid).update(status=status)
+                if not sta:
+                    return False, "失败"
+
+                u_info = await BaseUserRC.cache_by_pk(uid)
+                new_data = {
+                    "phone": "",
+                    "openid": f"{uid}_{datetime.now()}",
+                    "unionid": f"{uid}_{datetime.now()}",
+                    "apple_id": f"{uid}_{datetime.now()}",
+                }
+                data = await BaseUserRC.update_info(u_info, new_data, True)
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
-        return True, "OK"
+        return True, data
 
 
