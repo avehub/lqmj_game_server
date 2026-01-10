@@ -80,7 +80,8 @@ class AddLevel2Proxy(ProxyAuthApi):
             "create_by": proxy_id,
             "promotion_code": promotion_code,
             "join_day": datetime.now().strftime("%Y-%m-%d"),
-            "is_deleted": 0
+            "is_deleted": 0,
+            "status": 1
         }
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
