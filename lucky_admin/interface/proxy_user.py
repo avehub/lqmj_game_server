@@ -1,8 +1,9 @@
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
-from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
+from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
 
 
@@ -51,6 +52,12 @@ class ProxyUser(AdminAuthApi):
         sta, msg = await ProxyUserLogic.update_proxy_user(player_id, up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
+        # 检查用户折扣
+        if status == 1:
+            u_info = await BaseUserRC.cache_by_pk(player_id)
+            conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
+            if u_info["discount"] != conf.get("discount"):
+                await BaseUserRC.update_info(player_id, {"discount": conf.get("discount")})
         self.answer()
 
     async def get(self, req: Request, **kwargs):
@@ -66,4 +73,18 @@ class ProxyUser(AdminAuthApi):
         result = await ProxyUserLogic.get_proxy_user_filter(player_id=uid, proxy_level=proxy_level, phone=phone, promotion_code=promotion_code, page=page, page_size=page_size)
         self.answer(data=result)
 
-
+class ProxyUserLevel(AdminAuthApi):
+    """ 代理用户等级相关接口 """
+    async def put(self, req: Request, **kwargs):
+        """
+        更新代理等级
+        """
+        uid = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            self.answer(self.sta_code.FAIL, hint="用户不存在")
+        up_data = UpgradeProxyDTO(player_id=uid, opt_user_id=1)
+        sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint=msg)
+        self.answer()
