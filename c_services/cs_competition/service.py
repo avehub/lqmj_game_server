@@ -370,7 +370,7 @@ class CompetitionServer(BaseServer):
                     "ticket": score  # 正分不扣门票，负分输多少扣多少门票
                 }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
-            self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
+            self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
         data = {
             "competition_result": competition_result,
         }
