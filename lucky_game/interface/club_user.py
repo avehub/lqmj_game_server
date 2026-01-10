@@ -11,6 +11,7 @@ from common.public.enum_const import StaCode, ServiceEnum
 from common.public.conf import C_SERVICE_SECRET_KEY
 from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 
 
 class JoinBlack(GameAuthApi):
@@ -78,7 +79,10 @@ class KickRelation(GameAuthApi):
         relation_info, msg = await ClubUsersRC.get_club_user_by_id(relation_id)
         if not relation_info:
             return self.answer(StaCode.FAIL, hint=msg)
-
+        # 判断玩家是否在茶馆游戏中
+        cs_sta = await GameRoomsRC.check_uid_club_room(relation_info["uid"], relation_info["club_id"])
+        if cs_sta:
+            return self.answer(StaCode.FAIL, hint="正在游戏中,无法退出")
         # 校验操作人
         if check_uid == relation_info["uid"]:
             # 操作人为普通用户
