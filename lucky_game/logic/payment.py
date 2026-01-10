@@ -215,23 +215,24 @@ class PaymentLogic:
         bag_type = express.get("bag_type")
         order, msg = await OrderRC.get_order_info(order_no)
         async with in_transaction(connection_name=DbKey.DEFAULT):
+            up_data = {}
             if bag_type == GoodRC.BAG_TYPE_DELAY:
-                pass
-            else:
-                # 当为兑换商品时，直接修改订单状态
-                up_data = {
-                    "gain_status": GainStatus.RECEIVED
+                # 发放背包
+                bag_good = {
+                    'uid': uid,
+                    'good_id': express.get("good_id"),
+                    'count': order.get('num', 1),
+                    'end_time': express.get("down_time"),
                 }
-                if order.get("currency") != CurrencyType.BY_RMB:
-                    up_data["status"] = OrderStatus.PAID
-                order_sta, e = await OrderRC.up_order(
-                    up_data,
-                    order_no
-                )
-                NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
-                if not order_sta:
-                    return False, e
-                # 更新用户资源
+                print("bag_goods", bag_good)
+                print("uid", uid)
+                await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
+            # 更新用户资源
+            if express["currency"] != CurrencyType.BY_RMB:
+                # 当为兑换商品时，直接修改订单状态
+                up_data["status"] = OrderStatus.PAID
+                up_data["gain_status"] = GainStatus.RECEIVED
+            if express["sid"] not in [10]:
                 NLogger.info("领取资源：content:", content)
                 if isinstance(content, list):
                     for item in content:
@@ -245,7 +246,6 @@ class PaymentLogic:
                         NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
                         if not add_sta:
                             return False, e
-
                 else:
                     add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                         uid,
@@ -256,12 +256,20 @@ class PaymentLogic:
                     )
                     if not add_sta:
                         return False, e
-                # 如果为返还礼包订单
-                if order.get("explain"):
-                    await self.return_gold_order(order)
-                # 更新用户VIP经验
-                if order["amount"] > 1:
-                    await UserVipRC.update_user_vip_level(uid, order["amount"])
+            if up_data:
+                order_sta, e = await OrderRC.up_order(
+                    up_data,
+                    order_no
+                )
+                NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
+                if not order_sta:
+                    return False, e
+            # 如果为返还礼包订单
+            if order.get("explain"):
+                await self.return_gold_order(order)
+            # 更新用户VIP经验
+            if order.get("currency") == CurrencyType.BY_RMB and order["amount"] > 1:
+                await UserVipRC.update_user_vip_level(uid, order["amount"])
             return True, "ok"
 
     async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0):

@@ -105,7 +105,7 @@ class UserBagRC(RCModel):
         async def insert_bag(info):
             """生成插入数据"""
             good_id = info.get('good_id')
-            end_time = info.get('end_time') or 0
+            end_time = info.get('end_time') if info.get('end_time') else -1
             insert_bag_data = {
                 'uid': uid,
                 'good_id': good_id,
@@ -114,7 +114,7 @@ class UserBagRC(RCModel):
                 'created': cur_time
             }
             insert_obj = await cls.db_model.add_one(insert_bag_data)
-            insert_bag_data['id'] = insert_obj.bag_id
+            insert_bag_data['id'] = insert_obj.id
             return insert_bag_data
 
         old_bag = await cls.cache_user_bag(uid=uid)
@@ -129,9 +129,8 @@ class UserBagRC(RCModel):
             for item in express:
                 founded = False  # 找到过标识
                 good_id = item.get('good_id')
-                new_exp_time = item.get('end_time') or 0
+                new_exp_time = item.get('end_time') if item.get('end_time') else -1
                 goods_count = item.get('count') or 1
-
                 for ob in old_bag:
                     bag_id = ob.get('id')
                     old_count = ob.get('count') or 0
@@ -143,11 +142,13 @@ class UserBagRC(RCModel):
                         if new_exp_time != old_exp_time:
                             # 更新时效
                             ob["end_time"] = new_exp_time
+                            # to_update["end_time"] = new_exp_time
                             to_update = {"end_time": new_exp_time}
                         else:
                             # 更新数量（需确认过期时间相同）
                             new_count = old_count + goods_count
                             ob["count"] = max(new_count, 0)  # 确保goods_count不会小于0
+                            # to_update["count"] = ob.get('count') or 1,
                             to_update = {
                                 "count": ob.get('count') or 1,
                             }
@@ -226,6 +227,7 @@ class UserBagRC(RCModel):
             return
 
         new_items = await BaseUserRC.deal_user_update_goods(uid, key_name=cls.KEY_NEWLY)  # 没缓存消什么消
+        print("new_items", new_items)
         if not new_items:
             return
         new_items_set = set(new_items)
@@ -235,8 +237,8 @@ class UserBagRC(RCModel):
             return
 
         bag_id_set = {
-            g.get("bag_id") for g in bag_items
-            if g.get("good_id") in goods_list and g.get("bag_id") in new_items_set
+            g.get("id") for g in bag_items
+            if g.get("good_id") in goods_list and g.get("id") in new_items_set
         }
         if bag_id_set:
             await BaseUserRC.deal_user_update_goods(uid, id_list=bag_id_set, is_del=True, key_name=cls.KEY_NEWLY)
