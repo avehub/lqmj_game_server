@@ -184,8 +184,8 @@ class GameDataAdapterOrderTest(BaseApi):
         #sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         # await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
 
-        p1 = UpgradeProxyDTO(100000,1000)
-        res = await  GameDataAdapter.upgrade_level1_proxy(p1)
+        p1 = Level1ProxyDTO(100003,"ddd","ssss",1,1)
+        res = await  GameDataAdapter.add_level1_proxy(p1)
 
         # await  ProxysJobExecutor.every_month_summary()
         # await processor.process_monthly_settlement()
