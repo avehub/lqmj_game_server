@@ -15,9 +15,6 @@ from common.proto.py_pb2.ws_base import PbWsBaseRep
 from common.public.enum_const import Channel, StaCode, ServiceEnum, CacheKey
 from c_services.base.base_conf import BaseConf, base_conf
 from common.public.pub_base_service import BasePubService
-import tracemalloc
-import asyncio
-
 
 
 class BaseServer(BasePubService, CommonApi):
@@ -174,26 +171,7 @@ class BaseServer(BasePubService, CommonApi):
         asyncio.create_task(self.__read_task())
         await self.clear_in_service()
         asyncio.create_task(self.rpc_client())
-
-        # 启动内存监控
-        if tracemalloc.is_tracing():
-            asyncio.create_task(self.memory_monitor())
-
         await self.__consume_rmq()
-
-    # 添加内存监控方法
-    async def memory_monitor(self):
-        """ 内存监控任务 """
-        while True:
-            if tracemalloc.is_tracing():
-                snapshot = tracemalloc.take_snapshot()
-                top_stats = snapshot.statistics('lineno')
-                print("\n=== Memory Monitor ===")
-                print(f"Total allocated: {sum(stat.size for stat in snapshot.statistics('lineno')) / 1024:.2f} KB")
-                print("Top 10 memory allocations:")
-                for stat in top_stats[:10]:
-                    print(stat)
-            await asyncio.sleep(60)  # 每分钟检查一次
 
     async def init_component(self):
         """ 初始化组件 """

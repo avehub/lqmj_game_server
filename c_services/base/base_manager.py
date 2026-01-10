@@ -1,8 +1,7 @@
 from c_services.base.base_player import BasePlayer
 from typing import Optional, Deque
 from collections import deque
-import tracemalloc
-import gc
+
 from c_services.const.cs_enum_const import RoomType
 
 
@@ -20,10 +19,6 @@ class SessionManager:
             room_num = 300
             self.__room_pool = deque(maxlen=room_num)  # 房间对象池
             self.__player_pool = deque(maxlen=room_num * 4)  # 玩家对象池
-
-        # 跟踪对象池内存使用
-        if tracemalloc.is_tracing():
-            self._snapshot_before = tracemalloc.take_snapshot()
 
     async def new_match(self, *args, **kwargs):
         """ 接收新匹配 """
@@ -73,17 +68,6 @@ class SessionManager:
         if del_room:
             if self.__use_pool:
                 self.__room_pool.append(room)
-
-        gc.collect()
-
-        # 分析房间释放后的内存变化
-        if tracemalloc.is_tracing():
-            snapshot_after = tracemalloc.take_snapshot()
-            stats = snapshot_after.compare_to(self._snapshot_before, 'lineno')
-            print("Room release memory change:")
-            for stat in stats[:5]:
-                print(stat)
-            self._snapshot_before = snapshot_after
 
     def __del_room(self, tid):
         """ 删除房间 """
