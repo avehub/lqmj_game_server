@@ -24,7 +24,7 @@ class ProxySummary(LogMeta):
                                 , sort: int):
         sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
               f"t.created,t.upgrade_flag from " \
-              f"proxy_promotion_relation t left join  user u  on u.uid=t.id    where   t.proxy_id={proxy_id}"
+              f"proxy_promotion_relation t left join  user u  on u.uid=t.player_id    where   t.proxy_id={proxy_id}"
 
         if sort == 1:
             sql = sql + f" order by t.total_amount  desc ,t.id desc"
