@@ -853,7 +853,7 @@ class BaseCardRoom(BaseRoom):
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss, over_type)
-        self.clear_agree_dismiss()
+        self.__agree_dismiss_seats.clear()
         if over_type == OverType.ULTIMATE_DISMISS:
             return await super(BaseCardRoom, self).game_over()
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
