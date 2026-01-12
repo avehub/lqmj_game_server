@@ -109,9 +109,7 @@ class PayByGood(GameAuthApi):
                 self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             self.logerr(f'{pay_enum.phrase}事务执行失败，原因：{e}')
             self.answer(self.sta_code.FAIL, hint=f'{pay_enum.phrase}失败，请稍后再试')
-        data["buy_good"] = express["content"]
-        data["buy_good"]["img"] = express.get("img")
-        data["buy_good"]["good_id"] = express.get("good_id")
+        data["buy_good"] = express
         return self.answer(data=data)
 
 
