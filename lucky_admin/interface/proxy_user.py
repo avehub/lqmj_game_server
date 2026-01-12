@@ -55,6 +55,8 @@ class ProxyUser(AdminAuthApi):
         # 检查用户折扣
         if status == 1:
             u_info = await BaseUserRC.cache_by_pk(player_id)
+            if not u_info:
+                self.answer(self.sta_code.FAIL, hint="用户不存在")
             conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
             if u_info["discount"] != conf.get("discount"):
                 await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
