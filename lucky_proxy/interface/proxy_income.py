@@ -128,7 +128,7 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
                  ,sum(case when t.order_type=1 then t.order_amount else 0 end) total_room_amount
                  ,sum(case when t.order_type=2 then t.order_amount else 0 end) total_assistance_program_amount
             from proxy_order_dividend_records t  LEFT JOIN  user u  on u.uid=t.proxy_id  
-                  where  t.level1_proxy_id={proxy_id} and  t.order_month='{order_month}'
+                  where  t.level1_proxy_id={proxy_id} and t.level=2 and t.order_month='{order_month}'
                   {sql_offset}
                   {order_day_query}
             group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
