@@ -30,6 +30,8 @@ class ProxySummary(LogMeta):
             sql = sql + f" order by t.total_amount  desc ,t.id desc"
         elif sort == 2:
             sql = sql + f" order by t.total_amount  asc ,t.id desc"
+        else:
+            sql = sql + f" order by t.id desc"
 
         sql += f" limit {(page - 1) * page_size} ,{page_size} "
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
