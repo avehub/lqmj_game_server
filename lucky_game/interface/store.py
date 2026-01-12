@@ -111,6 +111,7 @@ class PayByGood(GameAuthApi):
             self.answer(self.sta_code.FAIL, hint=f'{pay_enum.phrase}失败，请稍后再试')
         data["buy_good"] = express["content"]
         data["buy_good"]["img"] = express.get("img")
+        data["buy_good"]["good_id"] = express.get("good_id")
         return self.answer(data=data)
 
 
