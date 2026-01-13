@@ -67,6 +67,7 @@ class GameDataAdapter(LogMeta):
                                                              "assistance_program_rate", "vip_level",
                                                              "vip_expire_time", "proxy_level"],
                                                             limit=1)
+
         if not proxy_user:
             cls.log_info(
                 f"【重要日志】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")

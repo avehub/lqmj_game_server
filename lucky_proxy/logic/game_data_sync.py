@@ -97,15 +97,15 @@ class GameDataSync(LogMeta):
                                     , proxy_user: ProxyUser):
 
         proxy_id = relation.get("proxy_id")
-
-        proxy_level = relation.get("level")
+        proxy_level = proxy_user.get("proxy_level")
         room_card_rate = proxy_user.get("room_card_rate")
         assistance_program_rate = proxy_user.get("assistance_program_rate")
         order_type = data.order_type
         now = datetime.now()
         level1_proxy_id = None
         # 有从二级升级成一级的情况  所以 若代理已经是一级 则 不取level1_proxy_id
-        if proxy_user.get("proxy_level") != ProxyLevel.LEVEL_1:
+        cls.log_info(f"当前订data={data}的代理等级={proxy_level}")
+        if proxy_level != ProxyLevel.LEVEL_1:
             level1_proxy_id = relation.get("level1_proxy_id")
 
         proxy_income = decimal.Decimal("0.00")
