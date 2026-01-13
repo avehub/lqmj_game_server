@@ -1,5 +1,4 @@
 from collections import Counter
-from copy import deepcopy
 from datetime import datetime
 
 from common.proto.py_pb2.ws_c2s import gang_model, shang_ga_model, exchange_model, player_position_model
@@ -8,7 +7,6 @@ from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjo
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, S2CGangInfo, \
     S2CHuBaseInfo, S2CExchangeCardsInfo, S2CTianTingInfo, S2CStartDingQueInfo, S2CNotifyPosition, S2CStartExchangeCards, S2CRoomDismissInfo
 from common.utils import earth_position
-from common.utils.utils import UtilsTool
 from . import const
 from .player import Player
 from .poker import Poker
@@ -564,7 +562,7 @@ class Room(BaseCardRoom):
         await self.deal_bu_pai(self.__four_card_bao_ting)
 
     async def start_eight_cards_tian_hu(self):
-        self.__player_actions.clear()
+        self.__player_actions = []
         self.set_flow_status(FlowStatus.T_IN_EIGHT_TIAN_HU)
         seat_id_list = [p.seat_id for p in self.seats if not p.tian_ting]
         self.poker.not_set_cards_ordered(seat_id_list, 4, 4, False)
@@ -810,7 +808,7 @@ class Room(BaseCardRoom):
             "in_flow": self.flow_status,
         }
         operates, can_gang_list = self.calc_operates_after_mo_pai(curr_player)
-        curr_player.operates = deepcopy(operates)
+        curr_player.operates = list(operates)
 
         if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
             data["is_bi_hu"] = 1 if self.check_is_bi_hu(operates) else 0
@@ -1031,12 +1029,12 @@ class Room(BaseCardRoom):
             data["lock_cards"] = p.lock_cards
             data_model = S2CTurnToMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting):
+            if self.__have_men_jian_hu and (p.all_chu_cards or p.cards_len == 5 or not contains_tian_ting or p.is_robot):
                 return self.call_flow(0.5, self.robot_play_card_by_suo_pai, p)
         else:
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-            if self.__decision_sec:
-                await self.turn_to_chu_pai_by_robot(p,timeout_seconds)
+        if self.__decision_sec:
+            await self.turn_to_chu_pai_by_robot(p,timeout_seconds)
 
     async def turn_to_chu_pai_by_robot(self,p,timeout_seconds):
         pass
@@ -1081,7 +1079,7 @@ class Room(BaseCardRoom):
             return
 
         self.set_flow_status(FlowStatus.T_IN_PUBLIC_OPRATE)
-        self.__player_actions.clear()  # 防止两个玩家，一个过、另个一碰后可杠同时触发导致过的玩家操作没有清除
+        self.__player_actions = []# 防止两个玩家，一个过、另个一碰后可杠同时触发导致过的玩家操作没有清除
         chu_pai_player = self.curr_player()
         chu_pai_player.operates = []
         self.log_info("玩家", chu_pai_player.seat_id, "出牌", self.__curr_card)
@@ -1110,7 +1108,7 @@ class Room(BaseCardRoom):
             elif ActionType.ACTION_TYPE_JIAN in p.operates:
                 jie_pao_count += 1
             if not self.__have_men_jian_hu:
-                operates = self.remove_jmh_from_operates(deepcopy(p.operates))
+                operates = self.remove_jmh_from_operates(p.operates)
             else:
                 operates = p.operates  # 提示密捡开
             data["operates"] = operates
@@ -1811,7 +1809,7 @@ class Room(BaseCardRoom):
 
     def operate_after_men_in_tian_ting(self, player):
         player.operates = []
-        self.__player_actions.clear()
+        self.__player_actions = []
         for p in self.seats:
             if p.can_tian_ting != -1 and ActionType.ACTION_TYPE_TIAN_TING in p.operates:
                 return
@@ -1819,7 +1817,7 @@ class Room(BaseCardRoom):
 
     async def operate_after_men_in_eight_tian_hu(self, player):
         player.operates = []
-        self.__player_actions.clear()
+        self.__player_actions = []
         all_tian_hu = True
         for p in self.seats:
             if not len(p.men_cards) > 0:
@@ -2424,7 +2422,7 @@ class Room(BaseCardRoom):
                                 HuType.FOUR_CARD_IS_SAME: self.__four_card_tian_hu}
                 ting_list = Rule.get_ting_hu_list(player.table_cards, player.cards, allow_hu_map, self.__lai_zi)
                 player.ting_list = ting_list
-                player.lock_cards = deepcopy(player.cards)
+                player.lock_cards = list(player.cards)
                 data = {"lock_cards": player.lock_cards}
                 data_model = S2CTurnToMahjong.pb_model(**data)
                 await self.inner_send(player, CmdRoom.PLAYER_TIAN_TING, data_model)
@@ -2988,8 +2986,8 @@ class Room(BaseCardRoom):
         is_zi_mo = self.curr_seat_id == p.seat_id
         if self.flow_status == FlowStatus.T_IN_EIGHT_TIAN_HU:
             is_zi_mo = True
-        table_cards = deepcopy(p.table_cards)
-        hand_cards = deepcopy(p.cards)
+        table_cards = p.table_cards
+        hand_cards = list(p.cards)
         is_gy = self.play_type == PlayType.GUI_YANG_4
         is_wu_dui = self.play_type == PlayType.BI_JIE_MJ
         allow_hu_map = {HuType.QI_DUI: True, HuType.JIN_GOU_DIAO: not is_gy, HuType.DI_LONG_QI: self.__di_long_qi,
@@ -3090,7 +3088,7 @@ class Room(BaseCardRoom):
             HuType.JIN_GOU_DIAO: HuType.QING_JIN_GOU,
             HuType.DA_KUAN_ZHANG: HuType.QING_DA_KUAN_ZHANG
         }
-        is_qing_yi_se = Rule.has_hu_is_qing_yi_se(deepcopy(p.table_cards), deepcopy(p.cards), self.__curr_card, self.__lai_zi)
+        is_qing_yi_se = Rule.has_hu_is_qing_yi_se(p.table_cards, list(p.cards), self.__curr_card, self.__lai_zi)
 
         if is_qing_yi_se and hu_type != HuType.FOUR_CARD_IS_SAME:
             hu_type = qing_upgrade_map.get(hu_type, HuType.QING_YI_SE)
