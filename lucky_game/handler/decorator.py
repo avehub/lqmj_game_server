@@ -11,7 +11,6 @@ from lucky_game.config import conf_srv, ConfSrv
 from nsanic.libs.consts import StaCode
 from nsanic.exception import JsonFinish
 from nsanic.libs.consts import Code
-from .middleware import logging_middleware
 from ..model_rc.conf_json import ConfJsonRC
 
 

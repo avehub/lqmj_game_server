@@ -11,6 +11,15 @@ from lucky_game.model_db.main import TournamentCycleLeaderboard
 from tortoise.exceptions import OperationalError
 
 
+def get_diff_index(now_index, data):
+    if now_index == 0:
+        return now_index
+    new_data = data[now_index:]
+    for index, (key, item) in enumerate(new_data.items()):
+        now_index -= 1
+        if item["total_points"] > data[now_index]["total_points"]:
+            return now_index
+
 class TournamentCycleLeaderboardRC(BaseCommonRC):
     db_model = TournamentCycleLeaderboard
     tb_name = db_model.sheet_name()
@@ -136,11 +145,15 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
                 if uid == item["uid"]:
                     result["total_points"] = item["total_points"]
                     result["rank_position"] = data.index(item) + 1
-                    last_index = data.index(item) - 1
-                    if last_index > 0:
+                    now_index = data.index(item)
+                    if now_index > 0:
+                        last_index = get_diff_index(now_index, data)
                         result["difference"] = data[last_index]["total_points"] - item["total_points"]
                     break
             # 如果用户不在排行榜中取最后一名积分
             if result["total_points"] == 0:
                 result["difference"] = data[-1]["total_points"]
+
+
+
         return result
