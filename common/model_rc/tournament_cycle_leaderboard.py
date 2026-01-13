@@ -14,11 +14,12 @@ from tortoise.exceptions import OperationalError
 def get_diff_index(now_index, data):
     if now_index == 0:
         return now_index
-    new_data = data[now_index:]
-    for index, (key, item) in enumerate(new_data.items()):
-        now_index -= 1
-        if item["total_points"] > data[now_index]["total_points"]:
-            return now_index
+    new_data = data[:now_index]
+    total = len(new_data)
+    for index, item in enumerate(new_data):
+        total -= 1
+        if item["total_points"] < data[total]["total_points"]:
+            return index+1
 
 class TournamentCycleLeaderboardRC(BaseCommonRC):
     db_model = TournamentCycleLeaderboard
