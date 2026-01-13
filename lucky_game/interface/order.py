@@ -84,7 +84,7 @@ class GainOrder(GameAuthApi):
         sta, msg = await PaymentLogic().pay_after(u_info, good, order_no)
         if not sta:
             return self.answer(code=self.sta_code.FAIL, hint=msg)
-        return self.answer(data={"good": good["content"] if isinstance(good["content"], list) else [good["content"]]},
+        return self.answer(data={"good": good},
                            hint=msg)
 
 

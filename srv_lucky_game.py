@@ -12,7 +12,7 @@ import sys
 signal_map = {}
 
 print("正在初始化服务器...")
-main_server = InitServer(conf, middlewares=[CorsMiddle, logging_middleware], bp_arr=[MainBp], exceptions=[RCatchExpt])
+main_server = InitServer(conf, middlewares=[CorsMiddle], bp_arr=[MainBp], exceptions=[RCatchExpt])
 main_server.add_signal(signal_map)
 # 获取Sanic应用实例并注册静态路由
 if conf.FILE_UPLOAD.LOCAL_STORAGE['enable']:

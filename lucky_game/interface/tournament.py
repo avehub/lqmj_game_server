@@ -58,7 +58,8 @@ class TournamentUserPoint(GameAuthApi):
         """
         获取用户赛事积分
         """
-        uid = kwargs.get("u_info").get("uid")
+        # uid = kwargs.get("u_info").get("uid")
+        uid = 100419
         cycle_id = self.check_int(req.args.get("cycle_id"), require=False, p_name="赛事周期ID")
         if not cycle_id:
             cycle_id = await TournamentCycleRC.get_current_cycle_id()
