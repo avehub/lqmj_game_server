@@ -567,6 +567,7 @@ class PaymentLogic:
             order_type = 2
         if order_type:
             order["order_type"] = order_type
+            order["express_content"] = express.get("content")
             await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order["uid"], msg=order)
 
         if good_type in [10, 11, 12]:
