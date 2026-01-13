@@ -245,7 +245,6 @@ class CompetitionServer(BaseServer):
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
-        self.log_info(room.match_room_id,"比赛开始前准备")
         data = {
             "cs_type": conf_data.get("cs_type"),
             "total_round": conf_data.get("total_round"),
@@ -283,7 +282,7 @@ class CompetitionServer(BaseServer):
                 await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
                 if is_init and p_uid > R_UID_THRESHOLD:
                     await TournamentUserPointRC.update_int_field(p_uid, "ticket", price, "sub")
-
+        self.log_info(room.match_room_id,"比赛开始前准备","轮次",room.match_round,room.game_room_info)
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:
             await self.__competition_info(room.match_room_id, is_init)
