@@ -102,7 +102,7 @@ class GameDataSync(LogMeta):
         assistance_program_rate = proxy_user.get("assistance_program_rate")
         order_type = data.order_type
         now = datetime.now()
-        level1_proxy_id = None
+        level1_proxy_id = 0
         # 有从二级升级成一级的情况  所以 若代理已经是一级 则 不取level1_proxy_id
         cls.log_info(f"当前订data={data}的代理等级={proxy_level}")
         if proxy_level != ProxyLevel.LEVEL_1:
