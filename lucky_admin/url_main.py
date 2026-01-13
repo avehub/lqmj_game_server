@@ -20,7 +20,7 @@ from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData
      PropertyRankingRecord, UserPortrait, UserPortraitDiff, UserActivityChart, UserActivityList, UserActivityValue
 
 from lucky_admin.interface.tournament import TournamentTemplate
-from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserLevel
+from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserLevel, ProxyUserBind
 
 
 class MainBp(BaseBlue):
@@ -109,6 +109,7 @@ class MainBp(BaseBlue):
         # 新增代理
         Urls("/ProxyUser", ProxyUser),
         Urls("/ProxyUserLevel", ProxyUserLevel),
+        Urls("ProxyUserBind", ProxyUserBind),
 
 
 
