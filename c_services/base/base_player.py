@@ -147,7 +147,7 @@ class BasePlayer():
         self.__uid = 0
         self.__is_robot = False
         self.__trustee: bool = False  # 是否为托管者
-        self.__cards.clear()
+        self.__cards = []
         self.__seat_id = -1  # 座位号
         self.__offline = False
         self.__tid = 0

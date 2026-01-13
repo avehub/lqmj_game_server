@@ -639,7 +639,7 @@ class Rule(metaclass=NoInstances):
 
         if not is_back:
             step_data[index][2] = hz_count
-            step_data[index][3] = deepcopy(cards)
+            step_data[index][3] = list(cards)
 
         flag, new_list, new_hz_count, new_hz_change_value = Rule.check_value_is_valid_with_lai_zi(
             cards, step_data, index, hz_count)
@@ -651,7 +651,7 @@ class Rule(metaclass=NoInstances):
         # 往回退一步
         if index > 0:
             step_data = step_data[0:index]
-            old_hz_count, old_list = deepcopy(step_data[index - 1][2]), deepcopy(step_data[index - 1][3])
+            old_hz_count, old_list = deepcopy(step_data[index - 1][2]), list(step_data[index - 1][3])
 
             return Rule.check_value_match_rule_with_lai_zi_count(
                 old_list, index - 1, step_data, old_hz_count, True)
@@ -778,7 +778,7 @@ class Rule(metaclass=NoInstances):
         hand_cards_len = len(cards)
         if hand_cards_len % 3 == 2:
             for card in set(cards):
-                tian_ting_hand_cards = deepcopy(cards)
+                tian_ting_hand_cards = list(cards)
                 tian_ting_hand_cards.remove(card)
                 can_hu, hu_path = Rule.can_ting_pai(table_cards, tian_ting_hand_cards, allow_hu_map)
                 if can_hu:
@@ -801,7 +801,7 @@ class Rule(metaclass=NoInstances):
                 return True, tian_ting_cards
 
         for card in set(cards):
-            temp_cards = deepcopy(cards)
+            temp_cards = list(cards)
             temp_cards.remove(card)
             # 打出一张之后能听牌
             can_hu, path = Rule.can_ting_pai(table_cards, temp_cards, allow_hu_map)
@@ -820,7 +820,7 @@ class Rule(metaclass=NoInstances):
         返回打出哪些牌后剩余牌保持叫牌的 牌列表
         """
         tian_ting_cards = []
-        cards_copy = deepcopy(cards)
+        cards_copy = list(cards)
         cards_copy.sort()
         if que > 0:
             que_cards = []
@@ -843,7 +843,7 @@ class Rule(metaclass=NoInstances):
             if card in tian_ting_cards:
                 tian_ting_cards.append(card)
                 continue
-            tian_ting_hand_cards = deepcopy(cards)
+            tian_ting_hand_cards = list(cards)
             tian_ting_hand_cards.remove(card)
             can_hu = Rule.only_can_hu(table_cards, tian_ting_hand_cards, card=lai_zi, lai_zi=lai_zi)
             if can_hu:
@@ -860,14 +860,14 @@ class Rule(metaclass=NoInstances):
         计算是否是听牌状态
         加个癞子能胡就听牌了
         """
-        cards = deepcopy(hand_cards)
+        cards = list(hand_cards)
         cards.append(lai_zi)  # 加入一张癞子牌
         return Rule.can_hu(table_cards, cards, allow_hu_map=allow_hu_map, lai_zi=lai_zi, is_gy=is_gy, is_wu_dui=is_wu_dui)
 
     @staticmethod
     def can_ting_pai_by_zun_yi(table_cards, hand_cards, card=0, ji_to_score=None, lai_zi=CardsType.LAI_ZI,
                                pai_xing_score_map=PAI_XING_SCORE_MAP, extra_score_map=EXTRA_SCORE_MAP):
-        cards = deepcopy(hand_cards)
+        cards = list(hand_cards)
         if len(cards) % 3 < 2:
             cards.append(lai_zi)
             card = lai_zi
@@ -1036,7 +1036,7 @@ class Rule(metaclass=NoInstances):
             if combo[0] != ActionType.ACTION_TYPE_AN_GANG:
                 return False
 
-        cards = deepcopy(hand_cards)
+        cards = list(hand_cards)
         cards_len = len(cards)
         is_14_mode = len(cards) == 14 or (is_zy and cards_len == 11)  # 是否14张牌
         cards.sort()
@@ -1073,7 +1073,7 @@ class Rule(metaclass=NoInstances):
         此接口处理玩家叫牌类型，外部不再处理
         """
         lai_zi = lai_zi or CardsType.LAI_ZI
-        cards = deepcopy(hand_cards)
+        cards = list(hand_cards)
         # 如果有14张 打出一张之后 算听牌
         if len(hand_cards) % 3 == 2:
             cards_list = list(cards)
@@ -1083,7 +1083,7 @@ class Rule(metaclass=NoInstances):
                 if curr_c == card:
                     continue
                 curr_c = card
-                tian_ting_hand_cards = deepcopy(hand_cards)
+                tian_ting_hand_cards = list(hand_cards)
                 tian_ting_hand_cards.remove(curr_c)
                 # 打出一张之后能听牌
                 can_hu, hu_path = Rule.can_ting_pai(
@@ -1105,7 +1105,7 @@ class Rule(metaclass=NoInstances):
         此接口处理玩家叫牌类型，外部不再处理
         """
         lai_zi = lai_zi or CardsType.LAI_ZI
-        cards = deepcopy(hand_cards)
+        cards = list(hand_cards)
         # 如果有14张 打出一张之后 算听牌
         can_hu, hu_path = Rule.can_ting_pai_by_zun_yi(table_cards, cards, 0, ji_to_score, lai_zi, pai_xing_score_map, extra_score_map)
         if can_hu:
