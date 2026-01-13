@@ -1,9 +1,10 @@
+from nsanic.libs import tool_dt
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
 from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
-from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
+from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO, PromotionAddUserDTO
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
 
 
@@ -89,4 +90,25 @@ class ProxyUserLevel(AdminAuthApi):
         sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
+        self.answer()
+
+class ProxyUserBind(AdminAuthApi):
+    """ 代理用户绑定接口 """
+
+    async def post(self, req: Request, **kwargs):
+        """
+        代理用户绑定接口
+        """
+        uid = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
+        invite_code = self.check_str(req.json.get('invite_code'), require=True, p_name='邀请码')
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            self.answer(self.sta_code.FAIL, hint="用户不存在")
+        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+                                          promotion_time=tool_dt.cur_time(), promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
+        if not sta:
+            self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
+            self.answer(self.sta_code.FAIL, hint="调用绑定接口失败")
         self.answer()
