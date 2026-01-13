@@ -19,7 +19,6 @@ from common.utils.utils import UtilsTool
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
-from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
 
 class BaseCardRoom(BaseRoom):
