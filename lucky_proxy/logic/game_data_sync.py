@@ -97,12 +97,16 @@ class GameDataSync(LogMeta):
                                     , proxy_user: ProxyUser):
 
         proxy_id = relation.get("proxy_id")
-        level1_proxy_id = relation.get("level1_proxy_id")
+
         proxy_level = relation.get("level")
         room_card_rate = proxy_user.get("room_card_rate")
         assistance_program_rate = proxy_user.get("assistance_program_rate")
         order_type = data.order_type
         now = datetime.now()
+        level1_proxy_id = None
+        # 有从二级升级成一级的情况  所以 若代理已经是一级 则 不取level1_proxy_id
+        if proxy_user.get("proxy_level") != ProxyLevel.LEVEL_1:
+            level1_proxy_id = relation.get("level1_proxy_id")
 
         proxy_income = decimal.Decimal("0.00")
         platform_income = decimal.Decimal("0.00")
@@ -116,7 +120,7 @@ class GameDataSync(LogMeta):
                 return 1
             if order_type == ChargeOrderType.TYPE_1:
                 original_level1_proxy_income = (
-                            decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
+                        decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
                 proxy_income = original_level1_proxy_income
                 platform_income = (decimal.Decimal(str(data.order_amount)) - original_level1_proxy_income).quantize(
@@ -168,7 +172,8 @@ class GameDataSync(LogMeta):
             "level1_proxy_income": level1_proxy_income,
             "platform_income": platform_income,
             "order_type": data.order_type,
-            "level": relation.get("level"),
+            #必须
+            "level": proxy_user.get("proxy_level"),
             "goods_number": data.goods_number,
             "order_year": now.strftime("%Y"),
             "order_month": now.strftime("%Y-%m"),
@@ -284,8 +289,9 @@ class GameDataSync(LogMeta):
         """
         try:
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict({"player_id": data.player_id},
-                                                                                        field=["id", "level", "proxy_id"], limit=1)
-            level_proxy_id= relation.get("proxy_id")
+                                                                                        field=["id", "level",
+                                                                                               "proxy_id"], limit=1)
+            level_proxy_id = relation.get("proxy_id")
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyUser.update_by_pk(data.player_id, update_data)
 
