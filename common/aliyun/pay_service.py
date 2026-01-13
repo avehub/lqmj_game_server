@@ -53,7 +53,8 @@ class AlipayPayment:
         self.client_config.alipay_public_key = AliPayConf.ALIPAY_PUBLIC_KEY
         self.client_config.server_url = AliPayConf.SERVER_URL
         self.notify_url = SERVER_ADDR + AliPayConf.NOTIFY_URL
-        self.private_key = self.type_conf.get("PRIVATE_AES")
+        if self.client_config.app_id != AliPayConf.SANDBOX.APP_ID:
+            self.private_key = self.type_conf.get("PRIVATE_AES")
         # 初始化客户端
         self.client = DefaultAlipayClient(self.client_config)
         # 保存支付类型
