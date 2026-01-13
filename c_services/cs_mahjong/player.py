@@ -165,7 +165,7 @@ class Player(BaseLeisurePlayer):
 
     @operates.setter
     def operates(self, opts):
-        self.__operates.clear()
+        self.__operates = []
         self.__operates.extend(opts)
 
     def can_operates(self):
@@ -325,10 +325,10 @@ class Player(BaseLeisurePlayer):
 
 
 
-        self.__chu_cards.clear()
-        self.__all_chu_cards.clear()
-        self.__table_cards.clear()
-        self.__zi_mo_cards.clear()
+        self.__chu_cards = []
+        self.__all_chu_cards = []
+        self.__table_cards = []
+        self.__zi_mo_cards = []
         self.__is_exchange_status = False
 
     def clear_data_round_over(self):
@@ -640,13 +640,13 @@ class Player(BaseLeisurePlayer):
         self.__zi_mo_count = 0
         self.__dian_pao_count = 0
         self.__jie_pao_count = 0
-        self.__ting_list.clear()
-        self.__ji_pai.clear()
-        self.__men_cards.clear()
-        self.__lock_cards.clear()
-        self.__hu_info.clear()
-        self.__han_dou_cards.clear()
-        self.__hu_path.clear()
+        self.__ting_list = []
+        self.__ji_pai = []
+        self.__men_cards = []
+        self.__lock_cards = []
+        self.__hu_info = {}
+        self.__han_dou_cards = set()
+        self.__hu_path = []
 
     def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """

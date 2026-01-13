@@ -464,9 +464,9 @@ class Room(BaseCardRoom):
         self.clear_room_init()
 
     def clear_room_init(self):
-        self.__win_seat_list.clear()
-        self.__gang_hou_mo_pai.clear()
-        self.__gang_hou_chu_pai.clear()
+        self.__win_seat_list = []
+        self.__gang_hou_mo_pai = []
+        self.__gang_hou_chu_pai = []
         self.__round_first_ji = 0
         self.__round_first_wgj = 0
         self.__chong_feng_ji_seat_id = 0
@@ -477,20 +477,20 @@ class Room(BaseCardRoom):
         self.__ze_ren_wgj_win_seat_id = 0
         self.__jie_pao_count = 0
         self.__is_yi_pao_duo_xiang = 0
-        self.__men_record.clear()
-        self.__exchange_cards_info.clear()
+        self.__men_record = []
+        self.__exchange_cards_info = {}
         self.clear_table_actions()
-        self.__record_operates.clear()
-        self.__kai_pai_hu_info.clear()
-        self.__shao_ji_gang_seats.clear()
-        self.__zha_jian_seats.clear()
+        self.__record_operates = {}
+        self.__kai_pai_hu_info = []
+        self.__shao_ji_gang_seats = set()
+        self.__zha_jian_seats = set()
         self.__ji_cards = None
         self.__record_cfj = 0
         self.__record_cfwgj = 0
         self.__men_in_tian_ting = False
         self.__dice_num = None
-        self.__fan_jin_ji_cards.clear()
-        self.__fan_yin_ji_cards.clear()
+        self.__fan_jin_ji_cards = set()
+        self.__fan_yin_ji_cards = set()
         self.__zhuo_ji_card = 0
         self.__ji_and_gang_score = 0
 
@@ -1035,22 +1035,22 @@ class Room(BaseCardRoom):
                 return self.call_flow(0.5, self.robot_play_card_by_suo_pai, p)
         else:
             await self.inner_send(p, CmdRoom.TURN_TO, data_model)
-        if self.__decision_sec:
-            await self.turn_to_chu_pai_by_robot(p,timeout_seconds)
+            if self.__decision_sec:
+                await self.turn_to_chu_pai_by_robot(p,timeout_seconds)
 
     async def turn_to_chu_pai_by_robot(self,p,timeout_seconds):
         pass
 
     def clear_table_actions(self, beside_seat_id=-1):
-        self.__player_actions.clear()
+        self.__player_actions = []
         self.clear_operates(beside_seat_id)
         self.__curr_card = 0
         self.__curr_action_player = None
         self.__jie_pao_count = -1
         self.__is_yi_pao_duo_xiang = 0
         self.__after_peng = False
-        self.__record_operates.clear()
-        self.__zha_jian_seats.clear()
+        self.__record_operates = {}
+        self.__zha_jian_seats = set()
 
     def clear_operates(self, beside_seat_id=-1):
         for p in self.seats:
@@ -1697,7 +1697,7 @@ class Room(BaseCardRoom):
         if self.can_somebody_hu():  # 有人可以胡，则需要等待
             if not self.__decision_sec:
                 return
-            await self.deal_chu_pai_call_time_out()
+            await self.deal_enter_chu_pai_call_time_out()
             return
         await self.do_zhuan_wan_gang_end()
 
@@ -4678,15 +4678,15 @@ class Room(BaseCardRoom):
         self.__init__(self.tid, service, room_conf)
 
     def clear_room(self):
-        self.__winner_list.clear()
-        self.__gang_hou_mo_pai.clear()
-        self.__gang_hou_chu_pai.clear()
-        self.__que_list.clear()
-        self.__shang_ga_list.clear()
+        self.__winner_list = []
+        self.__gang_hou_mo_pai = []
+        self.__gang_hou_chu_pai = []
+        self.__que_list = [1, 2, 3]
+        self.__shang_ga_list = [1, 2, 3, 4, 5, 0]
         self.clear_table_actions()
         self.clear_room_init()
-        self.__ji_pai_score.clear()
-        self.__default_ji.clear()
+        self.__ji_pai_score = self.get_ji_pai_score_map()
+        self.__default_ji = {CardsType.YAO_JI}
         super().clear_room()
 
 
