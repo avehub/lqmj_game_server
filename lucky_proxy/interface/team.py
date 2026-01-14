@@ -2,7 +2,7 @@ from sanic import Request
 
 from lucky_proxy.base_api import ProxyAuthApi
 from lucky_proxy.logic.proxy_summary import ProxySummary
-from lucky_proxy.model_db.main import ProxyUser, GameUser, ProxyUserWallet
+from lucky_proxy.model_db.main import ProxyUser, GameUser, ProxyUserWallet, ProxyPromotionRelation
 from nsanic.libs import tool_dt
 
 """
@@ -15,9 +15,13 @@ class TeamSummary(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
         team_info = await ProxyUserWallet.get_by_dict({"id": proxy_id}, field=["total_player", "level2_total_player"])
+        partner = await ProxyPromotionRelation.exec_sql(f"select count(1) as cnt from proxy_promotion_relation where proxy_id={proxy_id} and upgrade_flag=1", query=True, for_one=True)
+        data = {}
         if team_info:
-            self.answer(self.sta_code.PASS, team_info[0], hint='查询成功!')
-        self.answer(self.sta_code.PASS, {}, hint='查询成功!')
+            data.update(team_info[0])
+        if isinstance(partner, dict):
+            data.update({"partner_count": partner.get("cnt", 0)})
+        self.answer(self.sta_code.PASS, data, hint='查询成功!')
 
 
 """
