@@ -44,20 +44,21 @@ class TournamentLogic:
         rank_end = 0
         reward_content = []
         sta, reward = await TournamentRewardRC.get_reward_info(round_type)
+        NLogger.info(f"reward: {reward}")
         if sta and reward:
             rank_end = reward.get("rank_end")
             reward_content = reward.get("reward_content")
         mail_type = 2
         sender = "赛事系统"
         title = "赛事排行榜奖励"
-        for k, v in ranking_list.items():
+        for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
                 break
             uid = v.get("uid")
             award_ids = reward_content[k]["award_ids"]
             content = f"恭喜您在赛事中获得第{ranking}名，奖励如下："
-            attachment = '{"award_ids": award_ids}'
+            attachment = '{"award_ids": ' + f"{award_ids}" + '}'
             await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
 
@@ -86,20 +87,19 @@ class TournamentLogic:
         sta, _ = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
         if sta:
             next_cycle_id = 1 + cycle_id
-            new_sta, new_cycle = await TournamentCycleRC.get_cycle_info(next_cycle_id)
-            if new_sta and new_cycle:
-                if new_cycle["status"] != TournamentCycleRC.CYCLE_STATUS_STARTING:
-                    await self.up_cycle_status(next_cycle_id)
-                await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
+            await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
         return True
 
 
     async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
+        NLogger.info("清空赛季积分")
         sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
+        NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
         reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
+        NLogger.info(f"reward_user:{reward_user}")
         if reward_sta and reward_user:
             award_u_list = [item for item in reward_user["list"] if item["uid"] > R_UID_THRESHOLD]
             # 发送榜奖励
