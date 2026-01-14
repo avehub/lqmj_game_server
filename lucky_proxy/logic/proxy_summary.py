@@ -37,6 +37,34 @@ class ProxySummary(LogMeta):
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
     @classmethod
+    async def query_vip_player_page(cls, proxy_id: int 
+                                , page_size: int
+                                , page: int
+                                , sort: int
+                                , expire_start: int | None = None
+                                , expire_end: int | None = None):
+        sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
+              f"t.created,t.upgrade_flag, pu.vip_level, pu.vip_expire_time from " \
+              f"proxy_promotion_relation t " \
+              f"left join  user u  on u.uid=t.player_id " \
+              f"left join  proxy_user pu on pu.id = t.player_id " \
+              f"where t.proxy_id={proxy_id}"
+        if expire_start is not None:
+            sql += f" and pu.vip_expire_time >= {expire_start}"
+        if expire_end is not None:
+            sql += f" and pu.vip_expire_time <= {expire_end}"
+
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+        elif sort == 0:
+            sql = sql + f" order by t.id desc"
+
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
+
+    @classmethod
     async def query_team_member_page(cls, level1_proxy_id: int
                                      , page_size: int
                                      , page: int
@@ -54,6 +82,24 @@ class ProxySummary(LogMeta):
         sql += f" limit {(page - 1) * page_size} ,{page_size} "
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
+
+    @classmethod
+    async def query_team_member_page_filter_level(cls, level1_proxy_id: int, proxy_level: int,
+                                     page_size: int,
+                                     page: int,
+                                     sort: int):
+        # 过滤已经升级为一级代理的用户
+        sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
+              f" from  proxy_user_wallet t  JOIN proxy_user pu ON t.id = pu.id   left join  user u  on u.uid=t.id   " \
+              f" where  t.id=pu.id  and pu.proxy_level={proxy_level} and  pu.is_deleted=0  and t.level1_proxy_id={level1_proxy_id}"
+
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
 """
 收益明细查询
