@@ -20,6 +20,8 @@ def get_diff_index(now_index, data):
         total -= 1
         if item["total_points"] < data[total]["total_points"]:
             return index+1
+    # 如果没有找到满足条件的元素，返回直接上一名的索引
+    return now_index - 1
 
 class TournamentCycleLeaderboardRC(BaseCommonRC):
     db_model = TournamentCycleLeaderboard
