@@ -115,7 +115,7 @@ class TournamentCycleRC(BaseCommonRC):
             result = await cls.cache_session_get(cycle_id)
             if result:
                 return True, result
-            data, msg = await cls.get_cycle_filter(cycle_id=cycle_id)
+            sta, data = await cls.get_cycle_filter(cycle_id=cycle_id)
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
@@ -147,6 +147,7 @@ class TournamentCycleRC(BaseCommonRC):
         return cycle_id
 
     @classmethod
-    async def get_last_cycle_id(cls) -> int:
+    async def drop_cycle_id(cls) -> int:
         cycle_id = await cls.get_current_cycle_id()
-        return cycle_id + 1
+        await cls.conf.rds.drop_item("cycle_id")
+        return cycle_id

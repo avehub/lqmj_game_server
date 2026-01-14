@@ -114,7 +114,8 @@ class TimedService:
     async def __test_tasks(self):
         # 统计数据推送
         now_time = datetime.now()
-        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+
 
 
     async def __every_day_tasks(self):
@@ -126,7 +127,7 @@ class TimedService:
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
         # 赛季状态检查更新
-        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
+        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=1))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
 
@@ -203,21 +204,21 @@ class TimedService:
         _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
         if cycle_data:
             now = tool_dt.cur_time()
-            end_time = datetime.strptime(cycle_data["cycle_end_date"], "%Y-%m-%d %H:%M:%S")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 19:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
             if now > end_time_tamp:
                 sta = await TournamentLogic().up_cycle_status(cycle_id)
-                self.log_info(f"赛季周期{cycle_id}已结束，更新赛季周期状态：{sta}")
 
     @classmethod
     async def check_tournament_settle(self):
         """ 赛季周期结算 """
-        last_cycle_id = await TournamentCycleRC.get_last_cycle_id()
-        _, cycle_data = await TournamentCycleRC.get_cycle_info(last_cycle_id)
+        cycle_id = await TournamentCycleRC.drop_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
         if cycle_data and cycle_data["status"] == TournamentCycleRC.CYCLE_STATUS_END:
-            if await TournamentLogic().cycle_settle(last_cycle_id):
-                await TournamentCycleRC.update_cycle(last_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
-            self.log_info(f"赛季周期{last_cycle_id}已结算归档")
+            if await TournamentLogic().cycle_settle(cycle_id):
+                await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
+        await TournamentLogic().cycle_settle(cycle_id)
+        await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
 
 
 
