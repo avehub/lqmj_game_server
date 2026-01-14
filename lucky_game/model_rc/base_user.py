@@ -589,6 +589,14 @@ class BaseUserRC(BaseCommonRC):
         result = await cls.db_model.exec_query(sql)
         return result if result else None
 
+    @classmethod
+    async def many_update_user(cls, u_ids: list, **kwargs):
+        """统计用户总数"""
+        try:
+            await cls.db_model.filter(uid__in=u_ids).update(**kwargs)
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, "OK"
 
 
 class BaseBanRC(BaseCommonRC):

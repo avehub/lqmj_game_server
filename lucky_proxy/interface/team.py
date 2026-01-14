@@ -31,7 +31,7 @@ class Player(ProxyAuthApi):
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10,
                                    maxval=100)
         page = self.check_int(req.args.get("page"), default=1, require=False, p_name="page_size")
-        sort = self.check_int(req.args.get("sort"), default=1, require=False, p_name="sort", maxval=2, minval=1)
+        sort = self.check_int(req.args.get("sort"), default=0, require=False, p_name="sort", maxval=2, minval=1)
         promotion_player_page = await ProxySummary.query_player_page(proxy_id=proxy_id, page_size=page_size,
                                                                      page=page, sort=sort)
         return self.answer(self.sta_code.PASS, promotion_player_page, hint='查询成功!')

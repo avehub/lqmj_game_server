@@ -77,3 +77,23 @@ class ProxyLevel(BaseEnum):
     """ 代理等级 """
     LEVEL_1 = 1, "一级代理"
     LEVEL_2 = 2, "二级代理"
+
+
+"""
+VIP等级定义
+"""
+
+
+class ProxyVipLevel(BaseEnum):
+    """ 代理VIP等级 """
+    LEVEL_1 = 1, "月卡"
+    LEVEL_2 = 2, "季卡"
+    LEVEL_3 = 3, "年卡"
+    LEVEL_999 = 999, "永久"
+
+
+class ChargeOrderType(BaseEnum):
+    """ 充值订单类型 """
+    TYPE_1 = 1, "房卡"
+    TYPE_2 = 2, "助农"
+
