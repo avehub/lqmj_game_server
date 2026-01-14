@@ -10,7 +10,7 @@ from sanic import Request
 
 from lucky_proxy.const import ProxyLevel
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter, PromotionOrderDataDTO, PromotionAddUserDTO
-from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
+from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
 from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor, ProxysJobExecutor
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
@@ -127,8 +127,10 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
                  ,sum(case when t.order_type=2 then t.proxy_income else 0 end) total_assistance_program_income
                  ,sum(case when t.order_type=1 then t.order_amount else 0 end) total_room_amount
                  ,sum(case when t.order_type=2 then t.order_amount else 0 end) total_assistance_program_amount
-            from proxy_order_dividend_records t  LEFT JOIN  user u  on u.uid=t.proxy_id  
-                  where  t.level1_proxy_id={proxy_id} and  t.order_month='{order_month}'
+            from proxy_order_dividend_records t  
+                  LEFT JOIN  user u  on u.uid=t.proxy_id 
+                  LEFT JOIN  proxy_user pu  on pu.id=t.proxy_id  
+            where  t.level1_proxy_id={proxy_id} and t.order_month='{order_month}'
                   {sql_offset}
                   {order_day_query}
             group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
@@ -158,7 +160,7 @@ class MyIncomeDetailQuery(ProxyAuthApi):
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
 
 
-class GameDataAdapterOrderTest(ProxyAuthApi):
+class GameDataAdapterOrderTest(BaseApi):
     async def get(self, req: Request, **kwargs):
         """
          order_id: int
@@ -181,18 +183,15 @@ class GameDataAdapterOrderTest(ProxyAuthApi):
         json = req.json
         p = PromotionOrderDataDTO(1113, 1, 555, 1, 1, 18.00, 0.1, 0.7, time.time())
 
-        sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
+        #sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         # await  GameDataAdapter.sync_promotion_user(PromotionAddUserDTO(999,"pMHib1TpYH",1,1))
 
-        p1 = Level1ProxyDTO(150689, '150689', '18188591260')
+        p1 = Level1ProxyDTO(100003,"ddd","ssss",1,1)
         res = await  GameDataAdapter.add_level1_proxy(p1)
-        processor = ProxySettlementProcessor(
-            batch_size=5,  # 每批处理100个代理
-            target_month='2025-12'  # 处理2023年12月的数据，如果为None则处理上个月
-        )
+
         # await  ProxysJobExecutor.every_month_summary()
         # await processor.process_monthly_settlement()
-        self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="查询成功!")
+        self.answer(self.sta_code.PASS, res, hint="查询成功!")
 
 
 class TestOrder(BaseApi):
@@ -227,14 +226,6 @@ class TestOrder(BaseApi):
                                   , data.get("dividend_rate")
                                   , data.get("order_time")
                                   )
-        p = PromotionOrderDataDTO(order_id=1543, order_no='00012025123103233159015052960741'
-                                  , player_id=151058
-                                  , order_type=1
-                                  , goods_number=1
-                                  , price=0.1
-                                  , order_amount=Decimal("0.1")
-                                  , dividend_rate=0.7
-                                  , order_time=1767151411)
         sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_order_data(p)
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
 
