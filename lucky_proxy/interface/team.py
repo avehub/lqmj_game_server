@@ -3,6 +3,7 @@ from sanic import Request
 from lucky_proxy.base_api import ProxyAuthApi
 from lucky_proxy.logic.proxy_summary import ProxySummary
 from lucky_proxy.model_db.main import ProxyUser, GameUser, ProxyUserWallet
+from nsanic.libs import tool_dt
 
 """
 团队
@@ -70,3 +71,21 @@ class TeamMemberInfoDetailQuery(ProxyAuthApi):
             detail.update({"phone": user.get("phone")})
             detail.update({"avatar": user.get("avatar")})
         self.answer(self.sta_code.PASS, detail, hint='查询成功!')
+
+
+class PlayerVipQuery(ProxyAuthApi):
+    async def get(self, req: Request, **kwargs):
+        proxy_id = kwargs.get("uid")
+        page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10, maxval=100)
+        page = self.check_int(req.args.get("page"), default=1, require=False, p_name="page")
+        sort = self.check_int(req.args.get("sort"), default=0, require=False, p_name="sort", maxval=2, minval=0)
+        expired = self.check_int(req.args.get("expired"), default=0, require=False, p_name="expired", minval=0, maxval=1)
+        now = tool_dt.cur_time()
+        expire_start = None
+        expire_end = None
+        if expired == 0:
+            expire_start = now
+        else:
+            expire_end = now
+        rows = await ProxySummary.query_vip_player_page(proxy_id=proxy_id, page_size=page_size, page=page, sort=sort, expire_start=expire_start, expire_end=expire_end)
+        return self.answer(self.sta_code.PASS, rows, hint='查询成功!')
