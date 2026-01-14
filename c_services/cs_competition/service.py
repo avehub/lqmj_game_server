@@ -138,19 +138,19 @@ class CompetitionServer(BaseServer):
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         if conf_data.get("status") == CompetitionStatus.CLOSED:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已关闭", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
         if start_time > 0 and curr_time < start_time:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛未开始", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         if 0 < end_time < curr_time:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已结束", req_id=req_id)
         is_in_match_time = self.check_match_begin_time(curr_time, daily_start_time, daily_end_time)
         if not is_in_match_time:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛时间未到", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, f"开赛时间为【{daily_start_time[:5]}-{daily_end_time[:5]}】\n请提前做好备战准备", req_id=req_id)
         join_info = await self.__get_player_in_match(uid)
         if join_info:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家已加入比赛", req_id=req_id)
