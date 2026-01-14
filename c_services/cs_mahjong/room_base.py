@@ -1719,9 +1719,10 @@ class Room(BaseCardRoom):
         can_hu, _ = self.hu_de_qi(p)
         if can_hu:
             result.append(ActionType.ACTION_TYPE_HU)
-            result.append(ActionType.ACTION_TYPE_JIAN)
             if self.play_type not in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN):
                 result.append(ActionType.ACTION_TYPE_PASS)
+            else:
+                result.append(ActionType.ACTION_TYPE_JIAN)
         return result
 
     def can_somebody_hu(self):
