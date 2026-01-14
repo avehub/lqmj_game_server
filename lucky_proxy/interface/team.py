@@ -79,13 +79,20 @@ class PlayerVipQuery(ProxyAuthApi):
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10, maxval=100)
         page = self.check_int(req.args.get("page"), default=1, require=False, p_name="page")
         sort = self.check_int(req.args.get("sort"), default=0, require=False, p_name="sort", maxval=2, minval=0)
-        expired = self.check_int(req.args.get("expired"), default=0, require=False, p_name="expired", minval=0, maxval=1)
+        vip_state = self.check_int(req.args.get("vip_state"), default=None, require=False, p_name="vip_state")
+        expired = self.check_int(req.args.get("expired"), default=None, require=False, p_name="expired", minval=0, maxval=1)
         now = tool_dt.cur_time()
         expire_start = None
         expire_end = None
-        if expired == 0:
-            expire_start = now
-        else:
-            expire_end = now
+        if vip_state is not None:
+            if vip_state == 1:
+                expire_start = now
+            elif vip_state == 2:
+                expire_end = now
+        elif expired is not None:
+            if expired == 0:
+                expire_start = now
+            elif expired == 1:
+                expire_end = now
         rows = await ProxySummary.query_vip_player_page(proxy_id=proxy_id, page_size=page_size, page=page, sort=sort, expire_start=expire_start, expire_end=expire_end)
         return self.answer(self.sta_code.PASS, rows, hint='查询成功!')
