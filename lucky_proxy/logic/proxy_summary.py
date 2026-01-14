@@ -48,7 +48,7 @@ class ProxySummary(LogMeta):
               f"proxy_promotion_relation t " \
               f"left join  user u  on u.uid=t.player_id " \
               f"left join  proxy_user pu on pu.id = t.player_id " \
-              f"where t.proxy_id={proxy_id}"
+              f"where t.proxy_id={proxy_id} and t.upgrade_flag = 1"
         if expire_start is not None:
             sql += f" and pu.vip_expire_time >= {expire_start}"
         if expire_end is not None:
