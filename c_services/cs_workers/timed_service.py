@@ -14,6 +14,7 @@ from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
@@ -126,6 +127,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
+        # 更新赛季状态到比赛配置
+        self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
 
@@ -208,7 +211,16 @@ class TimedService:
                 await TournamentLogic().cycle_settle(cycle_id)
                 await TournamentLogic().up_cycle_status(cycle_id)
 
-
+    @classmethod
+    async def update_tournament_cycle_to_competition(self):
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
+        if cycle_data and cycle_data["reward_id"] == 1:
+            start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            start_time_tamp = int(start_time.timestamp())
+            await ConfCompetitionRC.update_competition_time(cycle_data["template_id"], start_time_tamp, end_time_tamp, cycle_id)
 
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):

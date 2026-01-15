@@ -144,6 +144,9 @@ class CompetitionServer(BaseServer):
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
+        cycle_id = conf_data.get("cycle_id") or 0
+        if self.__current_cycle_id < cycle_id:
+            self.__current_cycle_id = cycle_id
         if start_time > 0 and curr_time < start_time:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         if 0 < end_time < curr_time:
