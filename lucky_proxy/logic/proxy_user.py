@@ -77,4 +77,23 @@ class ProxyUserLogic(LogMeta):
             sta = await ProxyUser.exec_sql(sql)
         return sta, "更新成功"
 
+    @classmethod
+    async def update_many_proxy_user(cls, player_ids: list, up_data: dict):
+        """
+        更新proxy_user
+        """
+        sta = False
+        update_data = ""
+        valid_fields = {"status", "proxy_level", "is_deleted", "vip_level", "vip_expire_time"}
+        for k, v in up_data.items():
+            if k in valid_fields and v is not None:
+                if update_data:
+                    update_data += ", "
+                update_data += f" {k}={v}"
+        if update_data:
+            sql = f"UPDATE {cls.table_name} SET {update_data} WHERE id IN ({','.join(str(id) for id in player_ids)})"
+
+            sta = await ProxyUser.exec_sql(sql)
+        return sta, "更新成功"
+
 

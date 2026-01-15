@@ -262,12 +262,10 @@ class TimedService:
 
     async def check_proxy_vip(self):
         # 检查代理vip是否过期
-        date = tool_dt.dt_str()
-        today = tool_dt.day_begin(date)
-        data = await ProxyUserLogic.get_proxy_user_filter(vip_end_time=today)
-        self.log_info(f"【检查代理vip】{date} 代理商vip过期数：{len(data)}")
+        today = int(datetime.now().replace(hour=0, minute=0, second=0).timestamp())
+        data = await ProxyUserLogic.get_proxy_user_filter(status=1, vip_end_time=today)
         if data:
             u_ids = [d["id"] for d in data]
-            sta, msg = await BaseUserRC.many_update_user(u_ids, discount=1)
-            if not sta:
-                self.log_info(f"【检查代理vip】更新用户{u_ids}折扣失败：{msg}")
+            await BaseUserRC.many_update_user(u_ids, discount=1)
+            await ProxyUserLogic.update_many_proxy_user(u_ids, {"status": 0})
+
