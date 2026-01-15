@@ -226,10 +226,10 @@ class PaymentLogic:
                 }
                 await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
             # 更新用户资源
-            if express["currency"] != CurrencyType.BY_RMB:
+            if express["currency"] not in [CurrencyType.DEFAULT, CurrencyType.BY_RMB]:
                 # 当为兑换商品时，直接修改订单状态
                 up_data["status"] = OrderStatus.PAID
-                up_data["gain_status"] = GainStatus.RECEIVED
+            up_data["gain_status"] = GainStatus.RECEIVED
             if express["sid"] not in [10]:
                 NLogger.info("领取资源：content:", content)
                 if isinstance(content, list):
@@ -254,14 +254,13 @@ class PaymentLogic:
                     )
                     if not add_sta:
                         return False, e
-            if up_data:
-                order_sta, e = await OrderRC.up_order(
-                    up_data,
-                    order_no
-                )
-                NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
-                if not order_sta:
-                    return False, e
+            order_sta, e = await OrderRC.up_order(
+                up_data,
+                order_no
+            )
+            NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
+            if not order_sta:
+                return False, e
             # 如果为返还礼包订单
             if order.get("explain"):
                 await self.return_gold_order(order)
