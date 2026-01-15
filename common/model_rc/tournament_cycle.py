@@ -67,6 +67,7 @@ class TournamentCycleRC(BaseCommonRC):
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)
                 await cls.cache_session_del(cycle_id)
+                await cls.conf.rds.drop_item("cycle_id")
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, "成功"
@@ -144,10 +145,4 @@ class TournamentCycleRC(BaseCommonRC):
             cycle_id = data[0]["id"] if data else 0
             ex_time = 86400 - (tool_dt.cur_time()-tool_dt.day_begin())
             await cls.conf.rds.set_item("cycle_id", cycle_id, ex_time=ex_time)
-        return cycle_id
-
-    @classmethod
-    async def drop_cycle_id(cls) -> int:
-        cycle_id = await cls.get_current_cycle_id()
-        await cls.conf.rds.drop_item("cycle_id")
         return cycle_id
