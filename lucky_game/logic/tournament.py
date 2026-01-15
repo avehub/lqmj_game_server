@@ -34,7 +34,7 @@ class TournamentLogic:
     async def distribute_order_point(self, order: dict):
         """ 分发订单积分 """
         cycle_id = await TournamentCycleRC.get_current_cycle_id()
-        _, rule = await TournamentRuleRC.get_rule_info()
+        _, rule = await TournamentRuleRC.get_rule_info(is_content=True)
         ticket = order["num"] * rule["unit_point"]
         up_data = {"ticket": ticket}
         return await TournamentUserPointRC.up_user_point(cycle_id, order.get("uid"), up_data)
