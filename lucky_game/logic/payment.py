@@ -1,6 +1,7 @@
 """ 支付相关逻辑处理 """
 import decimal
 import random
+import traceback
 
 from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
@@ -529,6 +530,9 @@ class PaymentLogic:
                 else:
                     await self.pay_fail(order_info)
         except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                NLogger.error(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
         return True, "OK", {}
