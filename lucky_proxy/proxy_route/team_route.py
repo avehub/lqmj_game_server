@@ -4,7 +4,7 @@
 from nsanic.handler_http import Urls
 
 from lucky_proxy.interface.proxy import AddLevel2Proxy, RemoveLevel2Proxy, ModifyLevel2ProxyRate
-from lucky_proxy.interface.team import TeamSummary, Player, TeamMemberQuery, TeamMemberInfoDetailQuery
+from lucky_proxy.interface.team import TeamSummary, Player, TeamMemberQuery, TeamMemberInfoDetailQuery, PlayerVipQuery
 
 # 路由请添加在这里
 TEAM_APIS = [
@@ -18,6 +18,8 @@ TEAM_APIS = [
 
     # 绑定用户查询
     Urls("proxy/PlayerQuery", Player),
+    # 绑定用户VIP状态查询（未过期/已过期）
+    Urls("proxy/PlayerVipQuery", PlayerVipQuery),
 
     #  团队成员查询
     Urls("proxy/TeamMemberQuery", TeamMemberQuery),
