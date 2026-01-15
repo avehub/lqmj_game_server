@@ -126,8 +126,6 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
-        # 赛季状态检查更新
-        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=1))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
 
@@ -204,21 +202,11 @@ class TimedService:
         _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
         if cycle_data:
             now = tool_dt.cur_time()
-            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 19:59:59", "%Y-%m-%d %H:%M:%S")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
             if now > end_time_tamp:
-                sta = await TournamentLogic().up_cycle_status(cycle_id)
-
-    @classmethod
-    async def check_tournament_settle(self):
-        """ 赛季周期结算 """
-        cycle_id = await TournamentCycleRC.drop_cycle_id()
-        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
-        if cycle_data and cycle_data["status"] == TournamentCycleRC.CYCLE_STATUS_END:
-            if await TournamentLogic().cycle_settle(cycle_id):
-                await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
-        await TournamentLogic().cycle_settle(cycle_id)
-        await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
+                await TournamentLogic().cycle_settle(cycle_id)
+                await TournamentLogic().up_cycle_status(cycle_id)
 
 
 

@@ -56,10 +56,11 @@ class TournamentLogic:
             if ranking > rank_end:
                 break
             uid = v.get("uid")
-            award_ids = reward_content[k]["award_ids"]
-            content = f"恭喜您在赛事中获得第{ranking}名，奖励如下："
-            attachment = '{"award_ids": ' + f"{award_ids}" + '}'
-            await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+            if uid > R_UID_THRESHOLD:
+                award_ids = reward_content[k]["award_ids"]
+                content = f"恭喜您在赛事中获得第{ranking}名，奖励如下："
+                attachment = '{"award_ids": ' + f"{award_ids}" + '}'
+                await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
 
     async def distribute_order_good(self, order: dict) -> tuple:
@@ -94,14 +95,14 @@ class TournamentLogic:
     async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
-        NLogger.info("清空赛季积分")
+        NLogger.info(f"清空赛季{cycle_id}积分")
         sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
         NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
         reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
         NLogger.info(f"reward_user:{reward_user}")
         if reward_sta and reward_user:
-            award_u_list = [item for item in reward_user["list"] if item["uid"] > R_UID_THRESHOLD]
+            award_u_list = [item for item in reward_user["list"]]
             # 发送榜奖励
             await self.send_ranking_reward(award_u_list)
 
