@@ -112,13 +112,13 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
 
         sql_offset = ""
         order_day_query = ""
-        if last_id and last_id > 0:
-            sql_offset = f" and t.proxy_id<{last_id}"
+        # if last_id and last_id > 0:
+        #     sql_offset = f" and t.proxy_id<{last_id}"
         if start_day and end_day:
             order_day_query = f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
         sql = f"""
             select 
-                  t.proxy_id as uid
+                  t.proxy_id as uid,
                   t.proxy_id
                  ,u.name
                  ,u.avatar
@@ -132,11 +132,11 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
             from proxy_order_dividend_records t  
                   LEFT JOIN  user u  on u.uid=t.proxy_id 
                   LEFT JOIN  proxy_user pu  on pu.id=t.proxy_id  
-            where  t.level1_proxy_id={proxy_id}
-                  {sql_offset}
+            where  t.level1_proxy_id={proxy_id} 
                   {order_day_query}
             group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
         """
+        print(sql)
         detail = await ProxyOrderDividendRecords.exec_sql(sql, query=True)
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
 
@@ -178,6 +178,7 @@ class MyRechargeOrders(ProxyAuthApi):
                 pass
         offset = (page - 1) * page_size
         sql_count = f"select count(1) as cnt from orders o where {where}"
+        print(sql_count)
         total_row = await Orders.exec_sql(sql_count, query=True, for_one=True)
         total = total_row.get("cnt", 0) if isinstance(total_row, dict) else 0
         sql = f"""
@@ -190,23 +191,17 @@ class MyRechargeOrders(ProxyAuthApi):
         order by o.id desc
         limit {page_size} offset {offset}
         """
+        print(sql)
         rows = await Orders.exec_sql(sql, query=True) or []
         return self.answer(self.sta_code.PASS, {"page": page, "page_size": page_size, "total": total, "list": rows}, hint="查询成功!")
 
 class MyRechargeTotal(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
-        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         where = f" purchase_uid={proxy_id} "
-        if start_day and end_day:
-            try:
-                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
-                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
-                where += f" and created>={start_ts} and created<={end_ts} "
-            except Exception:
-                pass
+      
         sql = f"select ifnull(sum(amount),0.00) as total_amount, count(1) as total_orders from orders where {where}"
+        print(sql)
         row = await Orders.exec_sql(sql, query=True, for_one=True) or {}
         return self.answer(self.sta_code.PASS, {"total_amount": float(row.get("total_amount", 0.0)), "total_orders": row.get("total_orders", 0)}, hint="查询成功!")
 
