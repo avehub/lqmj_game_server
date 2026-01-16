@@ -14,6 +14,9 @@ class ProxyOrderStatistics(LogMeta):
                                         , level1_proxy_id: int | None = None
                                         , order_month: str | None = None
                                         , order_day: str | None = None
+                                        , player_id: int | None = None
+                                        , start_day: str | None = None
+                                        , end_day: str | None = None
                                         , last_id: int | None = None
                                         , page_size=20):
         sql = f"select  t.id, t.player_id, u.name, u.avatar, t.order_amount, t.order_month" \
@@ -21,12 +24,17 @@ class ProxyOrderStatistics(LogMeta):
               f" from proxy_order_dividend_records t  " \
               f" left join user u on u.uid = t.player_id " \
               f" where t.proxy_id={proxy_id} " \
-              f" and t.order_month='{order_month}'"
+              f" "
+        if order_month:
+            sql += f" and t.order_month='{order_month}'"
         if level1_proxy_id:
             sql = sql + f" and level1_proxy_id={level1_proxy_id} "
-
-        if order_day:
-            sql = sql + f" and  t.order_day='{order_day}'"
+        if player_id:
+            sql = sql + f" and t.player_id={player_id}"
+        if start_day and end_day:
+            sql = sql + f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
+        elif order_day:
+            sql = sql + f" and t.order_day='{order_day}'"
 
         if last_id and last_id > 0:
             sql = sql + f" and  t.id <{last_id}"

@@ -14,6 +14,7 @@ from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
 from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor, ProxysJobExecutor
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
+from lucky_game.model_db.main import Orders, Goods
 
 """
 代理钱包收益
@@ -104,6 +105,8 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         order_month = self.check_str(req.args.get("order_month"), require=True, p_name="order_month")
         order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
+        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
+        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
 
         last_id = self.check_int(req.args.get("last_id"), require=False, p_name="last_id")
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False, p_name="page_size", minval=10,
@@ -113,10 +116,13 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
         order_day_query = ""
         if last_id and last_id > 0:
             sql_offset = f" and t.proxy_id<{last_id}"
-        if order_day:
+        if start_day and end_day:
+            order_day_query = f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
+        elif order_day:
             order_day_query = f" and t.order_day='{order_day}'"
         sql = f"""
             select 
+                  t.proxy_id as uid
                   t.proxy_id
                  ,u.name
                  ,u.avatar
@@ -149,16 +155,67 @@ class MyIncomeDetailQuery(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
 
         last_id = self.check_int(req.args.get("last_id"), require=False, p_name="last_id")
-        order_month = self.check_str(req.args.get("order_month"), require=True, p_name="order_month")
+        order_month = self.check_str(req.args.get("order_month"), require=False, p_name="order_month")
         order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
+        player_id = self.check_int(req.args.get("uid"), require=False, p_name="uid")
+        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
+        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False
                                    , p_name="page_size", minval=10, maxval=100)
         detail = await ProxyOrderStatistics.proxy_income_detail_query(proxy_id=proxy_id, order_month=order_month
-                                                                      , order_day=order_day, page_size=page_size,
+                                                                      , order_day=order_day, player_id=player_id, start_day=start_day, end_day=end_day, page_size=page_size,
                                                                       last_id=last_id)
 
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
 
+class MyRechargeOrders(ProxyAuthApi):
+    async def get(self, req: Request, **kwargs):
+        proxy_id = kwargs.get("uid")
+        page = self.check_int(req.args.get("page"), require=False, default=1, p_name="page")
+        page_size = self.check_int(req.args.get("page_size"), require=False, default=20, p_name="page_size", minval=10, maxval=100)
+        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
+        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
+        where = f" o.purchase_uid={proxy_id} "
+        if start_day and end_day:
+            try:
+                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
+                where += f" and o.created>={start_ts} and o.created<={end_ts} "
+            except Exception:
+                pass
+        offset = (page - 1) * page_size
+        sql_count = f"select count(1) as cnt from orders o where {where}"
+        total_row = await Orders.exec_sql(sql_count, query=True, for_one=True)
+        total = total_row.get("cnt", 0) if isinstance(total_row, dict) else 0
+        sql = f"""
+        select o.id, o.order_no, o.amount, o.status, o.created, o.num, o.sku, o.currency, o.pay_mode,
+               u.name as user_name, u.avatar as user_avatar, o.purchase_uid as uid, g.name as good_name
+        from orders o
+        left join goods g on g.sku = o.sku
+        left join user u on u.uid = o.purchase_uid
+        where {where}
+        order by o.id desc
+        limit {page_size} offset {offset}
+        """
+        rows = await Orders.exec_sql(sql, query=True) or []
+        return self.answer(self.sta_code.PASS, {"page": page, "page_size": page_size, "total": total, "list": rows}, hint="查询成功!")
+
+class MyRechargeTotal(ProxyAuthApi):
+    async def get(self, req: Request, **kwargs):
+        proxy_id = kwargs.get("uid")
+        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
+        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
+        where = f" purchase_uid={proxy_id} "
+        if start_day and end_day:
+            try:
+                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
+                where += f" and created>={start_ts} and created<={end_ts} "
+            except Exception:
+                pass
+        sql = f"select ifnull(sum(amount),0.00) as total_amount, count(1) as total_orders from orders where {where}"
+        row = await Orders.exec_sql(sql, query=True, for_one=True) or {}
+        return self.answer(self.sta_code.PASS, {"total_amount": float(row.get("total_amount", 0.0)), "total_orders": row.get("total_orders", 0)}, hint="查询成功!")
 
 class GameDataAdapterOrderTest(BaseApi):
     async def get(self, req: Request, **kwargs):
