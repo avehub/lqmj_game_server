@@ -16,9 +16,10 @@ class ProxyOrderStatistics(LogMeta):
                                         , order_day: str | None = None
                                         , last_id: int | None = None
                                         , page_size=20):
-        sql = f"select  t.id ,t.order_amount,t.order_month" \
-              f",t.proxy_income,t.order_type,t.created  " \
+        sql = f"select  t.id, t.player_id, u.name, u.avatar, t.order_amount, t.order_month" \
+              f", t.proxy_income, t.order_type, t.created  " \
               f" from proxy_order_dividend_records t  " \
+              f" left join user u on u.uid = t.player_id " \
               f" where t.proxy_id={proxy_id} " \
               f" and t.order_month='{order_month}'"
         if level1_proxy_id:
