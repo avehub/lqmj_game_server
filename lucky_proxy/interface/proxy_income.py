@@ -103,8 +103,6 @@ class TeamMemberIncomeDetailQuery(ProxyAuthApi):
 class TeamMemberIncomeQuery(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
-        order_month = self.check_str(req.args.get("order_month"), require=True, p_name="order_month")
-        order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
 
@@ -118,8 +116,6 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
             sql_offset = f" and t.proxy_id<{last_id}"
         if start_day and end_day:
             order_day_query = f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
-        elif order_day:
-            order_day_query = f" and t.order_day='{order_day}'"
         sql = f"""
             select 
                   t.proxy_id as uid
@@ -136,7 +132,7 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
             from proxy_order_dividend_records t  
                   LEFT JOIN  user u  on u.uid=t.proxy_id 
                   LEFT JOIN  proxy_user pu  on pu.id=t.proxy_id  
-            where  t.level1_proxy_id={proxy_id} and t.order_month='{order_month}'
+            where  t.level1_proxy_id={proxy_id}
                   {sql_offset}
                   {order_day_query}
             group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
@@ -155,15 +151,12 @@ class MyIncomeDetailQuery(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
 
         last_id = self.check_int(req.args.get("last_id"), require=False, p_name="last_id")
-        order_month = self.check_str(req.args.get("order_month"), require=False, p_name="order_month")
-        order_day = self.check_str(req.args.get("order_day"), require=False, p_name="order_day")
         player_id = self.check_int(req.args.get("uid"), require=False, p_name="uid")
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         page_size = self.check_int(req.args.get("page_size"), default=20, require=False
                                    , p_name="page_size", minval=10, maxval=100)
-        detail = await ProxyOrderStatistics.proxy_income_detail_query(proxy_id=proxy_id, order_month=order_month
-                                                                      , order_day=order_day, player_id=player_id, start_day=start_day, end_day=end_day, page_size=page_size,
+        detail = await ProxyOrderStatistics.proxy_income_detail_query(proxy_id=proxy_id, player_id=player_id, start_day=start_day, end_day=end_day, page_size=page_size,
                                                                       last_id=last_id)
 
         self.answer(self.sta_code.PASS, detail, hint="查询成功!")
