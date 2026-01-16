@@ -14,7 +14,7 @@ from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
 from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor, ProxysJobExecutor
 from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
-from lucky_game.model_db.main import Orders, Goods
+from lucky_proxy.model_db.main import ProxyOrderDividendRecords
 
 """
 代理钱包收益
@@ -179,7 +179,7 @@ class MyRechargeOrders(ProxyAuthApi):
         offset = (page - 1) * page_size
         sql_count = f"select count(1) as cnt from orders o where {where}"
         print(sql_count)
-        total_row = await Orders.exec_sql(sql_count, query=True, for_one=True)
+        total_row = await ProxyOrderDividendRecords.exec_sql(sql_count, query=True, for_one=True)
         total = total_row.get("cnt", 0) if isinstance(total_row, dict) else 0
         sql = f"""
         select o.id, o.order_no, o.amount, o.status, o.created, o.num, o.sku, o.currency, o.pay_mode,
@@ -192,7 +192,7 @@ class MyRechargeOrders(ProxyAuthApi):
         limit {page_size} offset {offset}
         """
         print(sql)
-        rows = await Orders.exec_sql(sql, query=True) or []
+        rows = await ProxyOrderDividendRecords.exec_sql(sql, query=True) or []
         return self.answer(self.sta_code.PASS, {"page": page, "page_size": page_size, "total": total, "list": rows}, hint="查询成功!")
 
 class MyRechargeTotal(ProxyAuthApi):
@@ -202,7 +202,7 @@ class MyRechargeTotal(ProxyAuthApi):
       
         sql = f"select ifnull(sum(amount),0.00) as total_amount, count(1) as total_orders from orders where {where}"
         print(sql)
-        row = await Orders.exec_sql(sql, query=True, for_one=True) or {}
+        row = await ProxyOrderDividendRecords.exec_sql(sql, query=True, for_one=True) or {}
         return self.answer(self.sta_code.PASS, {"total_amount": float(row.get("total_amount", 0.0)), "total_orders": row.get("total_orders", 0)}, hint="查询成功!")
 
 class GameDataAdapterOrderTest(BaseApi):
