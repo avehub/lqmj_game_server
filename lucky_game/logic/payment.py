@@ -1,6 +1,7 @@
 """ 支付相关逻辑处理 """
 import decimal
 import random
+import traceback
 
 from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
@@ -525,6 +526,9 @@ class PaymentLogic:
                 else:
                     await self.pay_fail(order_info)
         except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                NLogger.error(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             NLogger.error(f"completed_order 事务执行失败，原因：{e}")
             return False, '查询发货失败', {}
         return True, "OK", {}
@@ -582,10 +586,8 @@ class PaymentLogic:
             # 发放赛事积分
             await TournamentLogic().distribute_order_point(order)
         elif good_type == 16:
-            # 修改用户折扣
-            conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
-            if conf and conf.get("discount"):
-                await BaseUserRC.update_info(order["uid"], {"discount": conf.get("discount")})
+            # 配置分销
+            await CommonApi.push_task2worker(CmdWorkers.PROXY_USER_SET, uid=order["uid"], msg=order)
         return True
 
 
