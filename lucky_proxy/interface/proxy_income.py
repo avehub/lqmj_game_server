@@ -184,7 +184,7 @@ class MyRechargeOrders(ProxyAuthApi):
         total_row = await ProxyOrderDividendRecords.exec_sql(sql_count, query=True, for_one=True)
         total = total_row.get("cnt", 0) if isinstance(total_row, dict) else 0
         sql = f"""
-        select o.id, o.order_no, o.amount, o.status, o.updated, o.num, o.sku, o.currency, o.pay_mode,
+        select o.id, o.order_no, o.created, o.amount, o.status, o.updated, o.num, o.sku, o.currency, o.pay_mode,
                u.name as user_name, u.avatar as user_avatar, o.purchase_uid as uid, g.name as good_name
         from orders o
         left join goods g on g.sku = o.sku
