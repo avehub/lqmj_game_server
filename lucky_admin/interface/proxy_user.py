@@ -24,8 +24,8 @@ class ProxyUser(AdminAuthApi):
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             self.answer(self.sta_code.FAIL, hint="用户不存在")
-        dup_phone = await ProxyUser.exec_sql(f"select id from proxy_user where phone='{phone}' and is_deleted=0 limit 1", query=True, for_one=True)
-        if isinstance(dup_phone, dict) and dup_phone.get("id"):
+        existed_list = await ProxyUserLogic.get_proxy_user_filter(phone=phone)
+        if isinstance(existed_list, list) and existed_list:
             self.answer(self.sta_code.FAIL, hint="手机号已存在")
         add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=phone, name=name, avatar=avatar, vip_level=vip_level, vip_expire_time=vip_expire_time)
         sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
@@ -50,9 +50,11 @@ class ProxyUser(AdminAuthApi):
         vip_level = self.check_int(req.json.get('vip_level'), require=False, p_name='VIP等级')
         vip_expire_time = self.check_int(req.json.get('vip_expire_time'), require=False, p_name='VIP过期时间')
         if phone:
-            dup = await ProxyUser.exec_sql(f"select id from proxy_user where phone='{phone}' and is_deleted=0 and id<>{player_id} limit 1", query=True, for_one=True)
-            if isinstance(dup, dict) and dup.get("id"):
-                self.answer(self.sta_code.FAIL, hint="手机号已存在")
+            dup_list = await ProxyUserLogic.get_proxy_user_filter(phone=phone)
+            if isinstance(dup_list, list):
+                for one in dup_list:
+                    if one.get("id") != player_id:
+                        self.answer(self.sta_code.FAIL, hint="手机号已存在")
         up_data = {
             "promotion_code": promotion_code,
             "phone": phone,
@@ -89,6 +91,7 @@ class ProxyUser(AdminAuthApi):
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         result = await ProxyUserLogic.get_proxy_user_filter(player_id=uid, proxy_level=proxy_level, phone=phone, promotion_code=promotion_code, page=page, page_size=page_size)
         self.answer(data=result)
+
 
 class ProxyUserLevel(AdminAuthApi):
     """ 代理用户等级相关接口 """
