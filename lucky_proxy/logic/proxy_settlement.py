@@ -113,7 +113,8 @@ class ProxySettlementProcessor(LogMeta):
                         WHERE
                             pu.id IN ( {id_placeholders} ) 
                         GROUP BY
-                            pu.id UNION ALL
+                            pu.id 
+                    UNION ALL
                         SELECT
                             podr.level1_proxy_id AS proxy_id,
                             '{self.target_month}' month,
