@@ -43,7 +43,7 @@ class ProxyUser(AdminAuthApi):
         更新代理
         """
         player_id = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
-        promotion_code = self.check_str(req.json.get('promotion_code'), require=False, maxlen=10, p_name='推广码')
+        promotion_code = self.check_str(req.json.get('promotion_code'), require=False, p_name='推广码')
         phone = self.check_phone_number(req.json.get('phone'), require=False)
         is_deleted = self.check_int(req.json.get('is_deleted'), require=False, p_name='删除')
         status = self.check_int(req.json.get('status'), require=False, p_name='状态')
@@ -100,6 +100,7 @@ class ProxyUserLevel(AdminAuthApi):
         更新代理等级
         """
         uid = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
+        pre_info = await ProxyUserLogic.get_proxy_user_filter(player_id=uid)
         u_info = await BaseUserRC.cache_by_pk(uid)
         if not u_info:
             self.answer(self.sta_code.FAIL, hint="用户不存在")
@@ -107,6 +108,21 @@ class ProxyUserLevel(AdminAuthApi):
         sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
+        pre_parent_id = 0
+        pre_grand_is_channel = 0
+        pre_grand_id = 0
+        if isinstance(pre_info, list) and pre_info:
+            pre_parent_id = pre_info[0].get("level1_proxy_id", 0) or 0
+            if pre_parent_id:
+                parent = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_parent_id)
+                if isinstance(parent, list) and parent:
+                    pre_grand_id = parent[0].get("level1_proxy_id", 0) or 0
+                    if pre_grand_id:
+                        grand = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_grand_id)
+                        if isinstance(grand, list) and grand:
+                            pre_grand_is_channel = grand[0].get("is_channel", 0) or 0
+        if pre_grand_is_channel == 1 and pre_grand_id:
+            await ProxyUserLogic.update_proxy_user(uid, {"channel_proxy_id": pre_grand_id})
         self.answer()
 
 class ProxyUserBind(AdminAuthApi):
@@ -128,4 +144,31 @@ class ProxyUserBind(AdminAuthApi):
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
             self.answer(self.sta_code.FAIL, hint="调用绑定接口失败")
+        self.answer()
+
+
+class ProxyChannelSet(AdminAuthApi):
+    async def post(self, req: Request, **kwargs):
+        channel_id = self.check_int(req.json.get("channel_id"), require=True, p_name="渠道代理ID")
+        sta, msg = await ProxyUserLogic.set_channel(channel_id, 1)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint=msg)
+        self.answer()
+
+
+class ProxyChannelUnset(AdminAuthApi):
+    async def post(self, req: Request, **kwargs):
+        channel_id = self.check_int(req.json.get("channel_id"), require=True, p_name="渠道代理ID")
+        sta, msg = await ProxyUserLogic.set_channel(channel_id, 0)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint=msg)
+        self.answer()
+
+class ProxyChannelUpdate(AdminAuthApi):
+    async def post(self, req: Request, **kwargs):
+        channel_id = self.check_int(req.json.get("channel_id"), require=True, p_name="渠道代理ID")
+        enable = self.check_int(req.json.get("enable"), require=True, p_name="启用状态")
+        sta, msg = await ProxyUserLogic.set_channel(channel_id, 1 if enable else 0)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint=msg)
         self.answer()
