@@ -169,20 +169,22 @@ class MyRechargeOrders(ProxyAuthApi):
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         where = f" o.purchase_uid={proxy_id} "
-        if start_day and end_day:
-            try:
+        try:
+            if start_day:
                 start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                where += f" and o.updated>={start_ts} "
+            if end_day:
                 end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
-                where += f" and o.created>={start_ts} and o.created<={end_ts} "
-            except Exception:
-                pass
+                where += f" and o.updated<={end_ts} "
+        except Exception:
+            pass
         offset = (page - 1) * page_size
         sql_count = f"select count(1) as cnt from orders o where {where}"
         print(sql_count)
         total_row = await ProxyOrderDividendRecords.exec_sql(sql_count, query=True, for_one=True)
         total = total_row.get("cnt", 0) if isinstance(total_row, dict) else 0
         sql = f"""
-        select o.id, o.order_no, o.amount, o.status, o.created, o.num, o.sku, o.currency, o.pay_mode,
+        select o.id, o.order_no, o.amount, o.status, o.updated, o.num, o.sku, o.currency, o.pay_mode,
                u.name as user_name, u.avatar as user_avatar, o.purchase_uid as uid, g.name as good_name
         from orders o
         left join goods g on g.sku = o.sku
@@ -198,10 +200,19 @@ class MyRechargeOrders(ProxyAuthApi):
 class MyRechargeTotal(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
+        start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
+        end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         where = f" purchase_uid={proxy_id} "
-      
+        try:
+            if start_day:
+                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                where += f" and updated>={start_ts} "
+            if end_day:
+                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
+                where += f" and updated<={end_ts} "
+        except Exception:
+            pass
         sql = f"select ifnull(sum(amount),0.00) as total_amount, count(1) as total_orders from orders where {where}"
-        print(sql)
         row = await ProxyOrderDividendRecords.exec_sql(sql, query=True, for_one=True) or {}
         return self.answer(self.sta_code.PASS, {"total_amount": float(row.get("total_amount", 0.0)), "total_orders": row.get("total_orders", 0)}, hint="查询成功!")
 
