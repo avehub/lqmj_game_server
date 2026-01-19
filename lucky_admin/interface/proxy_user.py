@@ -43,7 +43,7 @@ class ProxyUser(AdminAuthApi):
         更新代理
         """
         player_id = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
-        promotion_code = self.check_str(req.json.get('promotion_code'), require=False, p_name='推广码')
+        promotion_code = self.check_str(req.json.get('promotion_code'), require=False, maxlen=10, p_name='推广码')
         phone = self.check_phone_number(req.json.get('phone'), require=False)
         is_deleted = self.check_int(req.json.get('is_deleted'), require=False, p_name='删除')
         status = self.check_int(req.json.get('status'), require=False, p_name='状态')
