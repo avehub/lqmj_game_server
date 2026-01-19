@@ -103,6 +103,7 @@ class GameDataSync(LogMeta):
         order_type = data.order_type
         now = datetime.now()
         level1_proxy_id = 0
+        ch_id = 0
         # 有从二级升级成一级的情况  所以 若代理已经是一级 则 不取level1_proxy_id
         cls.log_info(f"当前订data={data}的代理等级={proxy_level}")
         if proxy_level != ProxyLevel.LEVEL_1:
@@ -139,6 +140,7 @@ class GameDataSync(LogMeta):
         level2_proxy_income = decimal.Decimal("0.00")
         level1_proxy_income = decimal.Decimal("0.00")
         level2_dividend_rate = decimal.Decimal("0.00")
+        channel_proxy_income = decimal.Decimal("0.00")
 
         if ProxyLevel.LEVEL_2 == proxy_level:
             if order_type == ChargeOrderType.TYPE_1:
@@ -155,6 +157,20 @@ class GameDataSync(LogMeta):
             proxy_income = level2_proxy_income.quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
 
+        # 渠道分成：玩家是一级代理，且其渠道代理是渠道时，房卡订单每张固定0.05从平台分成给渠道
+        try:
+            player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level", "channel_proxy_id", "is_channel"])
+            if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1 and data.order_type == ChargeOrderType.TYPE_1:
+                ch_id = player_proxy.get("channel_proxy_id") or 0
+                if ch_id:
+                    ch_user = await ProxyUser.get_by_pk(ch_id, ["is_channel"])
+                    if ch_user and ch_user.get("is_channel") == 1:
+                        channel_proxy_income = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
+                            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                        platform_income = (platform_income - channel_proxy_income).quantize(
+                            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+        except Exception as e:
+            cls.log_err(f"渠道分成计算异常: {e}")
         monday_date = now - timedelta(days=now.weekday())
         records = {
             "id": data.order_id,
@@ -171,6 +187,8 @@ class GameDataSync(LogMeta):
             "proxy_income": proxy_income,
             "level1_proxy_income": level1_proxy_income,
             "platform_income": platform_income,
+            "channel_proxy_income": channel_proxy_income,
+            "channel_proxy_id": ch_id,
             "order_type": data.order_type,
             #必须
             "level": proxy_user.get("proxy_level"),

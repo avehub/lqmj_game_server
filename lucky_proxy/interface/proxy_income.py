@@ -13,7 +13,7 @@ from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter, Promotio
 from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO
 from lucky_proxy.logic.order_statistics import ProxyOrderStatistics
 from lucky_proxy.logic.proxy_settlement import ProxySettlementProcessor, ProxysJobExecutor
-from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords
+from lucky_proxy.model_db.main import ProxyUserWallet, ProxyMonthSettlement, ProxyOrderDividendRecords, ProxyUser
 from lucky_proxy.model_db.main import ProxyOrderDividendRecords
 
 """
@@ -29,6 +29,8 @@ class ProxyIncomeQuery(ProxyAuthApi):
         today = datetime.now().strftime('%Y-%m-%d')
         month = datetime.now().strftime('%Y-%m')
         month_income = await ProxyOrderStatistics.proxy_month_income_query(kwargs.get("uid"), month, today)
+        channel_extra = {}
+        user_proxy = await ProxyUser.get_by_pk(kwargs.get("uid"), ["proxy_level", "is_channel"])
         if ProxyLevel.LEVEL_1 == wallet.get("proxy_level"):
             level2_month_income = await ProxyOrderStatistics.proxy_level2_income_query(kwargs.get("uid"), month, today)
             income = {
@@ -38,6 +40,13 @@ class ProxyIncomeQuery(ProxyAuthApi):
                     "assistance_program_income"),
                 "room_income": wallet.get("room_income") + level2_month_income.get("room_income"),
             }
+            if user_proxy and user_proxy.get("is_channel") == 1:
+                ch = await ProxyOrderStatistics.proxy_channel_income_query(kwargs.get("uid"), month, today)
+                channel_extra = {
+                    "channel_today_income": ch.get("today_income"),
+                    "channel_income": ch.get("income"),
+                    "channel_room_income": ch.get("room_income"),
+                }
         else:
             income = {
                 "today_income": month_income.get("today_income"),
@@ -45,6 +54,7 @@ class ProxyIncomeQuery(ProxyAuthApi):
                 "assistance_program_income": wallet.get("assistance_program_income"),
                 "room_income": wallet.get("room_income")
             }
+        income.update(channel_extra)
         self.answer(self.sta_code.PASS, income, hint='查询成功!')
 
 

@@ -121,6 +121,8 @@ class ProxyOrderDividendRecords(DBModel):
     level1_proxy_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                               description='一级代理分红金额')
     platform_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='平台收入')
+    channel_proxy_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='渠道分成金额')
+    channel_proxy_id = fields.BigIntField(max_length=20, default=0, description='渠道代理id')
     order_year = fields.CharField(max_length=4, description='余订单年')
     order_month = fields.CharField(max_length=8, description='余订单月 yyyyMM')
     order_day = fields.CharField(max_length=10, description='冗余订单日 yyyyMMdd')
