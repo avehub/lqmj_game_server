@@ -170,11 +170,12 @@ class MyRechargeOrders(ProxyAuthApi):
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         where = f" o.purchase_uid={proxy_id} "
         try:
+            from datetime import datetime
             if start_day:
-                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                start_ts = int(datetime.strptime(start_day + " 00:00:00", "%Y-%m-%d %H:%M:%S").timestamp())
                 where += f" and o.updated>={start_ts} "
             if end_day:
-                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
+                end_ts = int(datetime.strptime(end_day + " 23:59:59", "%Y-%m-%d %H:%M:%S").timestamp())
                 where += f" and o.updated<={end_ts} "
         except Exception:
             pass
@@ -204,11 +205,12 @@ class MyRechargeTotal(ProxyAuthApi):
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
         where = f" purchase_uid={proxy_id} "
         try:
+            from datetime import datetime
             if start_day:
-                start_ts = int(tool_dt.str_to_dt(start_day + " 00:00:00").timestamp())
+                start_ts = int(datetime.strptime(start_day + " 00:00:00", "%Y-%m-%d %H:%M:%S").timestamp())
                 where += f" and updated>={start_ts} "
             if end_day:
-                end_ts = int(tool_dt.str_to_dt(end_day + " 23:59:59").timestamp())
+                end_ts = int(datetime.strptime(end_day + " 23:59:59", "%Y-%m-%d %H:%M:%S").timestamp())
                 where += f" and updated<={end_ts} "
         except Exception:
             pass
