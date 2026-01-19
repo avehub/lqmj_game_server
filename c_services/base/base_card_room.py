@@ -247,9 +247,11 @@ class BaseCardRoom(BaseRoom):
         if self.agree_dismiss_count() == self.in_room_count:
             self.clear_agree_dismiss()
             await self.force_dismiss(OverType.FORCE)
+            return StaCode.PASS, ""
         if player.uid == self.owner and self.in_room_count == 1:
             self.clear_agree_dismiss()
             await self.force_dismiss(OverType.FORCE)
+            return StaCode.PASS, ""
         return StaCode.PASS, ""
 
     async def player_change_connect(self, player, data):

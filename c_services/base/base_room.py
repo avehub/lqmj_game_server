@@ -547,6 +547,8 @@ class BaseRoom(metaclass=ABCMeta):
         self.__room_conf = {}
         self.__poker = None
         self.cancel_all_timer()
+        if hasattr(self, '_timeout_task') and self._timeout_task:
+            self._timeout_task.cancel()  # 关键！
 
     def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """
