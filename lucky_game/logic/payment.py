@@ -218,14 +218,20 @@ class PaymentLogic:
         async with in_transaction(connection_name=DbKey.DEFAULT):
             up_data = {}
             if bag_type == GoodRC.BAG_TYPE_DELAY:
-                # 发放背包
-                bag_good = {
-                    'uid': uid,
-                    'good_id': express.get("good_id"),
-                    'count': order.get('num', 1),
-                    'end_time': express.get("down_time"),
-                }
-                await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
+                if express.get("type") == 15:
+                    # 发送农产品邮件
+                    await TournamentLogic().distribute_order_good(order)
+                    # 发放赛事积分
+                    await TournamentLogic().distribute_order_point(order)
+                else:
+                    # 发放背包
+                    bag_good = {
+                        'uid': uid,
+                        'good_id': express.get("good_id"),
+                        'count': order.get('num', 1),
+                        'end_time': express.get("down_time"),
+                    }
+                    await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
             # 更新用户资源
             if express["currency"] not in [CurrencyType.DEFAULT, CurrencyType.BY_RMB]:
                 # 当为兑换商品时，直接修改订单状态
@@ -573,10 +579,7 @@ class PaymentLogic:
             await FirstCharge().charge_order(order)
         # 商品为赛事订单：15 农产品
         elif good_type == 15:
-            # 发送农产品邮件
-            await TournamentLogic().distribute_order_good(order)
-            # 发放赛事积分
-            await TournamentLogic().distribute_order_point(order)
+            pass
 
         return True
 
