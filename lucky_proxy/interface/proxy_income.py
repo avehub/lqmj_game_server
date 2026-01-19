@@ -204,7 +204,7 @@ class MyRechargeTotal(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
-        where = f" purchase_uid={proxy_id} "
+        where = f" purchase_uid={proxy_id} and status = 99"
         try:
             from datetime import datetime
             if start_day:
