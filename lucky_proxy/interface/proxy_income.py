@@ -111,9 +111,9 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
                                    maxval=100)
 
         sql_offset = ""
-        order_day_query = ""
-        # if last_id and last_id > 0:
-        #     sql_offset = f" and t.proxy_id<{last_id}"
+        order_day_query = " "
+        if last_id and last_id > 0: 
+            sql_offset = f" and t.proxy_id<{last_id}"
         if start_day and end_day:
             order_day_query = f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
         sql = f"""
@@ -133,7 +133,8 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
                   LEFT JOIN  user u  on u.uid=t.proxy_id 
                   LEFT JOIN  proxy_user pu  on pu.id=t.proxy_id  
             where  t.level1_proxy_id={proxy_id} 
-                  {order_day_query}
+                    {sql_offset}
+                    {order_day_query}
             group by t.proxy_id ,u.name,u.avatar order by t.proxy_id desc  limit {page_size}
         """
         print(sql)
