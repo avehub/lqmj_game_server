@@ -15,11 +15,13 @@ def get_diff_index(now_index, data):
     if now_index == 0:
         return now_index
     new_data = data[:now_index]
+    total_points = data[now_index]["total_points"]
     total = len(new_data)
     for index, item in enumerate(new_data):
         total -= 1
-        if item["total_points"] < data[total]["total_points"]:
-            return index+1
+        if new_data[total]["total_points"] > total_points:
+            return index + 1
+    return now_index - 1
 
 class TournamentCycleLeaderboardRC(BaseCommonRC):
     db_model = TournamentCycleLeaderboard
@@ -142,11 +144,10 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         }
         sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id)
         if data:
-            for item in data:
+            for now_index, item in enumerate(data):
                 if uid == item["uid"]:
                     result["total_points"] = item["total_points"]
-                    result["rank_position"] = data.index(item) + 1
-                    now_index = data.index(item)
+                    result["rank_position"] = now_index + 1
                     if now_index > 0:
                         last_index = get_diff_index(now_index, data)
                         result["difference"] = data[last_index]["total_points"] - item["total_points"]
