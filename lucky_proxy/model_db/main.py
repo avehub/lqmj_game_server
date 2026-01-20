@@ -149,6 +149,7 @@ class ProxyPromotionRelation(DBModel):
     player_id = fields.BigIntField(max_length=28, unique=True, description='玩家id')
     proxy_id = fields.BigIntField(max_length=20, null=False, description='代理商id')
     level1_proxy_id = fields.BigIntField(max_length=20, null=False, description='一级代理id')
+    channel_proxy_id = fields.BigIntField(max_length=20, null=False, description='渠道代理id')
     promotion_type = fields.BigIntField(max_length=20, null=False, description='平台（厂商ID）（如有的话）')
     promotion_id = fields.BigIntField(max_length=20, null=False, description='订单金额')
     promotion_year = fields.CharField(max_length=4, description='余订单年 yyyy')

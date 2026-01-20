@@ -127,20 +127,23 @@ class GameDataSync(LogMeta):
                 platform_income = (decimal.Decimal(str(data.order_amount)) - original_level1_proxy_income).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
                  # 渠道分成：玩家是一级代理，且其渠道代理是渠道时，房卡订单每张固定0.05从平台分成给渠道  改成从关系表拿渠道ID
-                try:
-                    player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level", "channel_proxy_id", "is_channel"])
-                    if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1 and data.order_type == ChargeOrderType.TYPE_1:
-                        ch_id = player_proxy.get("channel_proxy_id") or 0
-                        if ch_id:
-                            ch_user = await ProxyUser.get_by_pk(ch_id, ["is_channel"])
-                            if ch_user and ch_user.get("is_channel") == 1:
-                                channel_proxy_income = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
-                                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                
+                player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level"])
+                if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1:
+                    ch_id = relation.get("channel_proxy_id") or 0
+                    if ch_id:
+                        ch_user = await ProxyUser.get_by_pk(ch_id, ["is_channel"])
+                        if ch_user and ch_user.get("is_channel") == 1:
+                            need = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
+                                decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                            if platform_income >= need:
+                                channel_proxy_income = need
                                 platform_income = (platform_income - channel_proxy_income).quantize(
                                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
-                except Exception as e:
-                    cls.log_err(f"渠道分成计算异常: {e}")
-                    return
+                                cls.log_info(f"渠道分成 proxy_id={proxy_id} channel_id={ch_id} income={channel_proxy_income} goods={data.goods_number}")
+                            else:
+                                cls.log_info(f"渠道分成不足 platform_income={platform_income} need={need} proxy_id={proxy_id} channel_id={ch_id}")
+        
             if order_type == ChargeOrderType.TYPE_2:
                 cls.log_info(
                     f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单不再给原代理产生分佣，data={data}")
