@@ -121,22 +121,22 @@ class ProxyUserLevel(AdminAuthApi):
         sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
-        pre_parent_id = 0
-        pre_grand_is_channel = 0
-        pre_grand_id = 0
-        if isinstance(pre_info, list) and pre_info:
-            pre_parent_id = pre_info[0].get("level1_proxy_id", 0) or 0
-            if pre_parent_id:
-                parent = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_parent_id)
-                if isinstance(parent, list) and parent:
-                    pre_grand_id = parent[0].get("level1_proxy_id", 0) or 0
-                    if pre_grand_id:
-                        grand = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_grand_id)
-                        if isinstance(grand, list) and grand:
-                            pre_grand_is_channel = grand[0].get("is_channel", 0) or 0
-        if pre_grand_id:
-            await ProxyUserLogic.update_proxy_user(uid, {"channel_proxy_id": pre_grand_id})
-        self.log_info(f"【操作日志】升级为一级代理完成 uid={uid}, 原上级={pre_parent_id}, 原上上级={pre_grand_id}, 渠道继承={1 if pre_grand_is_channel==1 else 0}")
+        # pre_parent_id = 0
+        # pre_grand_is_channel = 0
+        # pre_grand_id = 0
+        # if isinstance(pre_info, list) and pre_info:
+        #     pre_parent_id = pre_info[0].get("level1_proxy_id", 0) or 0
+        #     if pre_parent_id:
+        #         parent = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_parent_id)
+        #         if isinstance(parent, list) and parent:
+        #             pre_grand_id = parent[0].get("level1_proxy_id", 0) or 0
+        #             if pre_grand_id:
+        #                 grand = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_grand_id)
+        #                 if isinstance(grand, list) and grand:
+        #                     pre_grand_is_channel = grand[0].get("is_channel", 0) or 0
+        # if pre_grand_id:
+        #     await ProxyUserLogic.update_proxy_user(uid, {"channel_proxy_id": pre_grand_id})
+        self.log_info(f"【操作日志】升级为一级代理完成 uid={uid} ")
         admin = kwargs.get("u_info") or {}
         await RecordsAdminOperates.insert_one(
             username=admin.get("username", ""),
