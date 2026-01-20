@@ -19,7 +19,6 @@ from common.utils.utils import UtilsTool
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
-from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 
 
 class BaseCardRoom(BaseRoom):
@@ -154,7 +153,7 @@ class BaseCardRoom(BaseRoom):
 
     def clear_agree_dismiss(self):
         self.cancel_timer_dismiss()
-        self.__agree_dismiss_seats.clear()
+        self.__agree_dismiss_seats = set()
 
     async def player_join_room(self, players: list):
         await super(BaseCardRoom, self).player_join_room(players)
@@ -248,9 +247,11 @@ class BaseCardRoom(BaseRoom):
         if self.agree_dismiss_count() == self.in_room_count:
             self.clear_agree_dismiss()
             await self.force_dismiss(OverType.FORCE)
+            return StaCode.PASS, ""
         if player.uid == self.owner and self.in_room_count == 1:
             self.clear_agree_dismiss()
             await self.force_dismiss(OverType.FORCE)
+            return StaCode.PASS, ""
         return StaCode.PASS, ""
 
     async def player_change_connect(self, player, data):
@@ -279,8 +280,8 @@ class BaseCardRoom(BaseRoom):
 
     def clear_room_round_start(self):
         """ 小局开始清理 """
-        self.__round_msg_records.clear()
-        self.__replay_msg_data.clear()
+        self.__round_msg_records = []
+        self.__replay_msg_data = []
         self.__add_room_info_msg()
         self.__add_player_info_msg()
 
@@ -633,16 +634,16 @@ class BaseCardRoom(BaseRoom):
 
     def clear_room(self):
         """ 房间回收清理 """
-        self.__round_msg_records.clear()  # 每局消息记录
-        self.__replay_msg_data.clear()  # 存入战绩数据
-        self.__online_group_user.clear()
+        self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = []  # 存入战绩数据
+        self.__online_group_user = []
         self.__timer_dismiss = None
-        self.__agree_dismiss_seats.clear()
+        self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
-        self.__rule_details.clear()
-        self.__extra_score_map.clear()
-        self.__pai_xing_score_map.clear()
+        self.__rule_details = {}
+        self.__extra_score_map = {}
+        self.__pai_xing_score_map = {}
         self.__match_room_id = 0
 
         super().clear_room()
@@ -658,10 +659,10 @@ class BaseCardRoom(BaseRoom):
         self.__create_time = room_conf.get("created") or tool_dt.cur_time()
         self.__cur_round = room_conf.get("cur_round") or 1
 
-        self.__round_msg_records.clear()  # 每局消息记录
-        self.__replay_msg_data.clear()  # 每局消息记录
+        self.__round_msg_records = []  # 每局消息记录
+        self.__replay_msg_data = []  # 每局消息记录
         self.__timer_dismiss = None
-        self.__agree_dismiss_seats.clear()
+        self.__agree_dismiss_seats = set()
 
     def get_extra_score_map(self) -> dict:
         map_copy = EXTRA_SCORE_MAP.copy()

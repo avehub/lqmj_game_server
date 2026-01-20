@@ -138,19 +138,22 @@ class CompetitionServer(BaseServer):
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         if conf_data.get("status") == CompetitionStatus.CLOSED:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已关闭", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
+        cycle_id = conf_data.get("cycle_id") or 0
+        if self.__current_cycle_id < cycle_id:
+            self.__current_cycle_id = cycle_id
         if start_time > 0 and curr_time < start_time:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛未开始", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         if 0 < end_time < curr_time:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已结束", req_id=req_id)
         is_in_match_time = self.check_match_begin_time(curr_time, daily_start_time, daily_end_time)
         if not is_in_match_time:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛时间未到", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, f"开赛时间为【{daily_start_time[:5]}-{daily_end_time[:5]}】\n请提前做好备战准备", req_id=req_id)
         join_info = await self.__get_player_in_match(uid)
         if join_info:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家已加入比赛", req_id=req_id)
@@ -170,7 +173,6 @@ class CompetitionServer(BaseServer):
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point
-            await TournamentUserPointRC.update_int_field(uid, "ticket", price, "sub")
 
         await self.__join_competition(uid, competition_id, conf_data, req_id)
 
@@ -246,7 +248,6 @@ class CompetitionServer(BaseServer):
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
-        self.log_info(room.match_room_id,"比赛开始前准备")
         data = {
             "cs_type": conf_data.get("cs_type"),
             "total_round": conf_data.get("total_round"),
@@ -259,6 +260,7 @@ class CompetitionServer(BaseServer):
             "total_match_round": room.total_match_round,
             "secret": self.conf.SECRET_KEY,
         }
+        price = conf_data.get("price")
         cs_type = conf_data.get("cs_type")
         room.cs_type = cs_type
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
@@ -281,7 +283,9 @@ class CompetitionServer(BaseServer):
             for p_uid in group:
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
                 await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
-
+                if is_init and p_uid > R_UID_THRESHOLD:
+                    await TournamentUserPointRC.update_int_field(p_uid, "ticket", price, "sub")
+        self.log_info(room.match_room_id,"比赛开始前准备","轮次",room.match_round,room.game_room_info)
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:
             await self.__competition_info(room.match_room_id, is_init)
@@ -387,7 +391,7 @@ class CompetitionServer(BaseServer):
                 item["last_rank"] = last_rank
                 item["now_rank"] = now_rank
 
-        print("competition_result", competition_result)
+        self.log_info("competition_result", competition_result)
         s2c_competition_over = S2CCompetitionOver.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         await self.__delete_player_in_match(list(room.members))
@@ -497,6 +501,7 @@ class CompetitionServer(BaseServer):
             return await self.cs2ws_by_rmq(CmdCompetition.QUIT_COMPETITION, uid, StaCode.FAIL, "玩家不在比赛中或者已经在游戏中",
                                            req_id=req_id)
         self.__wait_player.pop(uid)
+        self.__player_info.pop(uid)
         delete_players = []
         players = [p_uid for p_uid, comp_id in self.__wait_player.items() if comp_id == competition_id]
         if players and all(uid < R_UID_THRESHOLD for uid in players):

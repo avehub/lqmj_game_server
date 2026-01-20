@@ -395,7 +395,10 @@ class RoomFCZJ(BaseLeisureRoom):
             return StaCode.RULE_ERR, "出牌不在手牌范围内，不可出"
         if player.cards_len % 3 != 2:
             return StaCode.RULE_ERR, "手牌数不对，不可出"
+        if self.has_do_by_action(player, ActionType.ACTION_TYPE_CHU_PAI):  # 不允许再次操作
+            return StaCode.ALREADY_DO, "已经操作过出牌了"
 
+        self.save_player_action(player, ActionType.ACTION_TYPE_CHU_PAI, data)
         player.chu_pai(card, True)
         self.log_info("玩家出牌", card, "座位号", player.seat_id)
         player.mo_pai = 0
