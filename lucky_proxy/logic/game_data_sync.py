@@ -158,7 +158,6 @@ class GameDataSync(LogMeta):
         level2_proxy_income = decimal.Decimal("0.00")
         level1_proxy_income = decimal.Decimal("0.00")
         level2_dividend_rate = decimal.Decimal("0.00")
-        channel_proxy_income = decimal.Decimal("0.00")
 
         if ProxyLevel.LEVEL_2 == proxy_level:
             if order_type == ChargeOrderType.TYPE_1:

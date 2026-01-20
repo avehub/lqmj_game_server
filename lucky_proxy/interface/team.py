@@ -16,11 +16,14 @@ class TeamSummary(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         team_info = await ProxyUserWallet.get_by_dict({"id": proxy_id}, field=["total_player", "level2_total_player"])
         partner = await ProxyPromotionRelation.exec_sql(f"select count(1) as cnt from proxy_promotion_relation where proxy_id={proxy_id} and upgrade_flag=1", query=True, for_one=True)
+        partner_channel = await ProxyPromotionRelation.exec_sql(f"select count(1) as cnt from proxy_promotion_relation t join proxy_user s on s.id=t.channel_proxy_id and s.is_channel=1 where t.channel_proxy_id={proxy_id} and t.upgrade_flag=1", query=True, for_one=True)
         data = {}
         if team_info:
             data.update(team_info[0])
         if isinstance(partner, dict):
             data.update({"partner_count": partner.get("cnt", 0)})
+        if isinstance(partner_channel, dict):
+            data.update({"partner_channel_count": partner_channel.get("cnt", 0)})
         self.answer(self.sta_code.PASS, data, hint='查询成功!')
 
 
