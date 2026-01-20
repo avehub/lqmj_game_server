@@ -41,7 +41,7 @@ class ProxyUser(AdminAuthApi):
         await RecordsAdminOperates.insert_one(
             username=admin.get("username", ""),
             route=req.path,
-            op_name="AddLevel1Proxy",
+            op_name="AddLevel1",
             method=req.method,
             params=req.json,
             status=self.sta_code.PASS,
@@ -141,7 +141,7 @@ class ProxyUserLevel(AdminAuthApi):
         await RecordsAdminOperates.insert_one(
             username=admin.get("username", ""),
             route=req.path,
-            op_name="UpgradeLevel1Proxy",
+            op_name="UpgradeLevel1",
             method=req.method,
             params=req.json,
             status=self.sta_code.PASS,
