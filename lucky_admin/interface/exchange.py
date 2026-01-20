@@ -5,7 +5,7 @@ from common.model_rc.user_good_exchange import UserGoodExchangeRC
 class Exchange(AdminAuthApi):
     """ 更新/查询 兑换管理 """
     async def put(self, req: Request, **kwargs):
-        exchange_id = self.check_int(req.json.get('exchange_id'), require=True, maxlen=128, p_name='兑换ID')
+        exchange_id = self.check_int(req.json.get('exchange_id'), require=True, p_name='兑换ID')
         phone = self.check_phone_number(req.json.get('phone'), require=False)
         real_name = self.check_str(req.json.get('real_name'), require=False, p_name='玩家真实姓名')
         region = self.check_str(req.json.get('region'), require=False, p_name='地区/行政区域')
