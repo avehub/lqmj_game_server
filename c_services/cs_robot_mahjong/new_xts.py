@@ -1345,7 +1345,7 @@ class MoveGenerator:
             remain_cards_by_deck = self.calc_remain_cards_by_deck()
             for card in self.hand_cards:
                 tmp_count = 0
-                tmp_count += remain_cards_by_deck[card]
+                tmp_count += remain_cards_by_deck.get(card, 0)
                 if tmp_count > count:
                     best_cards.clear()
                     count = tmp_count

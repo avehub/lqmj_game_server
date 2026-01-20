@@ -994,6 +994,7 @@ class ConfCompetition(DBModel):
     daily_start_time = fields.CharField(max_length=32, description='每日开始时间')
     daily_end_time = fields.CharField(max_length=32, description='每日结束时间')
     total_match_round = fields.SmallIntField(default=1, description='比赛总轮次')
+    cycle_id = fields.SmallIntField(default=1, description='周期ID')
 
     class Meta:
         table = "conf_competition"

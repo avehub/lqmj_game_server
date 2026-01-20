@@ -161,11 +161,11 @@ class Player(BaseLeisurePlayer):
 
     @property
     def operates(self):
-        return deepcopy(self.__operates)
+        return list(self.__operates)
 
     @operates.setter
     def operates(self, opts):
-        self.__operates.clear()
+        self.__operates = []
         self.__operates.extend(opts)
 
     def can_operates(self):
@@ -213,7 +213,7 @@ class Player(BaseLeisurePlayer):
         return len(self.__table_cards)
 
     def add_table_cards(self, card_type, cards, from_seat_id):
-        cards = deepcopy(cards)
+        cards = list(cards)
         cards.insert(0, card_type)
         cards.append(from_seat_id)
         self.__table_cards.append(cards)
@@ -234,7 +234,7 @@ class Player(BaseLeisurePlayer):
 
     @property
     def zi_mo_cards(self):
-        return deepcopy(self.__zi_mo_cards)
+        return list(self.__zi_mo_cards)
 
     @property
     def dian_pao_no_hu(self):
@@ -325,10 +325,10 @@ class Player(BaseLeisurePlayer):
 
 
 
-        self.__chu_cards.clear()
-        self.__all_chu_cards.clear()
-        self.__table_cards.clear()
-        self.__zi_mo_cards.clear()
+        self.__chu_cards = []
+        self.__all_chu_cards = []
+        self.__table_cards = []
+        self.__zi_mo_cards = []
         self.__is_exchange_status = False
 
     def clear_data_round_over(self):
@@ -443,7 +443,7 @@ class Player(BaseLeisurePlayer):
     def set_lock_cards(self, lock_cards):
         """ 锁牌，锁住除lock_cards的牌 """
         self.__lock_cards = []
-        temp_cards = deepcopy(self.cards)
+        temp_cards = list(self.cards)
         for card in lock_cards:
             if card in temp_cards:
                 temp_cards.remove(card)
@@ -486,10 +486,10 @@ class Player(BaseLeisurePlayer):
         self.__lian_zhuang = value
 
     def __add_table_cards(self, card_type, cards, from_seat_id):
-        cards = deepcopy(cards)
-        cards.insert(0, card_type)
-        cards.append(from_seat_id)
-        self.__table_cards.append(cards)
+        cards_copy = list(cards)
+        cards_copy.insert(0, card_type)
+        cards_copy.append(from_seat_id)
+        self.__table_cards.append(cards_copy)
 
     def ming_gang(self, card, from_seat_id=0):
         if 3 != self.cards.count(card):
@@ -640,13 +640,13 @@ class Player(BaseLeisurePlayer):
         self.__zi_mo_count = 0
         self.__dian_pao_count = 0
         self.__jie_pao_count = 0
-        self.__ting_list.clear()
-        self.__ji_pai.clear()
-        self.__men_cards.clear()
-        self.__lock_cards.clear()
-        self.__hu_info.clear()
-        self.__han_dou_cards.clear()
-        self.__hu_path.clear()
+        self.__ting_list = []
+        self.__ji_pai = []
+        self.__men_cards = []
+        self.__lock_cards = []
+        self.__hu_info = {}
+        self.__han_dou_cards = set()
+        self.__hu_path = []
 
     def calc_all_ji_pai(self, default_ji, fan_ji_list=None, with_out=False, exclude_last_card=None, include_hand_card=True,week_ji = None):
         """
@@ -787,7 +787,7 @@ class Player(BaseLeisurePlayer):
         p_info["ze_ren_yi_wan_ji"] = self.__ze_ren_yi_wan
         p_info["is_lock_cards"] = self.__tian_ting or bool(public_men_cards)
         p_info["table_cards"] = self.get_table_cards()
-        p_info["out_cards"] = deepcopy(self.__chu_cards)
+        p_info["out_cards"] = list(self.__chu_cards)
         p_info["lock_cards"] = self.__lock_cards
         p_info["operates"] = self.operates[:]
         p_info["men_cards"] = self.__men_cards
