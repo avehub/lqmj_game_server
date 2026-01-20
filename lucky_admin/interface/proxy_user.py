@@ -6,6 +6,7 @@ from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO, PromotionAddUserDTO
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
+from lucky_game.model_db.main import RecordsAdminOperates
 
 
 class ProxyUser(AdminAuthApi):
@@ -35,6 +36,17 @@ class ProxyUser(AdminAuthApi):
         discount = conf.get("discount")
         if u_info["discount"] != conf.get("discount"):
             await BaseUserRC.update_info(u_info, {"discount": discount})
+        self.log_info(f"【操作日志】新增一级代理 uid={uid}, phone={phone}, name={name}, vip_level={vip_level}, vip_expire_time={vip_expire_time}")
+        admin = kwargs.get("u_info") or {}
+        await RecordsAdminOperates.insert_one(
+            username=admin.get("username", ""),
+            route=req.path,
+            op_name="AddLevel1Proxy",
+            method=req.method,
+            params=req.json,
+            status=self.sta_code.PASS,
+            hint="ok"
+        )
         self.answer()
 
 
@@ -105,7 +117,7 @@ class ProxyUserLevel(AdminAuthApi):
         if not u_info:
             self.answer(self.sta_code.FAIL, hint="用户不存在")
         up_data = UpgradeProxyDTO(player_id=uid, opt_user_id=1)
-        # todo  增加操作日志升级
+        self.log_info(f"【操作日志】发起升级为一级代理 uid={uid}")
         sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
@@ -124,6 +136,17 @@ class ProxyUserLevel(AdminAuthApi):
                             pre_grand_is_channel = grand[0].get("is_channel", 0) or 0
         if pre_grand_id:
             await ProxyUserLogic.update_proxy_user(uid, {"channel_proxy_id": pre_grand_id})
+        self.log_info(f"【操作日志】升级为一级代理完成 uid={uid}, 原上级={pre_parent_id}, 原上上级={pre_grand_id}, 渠道继承={1 if pre_grand_is_channel==1 else 0}")
+        admin = kwargs.get("u_info") or {}
+        await RecordsAdminOperates.insert_one(
+            username=admin.get("username", ""),
+            route=req.path,
+            op_name="UpgradeLevel1Proxy",
+            method=req.method,
+            params=req.json,
+            status=self.sta_code.PASS,
+            hint="ok"
+        )
         self.answer()
 
 class ProxyUserBind(AdminAuthApi):
