@@ -208,12 +208,18 @@ class GameDataSync(LogMeta):
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
                 if relation.get("upgrade_flag") == 1 and ProxyLevel.LEVEL_1 == proxy_level:
-                    # todo : 更新渠道 金额
                     await cls.update_wallet(proxy_id, original_level1_proxy_income, decimal.Decimal("0.00"),
                                             data.order_amount, ChargeOrderType.TYPE_1)
                 else:
                     await cls.update_wallet(proxy_id, proxy_income, level1_proxy_income, data.order_amount,
                                             data.order_type)
+                if channel_proxy_income > decimal.Decimal("0.00") and ch_id:
+                    await ProxyUserWallet.exec_sql(
+                        f"update proxy_user_wallet "
+                        f"set total_income=total_income+{str(channel_proxy_income)}, "
+                        f"room_income=room_income+{str(channel_proxy_income)} "
+                        f"where id={ch_id}"
+                    )
                 await ProxyPromotionRelation.exec_sql(f" update proxy_promotion_relation  "
                                                       f"set total_amount=total_amount+{str(data.order_amount)} where player_id={data.player_id}")
         except Exception as e:
@@ -295,11 +301,13 @@ class GameDataSync(LogMeta):
                 await ProxyUser.add_one({**add_param, "channel_proxy_id": channel_proxy_id})
                 await ProxyUserWallet.add_one(
                     {"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1, "level1_proxy_id": level1_proxy_id})
-                if relation and relation.get("level") == ProxyLevel.LEVEL_1:
+                if relation:
                     up = {"upgrade_flag": 1}
                     if channel_proxy_id:
                         up["channel_proxy_id"] = channel_proxy_id
                     await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param=up)
+                else:
+                    await ProxyPromotionRelation.exec_sql(f"UPDATE proxy_promotion_relation SET upgrade_flag=1 WHERE player_id={data.player_id}")
         except Exception as e:
             cls.log_err(f"【重要日志】初始化一级代理失败，error：{e},data:{data}")
             return False, 'ERROR'
@@ -347,6 +355,8 @@ class GameDataSync(LogMeta):
                     if channel_proxy_id:
                         up["channel_proxy_id"] = channel_proxy_id
                     await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param=up)
+                else:
+                    await ProxyPromotionRelation.exec_sql(f"UPDATE proxy_promotion_relation SET upgrade_flag=1 WHERE player_id={data.player_id}")
                 cls.log_info(f"升级一级代理结束,data={data}")
 
         except Exception as e:
