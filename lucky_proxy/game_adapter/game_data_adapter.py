@@ -32,6 +32,7 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def upgrade_level1_proxy(cls, data: UpgradeProxyDTO):
+        
         proxy_user: ProxyUser = await ProxyUser.get_by_pk(data.player_id,
                                                           field=["id", "proxy_level", "is_deleted", "status"])
         if not proxy_user:

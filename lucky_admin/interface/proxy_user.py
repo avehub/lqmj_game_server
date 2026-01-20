@@ -105,6 +105,7 @@ class ProxyUserLevel(AdminAuthApi):
         if not u_info:
             self.answer(self.sta_code.FAIL, hint="用户不存在")
         up_data = UpgradeProxyDTO(player_id=uid, opt_user_id=1)
+        # todo  增加操作日志升级
         sta, msg = await GameDataAdapter.upgrade_level1_proxy(up_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
@@ -121,7 +122,7 @@ class ProxyUserLevel(AdminAuthApi):
                         grand = await ProxyUserLogic.get_proxy_user_filter(player_id=pre_grand_id)
                         if isinstance(grand, list) and grand:
                             pre_grand_is_channel = grand[0].get("is_channel", 0) or 0
-        if pre_grand_is_channel == 1 and pre_grand_id:
+        if pre_grand_id:
             await ProxyUserLogic.update_proxy_user(uid, {"channel_proxy_id": pre_grand_id})
         self.answer()
 

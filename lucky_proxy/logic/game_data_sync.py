@@ -126,6 +126,21 @@ class GameDataSync(LogMeta):
                 proxy_income = original_level1_proxy_income
                 platform_income = (decimal.Decimal(str(data.order_amount)) - original_level1_proxy_income).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                 # 渠道分成：玩家是一级代理，且其渠道代理是渠道时，房卡订单每张固定0.05从平台分成给渠道  改成从关系表拿渠道ID
+                try:
+                    player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level", "channel_proxy_id", "is_channel"])
+                    if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1 and data.order_type == ChargeOrderType.TYPE_1:
+                        ch_id = player_proxy.get("channel_proxy_id") or 0
+                        if ch_id:
+                            ch_user = await ProxyUser.get_by_pk(ch_id, ["is_channel"])
+                            if ch_user and ch_user.get("is_channel") == 1:
+                                channel_proxy_income = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
+                                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                                platform_income = (platform_income - channel_proxy_income).quantize(
+                                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                except Exception as e:
+                    cls.log_err(f"渠道分成计算异常: {e}")
+                    return
             if order_type == ChargeOrderType.TYPE_2:
                 cls.log_info(
                     f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单不再给原代理产生分佣，data={data}")
@@ -157,20 +172,7 @@ class GameDataSync(LogMeta):
             proxy_income = level2_proxy_income.quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
 
-        # 渠道分成：玩家是一级代理，且其渠道代理是渠道时，房卡订单每张固定0.05从平台分成给渠道
-        try:
-            player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level", "channel_proxy_id", "is_channel"])
-            if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1 and data.order_type == ChargeOrderType.TYPE_1:
-                ch_id = player_proxy.get("channel_proxy_id") or 0
-                if ch_id:
-                    ch_user = await ProxyUser.get_by_pk(ch_id, ["is_channel"])
-                    if ch_user and ch_user.get("is_channel") == 1:
-                        channel_proxy_income = (decimal.Decimal(str(data.goods_number)) * ROOM_FIXED_COMMISSION_AMOUNT).quantize(
-                            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
-                        platform_income = (platform_income - channel_proxy_income).quantize(
-                            decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
-        except Exception as e:
-            cls.log_err(f"渠道分成计算异常: {e}")
+       
         monday_date = now - timedelta(days=now.weekday())
         records = {
             "id": data.order_id,
@@ -203,6 +205,7 @@ class GameDataSync(LogMeta):
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyOrderDividendRecords.add_one(records)
                 if relation.get("upgrade_flag") == 1 and ProxyLevel.LEVEL_1 == proxy_level:
+                    # todo : 更新渠道 金额
                     await cls.update_wallet(proxy_id, original_level1_proxy_income, decimal.Decimal("0.00"),
                                             data.order_amount, ChargeOrderType.TYPE_1)
                 else:
@@ -295,6 +298,7 @@ class GameDataSync(LogMeta):
 
     @classmethod
     async def upgrade_level1_proxy(cls, data: UpgradeProxyDTO):
+        # todo:查找渠道ID 更新到proxy_user 以及绑定关系表
         update_data = {
             "opt_user_id": data.opt_user_id,
             "proxy_level": ProxyLevel.LEVEL_1,
