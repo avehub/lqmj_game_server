@@ -66,7 +66,7 @@ class UserGoodExchangeRC(BaseCommonRC):
 
     @classmethod
     async def get_exchange_filter(cls, uid: int = None, phone: int = None, check_status: int = None, status: int = None,
-                                  page: int = None, page_size: int = None):
+                                  page: int = None, page_size: int = None, start_time: int = None, end_time: int = None):
         """获取兑换信息记录"""
         try:
             query = {}
@@ -78,6 +78,10 @@ class UserGoodExchangeRC(BaseCommonRC):
                 query["check_status"] = check_status
             if status is not None:
                 query["status"] = status
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lt"] = end_time
             order_field = "-id"
             if page and page_size:
                 total = await cls.db_model.filter(**query).count()
