@@ -391,7 +391,7 @@ class CompetitionServer(BaseServer):
                 item["last_rank"] = last_rank
                 item["now_rank"] = now_rank
 
-        print("competition_result", competition_result)
+        self.log_info("competition_result", competition_result)
         s2c_competition_over = S2CCompetitionOver.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.MATCH_FINISH, s2c_competition_over)
         await self.__delete_player_in_match(list(room.members))
