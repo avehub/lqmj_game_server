@@ -20,11 +20,11 @@ class ProxyOrderStatistics(LogMeta):
                                         , last_id: int | None = None
                                         , page_size=20):
         sql = f"select  t.id, t.player_id, u.name, u.avatar, t.order_amount, t.order_month" \
-              f", t.proxy_income, t.order_type, t.created  " \
+              f", CASE WHEN t.channel_proxy_id = {proxy_id} THEN t.channel_proxy_income ELSE t.proxy_income END as proxy_income" \
+              f", t.order_type, t.created  " \
               f" from proxy_order_dividend_records t  " \
               f" left join user u on u.uid = t.player_id " \
-              f" where t.proxy_id={proxy_id} " \
-              f" "
+              f" where (t.proxy_id={proxy_id} OR t.channel_proxy_id={proxy_id}) "
         if order_month:
             sql += f" and t.order_month='{order_month}'"
         if level1_proxy_id:
