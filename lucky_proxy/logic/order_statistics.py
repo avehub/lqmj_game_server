@@ -24,7 +24,8 @@ class ProxyOrderStatistics(LogMeta):
               f", t.order_type, t.created  " \
               f" from proxy_order_dividend_records t  " \
               f" left join user u on u.uid = t.player_id " \
-              f" where (t.proxy_id={proxy_id} OR t.channel_proxy_id={proxy_id}) "
+              f" where (t.proxy_id={proxy_id} OR t.channel_proxy_id={proxy_id}) " \
+              f" and (CASE WHEN t.channel_proxy_id = {proxy_id} THEN t.channel_proxy_income ELSE t.proxy_income END) > 0 "
         if order_month:
             sql += f" and t.order_month='{order_month}'"
         if level1_proxy_id:
