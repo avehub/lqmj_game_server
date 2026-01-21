@@ -273,10 +273,12 @@ class GameDataSync(LogMeta):
             "vip_expire_time": data.vip_expire_time if data.vip_expire_time else 0
         }
         try:
+            cls.log_info(f"新增一级代理开始 uid={data.player_id}")
             query_relation = {
                 "player_id": data.player_id
             }
             relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
+            cls.log_info(f"relation={relation}")
             level1_proxy_id = None
             channel_proxy_id = 0
             if relation:
@@ -293,13 +295,12 @@ class GameDataSync(LogMeta):
                     add_param.update({"level1_proxy_id": level1_proxy_id})
                     parent = await ProxyUser.get_by_pk(level1_proxy_id, field=["level1_proxy_id"])
                     grand_id = parent.get("level1_proxy_id") if parent else 0
-                    if grand_id:
-                        grand = await ProxyUser.get_by_pk(grand_id, field=["is_channel"])
-                        if grand and grand.get("is_channel") == 1:
-                            channel_proxy_id = grand_id
+                    channel_proxy_id = grand_id or 0
+                    cls.log_info(f"parent={parent}, grand_id={grand_id}, channel_proxy_id={channel_proxy_id}")
 
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 await ProxyUser.add_one({**add_param, "channel_proxy_id": channel_proxy_id})
+                cls.log_info(f"写入代理表完成 uid={data.player_id}, channel_proxy_id={channel_proxy_id}")
                 await ProxyUserWallet.add_one(
                     {"id": data.player_id, "proxy_level": ProxyLevel.LEVEL_1, "level1_proxy_id": level1_proxy_id})
                 if relation:
@@ -307,8 +308,10 @@ class GameDataSync(LogMeta):
                     if channel_proxy_id:
                         up["channel_proxy_id"] = channel_proxy_id
                     await ProxyPromotionRelation.update_by_pk(pk_val=relation.get("id"), param=up)
+                    cls.log_info(f"更新关系表完成 relation_id={relation.get('id')}, channel_proxy_id={channel_proxy_id}")
                 else:
                     await ProxyPromotionRelation.exec_sql(f"UPDATE proxy_promotion_relation SET upgrade_flag=1 WHERE player_id={data.player_id}")
+                    cls.log_info(f"兜底关系表更新完成 player_id={data.player_id}")
         except Exception as e:
             cls.log_err(f"【重要日志】初始化一级代理失败，error：{e},data:{data}")
             return False, 'ERROR'
@@ -343,10 +346,7 @@ class GameDataSync(LogMeta):
                 parent = await ProxyUser.get_by_pk(level_proxy_id, field=["level1_proxy_id"])
                 grand_id = parent.get("level1_proxy_id") if parent else 0
                 cls.log_info(f"parent={parent}, grand_id={grand_id}")
-                if grand_id:
-                    grand = await ProxyUser.get_by_pk(grand_id, field=["is_channel"])
-                    if grand and grand.get("is_channel") == 1:
-                        channel_proxy_id = grand_id
+                channel_proxy_id = grand_id
                 cls.log_info(f"grand={locals().get('grand', None)}, channel_proxy_id={channel_proxy_id}")
             else:
                 cls.log_info("未找到上级代理，跳过渠道判定")
