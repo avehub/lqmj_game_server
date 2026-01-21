@@ -222,7 +222,8 @@ class PaymentLogic:
                     # 发送农产品邮件
                     await TournamentLogic().distribute_order_good(order)
                     # 发放赛事积分
-                    await TournamentLogic().distribute_order_point(order)
+                    sta, msg = await TournamentLogic().distribute_order_point(order)
+                    NLogger.info("领取资源-发放赛事积分：msg:", msg)
                 else:
                     # 发放背包
                     bag_good = {
