@@ -290,7 +290,7 @@ class GameDataSync(LogMeta):
                   2、若是二级用户升级一级代理 则原来的一级代理只享受0.05一张房卡的收益提成
                 """
 
-                if relation and proxy_level == ProxyLevel.LEVEL_1:
+                if relation:
                     level1_proxy_id = proxy_id
                     add_param.update({"level1_proxy_id": level1_proxy_id})
                     parent = await ProxyUser.get_by_pk(level1_proxy_id, field=["level1_proxy_id"])
