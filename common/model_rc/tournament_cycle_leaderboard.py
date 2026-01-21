@@ -20,7 +20,7 @@ def get_diff_index(now_index, data):
     for index, item in enumerate(new_data):
         total -= 1
         if new_data[total]["total_points"] > total_points:
-            return index + 1
+            return total
     return now_index - 1
 
 class TournamentCycleLeaderboardRC(BaseCommonRC):
