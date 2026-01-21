@@ -111,6 +111,8 @@ class GameDataSync(LogMeta):
 
         proxy_income = decimal.Decimal("0.00")
         platform_income = decimal.Decimal("0.00")
+        channel_proxy_income = decimal.Decimal("0.00")
+        
         # 原一级收入
         original_level1_proxy_income = decimal.Decimal("0.00")
         # 一级代理邀请的用户升级为一级代理后产生订单 如果是房卡则按照0.05一张给原一级分佣 否则不进行分佣
@@ -157,7 +159,7 @@ class GameDataSync(LogMeta):
 
         level2_proxy_income = decimal.Decimal("0.00")
         level1_proxy_income = decimal.Decimal("0.00")
-        level2_dividend_rate = decimal.Decimal("0.00")
+        level2_dividend_rate = decimal.Decimal("0.00") 
 
         if ProxyLevel.LEVEL_2 == proxy_level:
             if order_type == ChargeOrderType.TYPE_1:
