@@ -44,25 +44,38 @@ class ProxySummary(LogMeta):
                                 , sort: int
                                 , expire_start: int | None = None
                                 , expire_end: int | None = None):
-        sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
-              f"t.created,t.upgrade_flag, pu.vip_level, pu.vip_expire_time from " \
-              f"proxy_promotion_relation t " \
-              f"left join  user u  on u.uid=t.player_id " \
-              f"left join  proxy_user pu on pu.id = t.player_id " \
-              f"where t.proxy_id={proxy_id} and t.upgrade_flag = 1"
+        base_direct = f"""
+            select t.id,t.player_id,t.promotion_day,t.total_amount,u.avatar,u.name,
+                   t.created,t.upgrade_flag,pu.vip_level,pu.vip_expire_time,0 as is_channel_partner
+            from proxy_promotion_relation t
+            left join user u on u.uid=t.player_id
+            left join proxy_user pu on pu.id=t.player_id
+            where t.proxy_id={proxy_id} and t.upgrade_flag=1
+        """
+        base_channel = f"""
+            select t.id,t.player_id,t.promotion_day,t.total_amount,u.avatar,u.name,
+                   t.created,t.upgrade_flag,pu.vip_level,pu.vip_expire_time,1 as is_channel_partner
+            from proxy_promotion_relation t
+            left join user u on u.uid=t.player_id
+            left join proxy_user pu on pu.id=t.player_id
+            join proxy_user s on s.id=t.channel_proxy_id and s.is_channel=1
+            where t.channel_proxy_id={proxy_id} and t.upgrade_flag=1
+        """
         if expire_start is not None:
-            sql += f" and pu.vip_expire_time >= {expire_start}"
+            base_direct += f" and pu.vip_expire_time >= {expire_start}"
+            base_channel += f" and pu.vip_expire_time >= {expire_start}"
         if expire_end is not None:
-            sql += f" and pu.vip_expire_time <= {expire_end}"
-
+            base_direct += f" and pu.vip_expire_time <= {expire_end}"
+            base_channel += f" and pu.vip_expire_time <= {expire_end}"
+        union_sql = f"({base_direct}) union all ({base_channel})"
+        order_sql = ""
         if sort == 1:
-            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+            order_sql = " order by total_amount desc, id desc"
         elif sort == 2:
-            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+            order_sql = " order by total_amount asc, id desc"
         elif sort == 0:
-            sql = sql + f" order by t.id desc"
-
-        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+            order_sql = " order by id desc"
+        sql = f"select * from ({union_sql}) a {order_sql} limit {(page - 1) * page_size} ,{page_size}"
         return await ProxyPromotionRelation.exec_sql(sql, query=True)
 
     @classmethod

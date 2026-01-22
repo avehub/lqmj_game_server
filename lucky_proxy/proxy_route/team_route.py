@@ -18,6 +18,7 @@ TEAM_APIS = [
 
     # 绑定用户查询
     Urls("proxy/PlayerQuery", Player),
+
     # 绑定用户VIP状态查询（未过期/已过期）
     Urls("proxy/PlayerVipQuery", PlayerVipQuery),
 

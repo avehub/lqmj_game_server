@@ -37,6 +37,8 @@ class ProxyUser(DBModel):
                                                   description='助农提成比例')
     status = fields.IntField(null=True, default=0, description='状态：0 被封禁 1：正常')
     is_deleted = fields.IntField(null=True, default=0, description='删除状态：1、是 0否')
+    is_channel = fields.IntField(null=True, default=0, description='渠道状态：1、是 0否')
+    channel_proxy_id = fields.IntField(max_length=20, default=0, description='渠道代理id')
 
     vip_expire_time = fields.BigIntField(null=True, default=0, description='会员过期时间')
     vip_level = fields.IntField(null=True, default=1,
@@ -119,6 +121,8 @@ class ProxyOrderDividendRecords(DBModel):
     level1_proxy_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00,
                                               description='一级代理分红金额')
     platform_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='平台收入')
+    channel_proxy_income = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00, description='渠道分成金额')
+    channel_proxy_id = fields.BigIntField(max_length=20, default=0, description='渠道代理id')
     order_year = fields.CharField(max_length=4, description='余订单年')
     order_month = fields.CharField(max_length=8, description='余订单月 yyyyMM')
     order_day = fields.CharField(max_length=10, description='冗余订单日 yyyyMMdd')
@@ -145,6 +149,7 @@ class ProxyPromotionRelation(DBModel):
     player_id = fields.BigIntField(max_length=28, unique=True, description='玩家id')
     proxy_id = fields.BigIntField(max_length=20, null=False, description='代理商id')
     level1_proxy_id = fields.BigIntField(max_length=20, null=False, description='一级代理id')
+    channel_proxy_id = fields.BigIntField(max_length=20, null=False, description='渠道代理id')
     promotion_type = fields.BigIntField(max_length=20, null=False, description='平台（厂商ID）（如有的话）')
     promotion_id = fields.BigIntField(max_length=20, null=False, description='订单金额')
     promotion_year = fields.CharField(max_length=4, description='余订单年 yyyy')

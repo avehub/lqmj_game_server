@@ -63,7 +63,7 @@ class ProxyUserLogic(LogMeta):
         if not proxy_user:
             return sta, "更新的代理不存在"
         update_data = ""
-        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted", "vip_level", "vip_expire_time"}
+        valid_fields = {"proxy_name", "status", "proxy_level", "phone", "promotion_code", "is_deleted", "vip_level", "vip_expire_time", "is_channel", "channel_proxy_id"}
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
                 if update_data:
@@ -84,7 +84,8 @@ class ProxyUserLogic(LogMeta):
         """
         sta = False
         update_data = ""
-        valid_fields = {"status", "proxy_level", "is_deleted", "vip_level", "vip_expire_time"}
+        valid_fields = {"status", "proxy_level", "is_deleted", "vip_level", "vip_expire_time", "is_channel", "channel_proxy_id"}
+
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
                 if update_data:
@@ -95,5 +96,24 @@ class ProxyUserLogic(LogMeta):
 
             sta = await ProxyUser.exec_sql(sql)
         return sta, "更新成功"
+
+    @classmethod
+    async def set_channel(cls, channel_id: int, enable: int):
+        user = await cls.get_proxy_user_filter(player_id=channel_id)
+        if not user or user[0].get("proxy_level") != 1 or user[0].get("is_deleted") == 1:
+            return False, "仅支持设置一级代理为渠道"
+        await ProxyUser.exec_sql(f"UPDATE {cls.table_name} SET is_channel={1 if enable else 0} WHERE id={channel_id}")
+        # if enable:
+        #     sql = f"""
+        #     UPDATE proxy_user a
+        #     JOIN proxy_user l1 ON a.level1_proxy_id = l1.id
+        #     SET a.channel_proxy_id = {channel_id}
+        #     WHERE l1.level1_proxy_id = {channel_id} AND a.is_deleted=0
+        #     """
+        #     await ProxyUser.exec_sql(sql)
+        # else:
+        #     sql = f"UPDATE proxy_user SET channel_proxy_id=0 WHERE channel_proxy_id={channel_id}"
+        #     await ProxyUser.exec_sql(sql)
+        return True, "成功"
 
 
