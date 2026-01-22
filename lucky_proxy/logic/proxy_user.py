@@ -85,6 +85,7 @@ class ProxyUserLogic(LogMeta):
         sta = False
         update_data = ""
         valid_fields = {"status", "proxy_level", "is_deleted", "vip_level", "vip_expire_time", "is_channel", "channel_proxy_id"}
+
         for k, v in up_data.items():
             if k in valid_fields and v is not None:
                 if update_data:
@@ -114,4 +115,5 @@ class ProxyUserLogic(LogMeta):
         #     sql = f"UPDATE proxy_user SET channel_proxy_id=0 WHERE channel_proxy_id={channel_id}"
         #     await ProxyUser.exec_sql(sql)
         return True, "成功"
+
 

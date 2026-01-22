@@ -47,6 +47,7 @@ class ProxyUser(AdminAuthApi):
             status=self.sta_code.PASS,
             hint="ok"
         )
+
         self.answer()
 
 

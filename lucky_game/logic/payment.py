@@ -588,6 +588,7 @@ class PaymentLogic:
         elif good_type == 16:
             # 配置分销
             await CommonApi.push_task2worker(CmdWorkers.PROXY_USER_SET, uid=order["uid"], msg=order)
+
         return True
 
 
