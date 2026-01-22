@@ -177,7 +177,7 @@ class MyRechargeOrders(ProxyAuthApi):
         page_size = self.check_int(req.args.get("page_size"), require=False, default=20, p_name="page_size", minval=10, maxval=100)
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
-        where = f" o.purchase_uid={proxy_id} and o.status = 99"
+        where = f" o.purchase_uid={proxy_id} and o.status = 99 and o.updated>=1768320000"
         try:
             from datetime import datetime
             if start_day:
@@ -212,7 +212,7 @@ class MyRechargeTotal(ProxyAuthApi):
         proxy_id = kwargs.get("uid")
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
-        where = f" purchase_uid={proxy_id} and status = 99"
+        where = f" purchase_uid={proxy_id} and status = 99 and updated >= 1768320000"
         try:
             from datetime import datetime
             if start_day:
