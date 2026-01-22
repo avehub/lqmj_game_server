@@ -226,6 +226,7 @@ class CmdWorkers(BaseEnum):
     UPDATE_COMPETITION_RESULT = 32, "更新竞赛结果"
     PROXY_INVITE_BIND = 41, "分销-邀请绑定"
     PROXY_ORDER_SYNC = 42, "分销-订单同步"
+    PROXY_USER_SET = 43, "分销-用户配置"
     CLUB_EVENT_LOG = 51, "茶馆事件日志"
 
 

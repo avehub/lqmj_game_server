@@ -113,7 +113,8 @@ class ProxySettlementProcessor(LogMeta):
                         WHERE
                             pu.id IN ( {id_placeholders} ) 
                         GROUP BY
-                            pu.id UNION ALL
+                            pu.id 
+                    UNION ALL
                         SELECT
                             podr.level1_proxy_id AS proxy_id,
                             '{self.target_month}' month,
@@ -128,6 +129,21 @@ class ProxySettlementProcessor(LogMeta):
                             podr.level1_proxy_id IN ( {id_placeholders}) 
                         GROUP BY
                             podr.level1_proxy_id 
+                    UNION ALL
+                        SELECT
+                            podr.channel_proxy_id AS proxy_id,
+                            '{self.target_month}' month,
+                            COALESCE ( SUM( podr.order_amount ), 0 ) total_amount,
+                            COALESCE ( SUM( podr.channel_proxy_income ), 0 ) total_income,
+                            COUNT( podr.id ) total_order 
+                        FROM
+                            proxy_user pu
+                            LEFT JOIN proxy_order_dividend_records podr ON pu.id = podr.proxy_id 
+                            AND podr.order_month = '{self.target_month}' 
+                        WHERE
+                            podr.channel_proxy_id IN ( {id_placeholders}) 
+                        GROUP BY
+                            podr.channel_proxy_id 
                         ) b 
                     GROUP BY
                         b.proxy_id,

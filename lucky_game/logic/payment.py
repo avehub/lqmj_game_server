@@ -586,11 +586,9 @@ class PaymentLogic:
             # 发放赛事积分
             await TournamentLogic().distribute_order_point(order)
         elif good_type == 16:
-            # 修改用户折扣
-            conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
-            if conf and conf.get("discount"):
-                u_info = await BaseUserRC.cache_by_pk(order["uid"])
-                await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
+            # 配置分销
+            await CommonApi.push_task2worker(CmdWorkers.PROXY_USER_SET, uid=order["uid"], msg=order)
+
         return True
 
 
