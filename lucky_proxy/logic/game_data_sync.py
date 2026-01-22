@@ -64,6 +64,8 @@ class PromotionOrderDataDTO:
     dividend_rate: float
     # 订单时间（创建时间）
     order_time: int
+    # 直接传入的代理分成金额，优先用于计算，不再使用比例
+    dividend_income: float = 0.0
 
 
 """
@@ -151,9 +153,13 @@ class GameDataSync(LogMeta):
                     f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单不再给原代理产生分佣，data={data}")
                 return 1
         else:
-            proxy_income = (
-                    decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))).quantize(
-                decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            if data.dividend_income and float(data.dividend_income) > 0:
+                proxy_income = decimal.Decimal(str(data.dividend_income)).quantize(
+                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            else:
+                proxy_income = (
+                    decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))
+                ).quantize(decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             platform_income = (decimal.Decimal(str(data.order_amount)) - proxy_income).quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
 
