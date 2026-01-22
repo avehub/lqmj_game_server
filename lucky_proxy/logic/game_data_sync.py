@@ -116,7 +116,7 @@ class GameDataSync(LogMeta):
         # 原一级收入
         original_level1_proxy_income = decimal.Decimal("0.00")
         # 一级代理邀请的用户升级为一级代理后产生订单 如果是房卡则按照0.05一张给原一级分佣 否则不进行分佣
-        if relation.get("upgrade_flag") == 1 and ProxyLevel.LEVEL_1 == proxy_level:
+        if relation.get("upgrade_flag") == 1:
             if order_type == ChargeOrderType.TYPE_1 and ROOM_FIXED_COMMISSION_AMOUNT > decimal.Decimal(str(data.price)):
                 cls.log_info(
                     f"固定房卡分成比例时固定金额={ROOM_FIXED_COMMISSION_AMOUNT}大于订单单价={data.price},不进行分佣")
