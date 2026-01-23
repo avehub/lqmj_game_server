@@ -130,6 +130,7 @@ class GameDataSync(LogMeta):
                 proxy_income = original_level1_proxy_income
                 platform_income = (decimal.Decimal(str(data.order_amount)) - original_level1_proxy_income).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                cls.log_info(f"原一级固定分成 proxy_income={proxy_income}, platform_income={platform_income}, goods={data.goods_number}, price={data.price}")
                  # 渠道分成：玩家是一级代理，且其渠道代理是渠道时，房卡订单每张固定0.05从平台分成给渠道  改成从关系表拿渠道ID
                 player_proxy = await ProxyUser.get_by_pk(data.player_id, ["proxy_level", "channel_proxy_id", "is_channel"])
                 if player_proxy and player_proxy.get("proxy_level") == ProxyLevel.LEVEL_1 and data.order_type == ChargeOrderType.TYPE_1:
@@ -156,12 +157,15 @@ class GameDataSync(LogMeta):
             if data.dividend_income and float(data.dividend_income) > 0:
                 proxy_income = decimal.Decimal(str(data.dividend_income)).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                cls.log_info(f"按传入金额分成 proxy_income={proxy_income}, order_amount={data.order_amount}")
             else:
                 proxy_income = (
                     decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))
                 ).quantize(decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                cls.log_info(f"按比例分成 proxy_income={proxy_income}, order_amount={data.order_amount}, dividend_rate={data.dividend_rate}")
             platform_income = (decimal.Decimal(str(data.order_amount)) - proxy_income).quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            cls.log_info(f"计算平台收入 platform_income={platform_income}, order_amount={data.order_amount}, proxy_income={proxy_income}")
 
         level2_proxy_income = decimal.Decimal("0.00")
         level1_proxy_income = decimal.Decimal("0.00")
@@ -172,15 +176,18 @@ class GameDataSync(LogMeta):
                 level2_dividend_rate = room_card_rate
                 level2_proxy_income = (proxy_income * room_card_rate).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                cls.log_info(f"二级房卡分成 level2_proxy_income={level2_proxy_income}, room_card_rate={room_card_rate}, proxy_income基数={proxy_income}")
             elif order_type == ChargeOrderType.TYPE_2:
                 level2_dividend_rate = assistance_program_rate
                 level2_proxy_income = (proxy_income * assistance_program_rate).quantize(
                     decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                cls.log_info(f"二级助农分成 level2_proxy_income={level2_proxy_income}, assistance_program_rate={assistance_program_rate}, proxy_income基数={proxy_income}")
 
             level1_proxy_income = (proxy_income - level2_proxy_income).quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
             proxy_income = level2_proxy_income.quantize(
                 decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+            cls.log_info(f"分成拆分后 level1_proxy_income={level1_proxy_income}, level2_proxy_income={proxy_income}")
 
        
         monday_date = now - timedelta(days=now.weekday())
