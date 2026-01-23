@@ -234,7 +234,7 @@ class PaymentLogic:
                     }
                     await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
             # 更新用户资源
-            if express["currency"] not in CurrencyType.BY_RMB:
+            if express["currency"] not in [CurrencyType.BY_RMB]:
                 # 当为兑换商品时，直接修改订单状态
                 up_data["status"] = OrderStatus.PAID
             up_data["gain_status"] = GainStatus.RECEIVED
