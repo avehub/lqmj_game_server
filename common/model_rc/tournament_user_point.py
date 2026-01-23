@@ -58,9 +58,9 @@ class TournamentUserPointRC(BaseCommonRC):
         try:
             query = {"cycle_id": cycle_id, "uid": uid}
             has = await cls.db_model.filter(**query).first()
+            score = up_data.get("score", 0)
+            ticket = up_data.get("ticket", 0)
             if not has:
-                score = up_data.get("score", 0)
-                ticket = up_data.get("ticket", 0)
                 await cls.add_user_point(cycle_id, uid, score, ticket)
                 replay_msg_data = {
                     "uid": uid,
@@ -71,10 +71,12 @@ class TournamentUserPointRC(BaseCommonRC):
                 valid_fields = {"score", "ticket", "updated"}
                 update_data = {k: v for k, v in up_data.items() if k in valid_fields}
                 if update_data:
-                    if has.score:
-                        update_data["score"] = has.score + update_data["score"]
-                    if has.ticket:
-                        update_data["ticket"] = has.ticket + update_data["ticket"]
+                    if score:
+                        update_data["score"] = has.score + score
+                    if ticket:
+                        if has.ticket < 0:
+                            has.ticket = 0
+                        update_data["ticket"] = has.ticket + ticket
                     await cls.db_model.filter(**query).update(**update_data)
                     await cls.cache_session_del(f"{cycle_id}:{uid}")
 
