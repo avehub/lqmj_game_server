@@ -725,11 +725,12 @@ class WorkersServer(JsonBaseServer):
     async def __proxy_order_sync(self, uid, order_info):
         # 调用分销模块接口
         dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"])
+        dividend_num = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"])
         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
                                               order_type=order_info["order_type"], goods_number=int(order_info["express_content"]["amount"]) * int(order_info["num"]),
                                               price=float(float(order_info["amount"]) / order_info["num"]),
                                               order_amount=order_info["amount"], dividend_rate=dividend_rate,
-                                              order_time=order_info["created"])
+                                              order_time=order_info["created"], dividend_income=dividend_num)
         sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
         self.log_info(f"订单分销结果：{sta}")
         if not sta:
