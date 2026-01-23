@@ -39,18 +39,19 @@ class TournamentLogic:
         up_data = {"ticket": ticket}
         return await TournamentUserPointRC.up_user_point(cycle_id, order.get("uid"), up_data)
 
-    async def send_ranking_reward(self, ranking_list: list, round_type: int = 1):
+    async def send_ranking_reward(self,cycle_id: int, ranking_list: list, round_type: int = 1):
         """ 发送排行榜奖励 """
         rank_end = 0
         reward_content = []
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
         sta, reward = await TournamentRewardRC.get_reward_info(round_type)
         NLogger.info(f"reward: {reward}")
         if sta and reward:
             rank_end = reward.get("rank_end")
             reward_content = reward.get("reward_content")
         mail_type = 2
-        sender = "赛事系统"
-        title = "赛事排行榜奖励"
+        sender = 1
+        title = "【赛事奖励】" + cycle_info["cycle_name"]
         for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
@@ -58,7 +59,7 @@ class TournamentLogic:
             uid = v.get("uid")
             if uid > R_UID_THRESHOLD:
                 award_ids = reward_content[k]["award_ids"]
-                content = f"恭喜您在赛事中获得第{ranking}名，奖励如下："
+                content = f"尊敬的选手：{cycle_info['cycle_name']}已结束，您在本次赛事中斩获第 {ranking}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
                 attachment = '{"award_ids": ' + f"{award_ids}" + '}'
                 await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
@@ -104,7 +105,7 @@ class TournamentLogic:
         if reward_sta and reward_user:
             award_u_list = [item for item in reward_user["list"]]
             # 发送榜奖励
-            await self.send_ranking_reward(award_u_list)
+            await self.send_ranking_reward(cycle_id, award_u_list)
 
 
 
