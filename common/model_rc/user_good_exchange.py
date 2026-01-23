@@ -55,7 +55,7 @@ class UserGoodExchangeRC(BaseCommonRC):
         """更新兑换信息"""
         try:
             query = {"id": exchange_id}
-            valid_fields = {"region", "address", "phone", "real_name", "updated", "express_no"
+            valid_fields = {"region", "address", "phone", "real_name", "updated", "express_no",
                             "check_status", "exchange_no", "express_id", "status"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:

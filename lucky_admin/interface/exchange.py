@@ -1,6 +1,8 @@
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
 from common.model_rc.user_good_exchange import UserGoodExchangeRC
+from lucky_game.model_rc.base_store import GoodRC
+
 
 class Exchange(AdminAuthApi):
     """ 更新/查询 兑换管理 """
@@ -46,4 +48,13 @@ class Exchange(AdminAuthApi):
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
         sta, data = await UserGoodExchangeRC.get_exchange_filter(uid=uid, phone=phone, status=status, page=page, page_size=page_size, start_time=start_time, end_time=end_time)
+        if sta and data["list"]:
+            good_ids = [i["good_id"] for i in data["list"]]
+            good_list, msg = await GoodRC.get_good_filter(good_id=list(set(good_ids)))
+            if good_list:
+                good_dict = {f"{i['good_id']}": i for i in good_list}
+                for i in data["list"]:
+                    good_id = str(i["good_id"])
+                    if good_id in good_dict:
+                        i["good"] = good_dict[good_id]
         self.answer(data=data)
