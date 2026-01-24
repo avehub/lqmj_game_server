@@ -30,18 +30,20 @@ class ExchangeRecharge(AdminAuthApi):
         mask_phone = f"{phone[:3]}****{phone[-4:]}"
         self.log_info(f"后台审核充值接收参数 exchange_id={exchange_id}, 审核标记={approve}, 手机={phone}, 面值={amount}")
         record = await UserGoodExchangeRC.db_model.get_by_pk(exchange_id)
+        self.log_info(f"后台审核充值查询记录 {record}")
         if not record:
             self.answer(self.sta_code.FAIL, hint="兑换记录不存在")
         if approve != 1:
+            admin = kwargs.get("u_info") or {}
             await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeReject", req.method, req.json, self.sta_code.PASS, "ok")
             self.log_info(f"兑换审核拒绝 exchange_id={exchange_id}")
             self.answer()
-        use_phone = phone or record.phone
+        use_phone = phone or record.get("phone")
         mask_use_phone = f"{use_phone[:3]}****{use_phone[-4:]}" if use_phone else None
         face_value = int(amount)
         if face_value <= 0:
             self.answer(self.sta_code.FAIL, hint="面值缺失")
-        order_id = record.exchange_no or ""
+        order_id = record.get("exchange_no") or ""
         if not isinstance(order_id, str):
             order_id = str(order_id or "")
         if len(order_id) < 8 or len(order_id) > 32:
@@ -70,7 +72,7 @@ class ExchangeQuery(AdminAuthApi):
             record = await UserGoodExchangeRC.db_model.get_by_pk(exchange_id)
             if not record:
                 self.answer(self.sta_code.FAIL, hint="兑换记录不存在")
-            orderid = record.express_no or f"ex_{exchange_id}"
+            orderid = record.get("express_no") or f"ex_{exchange_id}"
         self.log_info(f"查询话费充值状态 exchange_id={exchange_id}, 订单号={orderid}")
         sta, msg, result = await RechargeJuhe.query_status(orderid)
         admin = kwargs.get("u_info") or {}
