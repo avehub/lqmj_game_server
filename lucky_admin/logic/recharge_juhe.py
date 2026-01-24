@@ -36,8 +36,9 @@ class RechargeJuhe(LogMeta):
             mask_key = f"{key[:4]}****"
             mask_phone = f"{phone[:3]}****{phone[-4:]}" if isinstance(phone, str) and len(phone) >= 7 else phone
             log_params = {**params, "key": mask_key, "phoneno": mask_phone, "sign": f"{sign[:6]}****"}
+            base_url = base_url.format(key, phone, amount, order_id, sign)
             cls.log_info(f"话费充值请求 url={base_url}, 参数={log_params}")
-            resp = await http_get(base_url, params=params)
+            resp = await http_get(base_url)
             cls.log_info(f"话费充值响应原始数据={resp}")
             data = json_parse(resp)
             cls.log_info(f"话费充值响应解析结果={data}")
