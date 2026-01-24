@@ -24,7 +24,10 @@ class AdminExchangeAuditRecharge(AdminAuthApi):
     async def post(self, req: Request, **kwargs):
         exchange_id = self.check_int(req.json.get("exchange_id"), require=True, p_name="兑换ID")
         approve = self.check_int(req.json.get("approve"), require=True, p_name="审核通过标记")
-        self.log_info(f"后台审核充值接收参数 exchange_id={exchange_id}, 审核标记={approve}")
+        phone = self.check_phone_number(req.json.get("phone"), require=True)
+        amount = self.check_int(req.json.get("amount"), require=True, p_name="面值")
+        mask_phone = f"{phone[:3]}****{phone[-4:]}"
+        self.log_info(f"后台审核充值接收参数 exchange_id={exchange_id}, 审核标记={approve}, 手机={mask_phone}, 面值={amount}")
         record = await UserGoodExchangeRC.db_model.get_by_pk(exchange_id)
         if not record:
             self.answer(self.sta_code.FAIL, hint="兑换记录不存在")
@@ -37,13 +40,9 @@ class AdminExchangeAuditRecharge(AdminAuthApi):
             await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeReject", req.method, req.json, self.sta_code.PASS, "ok")
             self.log_info(f"兑换审核拒绝 exchange_id={exchange_id}")
             self.answer()
-        use_phone = record.phone
+        use_phone = phone or record.phone
         mask_use_phone = f"{use_phone[:3]}****{use_phone[-4:]}" if use_phone else None
-        good_info = await GoodRC.get_good_by_id(record.good_id)
-        unit_value = 0
-        if isinstance(good_info.get("content"), dict):
-            unit_value = int(good_info["content"].get("face_value") or 0)
-        face_value = int(unit_value) * int(record.num or 1)
+        face_value = int(amount)
         if face_value <= 0:
             self.answer(self.sta_code.FAIL, hint="面值缺失")
         order_id = f"ex_{exchange_id}"
