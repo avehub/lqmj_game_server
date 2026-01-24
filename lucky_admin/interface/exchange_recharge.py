@@ -79,7 +79,7 @@ class ExchangeQuery(AdminAuthApi):
         self.log_info(f"查询话费充值状态 exchange_id={exchange_id}, 订单号={orderid}")
         sta, msg, result = await RechargeJuhe.query_status(orderid)
         admin = kwargs.get("u_info") or {}
-        await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeQueryStatus", req.method, req.args, self.sta_code.PASS if sta else self.sta_code.FAIL, msg or "")
+        await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeQuery", req.method, req.args, self.sta_code.PASS if sta else self.sta_code.FAIL, msg or "")
         if not sta:
             self.answer(self.sta_code.FAIL, hint=f"查询失败:{msg}")
         game_state = result.get("game_state")
