@@ -65,14 +65,10 @@ class RechargeJuhe(LogMeta):
             return False, "配置缺失", {}
         base_url = "http://op.juhe.cn/ofpay/mobile/ordersta?key={0}&orderid={1}".format(key, order_id)
 
-        params = {
-            "key": key,
-            "orderid": order_id,
-        }
         try:
             mask_key = f"{key[:4]}****"
             cls.log_info(f"查询话费充值状态 url={base_url}, 参数={{'key': '{mask_key}', 'orderid': '{order_id}'}}")
-            resp = await http_get(base_leisure_player)
+            resp = await http_get(base_url)
             cls.log_info(f"查询状态响应原始数据={resp}")
             data = json_parse(resp)
             cls.log_info(f"查询状态响应解析结果={data}")
