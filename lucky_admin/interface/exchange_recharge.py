@@ -59,7 +59,7 @@ class ExchangeRecharge(AdminAuthApi):
         third_order_id = result.get("orderid") or order_id
         await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(status=1, express_no=third_order_id, updated=tool_dt.cur_time())
         self.log_info(f"话费充值成功 exchange_id={exchange_id}, 第三方订单号={third_order_id}")
-        self.answer()
+        self.answer(self.sta_code.PASS, {"exchange_id": exchange_id, "order_id": third_order_id, "phone": mask_use_phone, "amount": face_value, "status": 1}, hint="已提交充值，发货中")
 
 
 class ExchangeQuery(AdminAuthApi):
