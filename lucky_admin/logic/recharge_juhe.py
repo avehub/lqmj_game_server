@@ -1,3 +1,4 @@
+from c_services.base import base_leisure_player
 from nsanic.libs.tool import http_get, json_parse
 from nsanic.libs.component import LogMeta
 from common.public.conf import JuheRechargeConf
@@ -62,7 +63,8 @@ class RechargeJuhe(LogMeta):
         if not key:
             cls.log_err("查询充值状态配置缺失")
             return False, "配置缺失", {}
-        base_url = "http://op.juhe.cn/ofpay/mobile/ordersta"
+        base_url = "http://op.juhe.cn/ofpay/mobile/ordersta?key={0}&orderid={1}".format(key, order_id)
+
         params = {
             "key": key,
             "orderid": order_id,
@@ -70,7 +72,7 @@ class RechargeJuhe(LogMeta):
         try:
             mask_key = f"{key[:4]}****"
             cls.log_info(f"查询话费充值状态 url={base_url}, 参数={{'key': '{mask_key}', 'orderid': '{order_id}'}}")
-            resp = await http_get(base_url, params=params)
+            resp = await http_get(base_leisure_player)
             cls.log_info(f"查询状态响应原始数据={resp}")
             data = json_parse(resp)
             cls.log_info(f"查询状态响应解析结果={data}")

@@ -87,7 +87,7 @@ class ExchangeQuery(AdminAuthApi):
             new_status = 99
         elif game_state == "9":
             status_text = "充值失败"
-            new_status = 1
+            new_status = 3
         if new_status is not None and exchange_id:
             await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(status=new_status, updated=tool_dt.cur_time())
             self.log_info(f"更新兑换状态 exchange_id={exchange_id}, 新状态={new_status}")
