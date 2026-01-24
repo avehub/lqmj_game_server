@@ -23,7 +23,7 @@ class RechargeJuhe(LogMeta):
             return False, "配置缺失", {}
         sign_str = f"{openid}{key}{phone}{amount}{order_id}"
         sign = UtilsTool.calc_hash(sign_str, htype='md5')
-        base_url = url.split('?')[0]
+        base_url = url
         params = {
             "key": key,
             "phoneno": phone,
