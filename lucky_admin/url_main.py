@@ -22,7 +22,7 @@ from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData
 from lucky_admin.interface.tournament import TournamentTemplate
 from lucky_admin.interface.proxy_user import ProxyUser
 from lucky_admin.interface.exchange import Exchange
-from lucky_admin.interface.exchange_recharge import AdminExchangeAuditRecharge
+from lucky_admin.interface.exchange_recharge import ExchangeRecharge, ExchangeQuery
 
 
 class MainBp(BaseBlue):
@@ -113,7 +113,8 @@ class MainBp(BaseBlue):
         
         # 兑换管理
         Urls("/Exchange", Exchange),
-        Urls("/AdminExchangeAuditRecharge", AdminExchangeAuditRecharge)
+        Urls("/ExchangeRecharge", ExchangeRecharge),
+        Urls("/ExchangeQuery", ExchangeQuery)
 
 
 

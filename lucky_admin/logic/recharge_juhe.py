@@ -53,3 +53,34 @@ class RechargeJuhe(LogMeta):
         except Exception as e:
             cls.log_err(f"调用话费充值接口异常: {e}")
             return False, "异常", {}
+
+    @classmethod
+    async def query_status(cls, order_id: str):
+        conf = await cls.get_conf()
+        key = conf.get("key")
+        if not key:
+            cls.log_err("查询充值状态配置缺失")
+            return False, "配置缺失", {}
+        base_url = "http://op.juhe.cn/ofpay/mobile/ordersta"
+        params = {
+            "key": key,
+            "orderid": order_id,
+        }
+        try:
+            mask_key = f"{key[:4]}****"
+            cls.log_info(f"查询话费充值状态 url={base_url}, 参数={{'key': '{mask_key}', 'orderid': '{order_id}'}}")
+            resp = await http_get(base_url, params=params)
+            cls.log_info(f"查询状态响应原始数据={resp}")
+            data = json_parse(resp)
+            cls.log_info(f"查询状态响应解析结果={data}")
+            if not isinstance(data, dict):
+                return False, "响应异常", {}
+            error_code = data.get("error_code")
+            reason = data.get("reason")
+            if error_code != 0:
+                return False, f"错误码:{error_code} 原因:{reason}", data
+            result = data.get("result") or {}
+            return True, "ok", result
+        except Exception as e:
+            cls.log_err(f"查询充值状态接口异常: {e}")
+            return False, "异常", {}
