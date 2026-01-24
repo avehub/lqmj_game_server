@@ -31,12 +31,7 @@ class ExchangeRecharge(AdminAuthApi):
         record = await UserGoodExchangeRC.db_model.get_by_pk(exchange_id)
         if not record:
             self.answer(self.sta_code.FAIL, hint="兑换记录不存在")
-        if approve == 99:
-            await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(check_status=99, updated=tool_dt.cur_time())
-            self.log_info(f"兑换审核通过 exchange_id={exchange_id}")
-        else:
-            await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(check_status=1, updated=tool_dt.cur_time())
-            admin = kwargs.get("u_info") or {}
+        if approve != 1:
             await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeReject", req.method, req.json, self.sta_code.PASS, "ok")
             self.log_info(f"兑换审核拒绝 exchange_id={exchange_id}")
             self.answer()
