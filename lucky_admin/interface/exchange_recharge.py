@@ -5,6 +5,7 @@ from lucky_admin.logic.recharge_juhe import RechargeJuhe
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_db.main import RecordsAdminOperates
 from common.model_rc.user_good_exchange import UserGoodExchangeRC
+from common.utils.utils import UtilsTool
 
 
 class AdminExchangeList(AdminAuthApi):
@@ -40,7 +41,12 @@ class ExchangeRecharge(AdminAuthApi):
         face_value = int(amount)
         if face_value <= 0:
             self.answer(self.sta_code.FAIL, hint="面值缺失")
-        order_id = f"ex_{exchange_id}"
+        order_id = record.exchange_no or ""
+        if not isinstance(order_id, str):
+            order_id = str(order_id or "")
+        if len(order_id) < 8 or len(order_id) > 32:
+            order_id = f"{int(tool_dt.cur_time() * 1000)}{UtilsTool.generate_invite_code(cls=UtilsTool, length=6)}"
+            await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(exchange_no=order_id, updated=tool_dt.cur_time())
         self.log_info(f"准备发起话费充值 exchange_id={exchange_id}, 订单号={order_id}, 手机={mask_use_phone}, 面值={face_value}")
         sta, msg, result = await RechargeJuhe.recharge(use_phone, face_value, order_id)
         admin = kwargs.get("u_info") or {}
