@@ -47,7 +47,7 @@ class DistributionSettleConfRC(RCModel):
             if profit_type is not None:
                  query["type"] = profit_type
             if range_num is not None:
-                query["range_min__gte"] = range_num
+                query["range_max"] = range_num
             result = records = await cls.db_model.filter(**query).order_by("level").values()
             if not records:
                 return False, []
