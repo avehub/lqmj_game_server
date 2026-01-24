@@ -836,6 +836,7 @@ class DistributionSettleConf(DBModel):
     range_max = fields.IntField(default=0, description='最大取值范围')
     profit_condition = fields.CharField(max_length=32, default="", description='分润条件')
     profit_ratio = fields.FloatField(null=True, default=1.0000, description='分润比例')
+    profit_num = fields.FloatField(null=True, default=0.0000, description='分润金额')
     desc = fields.CharField(max_length=256, null=True, default="", description='描述')
     updated = fields.BigIntField(default=0, description='更新时间')
 
