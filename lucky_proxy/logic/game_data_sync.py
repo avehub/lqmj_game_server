@@ -155,8 +155,12 @@ class GameDataSync(LogMeta):
                 return 1
         else:
             if data.dividend_income and float(data.dividend_income) > 0:
-                proxy_income = decimal.Decimal(str(data.dividend_income)).quantize(
-                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                incoming = decimal.Decimal(str(data.dividend_income)).quantize(decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                amount = decimal.Decimal(str(data.order_amount)).quantize(decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                if incoming > amount:
+                    cls.log_info(f"分成跳过：传入金额超额 incoming={incoming} > order_amount={amount}, order_id={data.order_id}, player_id={data.player_id}, proxy_id={proxy_id}, dividend_rate={data.dividend_rate}, goods={data.goods_number}, order_type={data.order_type}")
+                    return 1
+                proxy_income = incoming
                 cls.log_info(f"按传入金额分成 proxy_income={proxy_income}, order_amount={data.order_amount}")
             else:
                 proxy_income = (
