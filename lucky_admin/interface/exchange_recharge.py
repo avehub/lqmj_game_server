@@ -33,11 +33,14 @@ class ExchangeRecharge(AdminAuthApi):
         self.log_info(f"后台审核充值查询记录 {record}")
         if not record:
             self.answer(self.sta_code.FAIL, hint="兑换记录不存在")
+        cur_status = int(record.get("status") or 0)
+        if cur_status not in (0, 1, 3):
+            self.log_info(f"订单当前状态不允许发起充值 exchange_id={exchange_id}, 当前状态={cur_status}")
+            self.answer(self.sta_code.FAIL, hint="订单状态不允许发起充值")
         if approve != 1:
             admin = kwargs.get("u_info") or {}
             await RecordsAdminOperates.insert_one(admin.get("username", ""), req.path, "ExchangeReject", req.method, req.json, self.sta_code.PASS, "ok")
             self.log_info(f"兑换审核拒绝 exchange_id={exchange_id}")
-            self.answer()
         use_phone = phone or record.get("phone")
         mask_use_phone = f"{use_phone[:3]}****{use_phone[-4:]}" if use_phone else None
         face_value = int(amount)
