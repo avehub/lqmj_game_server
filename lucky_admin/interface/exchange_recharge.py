@@ -47,11 +47,16 @@ class ExchangeRecharge(AdminAuthApi):
         if face_value <= 0:
             self.answer(self.sta_code.FAIL, hint="面值缺失")
         order_id = record.get("exchange_no") or ""
-        if not isinstance(order_id, str):
-            order_id = str(order_id or "")
-        if len(order_id) < 8 or len(order_id) > 32:
+        if cur_status == 3:
             order_id = f"{int(tool_dt.cur_time() * 1000)}{UtilsTool.generate_invite_code(cls=UtilsTool, length=6)}"
             await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(exchange_no=order_id, updated=tool_dt.cur_time())
+            self.log_info(f"重提失败订单，已重新生成订单号 exchange_id={exchange_id}, 新订单号={order_id}")
+        else:
+            if not isinstance(order_id, str):
+                order_id = str(order_id or "")
+            if len(order_id) < 8 or len(order_id) > 32:
+                order_id = f"{int(tool_dt.cur_time() * 1000)}{UtilsTool.generate_invite_code(cls=UtilsTool, length=6)}"
+                await UserGoodExchangeRC.db_model.filter(id=exchange_id).update(exchange_no=order_id, updated=tool_dt.cur_time())
         self.log_info(f"准备发起话费充值 exchange_id={exchange_id}, 订单号={order_id}, 手机={mask_use_phone}, 面值={face_value}")
         sta, msg, result = await RechargeJuhe.recharge(use_phone, face_value, order_id)
         admin = kwargs.get("u_info") or {}
