@@ -38,7 +38,9 @@ class TournamentConfig(GameAuthApi):
             # 获取赛事规则
             sta, rule = await TournamentRuleRC.get_rule_info(rule_id=1)
             # 获取赛事周期
-            sta, cycle = await TournamentCycleRC.get_cycle_filter()
+            today = datetime.now()
+            current_month = today.month
+            sta, cycle = await TournamentCycleRC.get_cycle_filter(cycle_month=current_month)
             if cycle:
                 for item in cycle:
                     # 获取赛事奖励
@@ -64,8 +66,17 @@ class TournamentUserPoint(GameAuthApi):
             cycle_id = await TournamentCycleRC.get_current_cycle_id()
         sta, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
         if not sta:
-            user_point = {"cycle_id": cycle_id, "uid": uid, "score": 0, "rank_num": 0, "ticket": 100}
-            await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
+            has_sta, user_ticket = await TournamentUserPointRC.get_user_ticket(uid=uid)
+            if has_sta:
+                up_data = {
+                    "ticket": user_ticket["ticket"],
+                    "cycle_id": cycle_id,
+                    "score": 0,
+                }
+                await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+            else:
+                await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
+            _, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
         else:
             # 计算用户排名
             rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid)

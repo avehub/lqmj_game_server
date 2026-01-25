@@ -64,15 +64,13 @@ class TournamentRewardRC(BaseCommonRC):
         return True, "成功"
 
     @classmethod
-    async def get_reward_filter(cls, round_type: int = None, status: int = None, rank_start: int = None, rank_end: int = None,
+    async def get_reward_filter(cls, round_type: int = None, rank_start: int = None, rank_end: int = None,
                                   count: bool = False, reward_id: int = None, page: int = None, page_size: int = None):
         """获取赛事奖励记录"""
         try:
             query = {}
             if reward_id is not None:
                 query["id"] = reward_id
-            if status is not None:
-                query["status"] = status
             if round_type is not None:
                 query["round_type"] = round_type
             if rank_start is not None:
