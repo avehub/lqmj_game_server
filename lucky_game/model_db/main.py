@@ -867,12 +867,14 @@ class TournamentCycle(DBModel):
     cycle_end_date = fields.DateField(description='周期结束日期')
     cycle_month = fields.IntField(description='月份:1-12')
     cycle_name = fields.CharField(max_length=100, description='周期名称:2026年1月月赛')
+    reward_name = fields.CharField(max_length=64, description='奖励名称')
     cycle_start_date = fields.DateField(description='周期开始日期')
     cycle_year = fields.IntField(null=True, description='年份:2026')
     id = fields.BigIntField(primary_key=True, description='周期ID')
     status = fields.IntField(default=False, description='状态:0-未开始,1-进行中,2-已结束,3-已归档')
     template_id = fields.BigIntField(index=True, description='关联模板ID')
     reward_id = fields.BigIntField(null=True, description='关联奖励ID')
+    cycle_type = fields.IntField(null=True, description='赛季类型：0周赛 1热身赛')
     updated = fields.BigIntField(default=0)
 
     class Meta:
@@ -900,7 +902,7 @@ class TournamentRewards(DBModel):
     rank_start = fields.IntField(description='奖励范围排名起始值，默认1')
     reward_content = fields.JSONField(null=True, description='奖励内容')
     reward_description = fields.CharField(max_length=255, null=True, description='奖励描述')
-    round_type = fields.BooleanField(index=True, description='场次类型:1-线上周赛,2-线下总决赛')
+    round_type = fields.BooleanField(index=True, description='场次类型:0-线上热身赛,1-线上周赛,2-线下总决赛')
     updated = fields.BigIntField(default=0)
 
     class Meta:
