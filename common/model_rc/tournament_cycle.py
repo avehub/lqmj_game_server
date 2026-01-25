@@ -74,7 +74,7 @@ class TournamentCycleRC(BaseCommonRC):
 
     @classmethod
     async def get_cycle_filter(cls, cycle_id: int = None, status: int = None, cycle_year: int = None, reward_id: int = None,
-                                  template_id: int = None, page: int = None, page_size: int = None):
+                                  template_id: int = None, page: int = None, page_size: int = None, cycle_month: int = None):
         """获取赛事周期记录"""
         try:
             query = {}
@@ -88,6 +88,8 @@ class TournamentCycleRC(BaseCommonRC):
                 query["template_id"] = template_id
             if cycle_year is not None:
                 query["cycle_year"] = cycle_year
+            if cycle_month is not None:
+                query["cycle_month"] = cycle_month
             order_field = "id"
             result = None
             if page and page_size:

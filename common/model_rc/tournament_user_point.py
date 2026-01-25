@@ -135,6 +135,18 @@ class TournamentUserPointRC(BaseCommonRC):
         return True if result else False, result
 
     @classmethod
+    async def get_user_ticket(cls, uid: int):
+        """获取模板信息"""
+        try:
+            query = {"uid": uid}
+            data = await cls.db_model.filter(**query).order_by("-id").values()
+            if not data:
+                return False, "用户未报名"
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, data[0]
+
+    @classmethod
     async def del_user_point(cls, cycle_id: int, uid: int = None):
         """删除模板"""
         try:

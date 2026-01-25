@@ -50,8 +50,8 @@ class TournamentLogic:
             rank_end = reward.get("rank_end")
             reward_content = reward.get("reward_content")
         mail_type = 2
-        sender = 1
-        title = "【赛事奖励】" + cycle_info["cycle_name"]
+        sender = "1"
+        title = "【赛事奖励】" + cycle_info["reward_name"]
         for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
@@ -59,7 +59,7 @@ class TournamentLogic:
             uid = v.get("uid")
             if uid > R_UID_THRESHOLD:
                 award_ids = reward_content[k]["award_ids"]
-                content = f"尊敬的选手：{cycle_info['cycle_name']}已结束，您在本次赛事中斩获第 {ranking}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
+                content = f"尊敬的选手：{cycle_info['reward_name']}已结束，您在本次赛事中斩获第 {ranking}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
                 attachment = '{"award_ids": ' + f"{award_ids}" + '}'
                 await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
@@ -96,9 +96,9 @@ class TournamentLogic:
     async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
-        NLogger.info(f"清空赛季{cycle_id}积分")
-        sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
-        NLogger.info(f"清空赛季积分del_user_point:{sta}")
+        # NLogger.info(f"清空赛季{cycle_id}积分")
+        # sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
+        # NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
         reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
         NLogger.info(f"reward_user:{reward_user}")
