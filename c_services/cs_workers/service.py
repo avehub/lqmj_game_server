@@ -40,6 +40,7 @@ from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
+from lucky_proxy.logic.proxy_user import ProxyUserLogic
 
 
 class WorkersServer(JsonBaseServer):
@@ -71,6 +72,7 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
             CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
             CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
+            CmdWorkers.PROXY_USER_UP: self.__proxy_user_up,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -758,6 +760,14 @@ class WorkersServer(JsonBaseServer):
                                       vip_level=vip_level, vip_expire_time=vip_expire_time)
             sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
             self.log_info(f"订单分销结果：{sta} {msg}")
+
+    async def __proxy_user_up(self, uid, up_data):
+        # 修改用户折扣并设置分销用户信息
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if u_info and up_data:
+            if await ProxyUserLogic.get_proxy_user_filter(player_id=uid):
+                sta, msg = await ProxyUserLogic.update_proxy_user(uid, up_data)
+                self.log_info(f"更新分销会员结果：{sta} {msg}")
 
 
 
