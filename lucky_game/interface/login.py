@@ -505,6 +505,8 @@ class BindByPhone(BaseLogin):
         }
         u_info = await BaseUserRC.update_info(user, updated)
         (not u_info) and self.answer(StaCode.FAIL, hint="绑定失败")
+        # 同步更新分销会员信息
+        await self.push_task2worker(CmdWorkers.PROXY_USER_UP, uid=u_info["uid"], msg=updated)
         return self.answer()
 
 
