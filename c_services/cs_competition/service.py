@@ -51,7 +51,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall(0.1, self.__loop_match_competition).loop_start()
+        DelayCall((2,5), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -80,7 +80,7 @@ class CompetitionServer(BaseServer):
     async def cycle_info_init(self):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_status:
-            self.__current_cycle_type = 1 #cycle_info.get("cycle_type")
+            self.__current_cycle_type = cycle_info.get("cycle_type")
             if self.__current_cycle_type==1: #热身赛
                 sta, reward_info= await TournamentRewardRC.get_reward_info(3)
                 if sta:
