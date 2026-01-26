@@ -719,7 +719,7 @@ class WorkersServer(JsonBaseServer):
         self.log_info(f"用户{uid}绑定邀请关系{invite_code}")
         invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
                                           promotion_time=created, promotion_type=0)
-        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta, msg = await GameDataAdapter.sync_promotion_user(invite_data)
         self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")

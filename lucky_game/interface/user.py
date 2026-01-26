@@ -275,7 +275,7 @@ class UserInvite(GameAuthApi):
         )
         # 调用分销模块接口
         invite_data = PromotionAddUserDTO(player_id=u_info.get("uid"), promotion_code=invite_code, promotion_time=tool_dt.cur_time(), promotion_type=0)
-        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta, msg = await GameDataAdapter.sync_promotion_user(invite_data)
         if not sta:
             self.log_err(f"用户{u_info.get('uid')}绑定邀请关系{invite_code}失败")
             return self.answer(code=self.sta_code.FAIL, hint="绑定邀请关系失败")

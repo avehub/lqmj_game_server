@@ -164,11 +164,11 @@ class ProxyUserBind(AdminAuthApi):
             self.answer(self.sta_code.FAIL, hint="用户不存在")
         invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
                                           promotion_time=tool_dt.cur_time(), promotion_type=0)
-        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta, msg = await GameDataAdapter.sync_promotion_user(invite_data)
         self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
-            self.answer(self.sta_code.FAIL, hint="调用绑定接口失败")
+            self.answer(self.sta_code.FAIL, hint=msg)
         self.answer()
 
 

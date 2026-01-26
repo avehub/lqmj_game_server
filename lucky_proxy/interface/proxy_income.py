@@ -324,5 +324,5 @@ class TestInvite(BaseApi):
                                 , 1
                                 , time.time()
                                 )
-        sync_promotion_order_data_res = await  GameDataAdapter.sync_promotion_user(p)
+        sync_promotion_order_data_res, msg = await  GameDataAdapter.sync_promotion_user(p)
         self.answer(self.sta_code.PASS, sync_promotion_order_data_res, hint="提交成功!")
