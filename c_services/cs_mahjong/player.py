@@ -207,7 +207,7 @@ class Player(BaseLeisurePlayer):
 
     @property
     def table_cards(self):
-        return deepcopy(self.__table_cards)
+        return self.__table_cards.copy()
 
     def table_cards_len(self):
         return len(self.__table_cards)
@@ -277,7 +277,6 @@ class Player(BaseLeisurePlayer):
 
     def set_shao_txz(self, flag: int = 1):
         """ 设置烧通行证 """
-        print(self.__uid, "玩家被烧通行证")
         self.__shao_tong_xing_zheng = flag
 
     @property
@@ -766,7 +765,7 @@ class Player(BaseLeisurePlayer):
     def player_info(self, contain_cards=True):
         public_men_cards = []
         for men_cards in self.__men_cards:
-            data = deepcopy(men_cards)
+            data = men_cards.copy()
             if data.get("is_zi_mo"):
                 data["card"] = 0
             public_men_cards.append(data)
@@ -806,10 +805,10 @@ class Player(BaseLeisurePlayer):
             "jiao_pai": self.__jiao_pai,
             "fang_pao": self.__fang_pao,
             "hu_type": self.__hu_type,
-            "ji_pai": self.__ji_pai,
-            "men_cards": self.__men_cards,
+            "ji_pai": list(self.__ji_pai),
+            "men_cards": self.__men_cards.copy(),
             "is_zha_hu": self.__zha_hu,
-            "hu_path": self.__hu_path,
+            "hu_path": self.__hu_path.copy(),
         }
 
     @property
@@ -849,7 +848,7 @@ class Player(BaseLeisurePlayer):
         return result
 
     def get_public_pai(self):
-        return [deepcopy(item) for item in self.__table_cards]
+        return [item.copy() for item in self.__table_cards]
 
     def on_round_over(self, score):
         """ 一局结束结算 """

@@ -72,7 +72,7 @@ class DelayCall():
         cancel self可能会影响主流程
         """
         if self.task and not self.task.done():
-            print(f"task被取消：{self.delay.f.__name__}")
+            # print(f"task被取消：{self.delay.f.__name__}")
             self.task.cancel()
 
     def left_seconds(self):
@@ -92,7 +92,7 @@ class DelayCall():
         """ 创建一个task """
         self.__start_seconds = time.time()
         self.__current_delay = random.randint(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
-        print(f"新启动延时调用：{self.delay.f.__name__}, {self.__current_delay}秒后执行")
+        # print(f"新启动延时调用：{self.delay.f.__name__}, {self.__current_delay}秒后执行")
         self.task = asyncio.create_task(self.delay_call())
         return self.task
 

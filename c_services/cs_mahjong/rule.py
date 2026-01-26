@@ -2003,7 +2003,7 @@ class Rule(metaclass=NoInstances):
                 le1_card = one_path[0] - 1
                 for i1 in [i - 1, i + 1]:
                     if 0 <= i1 < len(hu_path) and le1_card in hu_path[i1]:
-                        hu_path_copy = deepcopy(hu_path)
+                        hu_path_copy = hu_path.copy()
                         one_path.insert(0, le1_card)  # 顺里面最小的牌
                         hu_path_copy[i] = one_path
 
@@ -2016,7 +2016,7 @@ class Rule(metaclass=NoInstances):
                         i2 = i1 + 1
                         if 0 <= i2 < len(hu_path) and le1_card_1 in hu_path_copy[i2]:
                             # 把i1的癞子替换为card
-                            hu_path_copy1 = deepcopy(hu_path_copy)
+                            hu_path_copy1 = hu_path_copy.copy()
                             hu_path_copy1[i1][le1_idx] = le1_card_1
 
                             # 把i2的card替换成癞子

@@ -288,6 +288,10 @@ class Room(BaseCardRoom):
     def four_card_no_near(self):
         return self.__four_card_no_near
 
+    @property
+    def exchange_cards_info(self):
+        return self.__exchange_cards_info
+
     def serialize_room_info(self):
         room_info = self.room_info()
         if self.room_status in (RoomStatus.T_PLAYING,RoomStatus.T_DISMISS):
@@ -596,6 +600,9 @@ class Room(BaseCardRoom):
                 data["hand_cards"] = p.cards
                 data_model = S2CPublicOperatesMahjong.pb_model(**data)
                 await self.inner_send(p, CmdRoom.PUBLIC_OPERATES, data_model)
+            if not self.__decision_sec:
+                return
+            await self.deal_operates_call_time_out()
             return
         await self.deal_bu_pai(self.__eight_card_tian_hu)
 
@@ -692,6 +699,10 @@ class Room(BaseCardRoom):
         data_model = S2CStartExchangeCards.pb_model(**data)
         await self.inner_broadcast(CmdRoom.START_EXCHANGE_CARDS, data_model)
         self.log_info("开始换三张")
+        await self.exchange_three_time_out(15)
+
+    async def exchange_three_time_out(self,seconds):
+        pass
 
     def get_tian_ting_player_count(self):
         count = 0
@@ -1130,12 +1141,12 @@ class Room(BaseCardRoom):
             self.log_info("进入chu_pai_call 有玩家可以操作")
             if not self.__decision_sec:
                 return
-            await self.deal_enter_chu_pai_call_time_out()
+            await self.deal_operates_call_time_out()
             return
         if self.__have_men_jian_hu:
             await self.everyone_pass()
 
-    async def deal_enter_chu_pai_call_time_out(self):
+    async def deal_operates_call_time_out(self):
         pass
 
     async def deal_first_ji(self, curr_p: Player):
@@ -1695,7 +1706,7 @@ class Room(BaseCardRoom):
         if self.can_somebody_hu():  # 有人可以胡，则需要等待
             if not self.__decision_sec:
                 return
-            await self.deal_enter_chu_pai_call_time_out()
+            await self.deal_operates_call_time_out()
             return
         await self.do_zhuan_wan_gang_end()
 
@@ -2652,8 +2663,13 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前流程不可换牌"
         if player.tian_ting:
             return StaCode.RULE_ERR, "天听不可换牌"
-        exchange_model.ParseFromString(data)
-        ex_cards = exchange_model.cards or []
+            # 检测data是否是list类型
+        if isinstance(data, list):
+            ex_cards = data
+        else:
+            exchange_model.ParseFromString(data)
+            ex_cards = exchange_model.cards or []
+
         if len(ex_cards) != 3:
             return StaCode.RULE_ERR, "所选换牌内容不符合"
         if self.__exchange_cards_type == ChangeCardsType.SAME_SUIT_CARDS:
@@ -2673,7 +2689,6 @@ class Room(BaseCardRoom):
             self.log_info(player.uid, "当前玩家是否选择换牌了", player.seat_id in self.__exchange_cards_info,
                           "exchange_cards_info_count:", len(self.__exchange_cards_info))
             return StaCode.RULE_ERR, "已经换过牌了"
-
         self.__exchange_cards_info[player.seat_id] = {
             "ex_cards": ex_cards,
             "ex_cards_index": ex_cards_index,
@@ -2682,7 +2697,6 @@ class Room(BaseCardRoom):
         one_of_model = s2c_one_of_model()
         one_of_model.seat_id = player.seat_id
         await self.inner_broadcast(CmdRoom.PLAYER_EXCHANGE_CARDS, one_of_model)
-        self.log_info("玩家确认换牌", player.uid, "seat_id", player.seat_id, "换牌信息", ex_cards)
         if self.exchange_cards_is_end():
             p_get_cards = {}
             for c_info in self.__exchange_cards_info.values():
@@ -2817,7 +2831,7 @@ class Room(BaseCardRoom):
             self.log_info("玩家可以操作天听")
             if not self.__decision_sec:
                 return
-            await self.deal_enter_chu_pai_call_time_out()
+            await self.deal_operates_call_time_out()
             return
         await self.check_tian_ting_enter_next()
 

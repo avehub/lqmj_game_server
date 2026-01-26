@@ -12,6 +12,7 @@ from c_services.cs_competition.const import GameRoomStatus
 from c_services.cs_competition.room import CompetitionRoom
 from common.model_rc.tournament_cycle import TournamentCycleRC
 from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
+from common.model_rc.tournament_rewards import TournamentRewardRC
 from common.model_rc.tournament_user_point import TournamentUserPointRC
 from common.proto.py_pb2.ws_c2s import join_competition_model
 from common.proto.py_pb2.ws_leisure import S2CCompetitionOver, S2CJoinCompetition, S2CStartCompetition, S2CGameRoomFinish, \
@@ -19,12 +20,13 @@ from common.proto.py_pb2.ws_leisure import S2CCompetitionOver, S2CJoinCompetitio
 from common.public.conf import ROBOT_BATTLE, R_UID_THRESHOLD
 from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.utils.utils import UtilsTool
-from lucky_game.const import CompetitionStatus, PriceType
+from lucky_game.const import CompetitionStatus, PriceType, ReasonCostGold
 from lucky_game.handler.random_utils import generate_natural_random
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 from common.utils.kit_async import DelayCall, delay_func
 from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 
 
 class CompetitionServer(BaseServer):
@@ -44,10 +46,12 @@ class CompetitionServer(BaseServer):
         self.__wait_player = {}
         self.__robot_cursor = 0
         self.__current_cycle_id = 0
+        self.__current_cycle_type = 0
         self.__player_info = {}
+        self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall((2,5), self.__loop_match_competition).loop_start()
+        DelayCall(0.1, self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -71,6 +75,16 @@ class CompetitionServer(BaseServer):
         await self.__read_robot_data()
         # 读取当前赛事周期
         self.__current_cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        await self.cycle_info_init()
+
+    async def cycle_info_init(self):
+        cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
+        if cycle_status:
+            self.__current_cycle_type = 1 #cycle_info.get("cycle_type")
+            if self.__current_cycle_type==1: #热身赛
+                sta, reward_info= await TournamentRewardRC.get_reward_info(3)
+                if sta:
+                    self.__reward_info = self.build_rank_to_reward_detail(reward_info)
 
     @UtilsTool.cal_time()
     async def __read_robot_data(self):
@@ -147,6 +161,7 @@ class CompetitionServer(BaseServer):
         cycle_id = conf_data.get("cycle_id") or 0
         if self.__current_cycle_id < cycle_id:
             self.__current_cycle_id = cycle_id
+            await self.cycle_info_init()
         if start_time > 0 and curr_time < start_time:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         if 0 < end_time < curr_time:
@@ -169,7 +184,7 @@ class CompetitionServer(BaseServer):
             if not sta:
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家暂未参赛", req_id=req_id)
             if user_point.get("ticket") < price:
-                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家积分不足", req_id=req_id)
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家参赛积分不足", req_id=req_id)
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point
@@ -349,7 +364,7 @@ class CompetitionServer(BaseServer):
         for rank, uid, score in rank_by_score:
             points = total_players - rank + 1
             ticket = self.__player_info[uid].get("ticket", 0)
-            score = 0 if score >= 0 else score
+            score = 0 if (score >= 0 or self.__current_cycle_type) else score
             competition_result.append({
                 "uid": uid,
                 "rank": rank,
@@ -375,6 +390,13 @@ class CompetitionServer(BaseServer):
                 }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
             self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
+            if self.__current_cycle_type == 1 and uid > R_UID_THRESHOLD:  # 热身赛
+                info = self.__reward_info.get(rank, None)
+                amount = 0
+                if info:
+                    amount = info["amount"]
+                sta, result = await self.send_competition_awards(uid, amount)
+                self.log_info(f"更新福袋奖励：{sta} 玩家{uid} 福袋奖励{amount} 排名{rank}")
         data = {
             "competition_result": competition_result,
         }
@@ -448,11 +470,17 @@ class CompetitionServer(BaseServer):
                 "score": 0 if is_init else score,
                 "room_num": player_in_room_num.get(uid, 0),
             }
+            award_desc = ""
+            if self.__current_cycle_type==1: #热身赛
+                info = self.__reward_info.get(rank, None)
+                if info:
+                    award_desc = info["title"]
             points = total_players - rank + 1
             player_rank.append(rank_info)
             award_list.append({
                 "rank": rank,
                 "points": points,
+                "award_desc": award_desc,
             })
 
 
@@ -592,3 +620,29 @@ class CompetitionServer(BaseServer):
     async def send_task_to_worker(self, cmd, data, uid=1):
         """ 发送任务到worker消费 """
         await self.push_task2worker(cmd, data, uid)
+
+    @staticmethod
+    async def send_competition_awards(uid, count):
+        """ 发放比赛奖励 """
+        return await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=ReasonCostGold.PREHEAT_COMPETITION_AWARDS)
+
+    @staticmethod
+    def build_rank_to_reward_detail(reward_info):
+        rank_start = reward_info["rank_start"]
+        reward_list = reward_info["reward_content"]
+
+        rank_map = {}
+
+        for i, entry in enumerate(reward_list):
+            rank = rank_start + i
+            rewards = entry["award_content"][0]["content"]["rewards"]
+            if not rewards:
+                continue  # 跳过空奖励
+            reward_item = rewards[0]
+
+            rank_map[rank] = {
+                "title": reward_item["title"],
+                "amount": reward_item["amount"]
+            }
+
+        return rank_map
