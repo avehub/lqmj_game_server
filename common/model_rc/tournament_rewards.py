@@ -15,7 +15,6 @@ class TournamentRewardRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
     expired_mode = 0
 
-
     @classmethod
     async def cache_session_set(cls, query, value):
         return await cls.conf.rds.set_item(f"{cls.tb_name}:{query}", value)
@@ -65,7 +64,7 @@ class TournamentRewardRC(BaseCommonRC):
 
     @classmethod
     async def get_reward_filter(cls, round_type: int = None, rank_start: int = None, rank_end: int = None,
-                                  count: bool = False, reward_id: int = None, page: int = None, page_size: int = None):
+                                count: bool = False, reward_id: int = None, page: int = None, page_size: int = None):
         """获取赛事奖励记录"""
         try:
             query = {}
@@ -130,3 +129,25 @@ class TournamentRewardRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"操作失败:{e}"
         return True, "成功"
+
+    @classmethod
+    async def get_reward_list(cls, reward_result: dict):
+        """获取赛事奖励列表"""
+        result = []
+        try:
+            reward_content = reward_result.get("reward_content", result)
+            if not reward_content:
+                return False, result
+            for item in reward_content:
+                ranking_start = item.get("ranking_start", 0)
+                ranking_end = item.get("ranking_end", 0)
+                if ranking_start > ranking_end or ranking_start < 1 or ranking_end < 1:
+                    continue
+                num = ranking_end - ranking_start + 1
+                for i in range(num):
+                    ranking = ranking_start + i
+                    award_ids = item["award_ids"]
+                    result.append({"ranking": ranking, "award_ids": award_ids})
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, result
