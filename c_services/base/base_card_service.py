@@ -1,10 +1,8 @@
-from asyncio import sleep
 
 from c_services.base.base_service import BaseService
 from c_services.const.cs_enum_const import CmdRoom, RoomStatus, CmdClub, ClubMsgType
 from c_services.cs_mahjong.const import OverType
 from common.proto.py_pb2.ws_c2s import req_dismiss_model, enter_room_model
-from common.proto.py_pb2.ws_leisure import S2CReqDismissRoom
 from common.public.conf import C_SERVICE_SECRET_KEY, R_UID_THRESHOLD
 from common.public.enum_const import StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall

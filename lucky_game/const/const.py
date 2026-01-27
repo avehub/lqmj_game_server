@@ -614,6 +614,7 @@ class ReasonCostGold(BaseEnum):
     CLUB_YELLOW_DIAMOND_TICKETS = 44, "游戏黄钻门票"
     ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
     WECHAT_STORE_SHOPPING = 46, "微信商店购物"
+    PREHEAT_COMPETITION_AWARDS = 47, "预热赛奖励"
 
 
     # 100 - 200留给管理员使用
