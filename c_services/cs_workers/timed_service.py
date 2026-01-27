@@ -116,6 +116,7 @@ class TimedService:
         # 统计数据推送
         now_time = datetime.now()
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
 
 
 
@@ -208,7 +209,7 @@ class TimedService:
             end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
             if now > end_time_tamp:
-                await TournamentLogic().cycle_settle(cycle_id)
+                await TournamentLogic().cycle_settle(cycle_id, cycle_data["reward_id"])
                 await TournamentLogic().up_cycle_status(cycle_id)
 
     @classmethod
