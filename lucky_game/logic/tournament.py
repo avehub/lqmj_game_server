@@ -39,16 +39,16 @@ class TournamentLogic:
         up_data = {"ticket": ticket}
         return await TournamentUserPointRC.up_user_point(cycle_id, order.get("uid"), up_data)
 
-    async def send_ranking_reward(self,cycle_id: int, ranking_list: list, round_type: int = 1):
+    async def send_ranking_reward(self, cycle_id: int, ranking_list: list, reward: dict):
         """ 发送排行榜奖励 """
         rank_end = 0
         reward_content = []
         sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
-        sta, reward = await TournamentRewardRC.get_reward_info(round_type)
         NLogger.info(f"reward: {reward}")
         if sta and reward:
             rank_end = reward.get("rank_end")
-            reward_content = reward.get("reward_content")
+            # reward_content = reward.get("reward_content")
+            reward_sta, reward_content = await TournamentRewardRC.get_reward_list(reward)
         mail_type = 2
         sender = "1"
         title = "【赛事奖励】" + cycle_info["reward_name"]
@@ -93,19 +93,20 @@ class TournamentLogic:
         return True
 
 
-    async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
+    async def cycle_settle(self, cycle_id: int, reward_id: int):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
         # NLogger.info(f"清空赛季{cycle_id}积分")
         # sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
         # NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
-        reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
+        _, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
+        reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_info["rank_end"])
         NLogger.info(f"reward_user:{reward_user}")
         if reward_sta and reward_user:
             award_u_list = [item for item in reward_user["list"]]
             # 发送榜奖励
-            await self.send_ranking_reward(cycle_id, award_u_list)
+            await self.send_ranking_reward(cycle_id, award_u_list, reward_info)
 
 
 
