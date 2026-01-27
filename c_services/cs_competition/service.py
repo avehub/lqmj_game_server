@@ -84,7 +84,7 @@ class CompetitionServer(BaseServer):
             if self.__current_cycle_type==1: #热身赛
                 sta, reward_info= await TournamentRewardRC.get_reward_info(3)
                 if sta:
-                    self.__reward_info = self.build_rank_to_reward_detail(reward_info)
+                    self.__reward_info = self.build_rank_to_reward(reward_info)
 
     @UtilsTool.cal_time()
     async def __read_robot_data(self):
@@ -627,22 +627,19 @@ class CompetitionServer(BaseServer):
         return await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=ReasonCostGold.PREHEAT_COMPETITION_AWARDS)
 
     @staticmethod
-    def build_rank_to_reward_detail(reward_info):
-        rank_start = reward_info["rank_start"]
-        reward_list = reward_info["reward_content"]
+    def build_rank_to_reward(reward_info):
+        rank_reward_map = {}
+        for item in reward_info["reward_content"]:
+            start = item["ranking_start"]
+            end = item["ranking_end"]
+            reward_item = item["award_content"][0]["content"]["rewards"][0]
 
-        rank_map = {}
+            title = reward_item["title"]
+            amount = reward_item["amount"]
 
-        for i, entry in enumerate(reward_list):
-            rank = rank_start + i
-            rewards = entry["award_content"][0]["content"]["rewards"]
-            if not rewards:
-                continue  # 跳过空奖励
-            reward_item = rewards[0]
-
-            rank_map[rank] = {
-                "title": reward_item["title"],
-                "amount": reward_item["amount"]
-            }
-
-        return rank_map
+            for rank in range(start, end + 1):
+                rank_reward_map[rank] = {
+                    "title": title,
+                    "amount": amount
+                }
+        return rank_reward_map

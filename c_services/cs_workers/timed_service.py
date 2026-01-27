@@ -220,7 +220,7 @@ class TimedService:
             end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
             start_time_tamp = int(start_time.timestamp())
-            await ConfCompetitionRC.update_competition_time(cycle_data["template_id"], start_time_tamp, end_time_tamp, cycle_id)
+            await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, cycle_id)
 
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
