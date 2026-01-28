@@ -73,9 +73,9 @@ class TournamentUserPointRC(BaseCommonRC):
                 valid_fields = {"score", "ticket", "updated"}
                 update_data = {k: v for k, v in up_data.items() if k in valid_fields}
                 if update_data:
-                    if score:
+                    if score or has.score:
                         update_data["score"] = has.score + score
-                    if ticket:
+                    if ticket or has.ticket:
                         if has.ticket < 0:
                             has.ticket = 0
                         update_data["ticket"] = has.ticket + ticket
