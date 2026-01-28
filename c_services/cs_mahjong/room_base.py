@@ -2720,7 +2720,7 @@ class Room(BaseCardRoom):
                 result["get_cards"] = get_cards
                 data_model = S2CExchangeCardsInfo.pb_model(**result)
                 await self.inner_send(p, CmdRoom.PLAYER_EXCHANGE_CARDS, data_model)
-                self.call_flow(2, self.ding_que_or_tian_ting)
+            self.call_flow(2, self.ding_que_or_tian_ting)
         return StaCode.PASS, ""
 
     async def on_player_tian_ting(self, p: Player):
