@@ -69,17 +69,15 @@ class TournamentUserPointRC(BaseCommonRC):
                     "total_points": score,
                 }
             else:
-                cls.conf.log.info("更新赛事积分前存在", has.ticket, has.score)
                 valid_fields = {"score", "ticket", "updated"}
                 update_data = {k: v for k, v in up_data.items() if k in valid_fields}
                 if update_data:
-                    if score:
+                    if score or has.score:
                         update_data["score"] = has.score + score
-                    if ticket:
+                    if ticket or has.ticket:
                         if has.ticket < 0:
                             has.ticket = 0
                         update_data["ticket"] = has.ticket + ticket
-                        cls.conf.log.info("更新赛事门票前", has.ticket + ticket)
                     cls.conf.log.info("更新赛事积分最终结果", cycle_id, update_data)
                     await cls.db_model.filter(**query).update(**update_data)
                     await cls.cache_session_del(f"{cycle_id}:{uid}")
