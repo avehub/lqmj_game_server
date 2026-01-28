@@ -299,6 +299,7 @@ class CompetitionServer(BaseServer):
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
                 await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
                 if is_init and p_uid > R_UID_THRESHOLD:
+                    self.log_info(room.match_room_id,"比赛开始前准备","玩家",p_uid,"门票",price)
                     await TournamentUserPointRC.update_int_field(p_uid, "ticket", price, "sub")
         self.log_info(room.match_room_id,"比赛开始前准备","轮次",room.match_round,room.game_room_info)
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
