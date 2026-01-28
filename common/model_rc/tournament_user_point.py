@@ -57,6 +57,7 @@ class TournamentUserPointRC(BaseCommonRC):
         """更新赛事积分"""
         try:
             query = {"cycle_id": cycle_id, "uid": uid}
+            cls.conf.log.info("更新赛事积分", query, up_data)
             has = await cls.db_model.filter(**query).first()
             score = up_data.get("score", 0)
             ticket = up_data.get("ticket", 0)
@@ -77,9 +78,9 @@ class TournamentUserPointRC(BaseCommonRC):
                         if has.ticket < 0:
                             has.ticket = 0
                         update_data["ticket"] = has.ticket + ticket
+                    cls.conf.log.info("更新赛事积分最终结果", cycle_id, update_data)
                     await cls.db_model.filter(**query).update(**update_data)
                     await cls.cache_session_del(f"{cycle_id}:{uid}")
-
                 replay_msg_data = {
                     "uid": uid,
                     "cycle_id": cycle_id,
