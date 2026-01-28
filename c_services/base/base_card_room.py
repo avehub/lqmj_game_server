@@ -388,7 +388,7 @@ class BaseCardRoom(BaseRoom):
                 "record_tid": 0,
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
-                "replay_msg": self.__round_msg_records,
+                "replay_msg": self.__round_msg_records.copy(),
                 "replay_label": replay_label
             }
             player_account = account.get(p.seat_id, {})
@@ -416,9 +416,9 @@ class BaseCardRoom(BaseRoom):
             return await self.game_over(over_type)
         else:
             if self.__match_room_id == 0:
-                replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
+                replay_msg_data = {"replay_msg_data": self.__replay_msg_data.copy(), "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
-                self.__replay_msg_data = []
+            self.__replay_msg_data = []
             await self.next_round_ready()
 
     async def next_round_ready(self):
@@ -517,7 +517,9 @@ class BaseCardRoom(BaseRoom):
         }
         if self.__replay_msg_data:
             # 游戏结束一轮结束战绩插入
-            record_data["replay_msg_data"] = self.__replay_msg_data
+            for item in self.__replay_msg_data:
+                item["replay_msg"] = self.__round_msg_records.copy()
+            record_data["replay_msg_data"] = self.__replay_msg_data.copy()
             # replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
             # await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
         else:
@@ -530,7 +532,7 @@ class BaseCardRoom(BaseRoom):
                     data = {
                         "record_id": self.__record_id,
                         "round_idx": round_idx,
-                        "round_msg_records": self.__round_msg_records,
+                        "round_msg_records": self.__round_msg_records.copy(),
                         "tid": self.tid,
                         "is_all": False
                     }
@@ -635,7 +637,7 @@ class BaseCardRoom(BaseRoom):
     def clear_room(self):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
-        self.__replay_msg_data = []  # 存入战绩数据
+        self.__replay_msg_data = []# 存入战绩数据
         self.__online_group_user = []
         self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
@@ -665,9 +667,12 @@ class BaseCardRoom(BaseRoom):
         self.__agree_dismiss_seats = set()
 
     def get_extra_score_map(self) -> dict:
-        map_copy = EXTRA_SCORE_MAP.copy()
+        map_result = {}
+        # 复制 EXTRA_SCORE_MAP 的内容
+        for key, value in EXTRA_SCORE_MAP.items():
+            map_result[key] = value
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
-            map_copy.update({
+            map_result.update({
                 ExtraHuPai.GANG_SHANG_PAO: 3,
                 ExtraHuPai.GANG_SHANG_HUA: 3,
                 CheckType.CHECK_CHA_QUE: 1,
@@ -677,9 +682,9 @@ class BaseCardRoom(BaseRoom):
                 CheckType.CHECK_LAI_ZI_GNAG: 40,
                 CheckType.CHECK_LAI_ZI_JI: 2,
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.BI_JIE_MJ:
-            map_copy.update({
+            map_result.update({
                 ExtraHuPai.GANG_SHANG_PAO: 10,
                 ExtraHuPai.GANG_SHANG_HUA: 3,
                 ExtraHuPai.QIANG_GANG_HU: 15,
@@ -688,9 +693,9 @@ class BaseCardRoom(BaseRoom):
                 ExtraHuPai.TIAN_HU: 60,
                 ExtraHuPai.SHA_BAO: 20,
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
-            map_copy.update({
+            map_result.update({
                 ExtraHuPai.GANG_SHANG_PAO: 10,
                 ExtraHuPai.GANG_SHANG_HUA: 10,
                 ExtraHuPai.QIANG_GANG_HU: 10,
@@ -709,27 +714,30 @@ class BaseCardRoom(BaseRoom):
                 CheckType.CHECK_LAI_ZI_JI: 2,
                 CheckType.CHECK_LAI_ZI_CHONG_XI: 25,
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.REN_HUAI_MJ:
             qys_score = self.__rule_details.get("qing_yi_se_score", 1)
             gao_wa_dan = self.__rule_details.get("gao_wa_dan", 0)
             if gao_wa_dan:
                 qys_score = qys_score * 50
-            map_copy.update({
+            map_result.update({
                 ExtraHuPai.GANG_SHANG_HUA: qys_score,
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.AN_SHUN_MJ:
-            map_copy.update({
+            map_result.update({
                 ExtraHuPai.SEA_MOON: 2,
                 ExtraHuPai.GAN_KOU: 5,
             })
-            return map_copy
+            return map_result
         else:
-            return map_copy
+            return map_result
 
     def get_pai_xing_score_map(self) -> dict:
-        map_copy = PAI_XING_SCORE_MAP.copy()
+        map_result = {}
+        # 复制 PAI_XING_SCORE_MAP 的内容
+        for key, value in PAI_XING_SCORE_MAP.items():
+            map_result[key] = value
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
             qing_yi_se = 10
             if self.play_type == PlayType.GUI_YANG_3:
@@ -737,7 +745,7 @@ class BaseCardRoom(BaseRoom):
                 if qys_score:
                     qing_yi_se = 10 + 5
 
-            map_copy.update({
+            map_result.update({
                 HuType.DI_LONG_QI: 20,
                 HuType.DOUBLE_DI_LONG_QI: 30,
                 HuType.QING_DOUBLE_DI_LONG_QI: 40,
@@ -745,9 +753,9 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_THREE_DI_LONG_QI: 50,
                 HuType.QING_YI_SE: qing_yi_se
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.BI_JIE_MJ:
-            map_copy.update({
+            map_result.update({
                 HuType.PING_HU: 6,
                 HuType.DA_DUI_ZI: 12,
                 HuType.QI_DUI: 10,
@@ -769,10 +777,10 @@ class BaseCardRoom(BaseRoom):
                 HuType.QYS_RUAN_WU_DUI: 40,  # 清硬五对
                 HuType.QYS_YING_WU_DUI: 40,  # 清硬五对
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
             base_score = 5
-            map_copy.update({
+            map_result.update({
                 HuType.PING_HU: base_score,
                 HuType.DA_DUI_ZI: base_score + 10,
                 HuType.QI_DUI: base_score + 20,
@@ -794,13 +802,13 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_THREE_LONG_QI: base_score + 140,
                 HuType.QING_JIN_GOU: base_score + 40
             })
-            return map_copy
+            return map_result
         elif self.play_type == PlayType.REN_HUAI_MJ:
             qys_score = self.__rule_details.get("qing_yi_se_score", 10)
             jgd_score = self.__rule_details.get("jin_gou_diao_score", 10)
             da_kuan_zhang_score = self.__rule_details.get("da_kuan_zhang_score", 4)
             ddz_score = self.__rule_details.get("da_dui_zi_score", 5)
-            map_copy.update({
+            map_result.update({
                 HuType.QING_YI_SE: qys_score,
                 HuType.JIN_GOU_DIAO: jgd_score,
                 HuType.DA_KUAN_ZHANG: da_kuan_zhang_score,
@@ -808,14 +816,17 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_QI_DUI: 10 + + qys_score,
                 HuType.QING_LONG_BEI: 20 + + qys_score,
             })
-            return map_copy
+            return map_result
         else:
-            return map_copy
+            return map_result
 
     def get_ji_pai_score_map(self) -> dict:
-        map_copy = JI_PAI_SCORE.copy()
+        map_result = {}
+        # 复制 JI_PAI_SCORE 的内容
+        for key, value in JI_PAI_SCORE.items():
+            map_result[key] = value
         if self.play_type == PlayType.BI_JIE_MJ:
-            map_copy.update({
+            map_result.update({
                 CardsType.YI_TONG: 5,
                 JiType.CHONG_FENG_JI: 2,
                 JiType.CHONG_FENG_JIN_JI: 2 * 10,
@@ -823,11 +834,11 @@ class BaseCardRoom(BaseRoom):
                 JiType.YIN_JI: 5,
                 JiType.ZE_REN_JI: 1,
             })
-            return map_copy
+            return map_result
         if self.play_type == PlayType.ZUN_YI_LAI_ZI:
             wgj_score = self.__rule_details.get("wu_gu_ji_score", 2)
             default_score = 1 if wgj_score == 3 else 2
-            map_copy.update({
+            map_result.update({
                 CardsType.WU_GU_JI: wgj_score,
                 CardsType.YAO_JI: 2,
                 CardsType.YI_WAN: 2,
@@ -853,14 +864,14 @@ class BaseCardRoom(BaseRoom):
                 JiType.MING_GANG: 5,
                 JiType.ZHUAN_WAN_GANG: 5,
             })
-            return map_copy
+            return map_result
         if self.play_type == PlayType.REN_HUAI_MJ:
-            map_copy.update({
+            map_result.update({
                 JiType.WEEK_JI: 1,
             })
-            return map_copy
+            return map_result
         else:
-            return map_copy
+            return map_result
 
     async def async_set_room_status(self, status: RoomStatus):
         self.set_room_status(status)

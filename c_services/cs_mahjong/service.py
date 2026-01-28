@@ -2,7 +2,6 @@ from c_services.const.cs_enum_const import CmdRoom, RoomStatus
 from c_services.cs_mahjong.player import Player
 from c_services.cs_mahjong.room_base import Room
 from common.public.enum_const import StaCode
-from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .const import FlowStatus
 from .service_robot_act import MahjongServerRobotAct
 from ..base.base_card_service import BaseCardService

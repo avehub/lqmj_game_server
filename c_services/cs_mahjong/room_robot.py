@@ -2,10 +2,10 @@ import random
 from copy import deepcopy
 
 from c_services.const.cs_enum_const import CmdRoom, CmdRobotCal
-from c_services.cs_mahjong.const import ActionType, FlowStatus, TimerDelay, CardsType, HuType
+from c_services.cs_mahjong.const import ActionType, FlowStatus, TimerDelay, CardsType, HuType, PlayType
 from c_services.cs_mahjong.room_base import Room
 from c_services.cs_mahjong.rule import Rule
-from common.proto.py_pb2.ws_c2s import gang_model
+from common.proto.py_pb2.ws_c2s import gang_model, exchange_model
 from common.proto.py_pb2.ws_leisure import s2c_one_of_model
 from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import StaCode, ServiceEnum
@@ -13,6 +13,26 @@ from common.utils.utils import UtilsTool
 
 
 class RoomRobot(Room):
+
+    async def exchange_three_time_out(self,seconds):
+        if self.flow_status != FlowStatus.T_IN_EXCHANGE_CARDS:
+            return StaCode.FLOW_ERR
+        for p in self.seats:
+            if p.is_robot:
+                res = random.randint(2, 8)
+                p.call_flow(res, self.exchange_three_auto,p)
+        self.call_flow(seconds, self.deal_exchange_time_out)
+
+    async def deal_exchange_time_out(self):
+        for p in self.seats:
+            await self.exchange_three_auto(p)
+
+    async def exchange_three_auto(self,p):
+        if not self.exchange_cards_info.get(p.seat_id):
+            exchange_cards = self.recommend_exchange_cards(p)
+            code, _ = await self.on_player_exchange_cards(p, exchange_cards)
+            if StaCode.PASS != code:
+                self.log_info(p.uid, "超时换牌有误", code)
 
     async def enter_mo_pai_call_by_robot(self,curr_player,seconds):
         if curr_player.is_robot:
@@ -52,43 +72,62 @@ class RoomRobot(Room):
             if p.can_operates() and not self.has_do_action(p):
                 has_operate = True
                 gang_type = p.gang_in_operates()
-                if p.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
-                    code, _ = await self.on_player_men(p)
-                    self.log_info("check_robot_operate 闷")
-                    if code != StaCode.PASS:
-                        self.log_info("机器人操作闷有误", code)
-                elif p.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
-                    self.log_info("check_robot_operate 捡")
-                    code, _ = await self.on_player_jian(p)
-                    if code != StaCode.PASS:
-                        self.log_info("机器人操作捡有误", code)
-                elif p.is_action_in_operates(ActionType.ACTION_TYPE_HU):
-                    code, _ = await self.on_player_hu(p)
-                    if StaCode.PASS != code:
-                        self.log_info("机器人操作胡牌有误", code)
-                elif p.is_action_in_operates(ActionType.ACTION_TYPE_TIAN_TING):
-                    code, _ = await self.on_player_tian_ting(p)
-                    if StaCode.PASS != code:
-                        self.log_info("机器人操作天听有误", code)
-                elif gang_type:
-                    # todo: AI机器人计算是否杠
-                    code = StaCode.PASS
-                    await self.robot_auto_gang(p, gang_type)
-                elif p.is_action_in_operates(ActionType.ACTION_TYPE_PENG):
-                    # todo: AI机器人计算是否碰
-                    code = StaCode.PASS
-                    await self.robot_auto_pong(p)
+                should_hu = False
+                if self.play_type in (PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN) and p.is_action_in_operates(ActionType.ACTION_TYPE_HU):
+                    hu_cards_count = self.calculate_hu_cards_count(p)
+                    self.log_info("check_robot_operate 胡牌数量：", p.uid, hu_cards_count,p.seat_id)
+                    if hu_cards_count <= 3:
+                        # 剩余能胡的牌的数量小于等于3，直接胡牌
+                        should_hu = True
+                    elif 3 < hu_cards_count <= 6:
+                        # 剩余能胡的牌的数量大于3小于等于6，有50%的概率胡牌
+                        import random
+                        should_hu = random.random() < 0.5
+                    if should_hu:
+                        code, _ = await self.on_player_hu(p)
+                        if StaCode.PASS != code:
+                            self.log_info("机器人操作胡牌有误", code)
 
-                if code != StaCode.PASS:
-                    self.log_info("机器人操作有误，选择pass")
-                    await self.on_player_pass(p)
+                if not should_hu:
+                    if p.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
+                        code, _ = await self.on_player_men(p)
+                        self.log_info("check_robot_operate 闷")
+                        if code != StaCode.PASS:
+                            self.log_info("机器人操作闷有误", code)
+                    elif p.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
+                        self.log_info("check_robot_operate 捡")
+                        code, _ = await self.on_player_jian(p)
+                        if code != StaCode.PASS:
+                            self.log_info("机器人操作捡有误", code)
+                    elif p.is_action_in_operates(ActionType.ACTION_TYPE_HU):
+                        code, _ = await self.on_player_hu(p)
+                        if StaCode.PASS != code:
+                            self.log_info("机器人操作胡牌有误", code)
+                    elif p.is_action_in_operates(ActionType.ACTION_TYPE_TIAN_TING):
+                        code, _ = await self.on_player_tian_ting(p)
+                        if StaCode.PASS != code:
+                            self.log_info("机器人操作天听有误", code)
+                    elif gang_type:
+                        # todo: AI机器人计算是否杠
+                        code = StaCode.PASS
+                        await self.robot_auto_gang(p, gang_type)
+                    elif p.is_action_in_operates(ActionType.ACTION_TYPE_PENG):
+                        # todo: AI机器人计算是否碰
+                        code = StaCode.PASS
+                        await self.robot_auto_pong(p)
+
+                    if code != StaCode.PASS:
+                        self.log_info("机器人操作有误，选择pass")
+                        await self.on_player_pass(p)
 
         if has_operate:
             await self.check_action_end()
 
-    async def chu_pai_call_time_out(self):
+    async def operates_time_out(self):
         if self.flow_status not in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_MO_PAI_CALL,
-                                    FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL):
+                                    FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,FlowStatus.T_IN_TIAN_TING,
+                                    FlowStatus.T_IN_FOUR_BAO_TING, FlowStatus.T_IN_TIAN_HU,
+                                    FlowStatus.T_IN_EIGHT_TIAN_HU):
             return
         for p in self.seats:
             if p.can_operates() and not self.has_do_action(p):
@@ -112,12 +151,13 @@ class RoomRobot(Room):
                 await self.check_action_end()
                 return
 
-    async def deal_enter_chu_pai_call_time_out(self):
+    async def deal_operates_call_time_out(self):
         self.call_flow_robot(TimerDelay.ROBOT_TIME, self.check_robot_operate)
-        await self.deal_chu_pai_call_time_out()
+        await self.deal_operates_time_out()
 
-    async def deal_chu_pai_call_time_out(self):
-        self.call_flow(TimerDelay.CHU_PAI_AFTER_WAIT_TIME, self.chu_pai_call_time_out)
+
+    async def deal_operates_time_out(self):
+        self.call_flow(TimerDelay.CHU_PAI_AFTER_WAIT_TIME, self.operates_time_out)
 
 
     @staticmethod
@@ -278,3 +318,117 @@ class RoomRobot(Room):
 
         # todo: 机器人自动计算出牌
         await self.robot_auto_attack(player)
+
+    def calculate_hu_cards_count(self, p):
+        """
+        计算机器人剩余能胡的牌的数量
+        """
+        # 初始化能胡的牌的数量
+
+        allow_hu_map = {HuType.DI_LONG_QI: self.di_long_qi, HuType.JIN_GOU_DIAO: True,
+                        HuType.QI_DUI: True, HuType.FOUR_CARD_NO_NEAR: self.four_card_no_near,
+                        HuType.FOUR_CARD_IS_SAME: self.four_card_tian_hu}
+        hu_cards_count = 0
+
+        # 获取玩家的听牌列表
+        ting_list = Rule.get_ting_hu_list(p.table_cards, list(p.cards), allow_hu_map, self.lai_zi)
+
+        # 获取剩余的牌
+        remain_cards = self.poker.remain_cards if hasattr(self.poker, 'remain_cards') else []
+
+        # 计算每种听牌在剩余牌中的数量
+        for card in ting_list:
+            # 计算该牌在剩余牌中的数量
+            card_count = remain_cards.count(card)
+            hu_cards_count += card_count
+
+        return hu_cards_count
+
+
+    @staticmethod
+    def recommend_exchange_cards(player):
+        """
+        推荐换三张牌的策略
+        :param player: 玩家对象
+        :return: 推荐舍弃的三张牌列表
+        """
+        # 获取玩家手牌
+        hand_cards = player.cards.copy()
+        if not hand_cards:
+            return []
+
+        # 按花色分组
+        suit_cards = {}
+        for card in hand_cards:
+            # 计算花色（假设牌的表示为两位数，十位为花色，个位为牌值）
+            suit = card // 10
+            if suit not in suit_cards:
+                suit_cards[suit] = []
+            suit_cards[suit].append(card)
+
+        # 计算每种花色的数量
+        suit_counts = []
+        for suit, cards in suit_cards.items():
+            suit_counts.append((suit, len(cards), cards))
+
+        # 按花色数量排序（升序）
+        suit_counts.sort(key=lambda x: x[1])
+
+        # 初始化推荐舍弃的牌列表
+        recommended_cards = []
+
+        # 优先从数量最少的花色中选择
+        for suit, count, cards in suit_counts:
+            # 如果已经选够三张牌，停止选择
+            if len(recommended_cards) >= 3:
+                break
+
+            # 对当前花色的牌进行排序
+            sorted_cards = sorted(cards)
+
+            # 计算每张牌的孤立程度（与相邻牌的距离）
+            isolation_scores = []
+            for i, card in enumerate(sorted_cards):
+                # 计算与前一张牌的距离
+                prev_distance = float('inf')
+                if i > 0:
+                    prev_distance = card - sorted_cards[i - 1]
+
+                # 计算与后一张牌的距离
+                next_distance = float('inf')
+                if i < len(sorted_cards) - 1:
+                    next_distance = sorted_cards[i + 1] - card
+
+                # 孤立程度为前后距离的最小值
+                isolation_score = min(prev_distance, next_distance)
+                isolation_scores.append((card, isolation_score))
+
+            # 按孤立程度排序（降序），优先选择孤立程度高的牌
+            isolation_scores.sort(key=lambda x: x[1], reverse=True)
+
+            # 选择当前花色中最孤立的牌
+            for card, _ in isolation_scores:
+                if len(recommended_cards) >= 3:
+                    break
+                recommended_cards.append(card)
+
+        # 如果还没选够三张牌，从剩余牌中选择
+        if len(recommended_cards) < 3:
+            remaining_cards = [card for card in hand_cards if card not in recommended_cards]
+            # 对剩余牌按孤立程度排序
+            remaining_isolation = []
+            for card in remaining_cards:
+                # 简化计算：如果牌的前后都没有相邻牌，则认为是孤立的
+                prev_card = card - 1
+                next_card = card + 1
+                is_isolated = prev_card not in remaining_cards and next_card not in remaining_cards
+                remaining_isolation.append((card, is_isolated))
+            # 优先选择孤立的牌
+            remaining_isolation.sort(key=lambda x: x[1], reverse=True)
+            for card, _ in remaining_isolation:
+                if len(recommended_cards) >= 3:
+                    break
+                recommended_cards.append(card)
+
+        # 确保返回的是三张牌
+        return recommended_cards[:3]

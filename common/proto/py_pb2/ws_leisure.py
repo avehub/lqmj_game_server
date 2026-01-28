@@ -1205,6 +1205,7 @@ class S2CCompetitionInfo:
             award_info = obj.award_list.add()
             award_info.rank = data.get("rank") or 0
             award_info.points = data.get("points") or 0
+            award_info.award_desc = data.get("award_desc") or ""
         game_room_list = kwargs.get("game_room_list") or []
         for data in game_room_list:
             game_room_status = obj.game_room_list.add()
