@@ -182,6 +182,7 @@ class CompetitionServer(BaseServer):
         if price_type == PriceType.BY_POINT:
             sta, user_point = await TournamentUserPointRC.get_user_point(self.__current_cycle_id, uid)
             if not sta:
+                self.log_info("玩家暂未参赛", "cycle_id",self.__current_cycle_id, "uid", uid)
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家暂未参赛", req_id=req_id)
             if user_point.get("ticket") < price:
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家参赛积分不足", req_id=req_id)
@@ -365,13 +366,13 @@ class CompetitionServer(BaseServer):
         for rank, uid, score in rank_by_score:
             points = total_players - rank + 1
             ticket = self.__player_info[uid].get("ticket", 0)
-            score = 0 if (score >= 0 or self.__current_cycle_type) else score
+            score = 0 if (score >= 0 or self.__current_cycle_type == 1) else score
             competition_result.append({
                 "uid": uid,
                 "rank": rank,
                 "score": score,
                 "points": points,
-                "ticket": ticket if score >= 0 else ticket + score
+                "ticket": ticket if (score >= 0 or self.__current_cycle_type == 1)  else ticket + score
             })
             self.__player_info.pop(uid)
 
