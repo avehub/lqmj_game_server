@@ -1212,6 +1212,9 @@ class S2CCompetitionInfo:
             game_room_status.room_num = data.get("room_num") or 0
             game_room_status.status = data.get("status") or 0
 
+        obj.total_round = kwargs.get("total_round") or 0
+        obj.curr_match_round = kwargs.get("curr_match_round") or 0
+        obj.total_match_round = kwargs.get("total_match_round") or 0
         return obj
 
 # ################################## 比赛通知 ##################################

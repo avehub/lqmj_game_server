@@ -51,7 +51,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall((2,5), self.__loop_match_competition).loop_start()
+        DelayCall(0.1, self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -260,7 +260,8 @@ class CompetitionServer(BaseServer):
         match_room_id = join_info.get("match_room_id")
         if not match_room_id:
             return await self.cs2ws_by_rmq(CmdCompetition.BACK_COMPETITION, uid, StaCode.FAIL, "玩家未加入比赛房间", req_id=req_id)
-        await self.__competition_info(match_room_id)
+        total_round = conf_data.get("total_round")
+        await self.__competition_info(match_room_id, total_round=total_round)
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
@@ -438,7 +439,7 @@ class CompetitionServer(BaseServer):
         self.log_info( match_room_id, "room_id", room_id, "更新积分", player_score)
         await self.__competition_info(match_room_id)
 
-    async def __competition_info(self, match_room_id, is_init=False, is_finish=False):
+    async def __competition_info(self, match_room_id, is_init=False, is_finish=False, total_round=0):
         room = self.get_room(match_room_id)
         if not room:
             self.log_info("match_room_id", match_room_id, "比赛房间不存在")
@@ -483,7 +484,11 @@ class CompetitionServer(BaseServer):
                 "points": points,
                 "award_desc": award_desc,
             })
-
+        data.update({
+            "total_round": total_round,
+            "curr_match_round": room.match_round,
+            "total_match_round": room.total_match_round,
+        })
 
         print("比赛信息", data)
         s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
