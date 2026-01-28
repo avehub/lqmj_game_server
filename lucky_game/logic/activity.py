@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime
 from typing import Union, Tuple
 
+from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 
@@ -209,9 +211,17 @@ class Base:
                         reward_amount = remark.get("amount")
                         if reason is None:
                             reason = ReasonCostGold.ACTIVITY_GIFT
-                        sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
-                                                                                       reason=reason)
-                        NLogger.info(f"领取奖励：sta={sta}, e={e}")
+                        if reward_type in await ExtraUserResourceChangesRC.change_field():
+                            sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
+                                                                                        reason=reason)
+                            NLogger.info(f"领取奖励：sta={sta}, e={e}")
+                        else:
+                            if reward_type in ["score"]:
+                                cycle_id = await TournamentCycleRC.get_current_cycle_id()
+                                up_data = {
+                                    "score": reward_amount
+                                }
+                                await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
         return sta, e
 
     async def act_progress(self, ac: dict, u_info: dict):
