@@ -249,12 +249,15 @@ class TimedService:
         """ 每日统计房间订单数据发送至钉钉 """
         count_data, sum_data = await OrderRC.statistics_order()
         count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
+        group_dict = {}
+        if group_data:
+            group_dict = {f"{i['cs_type']}": i for i in group_data}
         DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
         ding_server = DingTalkNotifier().get_service()
         content = f"时间：{tool_dt.dt_str(tool_dt.cur_time(), fmt='%Y-%m-%d')}\n" \
                    f"订单数：{count_data}\n" \
                    f"订单金额：{sum_data}\n" \
                    f"房间统计：\n" \
-                   f"房间数：{group_data}\n" \
-                   f"房间金额：{sum_data}"
+                   f"房间总数：{count_data}\n" \
+                   f"多个玩法房间数：{group_dict}"
         ding_server.send_text_message(content)
