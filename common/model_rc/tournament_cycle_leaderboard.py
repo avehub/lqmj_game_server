@@ -144,7 +144,6 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         }
         sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id)
         if data:
-            cls.conf.log.info(f"赛事周期计算: {cycle_id} 排行榜: {data}")
             for now_index, item in enumerate(data):
                 if uid == item["uid"]:
                     result["total_points"] = item["total_points"]
