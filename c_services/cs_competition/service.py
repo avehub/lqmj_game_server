@@ -159,7 +159,7 @@ class CompetitionServer(BaseServer):
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
         cycle_id = conf_data.get("cycle_id") or 0
-        if self.__current_cycle_id < cycle_id:
+        if self.__current_cycle_id != cycle_id:
             self.__current_cycle_id = cycle_id
             await self.cycle_info_init()
         if start_time > 0 and curr_time < start_time:
@@ -259,7 +259,7 @@ class CompetitionServer(BaseServer):
             await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, p_uid, msg=data_model, req_id=req_id)
         match_room_id = join_info.get("match_room_id")
         if not match_room_id:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家未加入比赛房间", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.BACK_COMPETITION, uid, StaCode.FAIL, "玩家未加入比赛房间", req_id=req_id)
         await self.__competition_info(match_room_id)
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
@@ -455,7 +455,6 @@ class CompetitionServer(BaseServer):
                 "tid": room_id,
             }
             game_room_list.append(game_room_status)
-            #
             for uid in info.get("players", []):
                 player_in_room_num.setdefault(uid, info.get("room_num", 0))
 
