@@ -2,6 +2,8 @@
 邮件系统
 """
 import asyncio
+import traceback
+
 from sanic import Request
 from tortoise.transactions import in_transaction
 from lucky_game.base_api import GameAuthApi
@@ -91,14 +93,18 @@ class MailsOperateUser(GameAuthApi):
                 # 处理邮件附件奖励
                 mail_list = await MailsRC.get_mail_awards([mail_data])
                 award_ids = mail_data.get("attachment")["award_ids"]
+                award_data, e = await AwardRC.get_award_by_filter(award_id=award_ids)
+                award_dict = {item['award_id']: item for item in award_data}
                 for k, award_id in enumerate(award_ids):
-                    new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
-                    for i in mail_list:
-                        await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=i.get('attachment').get('awards'))
-                        await Base().give_awards(uid, award_id)
-                        up_goods.extend(i.get('attachment').get('awards'))
-                    await Mails.update_by_pk(mail_id, new_data)
+                    await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=award_dict[award_id].get("content")["rewards"])
+                    await Base().give_awards(uid, award_id)
+                    up_goods.extend(award_dict[award_id].get("content")["rewards"])
+                new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
+                await Mails.update_by_pk(mail_id, new_data)
         except Exception as e:
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             self.log_err(f"mails_pull 事务执行失败，原因：{e}")
             return False, "邮件奖励领取失败，请联系客服", up_goods
         return True, "邮件领取成功", up_goods

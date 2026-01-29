@@ -37,8 +37,8 @@ class TournamentUserPointRC(BaseCommonRC):
     async def add_user_point(cls, cycle_id, uid, score, ticket: int = 0):
         """新增模板"""
         try:
-            if ENV != "prod":
-                ticket = 100
+            # if ENV != "prod":
+            #     ticket = 100
             data = {
                 "cycle_id": cycle_id,
                 "uid": uid,
@@ -119,7 +119,7 @@ class TournamentUserPointRC(BaseCommonRC):
         return True, result
 
     @classmethod
-    async def get_user_point(cls, cycle_id: int, uid: int):
+    async def get_user_point(cls, cycle_id: int, uid: int, add_status: bool = False):
         """获取模板信息"""
         try:
             result = await cls.cache_session_get(f"{cycle_id}:{uid}")
@@ -128,7 +128,11 @@ class TournamentUserPointRC(BaseCommonRC):
             query = {"cycle_id": cycle_id, "uid": uid}
             result = data = await cls.db_model.filter(**query).first().values()
             if not data:
-                return False, "用户未报名"
+                if add_status:
+                    await cls.add_user_point(cycle_id, uid, 0)
+                    result = data = await cls.db_model.filter(**query).first().values()
+                else:
+                    return False, "用户未报名"
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
