@@ -83,7 +83,7 @@ class DelayCall():
 
     async def delay_call(self):
         # 计算实际延迟时间
-        self.__current_delay = random.randint(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
+        self.__current_delay = random.uniform(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
         await asyncio.sleep(self.__current_delay)
         # 直接调用并允许异常抛出
         return await self.delay.call()
@@ -91,7 +91,7 @@ class DelayCall():
     def start(self):
         """ 创建一个task """
         self.__start_seconds = time.time()
-        self.__current_delay = random.randint(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
+        self.__current_delay = random.uniform(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
         # print(f"新启动延时调用：{self.delay.f.__name__}, {self.__current_delay}秒后执行")
         self.task = asyncio.create_task(self.delay_call())
         return self.task
