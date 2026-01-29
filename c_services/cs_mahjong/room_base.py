@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 from datetime import datetime
 
@@ -2711,6 +2712,7 @@ class Room(BaseCardRoom):
                 p_get_cards[target_p.seat_id] = cards
 
             result = {}
+            send_list = []
             for p in self.seats:
                 get_cards = p_get_cards.get(p.seat_id) or []
                 if p.seat_id == self.dealer_id and p.tian_ting != 1:
@@ -2722,7 +2724,9 @@ class Room(BaseCardRoom):
                 result["hand_cards"] = p.cards
                 result["get_cards"] = get_cards
                 data_model = S2CExchangeCardsInfo.pb_model(**result)
-                await self.inner_send(p, CmdRoom.PLAYER_EXCHANGE_CARDS, data_model)
+                send_list.append(self.inner_send(p, CmdRoom.PLAYER_EXCHANGE_CARDS, data_model))
+            if send_list:
+                await asyncio.gather(*send_list)
             self.call_flow(2, self.ding_que_or_tian_ting)
         return StaCode.PASS, ""
 
