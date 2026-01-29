@@ -90,13 +90,14 @@ class MailsOperateUser(GameAuthApi):
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 # 处理邮件附件奖励
                 mail_list = await MailsRC.get_mail_awards([mail_data])
-                award_id = mail_data.get("attachment")["award_ids"][0]
-                new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
-                for i in mail_list:
-                    await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=i.get('attachment').get('awards'))
-                    await Base().give_awards(uid, award_id)
-                    up_goods.extend(i.get('attachment').get('awards'))
-                await Mails.update_by_pk(mail_id, new_data)
+                award_ids = mail_data.get("attachment")["award_ids"]
+                for k, award_id in enumerate(award_ids):
+                    new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
+                    for i in mail_list:
+                        await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=i.get('attachment').get('awards'))
+                        await Base().give_awards(uid, award_id)
+                        up_goods.extend(i.get('attachment').get('awards'))
+                    await Mails.update_by_pk(mail_id, new_data)
         except Exception as e:
             self.log_err(f"mails_pull 事务执行失败，原因：{e}")
             return False, "邮件奖励领取失败，请联系客服", up_goods

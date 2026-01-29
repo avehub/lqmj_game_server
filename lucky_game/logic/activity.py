@@ -218,9 +218,13 @@ class Base:
                         else:
                             if reward_type in ["score"]:
                                 cycle_id = await TournamentCycleRC.get_current_cycle_id()
+                                last_cycle_id = cycle_id - 1
+                                _, last_cycle_ticket = await TournamentUserPointRC.get_user_point(last_cycle_id, uid)
                                 up_data = {
-                                    "score": reward_amount
+                                    "score": reward_amount,
+                                    "ticket": last_cycle_ticket["ticket"]
                                 }
+                                NLogger.info(f"领取赛事奖励：{up_data}")
                                 await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
         return sta, e
 

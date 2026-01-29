@@ -206,3 +206,39 @@ class TournamentUserPointRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"
         return True, "更新成功"
+    
+    @classmethod
+    async def extend_user_point(cls, cycle_id, uid, extend_data: dict):
+        """更新赛事积分"""
+        try:
+            query = {"cycle_id": cycle_id, "uid": uid}
+            cls.conf.log.info("继承赛事积分", query, extend_data)
+            has = await cls.db_model.filter(**query).first()
+            next_cycle_id = cycle_id + 1
+            next_query = {"cycle_id": cycle_id, "uid": uid}
+            next_has = await cls.db_model.filter(**next_query).first()
+            valid_fields = {"score", "ticket", "updated"}
+            update_data = {k: v for k, v in extend_data.items() if k in valid_fields}
+            if update_data:
+                if has.ticket:
+                    if has.ticket < 0:
+                        has.ticket = 0
+                    update_data["ticket"] = has.ticket + extend_data["ticket"]
+            score = update_data.get("score", 0)
+            ticket = update_data.get("ticket", 0)
+            if next_has:
+                cls.conf.log.info("继承赛事积分最终结果", cycle_id, update_data)
+                await cls.db_model.filter(**query).update(**update_data)
+                await cls.cache_session_del(f"{cycle_id}:{uid}")
+            else:
+                await cls.add_user_point(next_cycle_id, uid, score, ticket)
+            # 更新排行榜
+            replay_msg_data = {
+                "uid": uid,
+                "cycle_id": next_cycle_id,
+                "total_points": score,
+            }
+            await cls.push_task2worker(CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD, replay_msg_data)
+        except OperationalError as e:
+            return None, f"失败:{e}"
+        return True, "成功"
