@@ -1222,6 +1222,9 @@ class Room(BaseCardRoom):
             return await self.everyone_pass()
 
     async def everyone_pass(self):
+        if self.flow_status_is_equal(FlowStatus.T_IN_CHECK_OUT):
+            self.log_info("结算中，不处理操作")
+            return
         p = self.curr_player()
         self.__chong_feng_ji and await self.deal_first_ji(p)
         self.log_info("进入everyone_pass seat_id", p.seat_id)
