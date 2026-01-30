@@ -79,11 +79,10 @@ class TournamentUserPoint(GameAuthApi):
             else:
                 await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
             _, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
-        else:
-            # 计算用户排名
-            rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid)
-            if rank_position:
-                user_point.update(rank_position)
+        # 计算用户排名
+        rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid)
+        if rank_position:
+            user_point.update(rank_position)
         return self.answer(data=user_point)
 
 class TournamentLeaderboard (GameAuthApi):
