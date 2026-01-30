@@ -37,8 +37,6 @@ class TournamentUserPointRC(BaseCommonRC):
     async def add_user_point(cls, cycle_id, uid, score, ticket: int = 0):
         """新增模板"""
         try:
-            # if ENV != "prod":
-            #     ticket = 100
             data = {
                 "cycle_id": cycle_id,
                 "uid": uid,
