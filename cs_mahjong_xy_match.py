@@ -15,11 +15,8 @@ tracemalloc.start(25)  # 保留最近 25 层堆栈
 def dump_memory_snapshot():
     snapshot = tracemalloc.take_snapshot()
 
-    # 先过滤掉明显无关的
     snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
-        tracemalloc.Filter(False, "<frozen abc>"),
+        tracemalloc.Filter(False, "<frozen"),
         tracemalloc.Filter(False, "lib/python"),
         tracemalloc.Filter(False, "site-packages"),
     ))
@@ -31,24 +28,28 @@ def dump_memory_snapshot():
         f.write(f"Memory Snapshot at {datetime.now()}\n")
         f.write("=" * 60 + "\n")
 
-        # 获取所有统计
         stats = snapshot.statistics('lineno')
-        my_count = 0
 
-        # 优先输出 /www/lucky_game/ 的分配
+        # 收集所有属于你项目的分配
+        my_stats = []
         for stat in stats:
-            trace_str = str(stat.traceback)
-            if "/www/lucky_game/" in trace_str:
-                f.write(f"{stat}\n")
-                my_count += 1
+            # 更精准：检查 traceback 中是否有你的路径
+            for frame in stat.traceback:
+                if "/www/lucky_game/" in frame.filename:
+                    my_stats.append(stat)
+                    break  # 找到一个就跳出
 
-        if my_count == 0:
+        if my_stats:
+            # 按内存大小降序排序，取 top 20
+            my_stats.sort(key=lambda x: x.size, reverse=True)
+            for stat in my_stats[:20]:
+                f.write(f"{stat}\n")
+            f.write(f"\n[INFO] Found {len(my_stats)} allocation sites in your code. Showing top 20 by size.\n")
+        else:
             f.write(">>> NO ALLOCATIONS FOUND IN /www/lucky_game/ <<<\n")
             f.write("Top 10 overall (may include third-party):\n")
             for stat in stats[:10]:
                 f.write(f"{stat}\n")
-        else:
-            f.write(f"\n[INFO] Found {my_count} allocation sites in your code.\n")
 
     print(f"[MEMORY] Saved snapshot to {filename}")
 
