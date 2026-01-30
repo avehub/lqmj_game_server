@@ -82,7 +82,7 @@ class CompetitionServer(BaseServer):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_status:
             self.__current_cycle_type = cycle_info.get("cycle_type")
-            reward_id = 5
+            reward_id = 3
             if self.__current_cycle_type != 1:
                 reward_id = 5
             sta, reward_info= await TournamentRewardRC.get_reward_info(reward_id)
