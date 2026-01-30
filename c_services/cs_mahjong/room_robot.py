@@ -223,7 +223,7 @@ class RoomRobot(Room):
             'cmd': CmdRoom.ROBOT_CAL_ACTION.value,
             "secret": C_SERVICE_SECRET_KEY
         }
-        self.log_info("发送机器人自动出牌计算数据: ", state)
+        # self.log_info("发送机器人自动出牌计算数据: ", state)
         await self.cs2cs_by_rmq(ServiceEnum.ROBOT_MAHJONG_FC, CmdRobotCal.CAL_ACTION, state)
 
     async def robot_auto_pong(self, p):
@@ -236,7 +236,7 @@ class RoomRobot(Room):
             'cmd': CmdRoom.ROBOT_CAL_PENG.value,
             "secret": C_SERVICE_SECRET_KEY
         }
-        self.log_info("发送机器人自动碰计算数据: ", state)
+        # self.log_info("发送机器人自动碰计算数据: ", state)
         await self.cs2cs_by_rmq(ServiceEnum.ROBOT_MAHJONG_FC, CmdRobotCal.CAL_PONG, state)
 
     async def robot_auto_gang(self, p, gang_type):
@@ -251,7 +251,7 @@ class RoomRobot(Room):
             'cmd': CmdRoom.ROBOT_CAL_GANG.value,
             "secret": C_SERVICE_SECRET_KEY
         }
-        self.log_info("发送机器人自动杠计算数据: ", state)
+        # self.log_info("发送机器人自动杠计算数据: ", state)
         await self.cs2cs_by_rmq(ServiceEnum.ROBOT_MAHJONG_FC, CmdRobotCal.CAL_GANG, state)
 
     def cal_gang_card(self, p, gang_type):

@@ -77,6 +77,7 @@ class CompetitionServer(BaseServer):
         self.__current_cycle_id = await TournamentCycleRC.get_current_cycle_id()
         await self.cycle_info_init()
 
+
     async def cycle_info_init(self):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_status:
@@ -85,6 +86,13 @@ class CompetitionServer(BaseServer):
                 sta, reward_info= await TournamentRewardRC.get_reward_info(3)
                 if sta:
                     self.__reward_info = self.build_rank_to_reward(reward_info)
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
+        if cycle_data and cycle_data["reward_id"] != 2:
+            start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            start_time_tamp = int(start_time.timestamp())
+            await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
 
     @UtilsTool.cal_time()
     async def __read_robot_data(self):
@@ -148,20 +156,25 @@ class CompetitionServer(BaseServer):
 
     async def __do_match_competition(self, uid, competition_id, req_id):
         """ 匹配比赛 """
+        if self.__current_cycle_id == 0:
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         if conf_data.get("status") == CompetitionStatus.CLOSED:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
+
+        cycle_id = conf_data.get("cycle_id") or 0
+        if self.__current_cycle_id != cycle_id:
+            self.__current_cycle_id = cycle_id
+            await self.cycle_info_init()
+            conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
+
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
-        cycle_id = conf_data.get("cycle_id") or 0
-        if self.__current_cycle_id != cycle_id:
-            self.__current_cycle_id = cycle_id
-            await self.cycle_info_init()
         if start_time > 0 and curr_time < start_time:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         if 0 < end_time < curr_time:
