@@ -13,27 +13,43 @@ tracemalloc.start(25)  # 保留最近 25 层堆栈
 
 
 def dump_memory_snapshot():
-    """保存当前内存快照，并过滤标准库"""
     snapshot = tracemalloc.take_snapshot()
 
-    # 过滤掉 Python 标准库和 CPython 内部
     snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
-        tracemalloc.Filter(False, "<frozen importlib._abc>"),
-        tracemalloc.Filter(False, "lib/python*"),
-        tracemalloc.Filter(False, "site-packages/"),
-        tracemalloc.Filter(True, "/www/lucky_game/"), # 只看你的业务代码
+        tracemalloc.Filter(False, "<frozen"),
+        tracemalloc.Filter(False, "lib/python"),
+        tracemalloc.Filter(False, "site-packages"),
     ))
 
-    # 保存到文件
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"memory_snapshot_{timestamp}.txt"
+
     with open(filename, "w") as f:
         f.write(f"Memory Snapshot at {datetime.now()}\n")
         f.write("=" * 60 + "\n")
-        for stat in snapshot.statistics('lineno')[:15]:
-            f.write(f"{stat}\n")
+
+        stats = snapshot.statistics('lineno')
+
+        # 收集所有属于你项目的分配
+        my_stats = []
+        for stat in stats:
+            # 更精准：检查 traceback 中是否有你的路径
+            for frame in stat.traceback:
+                if "/www/lucky_game/" in frame.filename:
+                    my_stats.append(stat)
+                    break  # 找到一个就跳出
+
+        if my_stats:
+            # 按内存大小降序排序，取 top 20
+            my_stats.sort(key=lambda x: x.size, reverse=True)
+            for stat in my_stats[:20]:
+                f.write(f"{stat}\n")
+            f.write(f"\n[INFO] Found {len(my_stats)} allocation sites in your code. Showing top 20 by size.\n")
+        else:
+            f.write(">>> NO ALLOCATIONS FOUND IN /www/lucky_game/ <<<\n")
+            f.write("Top 10 overall (may include third-party):\n")
+            for stat in stats[:10]:
+                f.write(f"{stat}\n")
 
     print(f"[MEMORY] Saved snapshot to {filename}")
 
