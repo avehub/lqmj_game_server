@@ -15,41 +15,38 @@ tracemalloc.start(25)  # 保留最近 25 层堆栈
 def dump_memory_snapshot():
     snapshot = tracemalloc.take_snapshot()
 
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen"),
-        tracemalloc.Filter(False, "lib/python"),
-        tracemalloc.Filter(False, "site-packages"),
-    ))
+    # 不做激进过滤，保留所有（稍后分类）
+    stats = snapshot.statistics('lineno')
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"memory_snapshot_{timestamp}.txt"
 
     with open(filename, "w") as f:
         f.write(f"Memory Snapshot at {datetime.now()}\n")
-        f.write("=" * 60 + "\n")
+        f.write("=" * 60 + "\n\n")
 
-        stats = snapshot.statistics('lineno')
-
-        # 收集所有属于你项目的分配
+        # ===== 第一部分：代码部分 =====
         my_stats = []
         for stat in stats:
-            # 更精准：检查 traceback 中是否有你的路径
             for frame in stat.traceback:
                 if "/www/lucky_game/" in frame.filename:
                     my_stats.append(stat)
-                    break  # 找到一个就跳出
+                    break
 
         if my_stats:
-            # 按内存大小降序排序，取 top 20
             my_stats.sort(key=lambda x: x.size, reverse=True)
+            f.write(">>> YOUR CODE (Top 20 by size) <<<\n")
             for stat in my_stats[:20]:
                 f.write(f"{stat}\n")
-            f.write(f"\n[INFO] Found {len(my_stats)} allocation sites in your code. Showing top 20 by size.\n")
+            f.write(f"\n[INFO] Your code: {len(my_stats)} sites, top shown.\n\n")
         else:
-            f.write(">>> NO ALLOCATIONS FOUND IN /www/lucky_game/ <<<\n")
-            f.write("Top 10 overall (may include third-party):\n")
-            for stat in stats[:10]:
-                f.write(f"{stat}\n")
+            f.write(">>> YOUR CODE: No allocations found <<<\n\n")
+
+        # ===== 第二部分：全局 Top 20（含第三方） =====
+        f.write(">>> GLOBAL TOP 20 (including third-party) <<<\n")
+        global_top = sorted(stats, key=lambda x: x.size, reverse=True)[:20]
+        for stat in global_top:
+            f.write(f"{stat}\n")
 
     print(f"[MEMORY] Saved snapshot to {filename}")
 
