@@ -15,6 +15,9 @@ class TournamentRewardRC(BaseCommonRC):
     tb_name = db_model.sheet_name()
     expired_mode = 0
 
+    # 热身赛积分奖励
+    WARM_UP_REWARD = [71, 72, 73, 74, 75]
+
     @classmethod
     async def cache_session_set(cls, query, value):
         return await cls.conf.rds.set_item(f"{cls.tb_name}:{query}", value)
