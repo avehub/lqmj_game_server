@@ -109,14 +109,14 @@ class TimedService:
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
         # 测试任务
-        self.__scheduler.add_cron_job(self.__test_tasks, hour='*/1')
+        self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
 
 
     async def __test_tasks(self):
         # 统计数据推送
         now_time = datetime.now()
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
-        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
 
 
 
