@@ -299,6 +299,8 @@ class BaseCardRoom(BaseRoom):
         # 首局并且空闲不记录
         if not self.game_began:
             return
+        if self.__match_room_id > 0:
+            return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
         self.__add_pack_msg_records(cmd, data, code, hint)
@@ -388,7 +390,7 @@ class BaseCardRoom(BaseRoom):
                 "record_tid": 0,
                 "cs_type": self.service.service_type,
                 "round_num": self.round_idx,
-                "replay_msg": self.__round_msg_records.copy(),
+                "replay_msg": self.__round_msg_records,
                 "replay_label": replay_label
             }
             player_account = account.get(p.seat_id, {})
@@ -403,7 +405,8 @@ class BaseCardRoom(BaseRoom):
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
             player_score[str(p.uid)] = p.total_score
-            self.__replay_msg_data.append(record_data)
+            if self.__match_room_id == 0:
+                self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
@@ -416,9 +419,9 @@ class BaseCardRoom(BaseRoom):
             return await self.game_over(over_type)
         else:
             if self.__match_room_id == 0:
-                replay_msg_data = {"replay_msg_data": self.__replay_msg_data.copy(), "tid": self.tid}
+                replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
-            self.__replay_msg_data = []
+                self.__replay_msg_data = []
             await self.next_round_ready()
 
     async def next_round_ready(self):
@@ -517,9 +520,7 @@ class BaseCardRoom(BaseRoom):
         }
         if self.__replay_msg_data:
             # 游戏结束一轮结束战绩插入
-            for item in self.__replay_msg_data:
-                item["replay_msg"] = self.__round_msg_records.copy()
-            record_data["replay_msg_data"] = self.__replay_msg_data.copy()
+            record_data["replay_msg_data"] = self.__replay_msg_data
             # replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
             # await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
         else:
@@ -532,7 +533,7 @@ class BaseCardRoom(BaseRoom):
                     data = {
                         "record_id": self.__record_id,
                         "round_idx": round_idx,
-                        "round_msg_records": self.__round_msg_records.copy(),
+                        "round_msg_records": self.__round_msg_records,
                         "tid": self.tid,
                         "is_all": False
                     }

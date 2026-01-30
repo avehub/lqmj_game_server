@@ -198,7 +198,8 @@ class BaseRoom(metaclass=ABCMeta):
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.log_info("流程变动：", flow_status, flow_status.phrase)
+        if not LIVE_SERVER:
+            self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
@@ -258,9 +259,8 @@ class BaseRoom(metaclass=ABCMeta):
         return self.get_player_by_seat_id(self.__curr_seat_id)
 
     def get_player_by_seat_id(self, seat_id: int) -> BasePlayer or None:
-        seat_id -= 1
-        if 0 <= seat_id < len(self.__seats):
-            return self.__seats[seat_id]
+        if 0 < seat_id <= len(self.__seats):
+            return self.__seats[seat_id - 1]
 
     def next_player_reverse(self, seat_id, with_cards=True):
         """ 反序下一个人 """

@@ -150,7 +150,6 @@ class BaseServer(BasePubService, CommonApi):
         """ rmq消息回调 """
         async with message.process():  # 使用上下文处理器结束时也会消息确认
             try:
-
                 if message.exchange == Channel.C_SERVICES_COMMON:
                     if not self.SUBSCRIBE_FANOUT:
                         return

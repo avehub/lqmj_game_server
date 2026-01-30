@@ -216,7 +216,7 @@ class TimedService:
     async def update_tournament_cycle_to_competition(self):
         cycle_id = await TournamentCycleRC.get_current_cycle_id()
         _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
-        if cycle_data and cycle_data["reward_id"] == 1:
+        if cycle_data and cycle_data["reward_id"] != 2:
             start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
             end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
