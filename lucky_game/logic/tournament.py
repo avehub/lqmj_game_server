@@ -26,6 +26,7 @@ from common.model_rc.tournament_cycle import TournamentCycleRC
 
 
 class TournamentLogic:
+
     def __init__(self):
         pass
 
@@ -96,7 +97,6 @@ class TournamentLogic:
     async def cycle_settle(self, cycle_id: int, reward_id: int):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
-        # NLogger.info(f"清空赛季{cycle_id}积分")
         # sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
         # NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
@@ -108,6 +108,17 @@ class TournamentLogic:
             # 发送榜奖励
             await self.send_ranking_reward(cycle_id, award_u_list, reward_info)
 
+    async def warm_up_cycle(self, cycle_id: int) -> tuple:
+        """获取热身赛奖励发放状态及发放赛季ID"""
+        status = False
+        # 用户热身赛奖励累计发放直到写入下一个周赛
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        next_cycle_id = 1 + cycle_id
+        if cycle_info and cycle_info["cycle_type"] == 1:
+            next_cycle_info = await TournamentCycleRC.get_cycle_info(next_cycle_id)
+            if next_cycle_info["cycle_type"] == 0:
+                status = True
+        return status, next_cycle_id
 
 
 
