@@ -16,15 +16,15 @@ def dump_memory_snapshot():
     """保存当前内存快照，并过滤标准库"""
     snapshot = tracemalloc.take_snapshot()
 
-    # 过滤掉 Python 标准库和 CPython 内部
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
-        tracemalloc.Filter(False, "<frozen importlib._abc>"),
-        tracemalloc.Filter(False, "lib/python*"),
-        tracemalloc.Filter(False, "site-packages/"),
-        tracemalloc.Filter(True, "/www/lucky_game/"),  # 只看你的业务代码
-    ))
+    # # 过滤掉 Python 标准库和 CPython 内部
+    # snapshot = snapshot.filter_traces((
+    #     tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+    #     tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
+    #     tracemalloc.Filter(False, "<frozen importlib._abc>"),
+    #     tracemalloc.Filter(False, "lib/python*"),
+    #     tracemalloc.Filter(False, "site-packages/"),
+    #     tracemalloc.Filter(True, "/www/lucky_game/"),  # 只看你的业务代码
+    # ))
 
     # 保存到文件
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -32,7 +32,7 @@ def dump_memory_snapshot():
     with open(filename, "w") as f:
         f.write(f"Memory Snapshot at {datetime.now()}\n")
         f.write("=" * 60 + "\n")
-        for stat in snapshot.statistics('lineno')[:10]:
+        for stat in snapshot.statistics('lineno')[:20]:
             f.write(f"{stat}\n")
 
     print(f"[MEMORY] Saved snapshot to {filename}")
