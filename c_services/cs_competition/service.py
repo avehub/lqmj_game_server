@@ -76,6 +76,14 @@ class CompetitionServer(BaseServer):
         # 读取当前赛事周期
         self.__current_cycle_id = await TournamentCycleRC.get_current_cycle_id()
         await self.cycle_info_init()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
+        if cycle_data and cycle_data["reward_id"] != 2:
+            start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            start_time_tamp = int(start_time.timestamp())
+            await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
+
 
     async def cycle_info_init(self):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
