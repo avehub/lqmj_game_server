@@ -198,7 +198,8 @@ class BaseRoom(metaclass=ABCMeta):
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.log_info("流程变动：", flow_status, flow_status.phrase)
+        if not LIVE_SERVER:
+            self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
