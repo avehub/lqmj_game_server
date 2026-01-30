@@ -112,7 +112,7 @@ class PaymentLogic:
                     return False, f'{field_name}不足', {}
             else:
                 # 校验支付方式
-                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP]:
+                if pay_mode not in [PayMode.WECHAT_PAY, PayMode.ALIPAY, PayMode.HUI_FU_PAY, PayMode.APPLE_PAY, PayMode.ALIPAY_APP, PayMode.HUAWEI_PAY]:
                     return False, "支付方式错误", {}
                 # 购买房卡时获取用户折扣价格
                 discount = u_info.get("discount")
@@ -183,6 +183,7 @@ class PaymentLogic:
             PayMode.VIVO_PAY.val: self.pay_4,
             PayMode.APPLE_PAY.val: self.pay_5,
             PayMode.ALIPAY_APP.val: self.pay_6,
+            PayMode.HUAWEI_PAY.val: self.pay_7,
         }
         deal_func = map_func.get(pay_mode)
         NLogger.info(f"create_order 订单支付方式：{pay_mode} 执行方法：{deal_func}")
@@ -208,6 +209,7 @@ class PaymentLogic:
             PayMode.VIVO_PAY.val: self.order_4,
             PayMode.APPLE_PAY.val: self.order_5,
             PayMode.ALIPAY_APP.val: self.order_6,
+            PayMode.HUAWEI_PAY.val: self.order_7,
         }
         func = map_func.get(pay_mode)
         NLogger.info(f"order_method 查询平台订单状态", func)
@@ -491,6 +493,18 @@ class PaymentLogic:
         # 苹果的订单查询走苹果的订单校验接口：CallbackIos
         return False, "OK", {"trade_status": None}
 
+    async def pay_7(self, order, return_url: str = None):
+        """华为支付（客户端完成购买，服务端校验JWT）"""
+        suc, general_data = await self.deal_order_general(order)
+        data = {
+            "order": general_data,
+            "pay_7": {}
+        }
+        return True, data
+
+    async def order_7(self, order_no: str):
+        """华为订单查询：由 /HuaweiPayVerify 校验完成后更新订单"""
+        return False, "OK", {"trade_status": None}
 
 
     async def completed_order(self, **kwargs):
@@ -590,7 +604,6 @@ class PaymentLogic:
             await CommonApi.push_task2worker(CmdWorkers.PROXY_USER_SET, uid=order["uid"], msg=order)
 
         return True
-
 
 
 

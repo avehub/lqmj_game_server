@@ -3,7 +3,8 @@ from nsanic.base_blue import BaseBlue
 from nsanic.handler_http import Urls
 from lucky_game.interface.test_api import TestApi, TestCreatData
 from lucky_game.interface.login import LoginByGuest, LoginByToken, LoginByWechat, \
-    LoginByApple, SendCode, LoginByPhone, BindByWechat, BindByPhone
+    LoginByApple, SendCode, LoginByPhone, BindByWechat, BindByPhone, LoginByHuawei
+from lucky_game.interface.huawei_pay import HuaweiPayVerify
 from lucky_game.interface.store import StoreHandler, PayByGood, SwitchStaHandler, StoreList, StoreBuy
 from lucky_game.interface.mails import MailsListHandler, MailsOperateUser, MailsOperateOneClick
 from lucky_game.interface.activitys import ActivityDetail, JoinActivity, GainActivity, ProgressActivity, ActivityList, \
@@ -59,6 +60,7 @@ class MainBp(BaseBlue):
         Urls("/SendCode/", SendCode),  # 发送验证码
         Urls("/LoginByPhone/", LoginByPhone),  # 手机号登陆
         Urls("/LoginByWechat/", LoginByWechat),  # 微信登录(公众号/小程序/微信APP)
+        Urls("/LoginByHuawei/", LoginByHuawei),  # 华为登录
         Urls("/LoginByApple/", LoginByApple),  # AppleID登录
         Urls("/BindByWechat/", BindByWechat),  # 绑定微信
         Urls("/BindByPhone/", BindByPhone),  # 绑定手机号
@@ -118,6 +120,7 @@ class MainBp(BaseBlue):
         Urls("/QueryClubRanks/", ClubRanks),  # 获取茶馆战绩排行榜
         Urls("/QueryPastRanks/", PastRanks),  # 获取茶馆、我的历史战绩
         Urls("/QueryUserAggregateRanks/", UserAggregateRanks),  # 获取用户战绩总计
+        Urls("/HuaweiPayVerify/", HuaweiPayVerify),  # 华为支付校验
         Urls("/QueryClubAggregateRanks/", ClubAggregateRanks),  # 获取茶馆战绩总计
         Urls("/QueryUserIsInCService/", QueryUserIsInCService),  # 查询玩家是否在游戏中
 

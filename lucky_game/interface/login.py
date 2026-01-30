@@ -22,6 +22,7 @@ from common.utils.utils import UtilsTool
 from nsanic.libs.tool import http_get, json_parse
 from lucky_game.handler.wechat import WeChat
 from lucky_game.handler.alipay import Alipay
+from lucky_game.handler.huawei import Huawei
 from lucky_game.const import PlatForm, AliGrantType, EventTracking
 from lucky_game.handler.ali_verification import AliVerification
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
@@ -300,6 +301,34 @@ class LoginByWechat(BaseLogin):
         self.log_info('LoginByWechat suc:', u_info.get("uid"))
         return await self.format_login_info(u_info, server_info, JWType.USER)
 
+class LoginByHuawei(BaseLogin):
+    decorators = []
+    async def post(self, req: Request):
+        server_info = await self.whether_through()
+        platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
+        dev_ident = req.json.get('device_id') or req.headers.get('device_id')
+        huawei_id = self.check_str(req.json.get("huawei_id"), require=True, p_name="huawei_id")
+        (not huawei_id or not dev_ident) and self.answer(StaCode.ERR_ARG, hint='登录参数错误')
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
+        login_info = await self.get_login_info(req, LoginWay.WECHAT, dev_ident=dev_ident)
+        name = f"华为用户{self.rng.mk_str(4, True)}"
+        avatar = f"avatar/avatar_{random.randint(1, 7)}.png"
+        q_params = {
+            "dev_ident": dev_ident,
+            "platform": platform,
+        }
+        u_info = await BaseUserRC.cache_by_unique(q_params, BaseUserRC.KEY_DEVICE_ID)
+        if not u_info:
+            u_info = await self.create_new_user(
+                req, 'dev_ident', login_info,
+                {"unionid": huawei_id, "avatar": avatar, "name": name, "platform": platform},
+                BaseUserRC.KEY_DEVICE_ID, platform=platform, invite_code=invite_code
+            )
+        else:
+            u_info = await self.update_user_login_info(req, u_info, login_info)
+            await BaseUserRC.update_info(u_info, {"unionid": huawei_id, "avatar": avatar, "name": name})
+        (not u_info) and self.answer(StaCode.NO_PLAYER_INFO, hint='Failed to login')
+        return await self.format_login_info(u_info, server_info, JWType.USER)
 
 
 class LoginByToken(BaseLogin):
@@ -508,7 +537,4 @@ class BindByPhone(BaseLogin):
         # 同步更新分销会员信息
         await self.push_task2worker(CmdWorkers.PROXY_USER_UP, uid=u_info["uid"], msg=updated)
         return self.answer()
-
-
-
 

@@ -65,6 +65,7 @@ class PayMode(BaseEnum):
     VIVO_PAY = 4, "VIVO支付"
     APPLE_PAY = 5, "苹果支付"
     ALIPAY_APP = 6, "支付宝支付(App)"
+    HUAWEI_PAY = 7, "华为支付"
 
 
 class PayType(BaseEnum):
