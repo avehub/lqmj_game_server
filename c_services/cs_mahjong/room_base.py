@@ -720,7 +720,7 @@ class Room(BaseCardRoom):
         """
         摸牌
         """
-        if self.flow_status != FlowStatus.T_IN_CHECK_OUT:
+        if self.flow_status == FlowStatus.T_IN_CHECK_OUT:
             self.log_info(self.tid, "桌子已结算，不再摸牌")
             return
         self.clear_table_actions()
