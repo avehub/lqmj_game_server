@@ -156,6 +156,8 @@ class CompetitionServer(BaseServer):
 
     async def __do_match_competition(self, uid, competition_id, req_id):
         """ 匹配比赛 """
+        if self.__current_cycle_id == 0:
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
         conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
