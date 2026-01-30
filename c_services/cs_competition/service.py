@@ -82,10 +82,12 @@ class CompetitionServer(BaseServer):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_status:
             self.__current_cycle_type = cycle_info.get("cycle_type")
-            if self.__current_cycle_type==1: #热身赛
-                sta, reward_info= await TournamentRewardRC.get_reward_info(3)
-                if sta:
-                    self.__reward_info = self.build_rank_to_reward(reward_info)
+            reward_id = 5
+            if self.__current_cycle_type != 1:
+                reward_id = 5
+            sta, reward_info= await TournamentRewardRC.get_reward_info(reward_id)
+            if sta:
+                self.__reward_info = self.build_rank_to_reward(reward_info)
         _, cycle_data = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_data and cycle_data["reward_id"] != 2:
             start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
@@ -406,7 +408,7 @@ class CompetitionServer(BaseServer):
                 }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
             self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
-            if self.__current_cycle_type == 1 and uid > R_UID_THRESHOLD:  # 热身赛
+            if self.__reward_info and uid > R_UID_THRESHOLD:  # 热身赛
                 info = self.__reward_info.get(rank, None)
                 amount = 0
                 if info:
@@ -486,7 +488,7 @@ class CompetitionServer(BaseServer):
                 "room_num": player_in_room_num.get(uid, 0),
             }
             award_desc = ""
-            if self.__current_cycle_type==1: #热身赛
+            if self.__reward_info:
                 info = self.__reward_info.get(rank, None)
                 if info:
                     award_desc = info["title"]
@@ -640,10 +642,12 @@ class CompetitionServer(BaseServer):
         """ 发送任务到worker消费 """
         await self.push_task2worker(cmd, data, uid)
 
-    @staticmethod
-    async def send_competition_awards(uid, count):
+    async def send_competition_awards(self,uid, count):
         """ 发放比赛奖励 """
-        return await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=ReasonCostGold.PREHEAT_COMPETITION_AWARDS)
+        reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
+        if self.__current_cycle_type != 1:
+            reason = ReasonCostGold.COMPETITION_AWARDS
+        return await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=reason)
 
     @staticmethod
     def build_rank_to_reward(reward_info):
