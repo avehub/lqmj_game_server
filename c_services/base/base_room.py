@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod
 class BaseRoom(metaclass=ABCMeta):
     """ 基础玩法类 """
 
-    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0,extra_count =0):
+    def __init__(self, tid, service: BaseService, room_conf, poker, not_include=0, extra_count=0):
         self.__tid = tid
         self.__service = service
         self.__room_status = RoomStatus.T_IDLE
@@ -36,7 +36,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
-        self.__poker = poker(not_include,extra_count)
+        self.__poker = poker(not_include, extra_count)
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer
@@ -415,7 +415,6 @@ class BaseRoom(metaclass=ABCMeta):
     #         return
     #     await self.__service.publish_to_fanout(cmd, uid,data)
 
-
     @staticmethod
     @abstractmethod
     def get_player_info(player):
@@ -530,10 +529,9 @@ class BaseRoom(metaclass=ABCMeta):
                 self.service.release_player(p)
         self.__room_status = RoomStatus.T_CLOSED
         if task_list:
-           result = await asyncio.gather(*task_list)
-           self.log_info("调用离开房间结果",result)
+            result = await asyncio.gather(*task_list)
+            self.log_info("调用离开房间结果", result)
         self.service.release_room(self)
-
 
     def clear_room(self):
         """ 清理房间 """
