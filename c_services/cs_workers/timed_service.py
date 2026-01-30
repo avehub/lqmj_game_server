@@ -109,7 +109,7 @@ class TimedService:
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
         # 测试任务
-        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+        self.__scheduler.add_cron_job(self.__test_tasks, hour='*/1')
 
 
     async def __test_tasks(self):
