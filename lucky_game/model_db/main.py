@@ -875,6 +875,7 @@ class TournamentCycle(DBModel):
     template_id = fields.BigIntField(index=True, description='关联模板ID')
     reward_id = fields.BigIntField(null=True, description='关联奖励ID')
     cycle_type = fields.IntField(null=True, description='赛季类型：0周赛 1热身赛')
+    content = fields.CharField(max_length=255, description='其他赛事内容：json存储')
     updated = fields.BigIntField(default=0)
 
     class Meta:
