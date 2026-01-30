@@ -2,35 +2,54 @@
 麻将闷胡比赛玩法服务
 """
 
-# ====== 新增：内存监控支持 ======
+# ========== 安全内存监控（带异常保护）==========
 import tracemalloc
 import signal
-import logging
 import os
+import sys
+import datetime
+
+def _safe_print(msg):
+    """安全地向 stderr 输出，避免因 stdout 问题导致崩溃"""
+    try:
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
+    except:
+        pass  # 静默失败，绝不让日志写入杀死进程
 
 def _print_memory_top(signum=None, frame=None):
-    """打印当前内存分配 Top 10"""
-    if not tracemalloc.is_tracing():
-        print("[Memory] tracemalloc not active")
-        return
+    try:
+        if not tracemalloc.is_tracing():
+            _safe_print("[MEMORY] tracemalloc not active")
+            return
 
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
 
-    print(f"\n{'='*60}")
-    print(f"[MEMORY SNAPSHOT] PID={os.getpid()} | Time={__import__('datetime').datetime.now()}")
-    print(f"{'='*60}")
-    for i, stat in enumerate(top_stats[:10], 1):
-        print(f"{i:2}. {stat}")
-    print("="*60 + "\n")
+        lines = [
+            "=" * 60,
+            f"[MEMORY SNAPSHOT] PID={os.getpid()} | Time={datetime.datetime.now()}",
+            "=" * 60
+        ]
+        for i, stat in enumerate(top_stats[:10], 1):
+            lines.append(f"{i:2}. {stat}")
+        lines.append("=" * 60)
 
-# 启动内存追踪（开销很小，可长期开启）
-tracemalloc.start()
-print(f"[MEMORY] tracemalloc started. Use 'kill -USR1 {os.getpid()}' to dump top allocators.")
+        _safe_print("\n".join(lines))
 
-# 注册信号：发送 SIGUSR1 时打印内存快照
+    except Exception as e:
+        # 捕获所有异常，确保信号处理不会杀死进程
+        _safe_print(f"[ERROR] Memory dump failed: {type(e).__name__}: {e}")
+
+# 启动 tracemalloc 并注册信号
+try:
+    tracemalloc.start()
+    _safe_print(f"[MEMORY] tracemalloc started. Use 'kill -USR1 {os.getpid()}' to dump memory.")
+except Exception as e:
+    _safe_print(f"[WARNING] Failed to start tracemalloc: {e}")
+
 signal.signal(signal.SIGUSR1, _print_memory_top)
-# ==============================
+# ============================================
 
 from common.utils.init import start
 from common.public.enum_const import ServiceEnum
