@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from c_services.base.base_leisure_player import BaseLeisurePlayer
 from c_services.cs_mahjong.const import ActionType, HuType
 from c_services.cs_mahjong.poker import Poker

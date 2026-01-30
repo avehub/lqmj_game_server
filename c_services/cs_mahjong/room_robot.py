@@ -152,7 +152,8 @@ class RoomRobot(Room):
                 return
 
     async def deal_operates_call_time_out(self):
-        self.call_flow_robot(TimerDelay.ROBOT_TIME, self.check_robot_operate)
+        res = random.randint(2, 3)
+        self.call_flow_robot(res, self.check_robot_operate)
         await self.deal_operates_time_out()
 
 
