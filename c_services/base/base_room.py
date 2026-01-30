@@ -259,9 +259,8 @@ class BaseRoom(metaclass=ABCMeta):
         return self.get_player_by_seat_id(self.__curr_seat_id)
 
     def get_player_by_seat_id(self, seat_id: int) -> BasePlayer or None:
-        seat_id -= 1
-        if 0 <= seat_id < len(self.__seats):
-            return self.__seats[seat_id]
+        if 0 < seat_id <= len(self.__seats):
+            return self.__seats[seat_id - 1]
 
     def next_player_reverse(self, seat_id, with_cards=True):
         """ 反序下一个人 """
