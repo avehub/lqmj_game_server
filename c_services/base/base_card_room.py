@@ -299,8 +299,8 @@ class BaseCardRoom(BaseRoom):
         # 首局并且空闲不记录
         if not self.game_began:
             return
-        if self.__match_room_id > 0:
-            return
+        # if self.__match_room_id > 0: #暂时注释 用作内存测试
+        #     return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
         self.__add_pack_msg_records(cmd, data, code, hint)
