@@ -27,8 +27,6 @@ from nsanic.libs.mult_log import NLogger
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
 from lucky_game.model_rc.base_store import GoodRC
-from lucky_game.model_rc.order import OrderRC
-from c_services.base.base_server import BaseServer
 
 
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
@@ -221,14 +219,15 @@ class Base:
                                 _, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
                                 if cycle_info["cycle_type"] == 0:
                                     last_cycle_id = cycle_id - 1
-                                    _, last_cycle_ticket = await TournamentUserPointRC.get_user_point(last_cycle_id, uid, True)
-                                    up_data = {
-                                        "score": reward_amount,
-                                        "ticket": last_cycle_ticket["ticket"]
-                                    }
-                                    NLogger.info(f"领取赛事奖励：{up_data}")
-                                    await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
-        return sta, e
+                                    last_sta, last_cycle_ticket = await TournamentUserPointRC.get_user_point(last_cycle_id, uid, True)
+                                    if last_sta and last_cycle_ticket:
+                                        up_data = {
+                                            "score": reward_amount,
+                                            "ticket": last_cycle_ticket["ticket"]
+                                        }
+                                        NLogger.info(f"领取赛事奖励：{up_data}")
+                                        await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+        return sta, "OK"
 
     async def act_progress(self, ac: dict, u_info: dict):
         """ 查询当前用户参与活动进度 """

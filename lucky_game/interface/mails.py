@@ -6,6 +6,8 @@ import traceback
 
 from sanic import Request
 from tortoise.transactions import in_transaction
+
+from common.model_rc.tournament_rewards import TournamentRewardRC
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
 from lucky_game.model_db.main import Mails
@@ -97,6 +99,8 @@ class MailsOperateUser(GameAuthApi):
                 award_dict = {item['award_id']: item for item in award_data}
                 for k, award_id in enumerate(award_ids):
                     await Base().gain_awards(uid, award_id=award_id, reward_type=3, awards=award_dict[award_id].get("content")["rewards"])
+                    # 热身赛奖励等到下个周赛才可领取
+                    # if award_id not in TournamentRewardRC.WARM_UP_REWARD:
                     await Base().give_awards(uid, award_id)
                     up_goods.extend(award_dict[award_id].get("content")["rewards"])
                 new_data = {'attachment_sta': PullSta.PULLED, 'mail_sta': MailSta.READ}
@@ -193,6 +197,8 @@ class MailsOperateOneClick(GameAuthApi):
                     if awards:
                         award_id = mail.get("attachment")["award_ids"][0]
                         await Base().gain_awards(uid, awards=awards, award_id=award_id, reward_type=3)
+                        # 热身赛奖励等到下个周赛才可领取
+                        # if award_id not in TournamentRewardRC.WARM_UP_REWARD:
                         await Base().give_awards(uid, award_id)
                         up_goods.extend(awards)
 

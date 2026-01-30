@@ -38,9 +38,11 @@ class TournamentConfig(GameAuthApi):
             # 获取赛事规则
             sta, rule = await TournamentRuleRC.get_rule_info(rule_id=1)
             # 获取赛事周期
-            today = datetime.now()
-            current_month = today.month
-            sta, cycle = await TournamentCycleRC.get_cycle_filter(cycle_month=current_month)
+            # today = datetime.now()
+            # current_month = today.month
+            # 因为真实赛事跨月所以直接配置一个
+            cycle_month = rule["rule_content"]["cycle_month"]
+            sta, cycle = await TournamentCycleRC.get_cycle_filter(cycle_month=cycle_month)
             if cycle:
                 for item in cycle:
                     # 获取赛事奖励
@@ -111,6 +113,10 @@ class JoinTournament(GameAuthApi):
         current_hour = datetime.now().hour
         if current_hour < int(range_time[0].split(":")[0]) or current_hour > int(range_time[1].split(":")[0]):
             return self.answer(StaCode.FAIL, hint=f"比赛时间为每日{rule['range_time']}点")
+        if cycle_id:
+            sta, msg = await TournamentCycleRC.check_cycle_status(cycle_id)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=msg)
         has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
             return self.answer(StaCode.FAIL, hint="已报名")
