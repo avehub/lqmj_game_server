@@ -52,7 +52,7 @@ class BaseCardService(BaseService):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
         is_robot = uid < R_UID_THRESHOLD
         player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
-        match_room_id = data.get("match_room_id") or 0
+        match_room_id = data.get("match_room_id") or 1 #这里测试内存问题给他改成1了 应该默认是0
         if player.seat_id <= 0:
             room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
