@@ -2,6 +2,7 @@ import random
 from copy import deepcopy
 
 from c_services.const.cs_enum_const import CmdRoom, CmdRobotCal
+from c_services.cs_mahjong import const
 from c_services.cs_mahjong.const import ActionType, FlowStatus, TimerDelay, CardsType, HuType, PlayType
 from c_services.cs_mahjong.room_base import Room
 from c_services.cs_mahjong.rule import Rule
@@ -132,7 +133,13 @@ class RoomRobot(Room):
         for p in self.seats:
             if p.can_operates() and not self.has_do_action(p):
                 self.log_info(self.tid, p.seat_id, p.uid, "玩家有操作 超时：", p.operates)
-                await self.time_out_with_player_operates(p)
+                if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
+                    self.log_info("超时尾三必胡自动胡",p.uid,p.seat_id)
+                    code, _ = await self.on_player_hu(p)
+                    if StaCode.PASS != code:
+                        self.log_info("超时尾三必胡操作胡牌有误", code)
+                else:
+                    await self.time_out_with_player_operates(p)
         self.record_operates.clear()
         await self.check_action_end()
 

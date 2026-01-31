@@ -1020,6 +1020,9 @@ class Room(BaseCardRoom):
         return p.can_ming_gang(Rule, card)
 
     async def turn_to_player_chu_pai(self, p: Player, after_peng=False, timeout_seconds=TimerDelay.CHU_PAI_TIME):
+        if self.flow_status == FlowStatus.T_IN_CHECK_OUT:
+            self.log_info("结算中，不处理出牌")
+            return
         contains_tian_ting = any(
             action[0] == p.seat_id and action[1] == ActionType.ACTION_TYPE_TIAN_TING
             for action in self.__player_actions
