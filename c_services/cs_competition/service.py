@@ -51,7 +51,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall((0.5, 1.5), self.__loop_match_competition).loop_start()
+        DelayCall((1.1,2.0), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
