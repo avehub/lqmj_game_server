@@ -2770,15 +2770,13 @@ class Room(BaseCardRoom):
                 data_model = S2CTianTingInfo.pb_model(**result)
                 await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model)
         else:
-            p.tian_ting = 1
-            p.can_tian_ting = -1
             allow_hu_map = {HuType.QI_DUI: True, HuType.DI_LONG_QI: False,
                             HuType.FOUR_CARD_NO_NEAR: self.__four_card_no_near}
             if self.play_type != PlayType.ZUN_YI_LAI_ZI:
                 _, tian_ting_cards = Rule.which_cards_to_play_can_tian_ting(p.table_cards, p.cards, allow_hu_map)
             else:
                 _, tian_ting_cards = Rule.get_tian_ting_cards(p.table_cards, p.cards, p.que, lai_zi=self.__lai_zi)
-            result["tian_ting"] = p.tian_ting
+            result["tian_ting"] = 1
             data_model = S2CTianTingInfo.pb_model(**result)
             await self.inner_broadcast(CmdRoom.PLAYER_TIAN_TING, data_model, exclude_uid=p.uid)
             self.log_info(self.tid, p.uid, "tian_ting_cards", tian_ting_cards)
@@ -2792,6 +2790,8 @@ class Room(BaseCardRoom):
 
             data_model.lock_cards.extend(p.lock_cards)
             await self.inner_send(p, CmdRoom.PLAYER_TIAN_TING, data_model)
+            p.tian_ting = 1
+            p.can_tian_ting = -1
         self.save_player_action(p, ActionType.ACTION_TYPE_TIAN_TING)
         self.log_info("报听", p.uid)
         p.operates = []
