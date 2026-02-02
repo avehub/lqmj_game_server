@@ -66,6 +66,7 @@ class StaCode(BaseCode):
     FLOW_ERR = -105, 200, '流程错误'
     ALREADY_DO = -106, 200, '已经操作过'
     RESOURCE_NOT_ENOUGH = -107, 200, '资源不足'
+    COMPETITION_POINT_NOT_ENOUGH = -108,'比赛积分不足'
 
 
 @unique

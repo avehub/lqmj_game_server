@@ -200,7 +200,7 @@ class CompetitionServer(BaseServer):
                 self.log_info("玩家暂未参赛", "cycle_id",self.__current_cycle_id, "uid", uid)
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家暂未参赛", req_id=req_id)
             if user_point.get("ticket") < price:
-                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家参赛积分不足", req_id=req_id)
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.COMPETITION_POINT_NOT_ENOUGH, "参赛积分不足，请前往获取积分，继续挑战精彩赛事！", req_id=req_id)
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point

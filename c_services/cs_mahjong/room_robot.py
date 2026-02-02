@@ -322,9 +322,11 @@ class RoomRobot(Room):
                         self.log_info(player.uid, "机器人打出手里的缺牌：", card)
                         self.call_flow(0.5, self.enter_chu_pai_call)
                         return
-
-        # todo: 机器人自动计算出牌
-        await self.robot_auto_attack(player)
+        if player.card_is_lock():
+            await self.turn_to_player_chu_pai(player, False, 0)
+        else:
+            # todo: 机器人自动计算出牌
+            await self.robot_auto_attack(player)
 
     def calculate_hu_cards_count(self, p):
         """
