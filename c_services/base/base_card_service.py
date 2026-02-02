@@ -17,8 +17,8 @@ class BaseCardService(BaseService):
             CmdRoom.CLUB_OWNER_DISMISS.val: self.__club_owner_dismiss,
             CmdRoom.FORCE_DISMISS_ROOM.val: self.__force_dismiss_room,
         })
-
-        DelayCall(120, self.close_room_timeout_idle).loop_start()
+        self._idle_check_timer = DelayCall(120, self.close_room_timeout_idle)
+        self._idle_check_timer.loop_start()
 
     async def close_room_timeout_idle(self):
         # 这里遍历副本，不然会报错：dictionary changed size during iteration
@@ -109,5 +109,8 @@ class BaseCardService(BaseService):
             await room.force_dismiss(OverType.ULTIMATE_DISMISS)
 
     async def clear_in_service(self):
+        if hasattr(self, '_idle_check_timer'):
+            print("_idle_check_timer清理")
+            self._idle_check_timer.cancel()
         await GameRoomsRC.abnormal_cs_type(self.service_type, "重启子游戏服务")
         await super().clear_in_service()

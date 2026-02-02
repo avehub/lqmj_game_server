@@ -1003,7 +1003,7 @@ class Room(BaseCardRoom):
                             HuType.QI_DUI: True, HuType.FOUR_CARD_NO_NEAR: self.__four_card_no_near,
                             HuType.FOUR_CARD_IS_SAME: self.__four_card_tian_hu}
             hu_type, _ = Rule.can_hu(
-                player.table_cards, cards + [card], curr_card, allow_hu_map)
+                player.table_cards, cards + [card], card, allow_hu_map)
             if hu_type:
                 return False
         self.log_info("是绝张", curr_card, "玩家", player.seat_id)

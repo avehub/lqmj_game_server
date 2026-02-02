@@ -52,7 +52,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall((1.1,2.0), self.__loop_match_competition).loop_start()
+        DelayCall(0.1, self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -202,7 +202,7 @@ class CompetitionServer(BaseServer):
                 self.log_info("玩家暂未参赛", "cycle_id",self.__current_cycle_id, "uid", uid)
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家暂未参赛", req_id=req_id)
             if user_point.get("ticket") < price:
-                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.COMPETITION_POINT_NOT_ENOUGH, "参赛积分不足，请前往获取积分，继续挑战精彩赛事！", req_id=req_id)
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.COMPETITION_POINT_NOT_ENOUGH, "参赛积分不足，请前往获取积分\n继续挑战精彩赛事！", req_id=req_id)
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point

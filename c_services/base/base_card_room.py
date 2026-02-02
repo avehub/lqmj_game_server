@@ -426,7 +426,7 @@ class BaseCardRoom(BaseRoom):
 
     async def next_round_ready(self):
         await self.start_next_round()
-        auto_time = 0 if self.__match_room_id == 0 else 10
+        auto_time = 0 if self.__match_room_id == 0 else 9
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
@@ -488,7 +488,8 @@ class BaseCardRoom(BaseRoom):
                 if not record_info:
                     self.log_info("战绩创建失败", e, "入参", self.tid, tool_dt.cur_time())
                 self.__record_id = record_info.record_rid
-        self.call_flow(2, self.round_start)
+        start_time = 2 if self.__match_room_id == 0 else 0.5
+        self.call_flow(start_time, self.round_start)
         for p in self.seats:
             if p and not p.is_robot:
                 await self.service.sava_player_in_game(p.uid, self.tid, self.owner, self.club_id, 2)
@@ -640,7 +641,7 @@ class BaseCardRoom(BaseRoom):
         self.__round_msg_records = []  # 每局消息记录
         self.__replay_msg_data = []# 存入战绩数据
         self.__online_group_user = []
-        self.__timer_dismiss = None
+        self.cancel_timer_dismiss()
         self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
