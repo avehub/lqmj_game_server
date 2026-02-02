@@ -15,10 +15,12 @@ from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.model_rc.conf_competition import ConfCompetitionRC
+from lucky_game.model_rc.logout_user import LogoutUserRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
+from nsanic.libs.mult_log import NLogger
 
 
 
@@ -132,6 +134,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        # 处理已注销用户
+        self.__scheduler.add_date_job(self.clean_logout_user, run_date=now_time + timedelta(hours=0))
 
    
 
@@ -261,3 +265,14 @@ class TimedService:
                    f"房间总数：{count_data}\n" \
                    f"多个玩法房间数：{group_dict}"
         ding_server.send_text_message(content)
+
+    @classmethod
+    async def clean_logout_user(cls):
+        """ 清理已注销用户 """
+        now = tool_dt.cur_time()
+        end_time = now - 15 * 86400
+        sta, data = await LogoutUserRC.get_logout_user_by_filter(status=1, end_time=end_time)
+        if sta and data:
+            for i in data:
+                await LogoutUserRC.delete_logout_user(i["uid"])
+                NLogger.info(f"成功注销用户: {i['uid']}")
