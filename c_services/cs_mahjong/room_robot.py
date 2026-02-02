@@ -1,5 +1,4 @@
 import random
-from copy import deepcopy
 
 from c_services.const.cs_enum_const import CmdRoom, CmdRobotCal
 from c_services.cs_mahjong import const
@@ -58,7 +57,7 @@ class RoomRobot(Room):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
             return StaCode.NOT_YOUR_TURN
-        cards = deepcopy(p.cards)
+        cards = list(p.cards)
         code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
         if StaCode.PASS == code:
             self.log_info(p.uid, "超时出牌_摸到什么打什么：", cards[-1])
@@ -283,7 +282,7 @@ class RoomRobot(Room):
                 can_gang_list = []
                 for gang_card in cards:
                     # 先计算杠之前的听牌
-                    temp_cards = deepcopy(p.cards)
+                    temp_cards = p.cards.copy()
                     # 再计算杠之后的听牌
                     temp_cards.remove(gang_card)
                     temp_cards.remove(gang_card)
@@ -308,7 +307,7 @@ class RoomRobot(Room):
             self.log_info("机器人出牌没找到 robot", player, self.curr_seat_id)
             return
         # 未锁牌情况：有缺打缺，无缺打非癞子
-        cards = deepcopy(player.cards)
+        cards = list(player.cards)
         if player.que > 0:
             if cards[-1] // 10 == player.que:
                 code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(cards[-1]))
