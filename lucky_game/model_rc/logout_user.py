@@ -113,13 +113,15 @@ class LogoutUserRC(BaseCommonRC):
                 sta = await cls.db_model.filter(uid=uid).update(status=status)
                 if not sta:
                     return False, "失败"
-
                 u_info = await BaseUserRC.cache_by_pk(uid)
+                now = datetime.now()
+                unique = f"{uid}_{now}"
                 new_data = {
                     "phone": "",
-                    "openid": f"{uid}_{datetime.now()}",
-                    "unionid": f"{uid}_{datetime.now()}",
-                    "apple_id": f"{uid}_{datetime.now()}",
+                    "dev_ident": "",
+                    "openid": unique,
+                    "unionid": unique,
+                    "apple_id": unique,
                 }
                 data = await BaseUserRC.update_info(u_info, new_data, True)
         except OperationalError as e:
