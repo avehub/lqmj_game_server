@@ -117,6 +117,7 @@ class LogoutUserRC(BaseCommonRC):
                 now = datetime.now()
                 unique = f"{uid}_{now}"
                 new_data = {
+                    "name": "此账号已注销",
                     "phone": "",
                     "dev_ident": "",
                     "openid": unique,
