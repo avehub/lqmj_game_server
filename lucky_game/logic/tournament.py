@@ -15,6 +15,7 @@ from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_mails import MailsRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.const import ReasonCostGold, CurrencyType, PayMode, OrderStatus, GainStatus, GoodsSku, PlatForm, \
@@ -121,7 +122,15 @@ class TournamentLogic:
         return status, next_cycle_id
 
 
-
+    async def check_uid_white_status(self, uid: int) -> bool:
+        """ 检查用户是否在白名单 """
+        status = False
+        # 获取赛事白名单
+        conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_TOURNAMENT_WHITE)
+        if conf_data and conf_data["status"]:
+            if uid in conf_data["special_uid"]:
+                status = True
+        return status
 
 
 
