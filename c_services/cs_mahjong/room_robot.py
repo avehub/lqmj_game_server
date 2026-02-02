@@ -1,7 +1,7 @@
 import random
-from copy import deepcopy
 
 from c_services.const.cs_enum_const import CmdRoom, CmdRobotCal
+from c_services.cs_mahjong import const
 from c_services.cs_mahjong.const import ActionType, FlowStatus, TimerDelay, CardsType, HuType, PlayType
 from c_services.cs_mahjong.room_base import Room
 from c_services.cs_mahjong.rule import Rule
@@ -57,7 +57,7 @@ class RoomRobot(Room):
             return StaCode.FLOW_ERR
         if p.seat_id != self.curr_seat_id:
             return StaCode.NOT_YOUR_TURN
-        cards = deepcopy(p.cards)
+        cards = list(p.cards)
         code, _ = await self.on_player_chu_pai(p, self.serialized_chu_pai_data(cards[-1]))
         if StaCode.PASS == code:
             self.log_info(p.uid, "超时出牌_摸到什么打什么：", cards[-1])
@@ -132,7 +132,13 @@ class RoomRobot(Room):
         for p in self.seats:
             if p.can_operates() and not self.has_do_action(p):
                 self.log_info(self.tid, p.seat_id, p.uid, "玩家有操作 超时：", p.operates)
-                await self.time_out_with_player_operates(p)
+                if p.is_action_in_operates(ActionType.ACTION_TYPE_HU) and self.poker.left_count < const.XUE_LIU_LEFT_BI_HU:
+                    self.log_info("超时尾三必胡自动胡",p.uid,p.seat_id)
+                    code, _ = await self.on_player_hu(p)
+                    if StaCode.PASS != code:
+                        self.log_info("超时尾三必胡操作胡牌有误", code)
+                else:
+                    await self.time_out_with_player_operates(p)
         self.record_operates.clear()
         await self.check_action_end()
 
@@ -276,7 +282,7 @@ class RoomRobot(Room):
                 can_gang_list = []
                 for gang_card in cards:
                     # 先计算杠之前的听牌
-                    temp_cards = deepcopy(p.cards)
+                    temp_cards = p.cards.copy()
                     # 再计算杠之后的听牌
                     temp_cards.remove(gang_card)
                     temp_cards.remove(gang_card)
@@ -301,7 +307,7 @@ class RoomRobot(Room):
             self.log_info("机器人出牌没找到 robot", player, self.curr_seat_id)
             return
         # 未锁牌情况：有缺打缺，无缺打非癞子
-        cards = deepcopy(player.cards)
+        cards = list(player.cards)
         if player.que > 0:
             if cards[-1] // 10 == player.que:
                 code, _ = await self.on_player_chu_pai(player, self.serialized_chu_pai_data(cards[-1]))
@@ -316,9 +322,11 @@ class RoomRobot(Room):
                         self.log_info(player.uid, "机器人打出手里的缺牌：", card)
                         self.call_flow(0.5, self.enter_chu_pai_call)
                         return
-
-        # todo: 机器人自动计算出牌
-        await self.robot_auto_attack(player)
+        if player.card_is_lock():
+            await self.turn_to_player_chu_pai(player, False, 0)
+        else:
+            # todo: 机器人自动计算出牌
+            await self.robot_auto_attack(player)
 
     def calculate_hu_cards_count(self, p):
         """

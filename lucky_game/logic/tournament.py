@@ -122,7 +122,8 @@ class TournamentLogic:
         return status, next_cycle_id
 
 
-    async def check_uid_white_status(self, uid: int) -> bool:
+    @staticmethod
+    async def check_uid_white_status(uid: int) -> bool:
         """ 检查用户是否在白名单 """
         status = False
         # 获取赛事白名单
