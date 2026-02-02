@@ -22,6 +22,7 @@ from common.public.enum_const import StaCode, ServiceEnum, CacheKey
 from common.utils.utils import UtilsTool
 from lucky_game.const import CompetitionStatus, PriceType, ReasonCostGold
 from lucky_game.handler.random_utils import generate_natural_random
+from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 from common.utils.kit_async import DelayCall, delay_func
@@ -163,7 +164,8 @@ class CompetitionServer(BaseServer):
         conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
-        if conf_data.get("status") == CompetitionStatus.CLOSED:
+        in_white = await TournamentLogic.check_uid_white_status(uid)
+        if conf_data.get("status") == CompetitionStatus.CLOSED and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
 
         cycle_id = conf_data.get("cycle_id") or 0
@@ -177,12 +179,12 @@ class CompetitionServer(BaseServer):
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
-        if start_time > 0 and curr_time < start_time:
+        if start_time > 0 and curr_time < start_time and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
-        if 0 < end_time < curr_time:
+        if 0 < end_time < curr_time and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已结束", req_id=req_id)
         is_in_match_time = self.check_match_begin_time(curr_time, daily_start_time, daily_end_time)
-        if not is_in_match_time:
+        if not is_in_match_time and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, f"开赛时间为【{daily_start_time[:5]}-{daily_end_time[:5]}】\n请提前做好备战准备", req_id=req_id)
         join_info = await self.__get_player_in_match(uid)
         if join_info:
