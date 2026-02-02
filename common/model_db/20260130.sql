@@ -1,6 +1,7 @@
 -- 赛事模块发版执行SQL
 ALTER TABLE `user` 
-ADD COLUMN `future_value` int(0) UNSIGNED NULL DEFAULT 0 COMMENT '福袋' AFTER `yellow_diamond`;
+ADD COLUMN `future_value` int(0) UNSIGNED NULL DEFAULT 0 COMMENT '福袋' AFTER `yellow_diamond`,
+ADD COLUMN `status`  tinyint NOT NULL DEFAULT '0' COMMENT '福袋' AFTER `用户状态：0正常 1注销`;
 
 CREATE TABLE `tournament_rewards` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '奖励ID',

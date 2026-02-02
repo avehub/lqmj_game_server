@@ -185,18 +185,24 @@ class WriteOff(GameAuthApi):
     """ 注销账号 """
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
-        status = self.check_int(req.json.get("status"), require=True, minval=0, maxval=1, p_name="status")
-        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="证件号码")
-        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="证件姓名")
-        if u_info.get("id_card") != PlatForm.WECHAT_MINI_GAME or u_info.get("id_card"):
+        status = self.check_int(req.json.get("status"), require=True, minval=0, p_name="status")
+        if status == 1:
+            # 注销
+            id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="证件号码")
+            real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="证件姓名")
             res = UtilsTool.check_id_card(id_card)
             not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
-            res = UtilsTool.validate_name(real_name)
-            not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
-            u_info = kwargs.get("u_info") or {}
-            if id_card != u_info.get("id_card") or real_name != u_info.get("real_name"):
-                return self.answer(self.sta_code.ERR_ARG, hint="身份信息认证错误")
-        sta, data = await LogoutUserRC.create_logout_user(u_info, status=status)
+            if u_info.get("platform") != PlatForm.WECHAT_MINI_GAME and u_info.get("real_name"):
+                res = UtilsTool.validate_name(real_name)
+                not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
+                if id_card != u_info.get("id_card") or real_name != u_info.get("real_name"):
+                    return self.answer(self.sta_code.ERR_ARG, hint="身份信息认证错误")
+            data = await BaseUserRC.update_info(u_info, {"status": status})
+            sta, msg = await LogoutUserRC.create_logout_user(data, status=status)
+        else:
+            # 取消注销
+            data = await BaseUserRC.update_info(u_info, {"status": status})
+            sta, msg = await LogoutUserRC.update_logout_user(u_info["uid"])
         if not sta:
             return self.answer(code=self.sta_code.FAIL)
         return self.answer()
