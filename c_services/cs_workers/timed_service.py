@@ -270,7 +270,7 @@ class TimedService:
     async def clean_logout_user(cls):
         """ 清理已注销用户 """
         now = tool_dt.cur_time()
-        end_time = now - 7 * 86400
+        end_time = now - 15 * 86400
         sta, data = await LogoutUserRC.get_logout_user_by_filter(status=1, end_time=end_time)
         if sta and data:
             for i in data:
