@@ -131,6 +131,40 @@ CREATE TABLE `conf_competition` (
   KEY `idx_conf_compet_cs_type_8a84ef` (`cs_type`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='赛事配置表 ';
 
+CREATE TABLE `logout_user` (
+  `created` bigint DEFAULT '0' COMMENT '创建时间',
+  `uid` int NOT NULL AUTO_INCREMENT COMMENT '玩家ID',
+  `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT '' COMMENT '玩家昵称',
+  `avatar` varchar(256) DEFAULT '' COMMENT '头像地址',
+  `sex` smallint NOT NULL DEFAULT '0' COMMENT '性别',
+  `phone` varchar(18) DEFAULT NULL COMMENT '手机号码',
+  `email` varchar(256) DEFAULT NULL COMMENT '邮箱',
+  `address` varchar(256) DEFAULT '' COMMENT '所在地址',
+  `id_card` varchar(20) DEFAULT '' COMMENT '身份证',
+  `real_name` varchar(32) DEFAULT '' COMMENT '玩家真实姓名',
+  `pi` varchar(64) NOT NULL DEFAULT '' COMMENT '已通过实名认证用户的唯一标识',
+  `discount` float(3,2) unsigned DEFAULT '1.00' COMMENT '消费折扣',
+  `gold` decimal(65,2) DEFAULT '0.00' COMMENT '金币',
+  `diamond` int DEFAULT '0' COMMENT '钻石',
+  `room_card` int DEFAULT '0' COMMENT '房卡',
+  `yellow_diamond` int DEFAULT '0' COMMENT '黄钻',
+  `vip` smallint DEFAULT '0' COMMENT 'VIP等级',
+  `platform` smallint NOT NULL COMMENT '平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏',
+  `dev_ident` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT '' COMMENT '设备标识',
+  `ip` varchar(128) DEFAULT '' COMMENT '登陆IP',
+  `region` varchar(20) DEFAULT '' COMMENT '地区/行政区域',
+  `country` varchar(16) DEFAULT 'CN' COMMENT '国家域名',
+  `openid` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT '' COMMENT '小游戏授权用户唯一标识',
+  `unionid` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT '' COMMENT '平台用户授权唯一标识',
+  `wechat` smallint unsigned DEFAULT '0' COMMENT '微信平台绑定状态：1已绑定',
+  `apple_id` varchar(128) DEFAULT '' COMMENT '苹果平台用户授权唯一标识',
+  `future_value` int unsigned DEFAULT '0' COMMENT '福袋',
+  `updated` bigint DEFAULT '0' COMMENT '更新时间',
+  `status` smallint DEFAULT NULL COMMENT '用户状态：0正常 1注销中 2已注销',
+  UNIQUE KEY `uid` (`uid`),
+  UNIQUE KEY `uid_user_platfor_b2b99c` (`platform`,`openid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='注销用户表';
+
 -- 奖励内容
 INSERT INTO `lucky_game`.`awards` (`created`, `award_id`, `type`, `level`, `name`, `content`, `updated`) VALUES (0, 51, 4, 1, '赛事奖励-晋级资格', '{\"rewards\": [{\"img\": \"tournament/qualified.png\", \"type\": \"qualified\", \"title\": \"晋级资格x1\", \"amount\": 1}], \"good_suk\": \"IRLJQAMF\"}', 0);
 INSERT INTO `lucky_game`.`awards` (`created`, `award_id`, `type`, `level`, `name`, `content`, `updated`) VALUES (0, 52, 4, 2, '赛事奖励-10000福袋', '{\"rewards\": [{\"img\": \"tournament/future.png\", \"type\": \"future_value\", \"title\": \"福袋x10000\", \"amount\": 10000}], \"good_suk\": \"OIWARYRC\"}', 0);

@@ -111,14 +111,14 @@ class TimedService:
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
         # 测试任务
-        self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
 
 
     async def __test_tasks(self):
         # 统计数据推送
         now_time = datetime.now()
-        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
-        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        # self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
 
 
 
@@ -251,16 +251,22 @@ class TimedService:
     @classmethod
     async def send_ding_statistics(cls):
         """ 每日统计房间订单数据发送至钉钉 """
-        count_data, sum_data = await OrderRC.statistics_order()
+        order_count_data, order_sum_data = await OrderRC.statistics_order()
+        print("order_count_data", order_count_data)
+        print("order_sum_data", order_sum_data)
         count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
+        print("count_data", count_data)
+        print("group_data", group_data)
         group_dict = {}
         if group_data:
             group_dict = {f"{i['cs_type']}": i for i in group_data}
         DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
         ding_server = DingTalkNotifier().get_service()
-        content = f"时间：{tool_dt.dt_str(tool_dt.cur_time(), fmt='%Y-%m-%d')}\n" \
+        now = tool_dt.cur_time()
+        yesterday = now - 86400
+        content = f"时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
                    f"订单数：{count_data}\n" \
-                   f"订单金额：{sum_data}\n" \
+                   f"订单金额：{order_sum_data}\n" \
                    f"房间统计：\n" \
                    f"房间总数：{count_data}\n" \
                    f"多个玩法房间数：{group_dict}"
