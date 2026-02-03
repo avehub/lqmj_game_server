@@ -1078,7 +1078,6 @@ class LogoutUser(DBModel):
     address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
     id_card = fields.CharField(max_length=20, null=True, default='', description='身份证')
     real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
-    album = fields.CharField(max_length=256, null=True, default='', description='相册')
     pi = fields.CharField(max_length=64, index=True, default='', description='已通过实名认证用户的唯一标识')
     discount = fields.FloatField(max_digits=3, null=True, decimal_places=2, default=1, description="消费折扣")
     gold = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="金币")
@@ -1102,3 +1101,4 @@ class LogoutUser(DBModel):
 
     class Meta:
         unique_together = (("platform", "openid"),("unionid", "platform"),("uid"),)  # 唯一索引
+        table = "logout_user"
