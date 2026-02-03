@@ -58,7 +58,7 @@ class LogoutUserRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"失败原因:{str(e)}"
         return True, data
-
+    
     @classmethod
     async def get_logout_user(cls, uid: int):
         """根据ID获取单条总局战绩"""
