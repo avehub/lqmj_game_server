@@ -205,7 +205,7 @@ class WriteOff(GameAuthApi):
             sta, msg = await LogoutUserRC.update_logout_user(u_info["uid"])
         if not sta:
             return self.answer(code=self.sta_code.FAIL)
-        return self.answer()
+        return self.answer(data=data)
 
 class WebUpUserResource(SpecialApi):
     """ 网页更新用户资源 """
