@@ -43,7 +43,10 @@ class RoomRobot(Room):
                 res = 0.5
             self.call_flow_robot(res, self.check_robot_operate)
         else:
-            self.call_flow(seconds, self.turn_to_player_chu_pai, curr_player, False, 0)
+            if curr_player.card_is_lock() and curr_player.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
+                self.call_flow(seconds, self.operates_time_out)
+            else:
+                self.call_flow(seconds, self.turn_to_player_chu_pai, curr_player, False, 0)
 
 
     async def turn_to_chu_pai_by_robot(self,p,timeout_seconds):
