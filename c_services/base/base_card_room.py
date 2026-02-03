@@ -306,8 +306,8 @@ class BaseCardRoom(BaseRoom):
         # 首局并且空闲不记录
         if not self.game_began:
             return
-        if self.__match_room_id > 0:
-            return
+        # if self.__match_room_id > 0:
+        #     return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
         self.__add_pack_msg_records(cmd, data, code, hint)
@@ -412,7 +412,7 @@ class BaseCardRoom(BaseRoom):
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
             player_score[str(p.uid)] = p.total_score
-            if self.__match_room_id == 0:
+            if self.__match_room_id >= 0:
                 self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
@@ -425,7 +425,7 @@ class BaseCardRoom(BaseRoom):
         if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
-            if self.__match_room_id == 0:
+            if self.__match_room_id >= 0:
                 replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
                 self.__replay_msg_data = []
@@ -545,7 +545,7 @@ class BaseCardRoom(BaseRoom):
                         "tid": self.tid,
                         "is_all": False
                     }
-                    if self.__match_room_id == 0:
+                    if self.__match_room_id >= 0:
                         send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, data, p.uid))
             # 战绩更新局数
             if send_list:
@@ -582,7 +582,7 @@ class BaseCardRoom(BaseRoom):
         record_data["is_all"] = True
         record_data["is_dismiss"] = is_dismiss
         record_data["record_data_list"] = record_data_list
-        if self.__match_room_id == 0:
+        if self.__match_room_id >= 0:
             await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
 
         # 比赛房间结束
