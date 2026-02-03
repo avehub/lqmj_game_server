@@ -20,6 +20,8 @@ class RoomRobot(Room):
         for p in self.seats:
             if p.is_robot:
                 res = random.randint(2, 8)
+                if self.robot_fast:
+                    res = 0.5
                 p.call_flow(res, self.exchange_three_auto,p)
         self.call_flow(seconds, self.deal_exchange_time_out)
 
@@ -37,6 +39,8 @@ class RoomRobot(Room):
     async def enter_mo_pai_call_by_robot(self,curr_player,seconds):
         if curr_player.is_robot:
             res = random.randint(1, 2)
+            if self.robot_fast:
+                res = 0.5
             self.call_flow_robot(res, self.check_robot_operate)
         else:
             self.call_flow(seconds, self.turn_to_player_chu_pai, curr_player, False, 0)
@@ -48,6 +52,8 @@ class RoomRobot(Room):
                 rs = 4
             else:
                 rs = UtilsTool.random_choice_num([1, 2, 3], [0.5, 0.3, 0.2])
+            if self.robot_fast:
+                rs = 0.5
             self.call_flow_robot(rs, self.check_robot_auto_chu_pai)
             return
         self.call_flow(timeout_seconds, self.chu_pai_time_out, p)
@@ -137,6 +143,17 @@ class RoomRobot(Room):
                     code, _ = await self.on_player_hu(p)
                     if StaCode.PASS != code:
                         self.log_info("超时尾三必胡操作胡牌有误", code)
+                elif p.card_is_lock():
+                    if p.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
+                        code, _ = await self.on_player_men(p)
+                        self.log_info("锁牌后超时闷")
+                        if code != StaCode.PASS:
+                            self.log_info("锁牌后超时闷有误", code)
+                    elif p.is_action_in_operates(ActionType.ACTION_TYPE_JIAN):
+                        self.log_info("锁牌后超时捡")
+                        code, _ = await self.on_player_jian(p)
+                        if code != StaCode.PASS:
+                            self.log_info("锁牌后超时捡有误", code)
                 else:
                     await self.time_out_with_player_operates(p)
         self.record_operates.clear()
@@ -159,6 +176,8 @@ class RoomRobot(Room):
 
     async def deal_operates_call_time_out(self):
         res = random.randint(2, 3)
+        if self.robot_fast:
+            res = 0.5
         self.call_flow_robot(res, self.check_robot_operate)
         await self.deal_operates_time_out()
 

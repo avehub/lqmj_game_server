@@ -52,7 +52,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall(0.1, self.__loop_match_competition).loop_start()
+        DelayCall((1.1,2.0), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -305,12 +305,15 @@ class CompetitionServer(BaseServer):
         player_list = list(room.members)
         room_num = 1
         is_init = room.match_round == 1
+        room.price = price
         for group in group_list:
             data["room_id"] = await self.unique_room_id()
+            is_all_robot = all(p_uid <= R_UID_THRESHOLD for p_uid in group)
             game_room_info = {
                 "status": GameRoomStatus.PLAYING,
                 "players": group,
                 "room_num": room_num,
+                "is_all_robot": is_all_robot,
             }
             room.set_game_room_info(data["room_id"], game_room_info)
             room_num += 1
@@ -352,6 +355,7 @@ class CompetitionServer(BaseServer):
         s2c_game_room_finish = S2CGameRoomFinish.pb_model(**data)
         await self.conf.rds.srem("game_room_number", room_id)
         self.log_info(match_room_id,"room_id", room_id, "该房间已结束")
+
         send_list = []
         if players:
             for uid in players:
@@ -367,8 +371,26 @@ class CompetitionServer(BaseServer):
                 room.finish_room_count = 0
                 room.game_room_info.clear()
                 room.add_match_round()
+                room.player_all_finish = False
                 conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(room.competition_id)
                 await delay_func(10, self.__competition_before_start, conf_data, room, "")
+        else:
+            if not room.player_all_finish:
+                player_all_finish = True
+                robot_room = []
+                for room_id, info in room.game_room_info.items():
+                    if not info.get("is_all_robot"):
+                        if info.get("status") == GameRoomStatus.PLAYING:
+                            player_all_finish = False
+                    else:
+                        if info.get("status") == GameRoomStatus.PLAYING:
+                            robot_room.append(room_id)
+                if player_all_finish:
+                    room.player_all_finish = True
+                    self.log_info("所有真人玩家已结束")
+                    cs_enum = ServiceEnum.find_member_by_val(room.cs_type)
+                    msg = {"robot_room":robot_room,"secret":self.conf.SECRET_KEY}
+                    await self.cs2cs_by_rmq(cs_enum, CmdRoom.ALL_PLAYER_FINISH,msg)
 
         await self.__competition_info(match_room_id, is_finish=is_competition_finish)
         if is_competition_finish:
@@ -427,11 +449,14 @@ class CompetitionServer(BaseServer):
             if uid > R_UID_THRESHOLD:
                 rank_info = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(self.__current_cycle_id, uid)
                 now_rank = rank_info.get("rank_position", 0)
+                total_points = rank_info.get("total_points", 0)
                 last_rank_info = await self.__get_player_in_match(uid)
                 last_rank = last_rank_info.get("rank", 0)
                 item["difference"] = rank_info.get("difference", 0)
                 item["last_rank"] = last_rank
                 item["now_rank"] = now_rank
+                item["total_points"] = total_points
+                item["price"] = room.price
 
         self.log_info("competition_result", competition_result)
         s2c_competition_over = S2CCompetitionOver.pb_model(**data)
@@ -506,8 +531,6 @@ class CompetitionServer(BaseServer):
             "curr_match_round": room.match_round,
             "total_match_round": room.total_match_round,
         })
-
-        print("比赛信息", data)
         s2c_competition_info = S2CCompetitionInfo.pb_model(**data)
         await room.inner_broadcast(CmdCompetition.COMPETITION_INFO, s2c_competition_info)
 

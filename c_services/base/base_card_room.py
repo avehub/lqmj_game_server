@@ -1,16 +1,14 @@
 import asyncio
 import base64
 
-from nsanic.libs.tool import json_encode
 from nsanic.libs import tool_dt
 from c_services.base.base_room import BaseRoom
-from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement, CmdClub, ClubMsgType, CmdCompetition
+from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, CmdClub, ClubMsgType, CmdCompetition
 from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, ExtraHuPai, CheckType, PAI_XING_SCORE_MAP, \
     HuType, FlowStatus, \
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
-from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo, \
+from common.proto.py_pb2.ws_leisure import s2c_trustee_model, s2c_one_of_model, S2CGameOverInfo, S2CRoundOverInfo, \
     S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
@@ -56,6 +54,7 @@ class BaseCardRoom(BaseRoom):
         self.__match_room_id = 0
         self.__total_match_round = 0
         self.__match_round = 0
+        self.__robot_fast = False
 
     async def close_room_timeout_idle(self):
         if self.game_began:
@@ -114,6 +113,14 @@ class BaseCardRoom(BaseRoom):
     @property
     def match_round(self):
         return self.__match_round
+
+    @property
+    def robot_fast(self):
+        return self.__robot_fast
+
+    @robot_fast.setter
+    def robot_fast(self,value):
+        self.__robot_fast = value
 
 
     def set_not_playing_dismiss(self, status, value):
@@ -649,7 +656,9 @@ class BaseCardRoom(BaseRoom):
         self.__extra_score_map = {}
         self.__pai_xing_score_map = {}
         self.__match_room_id = 0
-
+        self.__total_match_round = 0
+        self.__match_round = 0
+        self.__robot_fast = False
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):

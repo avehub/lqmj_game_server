@@ -26,10 +26,6 @@ class MahjongServer(BaseCardService,MahjongServerRobotAct):
             CmdRoom.PLAY_CARDS.val: self.__on_player_chu_pai,
             CmdRoom.PLAYER_TIAN_TING.val: self.__on_player_tian_ting,
             CmdRoom.NOTIFY_POSITION.val: self.__notify_position,
-
-            CmdRoom.ROBOT_CAL_ACTION.val: self.on_robot_cal_action,
-            CmdRoom.ROBOT_CAL_PENG.val: self.on_robot_cal_peng,
-            CmdRoom.ROBOT_CAL_GANG.val: self.on_robot_cal_gang,
         })
 
     async def __on_player_pass(self, player, room, _):

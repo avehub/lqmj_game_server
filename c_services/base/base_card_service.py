@@ -110,7 +110,6 @@ class BaseCardService(BaseService):
 
     async def clear_in_service(self):
         if hasattr(self, '_idle_check_timer'):
-            print("_idle_check_timer清理")
             self._idle_check_timer.cancel()
         await GameRoomsRC.abnormal_cs_type(self.service_type, "重启子游戏服务")
         await super().clear_in_service()

@@ -18,6 +18,8 @@ class CompetitionRoom:
         self.__total_match_round = 4
         self.__competition_id = 0
         self.__game_room_info = {}
+        self.__player_all_finish = False
+        self.__price = 1
 
     @property
     def match_room_id(self):
@@ -90,6 +92,22 @@ class CompetitionRoom:
     def game_room_info(self):
         return self.__game_room_info
 
+    @property
+    def player_all_finish(self):
+        return self.__player_all_finish
+
+    @player_all_finish.setter
+    def player_all_finish(self,value):
+        self.__player_all_finish = value
+
+    @property
+    def price(self):
+        return self.__price
+
+    @price.setter
+    def price(self,value):
+        self.__price = value
+
     def set_game_room_info(self, room_id, info):
         self.__game_room_info[room_id] = info
 
@@ -149,6 +167,7 @@ class CompetitionRoom:
         self.__cs_type = 0
         self.__total_match_round = 4
         self.__game_room_info.clear()
+        self.__player_all_finish = False
 
     async def inner_broadcast(self, c_code, data):
         """ 广播消息成员 """
