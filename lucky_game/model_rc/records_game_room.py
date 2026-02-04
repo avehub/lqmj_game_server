@@ -174,7 +174,21 @@ class RecordsGameRoomRC(BaseCommonRC):
         return record, "删除成功"
 
     @classmethod
-    async def statistics_game_room(cls, start_time: int = None, end_time: int = None) -> tuple:
+    async def statistics_game_room_by_count(cls, start_time: int = None, end_time: int = None):
+        """获取昨日游戏房间统计数据"""
+        today_start_time, today_end_time = await cls.get_time_range("day")
+        if end_time is None:
+            end_time = today_start_time
+        if start_time is None:
+            start_time = today_end_time - 86400
+        where = f" created > {start_time} AND created < {end_time}"
+        count_sql = f"SELECT COUNT(*) AS total_count FROM {cls.tb_name} WHERE {where}"
+        count_data = await cls.db_model.exec_query(count_sql)
+        total_count = count_data[0]["total_count"] if count_data else 0
+        return total_count if total_count and total_count > 0 else 0
+
+    @classmethod
+    async def statistics_game_room_by_group_count(cls, start_time: int = None, end_time: int = None):
         """获取昨日游戏房间统计数据"""
         today_start_time, today_end_time = await cls.get_time_range("day")
         if end_time is None:
@@ -184,8 +198,6 @@ class RecordsGameRoomRC(BaseCommonRC):
         where = f" created > {start_time} AND created < {end_time}"
         group_sql = f"SELECT cs_type, COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY cs_type"
         group_data = await cls.db_model.exec_query(group_sql)
-        count_sql = f"SELECT COUNT(*) FROM {cls.tb_name} WHERE {where}"
-        count_data = await cls.db_model.exec_query(count_sql)
-        return count_data, group_data
+        return group_data if group_data else []
 
 
