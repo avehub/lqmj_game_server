@@ -3,12 +3,11 @@ from common.proto.pb2 import ws_leisure_pb2
 
 class C2SEnterLeisure:
     """ 进入休闲场 """
-    __proto = ws_leisure_pb2.C2SEnterLeisure()
-
     @classmethod
     def decode(cls, msg):
-        cls.__proto.ParseFromString(msg)
-        return cls.__proto
+        proto = ws_leisure_pb2.C2SEnterLeisure()
+        proto.ParseFromString(msg)
+        return proto
 
 
 play_card_model = ws_leisure_pb2.C2SPlayCards()
