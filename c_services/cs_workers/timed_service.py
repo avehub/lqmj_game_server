@@ -6,7 +6,7 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, DINGTALK_STATISTICS_SECRET
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
@@ -251,24 +251,22 @@ class TimedService:
     @classmethod
     async def send_ding_statistics(cls):
         """ 每日统计房间订单数据发送至钉钉 """
-        order_count_data, order_sum_data = await OrderRC.statistics_order()
-        print("order_count_data", order_count_data)
-        print("order_sum_data", order_sum_data)
-        count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
-        print("count_data", count_data)
-        print("group_data", group_data)
+        order_sum_data = await OrderRC.statistics_order_by_sum_amount()
+        order_count_data = await OrderRC.statistics_order_by_count()
+        group_data = await RecordsGameRoomRC.statistics_game_room_by_group_count()
+        count_data = await RecordsGameRoomRC.statistics_game_room_by_count()
         group_dict = {}
         if group_data:
             group_dict = {f"{i['cs_type']}": i for i in group_data}
-        DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
         ding_server = DingTalkNotifier().get_service()
+        ding_server.config.webhook_url = DINGTALK_STATISTICS_WEBHOOK
+        ding_server.config.secret = DINGTALK_STATISTICS_SECRET
         now = tool_dt.cur_time()
         yesterday = now - 86400
-        content = f"时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
+        content = f"- 时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
                    f"订单数：{count_data}\n" \
                    f"订单金额：{order_sum_data}\n" \
-                   f"房间统计：\n" \
-                   f"房间总数：{count_data}\n" \
+                   f"房间总数：{order_count_data}\n" \
                    f"多个玩法房间数：{group_dict}"
         ding_server.send_text_message(content)
 
