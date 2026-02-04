@@ -535,6 +535,7 @@ class BaseRoom(metaclass=ABCMeta):
 
     def clear_room(self):
         """ 清理房间 """
+        self.cancel_all_timer()
         self.__service = None
         self.__room_status = RoomStatus.T_CLOSED
         self.__flow_status = 0
@@ -544,9 +545,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
         self.__room_conf = {}
         self.__poker = None
-        self.cancel_all_timer()
-        if hasattr(self, '_timeout_task') and self._timeout_task:
-            self._timeout_task.cancel()  # 关键！
+
 
     def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """

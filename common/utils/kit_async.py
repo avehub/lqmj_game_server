@@ -52,7 +52,8 @@ class DelayCall():
         "delay",
         "task",
         "__start_seconds",
-        "__current_delay"
+        "__current_delay",
+        "_auto_clear"
     )
 
     def __init__(self, seconds, f, *args, **kw):
@@ -65,6 +66,7 @@ class DelayCall():
         self.delay = Delay(f, *args, **kw)
         self.__start_seconds = 0
         self.__current_delay = 0
+        self._auto_clear = True
 
     def cancel(self):
         """
@@ -74,6 +76,10 @@ class DelayCall():
         if self.task and not self.task.done():
             # print(f"task被取消：{self.delay.f.__name__}")
             self.task.cancel()
+            self.task = None
+        if self.delay:
+            self.delay.f = None
+            self.delay = None
 
     def left_seconds(self):
         """ 获取计时器的剩余时间 """
@@ -82,11 +88,15 @@ class DelayCall():
         return int(max(0.0, self.__current_delay - (time.time() - self.__start_seconds)))
 
     async def delay_call(self):
-        # 计算实际延迟时间
         self.__current_delay = random.uniform(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
-        await asyncio.sleep(self.__current_delay)
-        # 直接调用并允许异常抛出
-        return await self.delay.call()
+        try:
+            await asyncio.sleep(self.__current_delay)
+            return await self.delay.call()
+        finally:
+            # 👇 仅当 _auto_clear=True 时才清理（默认行为）
+            if self._auto_clear and self.delay:
+                self.delay.f = None
+                self.delay = None
 
     def start(self):
         """ 创建一个task """
@@ -97,6 +107,7 @@ class DelayCall():
         return self.task
 
     def loop_start(self):
+        self._auto_clear = False
         self.task = asyncio.create_task(self.__loop_call())
         return self.task
 

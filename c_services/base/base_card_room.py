@@ -1,16 +1,14 @@
 import asyncio
 import base64
 
-from nsanic.libs.tool import json_encode
 from nsanic.libs import tool_dt
 from c_services.base.base_room import BaseRoom
-from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement, CmdClub, ClubMsgType, CmdCompetition
+from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, CmdClub, ClubMsgType, CmdCompetition
 from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, ExtraHuPai, CheckType, PAI_XING_SCORE_MAP, \
     HuType, FlowStatus, \
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
-from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo, \
+from common.proto.py_pb2.ws_leisure import s2c_trustee_model, s2c_one_of_model, S2CGameOverInfo, S2CRoundOverInfo, \
     S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
@@ -56,6 +54,7 @@ class BaseCardRoom(BaseRoom):
         self.__match_room_id = 0
         self.__total_match_round = 0
         self.__match_round = 0
+        self.__robot_fast = False
 
     async def close_room_timeout_idle(self):
         if self.game_began:
@@ -114,6 +113,14 @@ class BaseCardRoom(BaseRoom):
     @property
     def match_round(self):
         return self.__match_round
+
+    @property
+    def robot_fast(self):
+        return self.__robot_fast
+
+    @robot_fast.setter
+    def robot_fast(self,value):
+        self.__robot_fast = value
 
 
     def set_not_playing_dismiss(self, status, value):
@@ -405,7 +412,7 @@ class BaseCardRoom(BaseRoom):
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
             player_score[str(p.uid)] = p.total_score
-            if self.__match_room_id == 0:
+            if self.__match_room_id >= 0:
                 self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
@@ -418,7 +425,7 @@ class BaseCardRoom(BaseRoom):
         if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
-            if self.__match_room_id == 0:
+            if self.__match_room_id >= 0:
                 replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
                 self.__replay_msg_data = []
@@ -426,7 +433,7 @@ class BaseCardRoom(BaseRoom):
 
     async def next_round_ready(self):
         await self.start_next_round()
-        auto_time = 0 if self.__match_room_id == 0 else 10
+        auto_time = 0 if self.__match_room_id == 0 else 9
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
@@ -488,7 +495,8 @@ class BaseCardRoom(BaseRoom):
                 if not record_info:
                     self.log_info("战绩创建失败", e, "入参", self.tid, tool_dt.cur_time())
                 self.__record_id = record_info.record_rid
-        self.call_flow(2, self.round_start)
+        start_time = 2 if self.__match_room_id == 0 else 0.5
+        self.call_flow(start_time, self.round_start)
         for p in self.seats:
             if p and not p.is_robot:
                 await self.service.sava_player_in_game(p.uid, self.tid, self.owner, self.club_id, 2)
@@ -537,7 +545,7 @@ class BaseCardRoom(BaseRoom):
                         "tid": self.tid,
                         "is_all": False
                     }
-                    if self.__match_room_id == 0:
+                    if self.__match_room_id >= 0:
                         send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, data, p.uid))
             # 战绩更新局数
             if send_list:
@@ -574,7 +582,7 @@ class BaseCardRoom(BaseRoom):
         record_data["is_all"] = True
         record_data["is_dismiss"] = is_dismiss
         record_data["record_data_list"] = record_data_list
-        if self.__match_room_id == 0:
+        if self.__match_room_id >= 0:
             await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
 
         # 比赛房间结束
@@ -640,7 +648,7 @@ class BaseCardRoom(BaseRoom):
         self.__round_msg_records = []  # 每局消息记录
         self.__replay_msg_data = []# 存入战绩数据
         self.__online_group_user = []
-        self.__timer_dismiss = None
+        self.cancel_timer_dismiss()
         self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
@@ -648,7 +656,9 @@ class BaseCardRoom(BaseRoom):
         self.__extra_score_map = {}
         self.__pai_xing_score_map = {}
         self.__match_room_id = 0
-
+        self.__total_match_round = 0
+        self.__match_round = 0
+        self.__robot_fast = False
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):

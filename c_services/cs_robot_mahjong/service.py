@@ -30,8 +30,8 @@ class RobotMahjongServer(JsonBaseServer):
         """
         self.log_info("出牌",data)  # 日志记录
 
-        print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
-        print("######-> AI开始计算预测动作 <-######")
+        # print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
+        # print("######-> AI开始计算预测动作 <-######")
         cs_type = data.get("cs_type", None)
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         uid = data.get("uid",1)
@@ -47,11 +47,11 @@ class RobotMahjongServer(JsonBaseServer):
         send_data = self.parse_receive_data(data)
         send_data["card"] = action
         self.log_info(f"计算出牌, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
-        print("输出封装预测后的数据: ", send_data)
-        print('当前预测玩家ID为: {}'.format(data['seat_id']))
-        print('AI输出预测打牌动作: {}'.format(action))
-        print()
-        print("%##############<< 预测下一位玩家出牌动作 >>##################%")
+        # print("输出封装预测后的数据: ", send_data)
+        # print('当前预测玩家ID为: {}'.format(data['seat_id']))
+        # print('AI输出预测打牌动作: {}'.format(action))
+        # print()
+        # print("%##############<< 预测下一位玩家出牌动作 >>##################%")
         await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
     async def cal_pong(self,_, data):
@@ -65,8 +65,8 @@ class RobotMahjongServer(JsonBaseServer):
         uid = data.get("uid",1)
         cmd = data.get("cmd", None)
 
-        print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
-        print("######-> AI开始计算预测动作 <-######")
+        # print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
+        # print("######-> AI开始计算预测动作 <-######")
 
         mg = LpyMoveGenerator()
         # 计算剩余卡牌并更新卡牌属性
@@ -86,11 +86,11 @@ class RobotMahjongServer(JsonBaseServer):
         send_data = self.parse_receive_data(data)
         send_data["card"] = action
         self.log_info(f"计算碰, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
-        print("输出封装预测后的数据: ", send_data)
-        print('当前预测玩家ID为: {}'.format(data['seat_id']))
-        print('AI输出预测碰牌动作: {}'.format(action))
-        print()
-        print("%##############<< 预测下一位玩家出牌动作 >>##################%")
+        # print("输出封装预测后的数据: ", send_data)
+        # print('当前预测玩家ID为: {}'.format(data['seat_id']))
+        # print('AI输出预测碰牌动作: {}'.format(action))
+        # print()
+        # print("%##############<< 预测下一位玩家出牌动作 >>##################%")
 
         await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
@@ -104,8 +104,8 @@ class RobotMahjongServer(JsonBaseServer):
         cs_type = data.get("cs_type", None)
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
 
-        print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
-        print("######-> AI开始计算预测动作 <-######")
+        # print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
+        # print("######-> AI开始计算预测动作 <-######")
 
         mg = LpyMoveGenerator()
         remain_cards = self.calc_remain_cards(data.get("curr_hand_cards") or [], data.get("remain_cards") or {})
@@ -118,18 +118,18 @@ class RobotMahjongServer(JsonBaseServer):
             magic_card=data.get("magic_card", None),
         )
 
-        print("当前杠牌操作类型: {}".format(data.get("gang_type")))
+        # print("当前杠牌操作类型: {}".format(data.get("gang_type")))
         action = mg.calc_can_gang(data.get("can_gang_cards"), data.get("gang_type"))
         # todo: 解析动作, 包装数据
         send_data = self.parse_receive_data(data)
         send_data["card"] = action
         send_data["gang_type"] = data.get("gang_type", 0)
         self.log_info(f"计算杠, tid: {send_data.get('tid')}, uid: {uid}, action: {action}")
-        print("输出封装预测后的数据: ", send_data)
-        print('预测玩家ID为: {}'.format(data['seat_id']))
-        print('AI输出预测杠牌动作: {}'.format(action))
-        print()
-        print("%##############<< 预测下一位玩家出牌动作 >>##################%")
+        # print("输出封装预测后的数据: ", send_data)
+        # print('预测玩家ID为: {}'.format(data['seat_id']))
+        # print('AI输出预测杠牌动作: {}'.format(action))
+        # print()
+        # print("%##############<< 预测下一位玩家出牌动作 >>##################%")
 
         await self.cs2cs_by_rmq(cs_enum, cmd, send_data,uid)
 
@@ -139,8 +139,8 @@ class RobotMahjongServer(JsonBaseServer):
         """
         self.log_info(data)  # 日志记录
 
-        print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
-        print("######-> AI开始计算预测最佳有效牌 <-######")
+        # print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
+        # print("######-> AI开始计算预测最佳有效牌 <-######")
 
         trigger = data.get('trigger', False)
         if trigger:
@@ -153,11 +153,11 @@ class RobotMahjongServer(JsonBaseServer):
         send_data["hu_cards"] = hu_cards  # 添加能胡卡牌
 
         self.log_info(f"计算有效牌, tid: {send_data.get('tid')}, uid: {send_data.get('uid')}, action: {action}")
-        print("输出封装预测后的数据: ", send_data)
-        print('当前预测摸牌ID为: {}'.format(send_data['self']))
-        print('AI输出预测摸牌: {}'.format(action))
-        print()
-        print("%##############<< 预测下一位摸好牌 >>##################%")
+        # print("输出封装预测后的数据: ", send_data)
+        # print('当前预测摸牌ID为: {}'.format(send_data['self']))
+        # print('AI输出预测摸牌: {}'.format(action))
+        # print()
+        # print("%##############<< 预测下一位摸好牌 >>##################%")
 
         #await self.send_child_name_lpy(send_data, action)
 
@@ -199,7 +199,7 @@ class RobotMahjongServer(JsonBaseServer):
         """
         todo: 老牌友血流红中🀄麻将
         """
-        print("============计算发财捉鸡出牌============")
+        # print("============计算发财捉鸡出牌============")
         mg = LpyMoveGenerator()
         remain_cards = self.calc_remain_cards(data.get("curr_hand_cards") or [], data.get("remain_cards") or {})
         mg.update_attr(
@@ -217,7 +217,7 @@ class RobotMahjongServer(JsonBaseServer):
         """
         todo: 老牌友贵阳麻将
         """
-        print("============计算贵阳麻将出牌============")
+        # print("============计算贵阳麻将出牌============")
         mg = MoveGenerator()
         remain_cards = self.calc_remain_cards(data.get("curr_hand_cards") or [], data.get("remain_cards") or {})
         mg.update_attr(

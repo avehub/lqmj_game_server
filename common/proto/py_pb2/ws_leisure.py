@@ -1211,6 +1211,8 @@ class S2CCompetitionOver:
             rank_info.difference = data.get("difference") or 0
             rank_info.last_rank = data.get("last_rank") or 0
             rank_info.now_rank = data.get("now_rank") or 0
+            rank_info.total_points = data.get("total_points") or 0
+            rank_info.price = data.get("price") or 0
         return obj
 
 
