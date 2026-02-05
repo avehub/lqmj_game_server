@@ -41,6 +41,7 @@ class CompetitionServer(BaseServer):
             CmdCompetition.MATCH_FINISH: self.__match_finish,
             CmdCompetition.BACK_COMPETITION: self.__back_competition,
             CmdCompetition.UPDATE_SCORE: self.__update_score,
+            CmdFanOut.LOST_CONNECT: self.__lost_connect,
         })
 
         self.__rooms = {}
@@ -169,6 +170,7 @@ class CompetitionServer(BaseServer):
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         in_white = await TournamentLogic.check_uid_white_status(uid)
+        self.log_info("白名单状态", uid, in_white)
         if conf_data.get("status") == CompetitionStatus.CLOSED and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL,
                                            "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
@@ -182,8 +184,8 @@ class CompetitionServer(BaseServer):
         _, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
-        if cycle_info and cycle_info["reward_id"] != 2:
-            start_time,end_time = self.get_competition_time(cycle_info)
+        # if cycle_info and cycle_info["reward_id"] != 2:
+        #     start_time,end_time = self.get_competition_time(cycle_info)
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
@@ -607,6 +609,9 @@ class CompetitionServer(BaseServer):
             send_list.append(self.cs2ws_by_rmq(CmdCompetition.QUIT_COMPETITION, p_uid, msg=data_model))
         if send_list:
             await asyncio.gather(*send_list)
+
+    async def __lost_connect(self,uid,_):
+        self.log_info("玩家掉线",uid)
 
     @staticmethod
     def check_match_begin_time(curr_time, daily_start_time, daily_end_time):
