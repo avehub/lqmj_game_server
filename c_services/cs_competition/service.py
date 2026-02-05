@@ -180,13 +180,12 @@ class CompetitionServer(BaseServer):
             conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
 
         _, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
-        daily_start_time = conf_data.get("daily_start_time")
-        daily_end_time = conf_data.get("daily_end_time")
-        if cycle_info and cycle_info["reward_id"] != 2:
-            daily_start_time,daily_end_time = self.get_competition_time(cycle_info)
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
-
+        if cycle_info and cycle_info["reward_id"] != 2:
+            start_time,end_time = self.get_competition_time(cycle_info)
+        daily_start_time = conf_data.get("daily_start_time")
+        daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
         if start_time > 0 and curr_time < start_time and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！",
