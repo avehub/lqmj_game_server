@@ -306,8 +306,8 @@ class BaseCardRoom(BaseRoom):
         # 首局并且空闲不记录
         if not self.game_began:
             return
-        # if self.__match_room_id > 0:
-        #     return
+        if self.__match_room_id > 0:
+            return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
         self.__add_pack_msg_records(cmd, data, code, hint)
@@ -920,7 +920,7 @@ class BaseCardRoom(BaseRoom):
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss, over_type)
-        self.clear_agree_dismiss()
+        self.__agree_dismiss_seats.clear()
         if over_type == OverType.ULTIMATE_DISMISS:
             return await super(BaseCardRoom, self).game_over()
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):
