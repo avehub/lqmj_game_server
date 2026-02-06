@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from nsanic.libs.component import LogMeta
 from tortoise.transactions import in_transaction
 
@@ -9,7 +9,7 @@ from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel, ProxyVipLevel
 from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO, \
     UpgradeProxyDTO
-from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser, ProxyOrderDividendRecords
+from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser
 
 """
 游戏数据同步适配器
@@ -57,7 +57,6 @@ class GameDataAdapter(LogMeta):
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
             cls.log_info(f"【重要日志】【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
-            await cls.sync_non_proxy_promotion_order(data)
             return 1
         proxy_id = relation.get("proxy_id")
         query_user = {
@@ -73,7 +72,6 @@ class GameDataAdapter(LogMeta):
         if not proxy_user:
             cls.log_info(
                 f"【重要日志】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
-            await cls.sync_non_proxy_promotion_order(data)
             return 1
         level1_proxy_id = proxy_user.get("level1_proxy_id")
         level1_proxy_user = proxy_user
@@ -83,7 +81,6 @@ class GameDataAdapter(LogMeta):
         if not level1_proxy_user:
             cls.log_info(
                 f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略订单同步，订单={data}")
-            await cls.sync_non_proxy_promotion_order(data)
             return 1
 
         vip_expire_time = level1_proxy_user.get("vip_expire_time")
@@ -93,7 +90,6 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【重要日志】会员已过期，忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}"
                 f",order_time={data.order_time},vip_expire_time={vip_expire_time},reason={proxy_id} 会员已过期或所属的一级代理会员已过期")
-            await cls.sync_non_proxy_promotion_order(data)
             return 1
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
         return 1
@@ -172,44 +168,6 @@ class GameDataAdapter(LogMeta):
             cls.log_err(f"同步分销用户绑定关系失败err={e},data={data}")
             return 0, f"同步分销用户绑定关系失败err={e},data={data}"
         return 1, f"成功"
-
-    @classmethod
-    async def sync_non_proxy_promotion_order(cls, data: PromotionOrderDataDTO):
-        now = datetime.now()
-        monday_date = now - timedelta(days=now.weekday())
-        records = {
-            "id": data.order_id,
-            "order_id": data.order_id,
-            "order_no": data.order_no,
-            "price": data.price,
-            "order_amount": data.order_amount,
-            "dividend_rate": 0,
-            "level2_dividend_rate": 0,
-            "proxy_id": 0,
-            "promotion_id": 0,
-            "player_id": data.player_id,
-            "level1_proxy_id": 0,
-            "proxy_income": 0,
-            "level1_proxy_income": 0,
-            "platform_income": data.order_amount,
-            "channel_proxy_income": 0,
-            "channel_proxy_id": 0,
-            "order_type": data.order_type,
-            "level": 1,
-            "goods_number": data.goods_number,
-            "order_year": now.strftime("%Y"),
-            "order_month": now.strftime("%Y-%m"),
-            "order_day": now.strftime("%Y-%m-%d"),
-            "order_week_day": monday_date.strftime("%Y-%m-%d"),
-            "order_time": data.order_time
-        }
-        try:
-            async with in_transaction(connection_name=DbKey.DEFAULT):
-                await ProxyOrderDividendRecords.add_one(records)
-        except Exception as e:
-            cls.log_err(f"非代理订单入库失败err={e},data={data}")
-            return 0
-        return 1
 
 
 if __name__ == '__main__':
