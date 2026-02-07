@@ -429,11 +429,16 @@ class BaseCardRoom(BaseRoom):
                 replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
                 self.__replay_msg_data = []
-            await self.next_round_ready()
+            await self.next_round_ready(over_type)
 
-    async def next_round_ready(self):
+    async def next_round_ready(self,over_type):
         await self.start_next_round()
-        auto_time = 0 if self.__match_room_id == 0 else 9
+        if self.__match_room_id == 0:
+            auto_time = 0
+        elif over_type == OverType.LIU_JU:
+            auto_time = 3
+        else:
+            auto_time = 9
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
