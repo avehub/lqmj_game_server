@@ -20,7 +20,10 @@ from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData
      PropertyRankingRecord, UserPortrait, UserPortraitDiff, UserActivityChart, UserActivityList, UserActivityValue
 
 from lucky_admin.interface.tournament import TournamentTemplate
-from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserLevel, ProxyUserBind, ProxyChannelSet, ProxyChannelUnset, ProxyChannelUpdate
+from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserDetailList, AddServiceProvider
+from lucky_admin.interface.distribution import DistributionTotal, DistributionTrend, DistributionAgriTrend, \
+    PromotionUserTrend, DistributionOrderDetail, DistributionAgriOrders, DistributionAgriShip, DistributionStatistics
+from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserLevel, ProxyUserBind, ProxyChannelSet,  ProxyChannelUnset, ProxyChannelUpdate
 
 
 class MainBp(BaseBlue):
@@ -110,8 +113,19 @@ class MainBp(BaseBlue):
         Urls("/ProxyUser", ProxyUser),
         Urls("/ProxyUserLevel", ProxyUserLevel),
         Urls("ProxyUserBind", ProxyUserBind),
+        Urls("/ProxyUserDetailList", ProxyUserDetailList),
+        Urls("/AddServiceProvider", AddServiceProvider),
         Urls("/ProxyChannelUpdate", ProxyChannelUpdate),
 
+        # 分销
+        Urls("/DistributionTotal", DistributionTotal),  # 今日数据总览
+        Urls("/DistributionTrend", DistributionTrend),  # 收入趋势图  饼图可以直接用
+        Urls("/DistributionAgriTrend", DistributionAgriTrend),  # 助农销量趋势图
+        Urls("/PromotionUserTrend", PromotionUserTrend),  # 推广新增用户趋势
+        Urls("/DistributionOrderDetail", DistributionOrderDetail),  # 分销收入订单明细
+        Urls("/DistributionAgriOrders", DistributionAgriOrders),  # 助农订单列表与搜索
+        Urls("/DistributionAgriShip", DistributionAgriShip),  # 助农订单批量发货
+        Urls("/DistributionStatistics", DistributionStatistics),  # 订单金额数据统计
 
 
 

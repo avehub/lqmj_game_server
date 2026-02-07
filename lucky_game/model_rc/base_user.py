@@ -272,13 +272,16 @@ class BaseUserRC(BaseCommonRC):
             await cls.conf.rds.set_hash(cls.tb_name, pk_val, json_encode(new_info))
 
     @classmethod
-    async def update_info(cls, info: dict, new_info: dict):
+    async def update_info(cls, info: dict, new_info: dict, del_cache: bool = False):
         """更新玩家信息，必须是玩家在线的情况下"""
         pk_val = info.get('uid')
         sta = await cls.db_model.update_by_pk(pk_val, new_info, old_data=info)
         if sta:
             info.update(new_info)
-            await cls.update_cache(pk_val, info)
+            if del_cache:
+                await cls.conf.rds.drop_item(pk_val)
+            else:
+                await cls.update_cache(pk_val, info)
             return info
         return
 

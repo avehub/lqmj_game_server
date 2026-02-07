@@ -7,12 +7,13 @@ from lucky_game.handler.decorator import GameChecker, CurrentLimiting, LimitTest
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.utils import UtilsTool
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
-from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, ActivityItem, ReasonCostGold
+from lucky_game.const import RED_DOTS_OPPORTUNITY_MAP, PlatForm, ReasonCostGold
 from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from common.public.conf import R_UID_THRESHOLD, ROBOT_AVATAR
 from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.logic.activity import Base
 from lucky_game.handler.wechat import WeChat
+from lucky_game.model_rc.logout_user import LogoutUserRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO
 
@@ -177,14 +178,26 @@ class UpdateUserResource(BaseUserInfo):
         p_info = await BaseUserRC.cache_by_pk(uid)
         return self.format_response_info(p_info)
 
+
+
+
 class WriteOff(GameAuthApi):
     """ 注销账号 """
     async def post(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
-        status = self.check_int(req.json.get("status"), require=True, minval=0, maxval=2, p_name="status")
-        new_data = {"ban_time": status}
-        data = await BaseUserRC.update_info(u_info, new_data)
-        if not data:
+        status = self.check_int(req.json.get("status"), require=True, minval=0, maxval=1, p_name="status")
+        id_card = self.check_str(req.json.get("id_card"), require=True, minlen=18, maxlen=18, p_name="证件号码")
+        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, p_name="证件姓名")
+        if u_info.get("id_card") != PlatForm.WECHAT_MINI_GAME or u_info.get("id_card"):
+            res = UtilsTool.check_id_card(id_card)
+            not res and self.answer(self.sta_code.ERR_ARG, hint='请检查身份证合法性')
+            res = UtilsTool.validate_name(real_name)
+            not res and self.answer(self.sta_code.ERR_ARG, hint='姓名错误')
+            u_info = kwargs.get("u_info") or {}
+            if id_card != u_info.get("id_card") or real_name != u_info.get("real_name"):
+                return self.answer(self.sta_code.ERR_ARG, hint="身份信息认证错误")
+        sta, data = await LogoutUserRC.create_logout_user(u_info, status=status)
+        if not sta:
             return self.answer(code=self.sta_code.FAIL)
         return self.answer()
 

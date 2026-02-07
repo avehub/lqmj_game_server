@@ -543,8 +543,8 @@ class BaseRoom(metaclass=ABCMeta):
         self.__curr_seat_id = 0
         self.__dealer = 0
         self.__round_idx = 1  # 局数
-        self.__seats.clear()
-        self.__room_conf.clear()
+        self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
+        self.__room_conf = {}
         self.__poker = None
         self.cancel_all_timer()
         if hasattr(self, '_timeout_task') and self._timeout_task:
