@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from urllib import parse
 from urllib.parse import urlparse, urlunparse
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs import tool_dt
 
 from sanic import Request, response
@@ -95,7 +96,16 @@ class TournamentLeaderboard (GameAuthApi):
         page = self.check_int(req.args.get("page"), require=False, default=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")
         sta, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=page, page_size=page_size)
-        rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid)
+        has = False
+        if sta and data["total"] > 0:
+            has = True
+        # 获取白名单状态
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_TOURNAMENT_WHITE)
+        if has and conf and conf["status"] and uid not in conf["special_uid"]:
+            # 如果有测试数据对非白名单用户隐藏
+            data["total"] = 0 
+            data["list"] = [] 
+        rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid, True if data["total"] == 0 else False)
         data["rank_position"] = rank_position
         return self.answer(data=data)
 
