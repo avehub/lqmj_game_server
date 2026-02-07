@@ -47,7 +47,7 @@ class CompetitionServer(BaseServer):
         self.__player_info = {}
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall(2, self.__loop_match_competition).loop_start()
+        DelayCall((2,5), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -170,7 +170,6 @@ class CompetitionServer(BaseServer):
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point
-            await TournamentUserPointRC.update_int_field(uid, "ticket", price, "sub")
 
         await self.__join_competition(uid, competition_id, conf_data, req_id)
 
@@ -246,7 +245,6 @@ class CompetitionServer(BaseServer):
 
     async def __competition_before_start(self, conf_data, room, req_id=""):
         """ 比赛开始前 """
-        self.log_info(room.match_room_id,"比赛开始前准备")
         data = {
             "cs_type": conf_data.get("cs_type"),
             "total_round": conf_data.get("total_round"),
@@ -259,6 +257,7 @@ class CompetitionServer(BaseServer):
             "total_match_round": room.total_match_round,
             "secret": self.conf.SECRET_KEY,
         }
+        price = conf_data.get("price")
         cs_type = conf_data.get("cs_type")
         room.cs_type = cs_type
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
@@ -278,14 +277,12 @@ class CompetitionServer(BaseServer):
             }
             room.set_game_room_info(data["room_id"], game_room_info)
             room_num += 1
-            send_list = []
             for p_uid in group:
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
-                send_list.append(self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid))
-
-            if send_list:
-                await asyncio.gather(*send_list)
-
+                await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
+                if is_init and p_uid > R_UID_THRESHOLD:
+                    await TournamentUserPointRC.update_int_field(p_uid, "ticket", price, "sub")
+        self.log_info(room.match_room_id,"比赛开始前准备","轮次",room.match_round,room.game_room_info)
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:
             await self.__competition_info(room.match_room_id, is_init)
@@ -374,7 +371,7 @@ class CompetitionServer(BaseServer):
                     "ticket": score  # 正分不扣门票，负分输多少扣多少门票
                 }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
-            self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
+            self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
         data = {
             "competition_result": competition_result,
         }
@@ -501,6 +498,7 @@ class CompetitionServer(BaseServer):
             return await self.cs2ws_by_rmq(CmdCompetition.QUIT_COMPETITION, uid, StaCode.FAIL, "玩家不在比赛中或者已经在游戏中",
                                            req_id=req_id)
         self.__wait_player.pop(uid)
+        self.__player_info.pop(uid)
         delete_players = []
         players = [p_uid for p_uid, comp_id in self.__wait_player.items() if comp_id == competition_id]
         if players and all(uid < R_UID_THRESHOLD for uid in players):

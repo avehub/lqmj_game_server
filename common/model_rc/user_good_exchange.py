@@ -54,7 +54,7 @@ class UserGoodExchangeRC(BaseCommonRC):
     async def up_exchange(cls, exchange_id, up_data: dict):
         """更新兑换信息"""
         try:
-            query = {"exchange_id": exchange_id}
+            query = {"id": exchange_id}
             valid_fields = {"region", "address", "phone", "real_name", "updated", "express_no"
                             "check_status", "exchange_no", "express_id", "status"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}

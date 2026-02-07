@@ -6,6 +6,9 @@ from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import Level1ProxyDTO, UpgradeProxyDTO, PromotionAddUserDTO
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
+from lucky_proxy.logic.game_data_sync import Level1ProxyDTO
+from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_db.main import RecordsAdminOperates
 
 
@@ -89,7 +92,7 @@ class ProxyUser(AdminAuthApi):
             if status == 1:
                 discount = conf.get("discount")
             if u_info["discount"] != conf.get("discount"):
-                await BaseUserRC.update_info(u_info, {"discount": discount})
+                await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
         self.answer()
 
     async def get(self, req: Request, **kwargs):
@@ -194,6 +197,67 @@ class ProxyChannelUpdate(AdminAuthApi):
         channel_id = self.check_int(req.json.get("channel_id"), require=True, p_name="渠道代理ID")
         enable = self.check_int(req.json.get("enable"), require=True, p_name="启用状态")
         sta, msg = await ProxyUserLogic.set_channel(channel_id, 1 if enable else 0)
+        if not sta:
+            self.answer(self.sta_code.FAIL, hint=msg)
+        self.answer()
+
+class ProxyUserBind(AdminAuthApi):
+    """ 代理用户绑定接口 """
+
+    async def post(self, req: Request, **kwargs):
+        """
+        代理用户绑定接口
+        """
+        uid = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
+        invite_code = self.check_str(req.json.get('invite_code'), require=True, p_name='邀请码')
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            self.answer(self.sta_code.FAIL, hint="用户不存在")
+        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+                                          promotion_time=tool_dt.cur_time(), promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
+        if not sta:
+            self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
+            self.answer(self.sta_code.FAIL, hint="调用绑定接口失败")
+        self.answer()
+class ProxyUserDetailList(AdminAuthApi):
+    async def get(self, req: Request, **kwargs):
+        uid = self.check_int(req.args.get('uid'), require=False, p_name='用户ID')
+        proxy_level = self.check_int(req.args.get('proxy_level'), require=False, p_name='代理等级')
+        phone = self.check_phone_number(req.args.get('phone'), require=False)
+        promotion_code = self.check_str(req.args.get('promotion_code'), require=False, p_name='推广码')
+        page = self.check_int(req.args.get('page'), require=False, default=1, p_name='分页')
+        page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
+        result = await ProxyUserLogic.get_proxy_user_details_filter(player_id=uid, proxy_level=proxy_level, phone=phone, promotion_code=promotion_code, page=page, page_size=page_size)
+        if isinstance(result, dict) and "list" in result:
+            for item in result["list"]:
+                item["id"] = item.get("id")
+                item["phone"] = item.get("phone", "")
+                item["unionid"] = item.get("unionid", "")
+                item["proxy_level"] = item.get("proxy_level", 0)
+                item["vip_level"] = item.get("vip_level", 0)
+                item["status"] = item.get("status", 0)
+                item["auth_status"] = item.get("auth_status", 0)
+                item["promotion_code"] = item.get("promotion_code", "")
+                item["assistance_program_rate"] = float(item.get("assistance_program_rate", 0))
+                item["room_card_rate"] = float(item.get("room_card_rate", 0))
+                item["level2_total_player"] = item.get("level2_total_player", 0)
+                item["join_day"] = item.get("join_day", "")
+                item["operation"] = "view"
+        self.answer(data=result)
+
+class AddServiceProvider(AdminAuthApi):
+    async def post(self, req: Request, **kwargs):
+        uid = self.check_int(req.json.get('uid'), require=True, p_name='用户ID')
+        phone = self.check_phone_number(req.json.get('phone'), require=True)
+        vip_level = self.check_int(req.json.get('vip_level'), require=True, p_name='会员等级')
+        vip_expire_time = self.check_int(req.json.get('vip_expire_time'), require=True, p_name='会员到期时间')
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            self.answer(self.sta_code.FAIL, hint="用户不存在")
+        add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=phone, name=u_info.get("name",""), avatar=u_info.get("avatar",""), vip_level=vip_level, vip_expire_time=vip_expire_time)
+        sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
         self.answer()

@@ -20,6 +20,8 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
+from lucky_game.model_rc.stats_income_daily import StatsIncomeDailyRC
+
 
 
 class TimedService:
@@ -132,7 +134,7 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_proxy_vip, run_date=now_time + timedelta(hours=0))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
-
+ 
    
 
     async def __stats_data_tasks(self):
@@ -152,6 +154,11 @@ class TimedService:
         now_time = datetime.now()
         # 删除历史战绩（7天外）
         self.__scheduler.add_date_job(self.__del_to_game_record_history, run_date=now_time)
+
+    @classmethod
+    async def __income_daily_stats(cls):
+        day = datetime.now() - timedelta(days=1)
+        await StatsIncomeDailyRC.upsert_for_day(day)
 
 
 

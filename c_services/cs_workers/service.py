@@ -71,6 +71,7 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
             CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
+            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop
             CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
             CmdWorkers.PROXY_USER_UP: self.__proxy_user_up,
         })
@@ -333,17 +334,15 @@ class WorkersServer(JsonBaseServer):
         res = await UserBehaviorsRC.update_user_order_count(uid, data)
         self.log_info(uid, "更新玩家完成订单数", True if res else False)
 
-    async def __update_bag_prop(self, uid, data):
+    async def __update_bag_grop(self, uid, good_data):
         """ 更新背包物品 """
-        data = data.get("prop") or []
-        if not data:
+        if not good_data:
             return
-        await UserBagRC.update_user_bag(uid, data)
-        goods_id_list = []
-        for d in data:
-            goods_id_list.append(d.get('goods_id'))
-        await UserBagRC.batch_deal_new_props(uid, goods_id_list)
-        self.log_info(uid, "更新背包物品", data)
+        await UserBagRC.update_user_bag(uid, [good_data])
+        # await UserBagRC.batch_deal_new_props(uid, [good_data.get('good_id')])
+        await BaseUserRC.deal_user_update_goods(uid, id_list=[good_data.get('good_id')])
+        await self.__notice_by_bag(uid)
+        self.log_info(uid, "更新背包物品", good_data)
 
     async def __check_limited_goods(self, uid, data):
         """检查限时物品"""
@@ -700,7 +699,7 @@ class WorkersServer(JsonBaseServer):
             sta, _ = await TournamentCycleLeaderboardRC.add_leaderboard(cycle_id, uid, total_points)
         else:
             up_data = {
-                "total_points": total_points + leaderboard_data.get("total_points"),
+                "total_points": total_points,
                 "participated_rounds": 1 + leaderboard_data.get("participated_rounds"),
             }
             sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)

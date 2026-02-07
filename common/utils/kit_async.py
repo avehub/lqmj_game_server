@@ -1,6 +1,7 @@
 import asyncio
 import time
 import traceback
+import random
 
 
 def handle_task_result(task):
@@ -50,15 +51,20 @@ class DelayCall():
         "seconds",
         "delay",
         "task",
-        "__start_seconds"
+        "__start_seconds",
+        "__current_delay"
     )
 
     def __init__(self, seconds, f, *args, **kw):
-        assert seconds >= 0, "seconds must be greater than or equal to 0"
+        if isinstance(seconds, tuple) and len(seconds) == 2:
+            assert 0 <= seconds[0] <= seconds[1], "seconds range must be valid"
+        else:
+            assert seconds >= 0, "seconds must be greater than or equal to 0"
         self.task = None
         self.seconds = seconds
         self.delay = Delay(f, *args, **kw)
         self.__start_seconds = 0
+        self.__current_delay = 0
 
     def cancel(self):
         """
@@ -72,21 +78,22 @@ class DelayCall():
     def left_seconds(self):
         """ 获取计时器的剩余时间 """
         if not self.__start_seconds:
-            return self.seconds
-        return int(max(0, self.seconds - (time.time() - self.__start_seconds)))
+            return self.seconds[0] if isinstance(self.seconds, tuple) else self.seconds
+        return int(max(0.0, self.__current_delay - (time.time() - self.__start_seconds)))
 
     async def delay_call(self):
-        await asyncio.sleep(self.seconds)
+        # 计算实际延迟时间
+        self.__current_delay = random.randint(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
+        await asyncio.sleep(self.__current_delay)
         # 直接调用并允许异常抛出
         return await self.delay.call()
-        # return asyncio.get_running_loop().call_later(self.seconds, self.delay.call)
 
     def start(self):
         """ 创建一个task """
         self.__start_seconds = time.time()
-        print(f"新启动延时调用：{self.delay.f.__name__}, {self.seconds}秒后执行")
+        self.__current_delay = random.randint(*self.seconds) if isinstance(self.seconds, tuple) else self.seconds
+        print(f"新启动延时调用：{self.delay.f.__name__}, {self.__current_delay}秒后执行")
         self.task = asyncio.create_task(self.delay_call())
-        # self.task.add_done_callback(self.handle_task_result)
         return self.task
 
     def loop_start(self):
@@ -104,9 +111,10 @@ async def delay_func(seconds, func, *args, **kwargs):
     延时调用func
     func: 协程或普通函数
     """
-    if not isinstance(seconds, (int, float)) or seconds < 0:
+    if not isinstance(seconds, (int, float, tuple)) or (isinstance(seconds, tuple) and (len(seconds) != 2 or seconds[0] < 0 or seconds[1] < seconds[0])):
         raise ValueError("warp_func seconds error !!!")
-    await asyncio.sleep(seconds)
+    delay_time = random.randint(*seconds) if isinstance(seconds, tuple) else seconds
+    await asyncio.sleep(delay_time)
     if asyncio.iscoroutinefunction(func):
         return await func(*args, **kwargs)
     else:
