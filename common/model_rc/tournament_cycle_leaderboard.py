@@ -134,7 +134,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         return True if result else False, result
 
     @classmethod
-    async def get_uid_rank_and_difference(cls, cycle_id: int, uid: int) -> dict:
+    async def get_uid_rank_and_difference(cls, cycle_id: int, uid: int, is_none: bool=False) -> dict:
         """获取用户在赛事周期内的排行及同上一名差额信息"""
         result = {
             "uid": uid,
@@ -142,6 +142,8 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
             "rank_position": 0,  # 排名
             "difference": 0,  # 同上名积分差
         }
+        if is_none:
+            return result
         sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id)
         if data:
             for now_index, item in enumerate(data):
