@@ -71,7 +71,7 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
             CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
-            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop
+            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop,
             CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
             CmdWorkers.PROXY_USER_UP: self.__proxy_user_up,
         })
