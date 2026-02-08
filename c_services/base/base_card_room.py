@@ -412,7 +412,7 @@ class BaseCardRoom(BaseRoom):
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
             player_score[str(p.uid)] = p.total_score
-            if self.__match_room_id >= 0:
+            if self.__match_room_id == 0:
                 self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
@@ -425,15 +425,20 @@ class BaseCardRoom(BaseRoom):
         if not self.has_next_round() or over_type in (OverType.FORCE, OverType.CLUB_OWNER_DISMISS):
             return await self.game_over(over_type)
         else:
-            if self.__match_room_id >= 0:
+            if self.__match_room_id == 0:
                 replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
                 self.__replay_msg_data = []
-            await self.next_round_ready()
+            await self.next_round_ready(over_type)
 
-    async def next_round_ready(self):
+    async def next_round_ready(self,over_type):
         await self.start_next_round()
-        auto_time = 0 if self.__match_room_id == 0 else 9
+        if self.__match_room_id == 0:
+            auto_time = 0
+        elif over_type == OverType.LIU_JU:
+            auto_time = 3
+        else:
+            auto_time = 9
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
@@ -545,7 +550,7 @@ class BaseCardRoom(BaseRoom):
                         "tid": self.tid,
                         "is_all": False
                     }
-                    if self.__match_room_id >= 0:
+                    if self.__match_room_id == 0:
                         send_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, data, p.uid))
             # 战绩更新局数
             if send_list:
@@ -582,7 +587,7 @@ class BaseCardRoom(BaseRoom):
         record_data["is_all"] = True
         record_data["is_dismiss"] = is_dismiss
         record_data["record_data_list"] = record_data_list
-        if self.__match_room_id >= 0:
+        if self.__match_room_id == 0:
             await self.send_task_to_worker(CmdWorkers.UPDATE_GAME_RECORD_TIMES, record_data)
 
         # 比赛房间结束
@@ -920,7 +925,7 @@ class BaseCardRoom(BaseRoom):
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
         self.log_info("force_dismiss", self.not_playing_dismiss, over_type)
-        self.clear_agree_dismiss()
+        self.__agree_dismiss_seats.clear()
         if over_type == OverType.ULTIMATE_DISMISS:
             return await super(BaseCardRoom, self).game_over()
         if not self.room_status_is_equal(RoomStatus.T_PLAYING):

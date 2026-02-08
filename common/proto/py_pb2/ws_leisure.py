@@ -1111,7 +1111,8 @@ class S2CChangeConnect:
     @classmethod
     def pb_model(cls, **kwargs):
         obj = ws_leisure_pb2.S2CChangeConnect()
-        obj.seat_id = kwargs.get("seat_id") or 0
+        seat_id = kwargs.get("seat_id")
+        obj.seat_id = seat_id if seat_id >= 0 else 0
         obj.offline = kwargs.get("offline") or False
         return obj
 

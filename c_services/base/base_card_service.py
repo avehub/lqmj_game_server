@@ -17,8 +17,8 @@ class BaseCardService(BaseService):
             CmdRoom.CLUB_OWNER_DISMISS.val: self.__club_owner_dismiss,
             CmdRoom.FORCE_DISMISS_ROOM.val: self.__force_dismiss_room,
         })
-        self._idle_check_timer = DelayCall(120, self.close_room_timeout_idle)
-        self._idle_check_timer.loop_start()
+
+        DelayCall(120, self.close_room_timeout_idle).loop_start()
 
     async def close_room_timeout_idle(self):
         # 这里遍历副本，不然会报错：dictionary changed size during iteration
@@ -52,7 +52,7 @@ class BaseCardService(BaseService):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
         is_robot = uid < R_UID_THRESHOLD
         player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
-        match_room_id = data.get("match_room_id") or 1
+        match_room_id = data.get("match_room_id") or 0
         if player.seat_id <= 0:
             room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
@@ -109,7 +109,5 @@ class BaseCardService(BaseService):
             await room.force_dismiss(OverType.ULTIMATE_DISMISS)
 
     async def clear_in_service(self):
-        if hasattr(self, '_idle_check_timer'):
-            self._idle_check_timer.cancel()
         await GameRoomsRC.abnormal_cs_type(self.service_type, "重启子游戏服务")
         await super().clear_in_service()
