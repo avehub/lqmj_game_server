@@ -62,13 +62,19 @@ class UserInformationGather(GameAuthApi):
     """道具兑换/信息收集"""
 
     async def post(self, req: Request, **kwargs):
-        real_name = self.check_str(req.json.get("real_name"), require=True, minlen=2, maxlen=10, p_name="真实姓名")
         phone = self.check_phone_number(req.json.get("phone"), require=True)
-        region = self.check_str(req.json.get("region"), require=True, p_name="所在地区")
-        address = self.check_str(req.json.get("address"), require=True, p_name="详细地址")
         good_id = self.check_int(req.json.get("good_id"), require=True, p_name="兑换ID")
-        good_num = self.check_int(req.json.get("good_num"), require=True, p_name="兑换数量")
-        platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
+        good_info = await GoodRC.get_good_by_id(good_id)
+        if not good_info:
+            return self.answer(self.sta_code.GOODS_NOT_FOUND, hint="兑换商品已下架")
+        check_sta = True
+        if good_info.get("kind") == 2:
+            check_sta = False
+        real_name = self.check_str(req.json.get("real_name"), require=check_sta, minlen=2, maxlen=10, p_name="真实姓名")
+        good_num = self.check_int(req.json.get("good_num"), require=check_sta, p_name="兑换数量")
+        platform = self.check_int(req.args.get("platform"), require=check_sta, p_name="平台")
+        region = self.check_str(req.json.get("region"), require=check_sta, p_name="所在地区")
+        address = self.check_str(req.json.get("address"), require=check_sta, p_name="详细地址")
         user = kwargs.get("u_info")
         uid = user.get("uid")
         good_info = await GoodRC.get_good_by_id(good_id)

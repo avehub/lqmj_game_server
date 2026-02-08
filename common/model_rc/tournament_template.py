@@ -54,7 +54,7 @@ class TournamentTemplateRC(BaseCommonRC):
     async def update_template(cls, template_id, up_data: dict):
         """更新模板"""
         try:
-            query = {"template_id": template_id}
+            query = {"id": template_id}
             valid_fields = {"template_name", "template_type", "cycle_type", "rounds_per_cycle", "updated", "online_rounds", "final_round_offline", "qualifier_count", "status"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:

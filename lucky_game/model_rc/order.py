@@ -135,16 +135,29 @@ class OrderRC(BaseCommonRC):
         return result, msg
 
     @classmethod
-    async def statistics_order(cls, start_time: int = None, end_time: int = None) -> tuple:
+    async def statistics_order_by_sum_amount(cls, start_time: int = None, end_time: int = None):
         """获取订单统计数据"""
         today_start_time, today_end_time = await cls.get_time_range("day")
         if end_time is None:
             end_time = today_start_time
         if start_time is None:
             start_time = today_end_time - 86400
-        where = f" created>{start_time} AND created<{end_time} AND good_id>8 AND status=99"
-        sum_sql = f"SELECT SUM(amount) FROM {cls.tb_name} WHERE {where}"
+        where = f" created>{start_time} AND created<{end_time} AND currency=5 AND status=99"
+        sum_sql = f"SELECT SUM(amount) AS total_amount FROM {cls.tb_name} WHERE {where}"
         sum_data = await cls.db_model.exec_query(sum_sql)
-        count_sql = f"SELECT COUNT(*) FROM {cls.tb_name} WHERE {where}"
+        total_amount = sum_data[0]["total_amount"] if sum_data else 0
+        return total_amount if total_amount and total_amount > 0 else 0
+
+    @classmethod
+    async def statistics_order_by_count(cls, start_time: int = None, end_time: int = None):
+        """获取订单统计数据"""
+        today_start_time, today_end_time = await cls.get_time_range("day")
+        if end_time is None:
+            end_time = today_start_time
+        if start_time is None:
+            start_time = today_end_time - 86400
+        where = f" created>{start_time} AND created<{end_time} AND currency=5 AND status=99"
+        count_sql = f"SELECT COUNT(*) AS total_count FROM {cls.tb_name} WHERE {where}"
         count_data = await cls.db_model.exec_query(count_sql)
-        return count_data, sum_data
+        total_count = count_data[0]["total_count"] if count_data else 0
+        return total_count if total_count and total_count > 0 else 0

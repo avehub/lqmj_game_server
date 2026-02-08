@@ -66,6 +66,7 @@ class StaCode(BaseCode):
     FLOW_ERR = -105, 200, '流程错误'
     ALREADY_DO = -106, 200, '已经操作过'
     RESOURCE_NOT_ENOUGH = -107, 200, '资源不足'
+    COMPETITION_POINT_NOT_ENOUGH = -108,'比赛积分不足'
 
 
 @unique
@@ -130,6 +131,8 @@ class ServiceEnum(BaseEnum):
     C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
     C_MAHJONG_RH = 26, "mahjong_rh", GameType.ROOM_CARD
     C_MAHJONG_GY_MATCH = 27, "mahjong_gy_match", GameType.ROOM_CARD
+    C_MAHJONG_XY_MATCH = 28, "mahjong_xy_match", GameType.ROOM_CARD
+
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'

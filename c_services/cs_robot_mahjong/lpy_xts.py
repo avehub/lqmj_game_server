@@ -10,7 +10,7 @@ from collections import defaultdict
 from c_services.cs_robot_mahjong.const import ACTION_TYPE_MING_GANG, FcHuPaiType, FcPileType, ACTION_TYPE_ZHUAN_WAN_GANG
 from common.utils.utils import UtilsTool
 
-LOG_PRINT = True
+LOG_PRINT = False
 
 
 class TypeScore(IntEnum):
@@ -1242,7 +1242,7 @@ class LpyMoveGenerator:
             remain_cards_by_deck = self.calc_remain_cards_by_deck()
             for card in self.hand_cards:
                 tmp_count = 0
-                tmp_count += remain_cards_by_deck[card]
+                tmp_count += remain_cards_by_deck.get(card, 0)
                 if tmp_count > count:
                     best_cards.clear()
                     count = tmp_count

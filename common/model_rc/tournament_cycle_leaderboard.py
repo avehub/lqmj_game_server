@@ -11,6 +11,18 @@ from lucky_game.model_db.main import TournamentCycleLeaderboard
 from tortoise.exceptions import OperationalError
 
 
+def get_diff_index(now_index, data):
+    if now_index == 0:
+        return now_index
+    new_data = data[:now_index]
+    total_points = data[now_index]["total_points"]
+    total = len(new_data)
+    for index, item in enumerate(new_data):
+        total -= 1
+        if new_data[total]["total_points"] > total_points:
+            return total
+    return now_index - 1
+
 class TournamentCycleLeaderboardRC(BaseCommonRC):
     db_model = TournamentCycleLeaderboard
     tb_name = db_model.sheet_name()
@@ -64,7 +76,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
     async def update_leaderboard(cls, leaderboard_id, up_data: dict):
         """更新排行榜"""
         try:
-            query = {"leaderboard_id": leaderboard_id}
+            query = {"id": leaderboard_id}
             valid_fields = {"cycle_id", "uid", "total_points", "updated", "participated_rounds"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
             if update_data:
@@ -107,7 +119,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         """获取用户在赛事周期内的排行榜信息"""
         result = None
         try:
-            data, msg = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
+            sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id, uid=uid)
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
@@ -122,7 +134,7 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
         return True if result else False, result
 
     @classmethod
-    async def get_uid_rank_and_difference(cls, cycle_id: int, uid: int) -> dict:
+    async def get_uid_rank_and_difference(cls, cycle_id: int, uid: int, is_none: bool=False) -> dict:
         """获取用户在赛事周期内的排行及同上一名差额信息"""
         result = {
             "uid": uid,
@@ -130,17 +142,21 @@ class TournamentCycleLeaderboardRC(BaseCommonRC):
             "rank_position": 0,  # 排名
             "difference": 0,  # 同上名积分差
         }
+        if is_none:
+            return result
         sta, data = await cls.get_leaderboard_filter(cycle_id=cycle_id)
         if data:
-            for item in data:
+            for now_index, item in enumerate(data):
                 if uid == item["uid"]:
                     result["total_points"] = item["total_points"]
-                    result["rank_position"] = data.index(item) + 1
-                    last_index = data.index(item) - 1
-                    if last_index > 0:
+                    result["rank_position"] = now_index + 1
+                    if now_index > 0:
+                        last_index = get_diff_index(now_index, data)
                         result["difference"] = data[last_index]["total_points"] - item["total_points"]
                     break
             # 如果用户不在排行榜中取最后一名积分
             if result["total_points"] == 0:
                 result["difference"] = data[-1]["total_points"]
+
+        cls.conf.log.info(f"赛事周期差额计算结果: {result}")
         return result

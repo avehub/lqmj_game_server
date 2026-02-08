@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod
 class BaseRoom(metaclass=ABCMeta):
     """ 基础玩法类 """
 
-    def __init__(self, tid, service: BaseService, room_conf, poker,not_include =0,extra_count =0):
+    def __init__(self, tid, service: BaseService, room_conf, poker, not_include=0, extra_count=0):
         self.__tid = tid
         self.__service = service
         self.__room_status = RoomStatus.T_IDLE
@@ -36,7 +36,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__round_idx = 1  # 局数
         self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
 
-        self.__poker = poker(not_include,extra_count)
+        self.__poker = poker(not_include, extra_count)
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer
@@ -198,7 +198,8 @@ class BaseRoom(metaclass=ABCMeta):
 
     def set_flow_status(self, flow_status: BaseEnum):
         self.__flow_status = flow_status
-        self.log_info("流程变动：", flow_status, flow_status.phrase)
+        if not LIVE_SERVER:
+            self.log_info("流程变动：", flow_status, flow_status.phrase)
 
     def room_status_is_equal(self, room_status: RoomStatus):
         if self.__room_status == room_status:
@@ -258,9 +259,8 @@ class BaseRoom(metaclass=ABCMeta):
         return self.get_player_by_seat_id(self.__curr_seat_id)
 
     def get_player_by_seat_id(self, seat_id: int) -> BasePlayer or None:
-        seat_id -= 1
-        if 0 <= seat_id < len(self.__seats):
-            return self.__seats[seat_id]
+        if 0 < seat_id <= len(self.__seats):
+            return self.__seats[seat_id - 1]
 
     def next_player_reverse(self, seat_id, with_cards=True):
         """ 反序下一个人 """
@@ -415,7 +415,6 @@ class BaseRoom(metaclass=ABCMeta):
     #         return
     #     await self.__service.publish_to_fanout(cmd, uid,data)
 
-
     @staticmethod
     @abstractmethod
     def get_player_info(player):
@@ -530,23 +529,23 @@ class BaseRoom(metaclass=ABCMeta):
                 self.service.release_player(p)
         self.__room_status = RoomStatus.T_CLOSED
         if task_list:
-           result = await asyncio.gather(*task_list)
-           self.log_info("调用离开房间结果",result)
+            result = await asyncio.gather(*task_list)
+            self.log_info("调用离开房间结果", result)
         self.service.release_room(self)
-
 
     def clear_room(self):
         """ 清理房间 """
+        self.cancel_all_timer()
         self.__service = None
         self.__room_status = RoomStatus.T_CLOSED
         self.__flow_status = 0
         self.__curr_seat_id = 0
         self.__dealer = 0
         self.__round_idx = 1  # 局数
-        self.__seats.clear()
-        self.__room_conf.clear()
+        self.__seats: List[Optional[BasePlayer]] = self.__init_seats()
+        self.__room_conf = {}
         self.__poker = None
-        self.cancel_all_timer()
+
 
     def refresh_room_conf(self, service, room_conf):
         """ 刷新房间配置 """

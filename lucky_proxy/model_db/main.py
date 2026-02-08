@@ -47,6 +47,8 @@ class ProxyUser(DBModel):
     upgrade_time = fields.BigIntField(null=True, default=0, description='升级成为一级代理时间')
     opt_user_id = fields.BigIntField(null=True, default=0, description='升级一级代理操作用户')
 
+    vip_expire_time = fields.BigIntField(null=True, default=0, description='会员过期时间')
+    vip_level = fields.IntField(null=True, default=1, description='VIP等级1（月卡会员）、2（季卡会员）、3（年卡会员）、999（永久会员）')
     class Meta:
         table = "proxy_user"
 

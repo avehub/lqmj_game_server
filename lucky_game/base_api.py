@@ -99,7 +99,7 @@ class BaseApi(BaseHttpApi, CommonApi):
             "data": data,
             "msg": hint,
         }
-        NLogger.info(f"Response : headers={headers} total={total} result={result}")
+        # NLogger.info(f"Response : headers={headers} total={total} result={result}")
         raise JsonFinish(code, data, total, hint, headers)
 
 class GameAuthApi(BaseApi):

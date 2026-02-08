@@ -94,19 +94,9 @@ class PaymentLogic:
         field = field_name = ""
         if price > 0:
             if currency != CurrencyType.BY_RMB:
-                match currency:
-                    case CurrencyType.BY_GOLD:
-                        field = "gold"
-                        field_name = "金币"
-                    case CurrencyType.BY_DIAMOND:
-                        field = "diamond"
-                        field_name = "钻石"
-                    case CurrencyType.BY_YELLOW_DIAMOND:
-                        field = "yellow_diamond"
-                        field_name = "黄钻"
-                    case CurrencyType.BY_ROOM_CARD:
-                        field = "room_card"
-                        field_name = "房卡"
+                if currency in ExtraUserResourceChangesRC.CURRENCY_MAP.keys():
+                    field = ExtraUserResourceChangesRC.CURRENCY_MAP[currency]
+                    field_name = ExtraUserResourceChangesRC.CURRENCY_DESC[field]
                 amount = u_info.get(field)
                 if amount < price:
                     return False, f'{field_name}不足', {}
@@ -148,7 +138,7 @@ class PaymentLogic:
         currency = express.get("currency")
         sku = express.get("sku")
         price = express.get("price") or 0
-        if currency in [CurrencyType.BY_GOLD, CurrencyType.BY_DIAMOND, CurrencyType.BY_YELLOW_DIAMOND, CurrencyType.BY_ROOM_CARD]:
+        if currency not in [CurrencyType.DEFAULT, CurrencyType.BY_RMB]:
             # 扣除资源
             change_field = data_before.get("field", "")
             if change_field:
@@ -230,23 +220,29 @@ class PaymentLogic:
         bag_type = express.get("bag_type")
         order, msg = await OrderRC.get_order_info(order_no)
         async with in_transaction(connection_name=DbKey.DEFAULT):
-            if bag_type:
-                pass
-            else:
+            up_data = {}
+            if bag_type == GoodRC.BAG_TYPE_DELAY:
+                if express.get("type") == 15:
+                    # 发送农产品邮件
+                    await TournamentLogic().distribute_order_good(order)
+                    # 发放赛事积分
+                    sta, msg = await TournamentLogic().distribute_order_point(order)
+                    NLogger.info("领取资源-发放赛事积分：msg:", msg)
+                else:
+                    # 发放背包
+                    bag_good = {
+                        'uid': uid,
+                        'good_id': express.get("good_id"),
+                        'count': order.get('num', 1),
+                        'end_time': express.get("down_time"),
+                    }
+                    await CommonApi.push_task2worker(CmdWorkers.UPDATE_BAG_PROP, msg=bag_good, uid=uid)
+            # 更新用户资源
+            if express["currency"] not in [CurrencyType.BY_RMB]:
                 # 当为兑换商品时，直接修改订单状态
-                up_data = {
-                    "gain_status": GainStatus.RECEIVED
-                }
-                if order.get("currency") != CurrencyType.BY_RMB:
-                    up_data["status"] = OrderStatus.PAID
-                order_sta, e = await OrderRC.up_order(
-                    up_data,
-                    order_no
-                )
-                NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
-                if not order_sta:
-                    return False, e
-                # 更新用户资源
+                up_data["status"] = OrderStatus.PAID
+            up_data["gain_status"] = GainStatus.RECEIVED
+            if express["sid"] not in [10, 7]:
                 NLogger.info("领取资源：content:", content)
                 if isinstance(content, list):
                     for item in content:
@@ -260,7 +256,6 @@ class PaymentLogic:
                         NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
                         if not add_sta:
                             return False, e
-
                 else:
                     add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                         uid,
@@ -271,12 +266,19 @@ class PaymentLogic:
                     )
                     if not add_sta:
                         return False, e
-                # 如果为返还礼包订单
-                if order.get("explain"):
-                    await self.return_gold_order(order)
-                # 更新用户VIP经验
-                if order["amount"] > 1:
-                    await UserVipRC.update_user_vip_level(uid, order["amount"])
+            order_sta, e = await OrderRC.up_order(
+                up_data,
+                order_no
+            )
+            NLogger.info(f"兑换商品成功-更新订单 订单创建结果order_sta: {order_sta} e: {e}", order)
+            if not order_sta:
+                return False, e
+            # 如果为返还礼包订单
+            if order.get("explain"):
+                await self.return_gold_order(order)
+            # 更新用户VIP经验
+            if order.get("currency") == CurrencyType.BY_RMB and order["amount"] > 1:
+                await UserVipRC.update_user_vip_level(uid, order["amount"])
             return True, "ok"
 
     async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0):
@@ -581,13 +583,7 @@ class PaymentLogic:
             await FirstCharge().charge_order(order)
         # 商品为赛事订单：15 农产品
         elif good_type == 15:
-            # 发送农产品邮件
-            await TournamentLogic().distribute_order_good(order)
-            # 发放赛事积分
-            await TournamentLogic().distribute_order_point(order)
-        elif good_type == 16:
-            # 配置分销
-            await CommonApi.push_task2worker(CmdWorkers.PROXY_USER_SET, uid=order["uid"], msg=order)
+            pass
 
         return True
 

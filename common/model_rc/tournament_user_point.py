@@ -37,8 +37,6 @@ class TournamentUserPointRC(BaseCommonRC):
     async def add_user_point(cls, cycle_id, uid, score, ticket: int = 0):
         """新增模板"""
         try:
-            if ENV != "prod":
-                ticket = 100
             data = {
                 "cycle_id": cycle_id,
                 "uid": uid,
@@ -54,13 +52,14 @@ class TournamentUserPointRC(BaseCommonRC):
 
     @classmethod
     async def up_user_point(cls, cycle_id, uid, up_data: dict):
-        """更新模板"""
+        """更新赛事积分"""
         try:
             query = {"cycle_id": cycle_id, "uid": uid}
+            cls.conf.log.info("更新赛事积分", query, up_data)
             has = await cls.db_model.filter(**query).first()
+            score = up_data.get("score", 0)
+            ticket = up_data.get("ticket", 0)
             if not has:
-                score = up_data.get("score", 0)
-                ticket = up_data.get("ticket", 0)
                 await cls.add_user_point(cycle_id, uid, score, ticket)
                 replay_msg_data = {
                     "uid": uid,
@@ -68,16 +67,20 @@ class TournamentUserPointRC(BaseCommonRC):
                     "total_points": score,
                 }
             else:
+                cls.conf.log.info("更新赛事积分前存在", has.ticket, has.score)
                 valid_fields = {"score", "ticket", "updated"}
                 update_data = {k: v for k, v in up_data.items() if k in valid_fields}
                 if update_data:
-                    if has.score:
-                        update_data["score"] = has.score + update_data["score"]
-                    if has.ticket:
-                        update_data["ticket"] = has.ticket + update_data["ticket"]
+                    if score or has.score:
+                        update_data["score"] = has.score + score
+                    if ticket or has.ticket:
+                        if has.ticket < 0:
+                            has.ticket = 0
+                        update_data["ticket"] = has.ticket + ticket
+                        cls.conf.log.info("更新赛事门票前", has.ticket + ticket)
+                    cls.conf.log.info("更新赛事积分最终结果", cycle_id, update_data)
                     await cls.db_model.filter(**query).update(**update_data)
                     await cls.cache_session_del(f"{cycle_id}:{uid}")
-
                 replay_msg_data = {
                     "uid": uid,
                     "cycle_id": cycle_id,
@@ -91,7 +94,7 @@ class TournamentUserPointRC(BaseCommonRC):
 
     @classmethod
     async def get_point_filter(cls, uid: int = None, cycle_id: int = None, page: int = None, page_size: int = None):
-        """获取模板记录"""
+        """获取赛事用户积分列表"""
         try:
             query = {}
             if cycle_id is not None:
@@ -116,7 +119,7 @@ class TournamentUserPointRC(BaseCommonRC):
         return True, result
 
     @classmethod
-    async def get_user_point(cls, cycle_id: int, uid: int):
+    async def get_user_point(cls, cycle_id: int, uid: int, add_status: bool = False):
         """获取模板信息"""
         try:
             result = await cls.cache_session_get(f"{cycle_id}:{uid}")
@@ -125,12 +128,28 @@ class TournamentUserPointRC(BaseCommonRC):
             query = {"cycle_id": cycle_id, "uid": uid}
             result = data = await cls.db_model.filter(**query).first().values()
             if not data:
-                return False, "用户未报名"
+                if add_status:
+                    await cls.add_user_point(cycle_id, uid, 0)
+                    result = data = await cls.db_model.filter(**query).first().values()
+                else:
+                    return False, "用户未报名"
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
             await cls.cache_session_set(f"{cycle_id}:{uid}", result)
         return True if result else False, result
+
+    @classmethod
+    async def get_user_ticket(cls, uid: int):
+        """获取模板信息"""
+        try:
+            query = {"uid": uid}
+            data = await cls.db_model.filter(**query).order_by("-id").values()
+            if not data:
+                return False, "用户未报名"
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, data[0]
 
     @classmethod
     async def del_user_point(cls, cycle_id: int, uid: int = None):
@@ -191,3 +210,39 @@ class TournamentUserPointRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"更新失败：{str(e)}"
         return True, "更新成功"
+    
+    @classmethod
+    async def extend_user_point(cls, cycle_id, uid, extend_data: dict):
+        """更新赛事积分"""
+        try:
+            query = {"cycle_id": cycle_id, "uid": uid}
+            cls.conf.log.info("继承赛事积分", query, extend_data)
+            has = await cls.db_model.filter(**query).first()
+            next_cycle_id = cycle_id + 1
+            next_query = {"cycle_id": cycle_id, "uid": uid}
+            next_has = await cls.db_model.filter(**next_query).first()
+            valid_fields = {"score", "ticket", "updated"}
+            update_data = {k: v for k, v in extend_data.items() if k in valid_fields}
+            if update_data:
+                if has.ticket:
+                    if has.ticket < 0:
+                        has.ticket = 0
+                    update_data["ticket"] = has.ticket + extend_data["ticket"]
+            score = update_data.get("score", 0)
+            ticket = update_data.get("ticket", 0)
+            if next_has:
+                cls.conf.log.info("继承赛事积分最终结果", cycle_id, update_data)
+                await cls.db_model.filter(**query).update(**update_data)
+                await cls.cache_session_del(f"{cycle_id}:{uid}")
+            else:
+                await cls.add_user_point(next_cycle_id, uid, score, ticket)
+            # 更新排行榜
+            replay_msg_data = {
+                "uid": uid,
+                "cycle_id": next_cycle_id,
+                "total_points": score,
+            }
+            await cls.push_task2worker(CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD, replay_msg_data)
+        except OperationalError as e:
+            return None, f"失败:{e}"
+        return True, "成功"

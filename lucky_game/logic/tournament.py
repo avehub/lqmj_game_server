@@ -15,6 +15,7 @@ from common.public.enum_const import DbKey
 from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_mails import MailsRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.const import ReasonCostGold, CurrencyType, PayMode, OrderStatus, GainStatus, GoodsSku, PlatForm, \
@@ -26,6 +27,7 @@ from common.model_rc.tournament_cycle import TournamentCycleRC
 
 
 class TournamentLogic:
+
     def __init__(self):
         pass
 
@@ -34,31 +36,34 @@ class TournamentLogic:
     async def distribute_order_point(self, order: dict):
         """ 分发订单积分 """
         cycle_id = await TournamentCycleRC.get_current_cycle_id()
-        _, rule = await TournamentRuleRC.get_rule_info()
+        _, rule = await TournamentRuleRC.get_rule_info(is_content=True)
         ticket = order["num"] * rule["unit_point"]
         up_data = {"ticket": ticket}
         return await TournamentUserPointRC.up_user_point(cycle_id, order.get("uid"), up_data)
 
-    async def send_ranking_reward(self, ranking_list: list, round_type: int = 1):
+    async def send_ranking_reward(self, cycle_id: int, ranking_list: list, reward: dict):
         """ 发送排行榜奖励 """
         rank_end = 0
         reward_content = []
-        sta, reward = await TournamentRewardRC.get_reward_info(round_type)
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        NLogger.info(f"reward: {reward}")
         if sta and reward:
             rank_end = reward.get("rank_end")
-            reward_content = reward.get("reward_content")
+            # reward_content = reward.get("reward_content")
+            reward_sta, reward_content = await TournamentRewardRC.get_reward_list(reward)
         mail_type = 2
-        sender = "赛事系统"
-        title = "赛事排行榜奖励"
-        for k, v in ranking_list.items():
+        sender = "1"
+        title = "【赛事奖励】" + cycle_info["reward_name"]
+        for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
                 break
             uid = v.get("uid")
-            award_ids = reward_content[k]["award_ids"]
-            content = f"恭喜您在赛事中获得第{ranking}名，奖励如下："
-            attachment = '{"award_ids": award_ids}'
-            await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+            if uid > R_UID_THRESHOLD:
+                award_ids = reward_content[k]["award_ids"]
+                content = f"尊敬的选手：{cycle_info['reward_name']}已结束，您在本次赛事中斩获第 {ranking}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
+                attachment = '{"award_ids": ' + f"{award_ids}" + '}'
+                await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
 
     async def distribute_order_good(self, order: dict) -> tuple:
@@ -86,28 +91,47 @@ class TournamentLogic:
         sta, _ = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
         if sta:
             next_cycle_id = 1 + cycle_id
-            new_sta, new_cycle = await TournamentCycleRC.get_cycle_info(next_cycle_id)
-            if new_sta and new_cycle:
-                if new_cycle["status"] != TournamentCycleRC.CYCLE_STATUS_STARTING:
-                    await self.up_cycle_status(next_cycle_id)
-                await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
+            await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
         return True
 
 
-    async def cycle_settle(self, cycle_id: int, reward_num: int = 10):
+    async def cycle_settle(self, cycle_id: int, reward_id: int):
         """ 赛事周期结算 """
         # 将用户上赛季积分清空
-        sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
+        # sta, _ = await TournamentUserPointRC.del_user_point(cycle_id)
+        # NLogger.info(f"清空赛季积分del_user_point:{sta}")
         # 统计赛季周期获奖用户
-        reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_num)
+        _, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
+        reward_sta, reward_user = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=1, page_size=reward_info["rank_end"])
+        NLogger.info(f"reward_user:{reward_user}")
         if reward_sta and reward_user:
-            award_u_list = [item for item in reward_user["list"] if item["uid"] > R_UID_THRESHOLD]
+            award_u_list = [item for item in reward_user["list"]]
             # 发送榜奖励
-            await self.send_ranking_reward(award_u_list)
+            await self.send_ranking_reward(cycle_id, award_u_list, reward_info)
+
+    async def warm_up_cycle(self, cycle_id: int) -> tuple:
+        """获取热身赛奖励发放状态及发放赛季ID"""
+        status = False
+        # 用户热身赛奖励累计发放直到写入下一个周赛
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        next_cycle_id = 1 + cycle_id
+        if cycle_info and cycle_info["cycle_type"] == 1:
+            next_cycle_info = await TournamentCycleRC.get_cycle_info(next_cycle_id)
+            if next_cycle_info["cycle_type"] == 0:
+                status = True
+        return status, next_cycle_id
 
 
-
-
+    @staticmethod
+    async def check_uid_white_status(uid: int) -> bool:
+        """ 检查用户是否在白名单 """
+        status = False
+        # 获取赛事白名单
+        conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_TOURNAMENT_WHITE)
+        if conf_data and conf_data["status"]:
+            if uid in conf_data["special_uid"]:
+                status = True
+        return status
 
 
 

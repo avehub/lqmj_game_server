@@ -21,6 +21,8 @@ from lucky_admin.interface.numerical_analysis import BuyBaseData, AddUserPayData
 
 from lucky_admin.interface.tournament import TournamentTemplate
 from lucky_admin.interface.proxy_user import ProxyUser, ProxyUserLevel, ProxyUserBind, ProxyChannelSet, ProxyChannelUnset, ProxyChannelUpdate
+from lucky_admin.interface.exchange import Exchange
+from lucky_admin.interface.exchange_recharge import ExchangeRecharge, ExchangeQuery
 
 
 class MainBp(BaseBlue):
@@ -111,6 +113,11 @@ class MainBp(BaseBlue):
         Urls("/ProxyUserLevel", ProxyUserLevel),
         Urls("ProxyUserBind", ProxyUserBind),
         Urls("/ProxyChannelUpdate", ProxyChannelUpdate),
+        
+        # 兑换管理
+        Urls("/Exchange", Exchange),
+        Urls("/ExchangeRecharge", ExchangeRecharge),
+        Urls("/ExchangeQuery", ExchangeQuery)
 
 
 

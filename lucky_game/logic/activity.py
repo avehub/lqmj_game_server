@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime
 from typing import Union, Tuple
 
+from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 
@@ -25,8 +27,6 @@ from nsanic.libs.mult_log import NLogger
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs.tool import json_parse, json_encode
 from lucky_game.model_rc.base_store import GoodRC
-from lucky_game.model_rc.order import OrderRC
-from c_services.base.base_server import BaseServer
 
 
 async def atc_behavior(uid: int, act_id: int, act_type: int, award_type: int, pay_type: int) -> bool:
@@ -161,16 +161,16 @@ class Base:
             for award in awards:
                 award_type = award.get("type")
                 award_amount = award.get("amount")
-                if award_type in field_values:
-                    NLogger.info(f"发放奖励：uid={uid}，award_type={award_type}，award_amount={award_amount}")
-                    sta, e = await AwardGainsRC.add_gains(
-                        uid,
-                        act_id,
-                        award_id if award_id else award.get("award_id"),
-                        reward_type,
-                        remark={"type": award_type, "amount": award_amount}
-                    )
-                    NLogger.info(f"发放奖励入库结果：sta={sta}，e={e}")
+                # if award_type in field_values:
+                NLogger.info(f"发放奖励：uid={uid}，award_type={award_type}，award_amount={award_amount}")
+                sta, e = await AwardGainsRC.add_gains(
+                    uid,
+                    act_id,
+                    award_id if award_id else award.get("award_id"),
+                    reward_type,
+                    remark={"type": award_type, "amount": award_amount}
+                )
+                NLogger.info(f"发放奖励入库结果：sta={sta}，e={e}")
         else:
             NLogger.info(f"发放奖励：uid={uid}，reward_type={awards['type']}，reward_amount={awards['amount']}")
             sta, e = await AwardGainsRC.add_gains(
@@ -209,10 +209,25 @@ class Base:
                         reward_amount = remark.get("amount")
                         if reason is None:
                             reason = ReasonCostGold.ACTIVITY_GIFT
-                        sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
-                                                                                       reason=reason)
-                        NLogger.info(f"领取奖励：sta={sta}, e={e}")
-        return sta, e
+                        if reward_type in await ExtraUserResourceChangesRC.change_field():
+                            sta, e = await ExtraUserResourceChangesRC.change_user_resource(uid, reward_type, reward_amount,
+                                                                                        reason=reason)
+                            NLogger.info(f"领取奖励：sta={sta}, e={e}")
+                        else:
+                            if reward_type in ["score"]:
+                                cycle_id = await TournamentCycleRC.get_current_cycle_id()
+                                _, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+                                if cycle_info["cycle_type"] == 0:
+                                    last_cycle_id = cycle_id - 1
+                                    last_sta, last_cycle_ticket = await TournamentUserPointRC.get_user_point(last_cycle_id, uid, True)
+                                    if last_sta and last_cycle_ticket:
+                                        up_data = {
+                                            "score": reward_amount,
+                                            "ticket": last_cycle_ticket["ticket"]
+                                        }
+                                        NLogger.info(f"领取赛事奖励：{up_data}")
+                                        await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+        return sta, "OK"
 
     async def act_progress(self, ac: dict, u_info: dict):
         """ 查询当前用户参与活动进度 """

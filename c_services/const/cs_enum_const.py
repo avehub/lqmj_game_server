@@ -187,6 +187,9 @@ class CmdRoom(BaseEnum):
     MANY_HU = 114, "多人胡", "麻将"
     RECORD_ACCOUNT = 115, "记账", "麻将"
 
+    #比赛玩法
+    ALL_PLAYER_FINISH = 120,"所有真人已结束当前轮次",CallCheck.INNER.val
+
 
 @unique
 class CmdRobotCal(BaseEnum):

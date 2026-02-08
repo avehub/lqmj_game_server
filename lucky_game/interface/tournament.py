@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from urllib import parse
 from urllib.parse import urlparse, urlunparse
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from nsanic.libs import tool_dt
 
 from sanic import Request, response
@@ -38,7 +39,11 @@ class TournamentConfig(GameAuthApi):
             # 获取赛事规则
             sta, rule = await TournamentRuleRC.get_rule_info(rule_id=1)
             # 获取赛事周期
-            sta, cycle = await TournamentCycleRC.get_cycle_filter()
+            # today = datetime.now()
+            # current_month = today.month
+            # 因为真实赛事跨月所以直接配置一个
+            cycle_month = rule["rule_content"]["cycle_month"]
+            sta, cycle = await TournamentCycleRC.get_cycle_filter(cycle_month=cycle_month)
             if cycle:
                 for item in cycle:
                     # 获取赛事奖励
@@ -64,16 +69,21 @@ class TournamentUserPoint(GameAuthApi):
             cycle_id = await TournamentCycleRC.get_current_cycle_id()
         sta, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
         if not sta:
-            user_point = {"cycle_id": cycle_id, "uid": uid, "score": 0, "rank_num": 0, "ticket": 100}
-            await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
-        else:
-            # 计算用户排名
-            user_point["rank_num"] = 0
-            _, rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_position(cycle_id, uid)
-            if rank_position:
-                rank_data = rank_position[0]
-                user_point["rank_num"] = rank_data["rank_position"]
-                user_point["score"] = rank_data["total_points"]
+            has_sta, user_ticket = await TournamentUserPointRC.get_user_ticket(uid=uid)
+            if has_sta:
+                up_data = {
+                    "ticket": user_ticket["ticket"],
+                    "cycle_id": cycle_id,
+                    "score": 0,
+                }
+                await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+            else:
+                await TournamentUserPointRC.add_user_point(cycle_id, uid, 0)
+            _, user_point = await TournamentUserPointRC.get_user_point(cycle_id=cycle_id, uid=uid)
+        # 计算用户排名
+        rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid)
+        if rank_position:
+            user_point.update(rank_position)
         return self.answer(data=user_point)
 
 class TournamentLeaderboard (GameAuthApi):
@@ -86,10 +96,17 @@ class TournamentLeaderboard (GameAuthApi):
         page = self.check_int(req.args.get("page"), require=False, default=1, p_name="页码")
         page_size = self.check_int(req.args.get("amount"), require=False, default=10, p_name="每页数量")
         sta, data = await TournamentCycleLeaderboardRC.get_leaderboard_filter(cycle_id=cycle_id, page=page, page_size=page_size)
-        sta, rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_position(cycle_id, uid)
-        data["rank_position"] = {"uid": uid, "rank_position": 0, "total_points": 0}
-        if rank_position:
-            data["rank_position"] = rank_position[0]
+        has = False
+        if sta and data["total"] > 0:
+            has = True
+        # 获取白名单状态
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_TOURNAMENT_WHITE)
+        if has and conf and conf["status"] and uid not in conf["special_uid"]:
+            # 如果有测试数据对非白名单用户隐藏
+            data["total"] = 0 
+            data["list"] = [] 
+        rank_position = await TournamentCycleLeaderboardRC.get_uid_rank_and_difference(cycle_id, uid, True if data["total"] == 0 else False)
+        data["rank_position"] = rank_position
         return self.answer(data=data)
 
 class JoinTournament(GameAuthApi):
@@ -105,6 +122,10 @@ class JoinTournament(GameAuthApi):
         current_hour = datetime.now().hour
         if current_hour < int(range_time[0].split(":")[0]) or current_hour > int(range_time[1].split(":")[0]):
             return self.answer(StaCode.FAIL, hint=f"比赛时间为每日{rule['range_time']}点")
+        if cycle_id:
+            sta, msg = await TournamentCycleRC.check_cycle_status(cycle_id)
+            if not sta:
+                return self.answer(StaCode.FAIL, hint=msg)
         has_registered = await TournamentRegistrationRC.get_uid_registration(uid, cycle_id)
         if has_registered:
             return self.answer(StaCode.FAIL, hint="已报名")

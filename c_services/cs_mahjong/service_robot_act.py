@@ -15,8 +15,6 @@ class MahjongServerRobotAct(BaseService):
         if room.room_status != RoomStatus.T_PLAYING:
             room.log_info(tid, "uid", uid, "房间状态不是游戏中")
             return
-        if p.chu_pai_len() > 0:
-            room.log_info(tid, "uid", uid, "玩家已经出牌")
 
         code, msg = await room.on_player_chu_pai(p, room.serialized_chu_pai_data(card))
         if code != StaCode.PASS:
@@ -36,6 +34,9 @@ class MahjongServerRobotAct(BaseService):
             return
         if not card:
             room.log_info(tid, "uid", uid, "cs_robot_mahjong不碰牌")
+            if room.flow_status_is_equal(FlowStatus.T_IN_CHECK_OUT):
+                room.log_info(tid, "uid", uid, "桌子已结算，不再碰的后续")
+                return
             code, msg = await room.on_player_pass(p)
             if code != StaCode.PASS:
                 room.log_info(tid, "uid", uid, "cs_robot_mahjong不碰牌失败", code, msg)
@@ -62,6 +63,9 @@ class MahjongServerRobotAct(BaseService):
         if not card:
             if room.flow_status == FlowStatus.T_IN_PUBLIC_OPRATE:
                 room.log_info(tid, "uid", uid, "cs_robot_mahjong不杠牌,直接过")
+                if room.flow_status_is_equal(FlowStatus.T_IN_CHECK_OUT):
+                    room.log_info(tid, "uid", uid, "桌子已结算，不再杠的后续")
+                    return
                 code, msg = await room.on_player_pass(p)
                 if code != StaCode.PASS:
                     room.log_info(tid, "uid", uid, "cs_robot_mahjong不杠牌失败", code, msg)

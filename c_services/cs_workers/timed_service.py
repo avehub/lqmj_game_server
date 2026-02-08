@@ -6,7 +6,7 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, DINGTALK_STATISTICS_SECRET
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
@@ -15,11 +15,15 @@ from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
 from lucky_game.model_rc.base_user import BaseUserRC
+from lucky_game.model_rc.conf_competition import ConfCompetitionRC
+from lucky_game.model_rc.logout_user import LogoutUserRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
+from nsanic.libs.mult_log import NLogger
+
 
 
 class TimedService:
@@ -116,6 +120,8 @@ class TimedService:
         # 统计数据推送
         now_time = datetime.now()
         self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        # self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
+
 
 
     async def __every_day_tasks(self):
@@ -126,12 +132,14 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
-        # 赛季结算更新
-        self.__scheduler.add_date_job(self.check_tournament_settle, run_date=now_time + timedelta(hours=6))
         # 代理商状态检查
         self.__scheduler.add_date_job(self.check_proxy_vip, run_date=now_time + timedelta(hours=0))
+        # 更新赛季状态到比赛配置
+        self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
-        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        # 处理已注销用户
+        self.__scheduler.add_date_job(self.clean_logout_user, run_date=now_time + timedelta(hours=0))
 
    
 
@@ -206,23 +214,22 @@ class TimedService:
         _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
         if cycle_data:
             now = tool_dt.cur_time()
-            end_time = datetime.strptime(cycle_data["cycle_end_date"], "%Y-%m-%d %H:%M:%S")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
             end_time_tamp = int(end_time.timestamp())
             if now > end_time_tamp:
-                sta = await TournamentLogic().up_cycle_status(cycle_id)
-                self.log_info(f"赛季周期{cycle_id}已结束，更新赛季周期状态：{sta}")
+                await TournamentLogic().cycle_settle(cycle_id, cycle_data["reward_id"])
+                await TournamentLogic().up_cycle_status(cycle_id)
 
     @classmethod
-    async def check_tournament_settle(self):
-        """ 赛季周期结算 """
-        last_cycle_id = await TournamentCycleRC.get_last_cycle_id()
-        _, cycle_data = await TournamentCycleRC.get_cycle_info(last_cycle_id)
-        if cycle_data and cycle_data["status"] == TournamentCycleRC.CYCLE_STATUS_END:
-            if await TournamentLogic().cycle_settle(last_cycle_id):
-                await TournamentCycleRC.update_cycle(last_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_SETTLE})
-            self.log_info(f"赛季周期{last_cycle_id}已结算归档")
-
-
+    async def update_tournament_cycle_to_competition(self):
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        _, cycle_data = await TournamentCycleRC.get_cycle_info(cycle_id)
+        if cycle_data and cycle_data["reward_id"] != 2:
+            start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
+            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end_time_tamp = int(end_time.timestamp())
+            start_time_tamp = int(start_time.timestamp())
+            await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, cycle_id)
 
     @classmethod
     def interval_minute_execute_once_from_zero(cls, minute=35):
@@ -248,16 +255,23 @@ class TimedService:
     @classmethod
     async def send_ding_statistics(cls):
         """ 每日统计房间订单数据发送至钉钉 """
-        count_data, sum_data = await OrderRC.statistics_order()
-        count_data, group_data = await RecordsGameRoomRC.statistics_game_room()
-        DingTalkConfig.webhook_url = DINGTALK_STATISTICS_WEBHOOK
+        order_sum_data = await OrderRC.statistics_order_by_sum_amount()
+        order_count_data = await OrderRC.statistics_order_by_count()
+        group_data = await RecordsGameRoomRC.statistics_game_room_by_group_count()
+        count_data = await RecordsGameRoomRC.statistics_game_room_by_count()
+        group_dict = {}
+        if group_data:
+            group_dict = {f"{i['cs_type']}": i for i in group_data}
         ding_server = DingTalkNotifier().get_service()
-        content = f"时间：{tool_dt.dt_str(tool_dt.cur_time(), fmt='%Y-%m-%d')}\n" \
+        ding_server.config.webhook_url = DINGTALK_STATISTICS_WEBHOOK
+        ding_server.config.secret = DINGTALK_STATISTICS_SECRET
+        now = tool_dt.cur_time()
+        yesterday = now - 86400
+        content = f"- 时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
                    f"订单数：{count_data}\n" \
-                   f"订单金额：{sum_data}\n" \
-                   f"房间统计：\n" \
-                   f"房间数：{group_data}\n" \
-                   f"房间金额：{sum_data}"
+                   f"订单金额：{order_sum_data}\n" \
+                   f"房间总数：{order_count_data}\n" \
+                   f"多个玩法房间数：{group_dict}"
         ding_server.send_text_message(content)
 
     async def check_proxy_vip(self):
@@ -269,3 +283,14 @@ class TimedService:
             await BaseUserRC.many_update_user(u_ids, discount=1)
             await ProxyUserLogic.update_many_proxy_user(u_ids, {"status": 0})
 
+
+    @classmethod
+    async def clean_logout_user(cls):
+        """ 清理已注销用户 """
+        now = tool_dt.cur_time()
+        end_time = now - 15 * 86400
+        sta, data = await LogoutUserRC.get_logout_user_by_filter(status=1, end_time=end_time)
+        if sta and data:
+            for i in data:
+                await LogoutUserRC.delete_logout_user(i["uid"])
+                NLogger.info(f"成功注销用户: {i['uid']}")

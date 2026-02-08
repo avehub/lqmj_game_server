@@ -1,6 +1,8 @@
 """
 赛事周期表 (月度赛事实例)
 """
+from datetime import datetime
+
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode, json_parse
 from common.model_rc.base_rc import BaseCommonRC
@@ -67,13 +69,14 @@ class TournamentCycleRC(BaseCommonRC):
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)
                 await cls.cache_session_del(cycle_id)
+                await cls.conf.rds.drop_item("cycle_id")
         except OperationalError as e:
             return None, f"失败:{e}"
         return True, "成功"
 
     @classmethod
     async def get_cycle_filter(cls, cycle_id: int = None, status: int = None, cycle_year: int = None, reward_id: int = None,
-                                  template_id: int = None, page: int = None, page_size: int = None):
+                                  template_id: int = None, page: int = None, page_size: int = None, cycle_month: int = None):
         """获取赛事周期记录"""
         try:
             query = {}
@@ -87,6 +90,8 @@ class TournamentCycleRC(BaseCommonRC):
                 query["template_id"] = template_id
             if cycle_year is not None:
                 query["cycle_year"] = cycle_year
+            if cycle_month is not None:
+                query["cycle_month"] = cycle_month
             order_field = "id"
             result = None
             if page and page_size:
@@ -115,7 +120,7 @@ class TournamentCycleRC(BaseCommonRC):
             result = await cls.cache_session_get(cycle_id)
             if result:
                 return True, result
-            data, msg = await cls.get_cycle_filter(cycle_id=cycle_id)
+            sta, data = await cls.get_cycle_filter(cycle_id=cycle_id)
         except OperationalError as e:
             return None, f"查询失败:{e}"
         if data:
@@ -147,6 +152,17 @@ class TournamentCycleRC(BaseCommonRC):
         return cycle_id
 
     @classmethod
-    async def get_last_cycle_id(cls) -> int:
-        cycle_id = await cls.get_current_cycle_id()
-        return cycle_id + 1
+    async def check_cycle_status(cls, cycle_id: int) -> tuple:
+        """ 检查当前赛事是否开始 """
+        sta, cycle = await cls.get_cycle_info(cycle_id)
+        if not sta or not cycle:
+            return False, "无该赛事场次"
+        now = tool_dt.cur_time()
+        start_time = datetime.strptime(cycle["cycle_start_date"] + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+        end_time = datetime.strptime(cycle["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+        start_time_tamp = int(start_time.timestamp())
+        end_time_tamp = int(end_time.timestamp())
+        if start_time_tamp > now or now > end_time_tamp:
+            return False, "该赛事未开始"
+        return True, "赛事正在进行中"
+

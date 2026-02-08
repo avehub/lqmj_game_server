@@ -49,6 +49,8 @@ class User(DBModel):
     apple_id = fields.CharField(max_length=128, index=True, default='', description='苹果平台用户授权唯一标识')
     ban_time = fields.BigIntField(null=True, default=0, description='封禁时间：0未封禁 -1永久封禁 大于0为封禁时间')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='用户状态：1注销中 2已注销')
+    future_value = fields.SmallIntField(max_digits=20, null=True, default=0, description='福袋')
 
     class Meta:
         unique_together = (("platform", "openid"),("unionid", "platform"),)  # 联合主键
@@ -865,12 +867,15 @@ class TournamentCycle(DBModel):
     cycle_end_date = fields.DateField(description='周期结束日期')
     cycle_month = fields.IntField(description='月份:1-12')
     cycle_name = fields.CharField(max_length=100, description='周期名称:2026年1月月赛')
+    reward_name = fields.CharField(max_length=64, description='奖励名称')
     cycle_start_date = fields.DateField(description='周期开始日期')
     cycle_year = fields.IntField(null=True, description='年份:2026')
     id = fields.BigIntField(primary_key=True, description='周期ID')
     status = fields.IntField(default=False, description='状态:0-未开始,1-进行中,2-已结束,3-已归档')
     template_id = fields.BigIntField(index=True, description='关联模板ID')
     reward_id = fields.BigIntField(null=True, description='关联奖励ID')
+    cycle_type = fields.IntField(null=True, description='赛季类型：0周赛 1热身赛')
+    content = fields.CharField(max_length=255, description='其他赛事内容：json存储')
     updated = fields.BigIntField(default=0)
 
     class Meta:
@@ -898,7 +903,7 @@ class TournamentRewards(DBModel):
     rank_start = fields.IntField(description='奖励范围排名起始值，默认1')
     reward_content = fields.JSONField(null=True, description='奖励内容')
     reward_description = fields.CharField(max_length=255, null=True, description='奖励描述')
-    round_type = fields.BooleanField(index=True, description='场次类型:1-线上周赛,2-线下总决赛')
+    round_type = fields.BooleanField(index=True, description='场次类型:0-线上热身赛,1-线上周赛,2-线下总决赛')
     updated = fields.BigIntField(default=0)
 
     class Meta:
@@ -992,6 +997,7 @@ class ConfCompetition(DBModel):
     daily_start_time = fields.CharField(max_length=32, description='每日开始时间')
     daily_end_time = fields.CharField(max_length=32, description='每日结束时间')
     total_match_round = fields.SmallIntField(default=1, description='比赛总轮次')
+    cycle_id = fields.SmallIntField(default=1, description='周期ID')
 
     class Meta:
         table = "conf_competition"
@@ -1060,3 +1066,39 @@ class RecordsAdminTimedTask(DBModel):
             "status": status,
         }
         return await cls.add_one(data)
+
+class LogoutUser(DBModel):
+    """注销用户表"""
+    uid = fields.IntField(max_length=28, index=True, default=500000, description='玩家ID')
+    name = fields.CharField(max_length=32, null=True, default='', description='玩家昵称')
+    avatar = fields.CharField(max_length=256, null=True, default='', description='头像地址')
+    sex = fields.IntEnumField(enum_type=Sex, default=Sex.DEFAULT, description="性别")
+    phone = fields.CharField(max_length=18, null=True, index=True, description='手机号码')
+    email = fields.CharField(max_length=256, null=True, description='邮箱')
+    address = fields.CharField(max_length=256, null=True, default='', description='所在地址')
+    id_card = fields.CharField(max_length=20, null=True, default='', description='身份证')
+    real_name = fields.CharField(max_length=32, null=True, default='', description='玩家真实姓名')
+    pi = fields.CharField(max_length=64, index=True, default='', description='已通过实名认证用户的唯一标识')
+    discount = fields.FloatField(max_digits=3, null=True, decimal_places=2, default=1, description="消费折扣")
+    gold = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="金币")
+    diamond = fields.IntField(max_digits=20, null=True, default=0, description="钻石")
+    room_card = fields.IntField(max_digits=20, null=True, default=0, description="房卡")
+    yellow_diamond = fields.IntField(max_digits=20, null=True, default=0, description="黄钻")
+    vip = fields.SmallIntField(max_length=2, default=0, null=True, description="VIP等级")
+    platform = fields.IntEnumField(enum_type=PlatForm, index=True,
+                                   description="平台：1网页 2微信公众号 3原生app 4微信小游戏 5支付宝小游戏 6抖音小游戏 7安卓app 8ios_app")
+    dev_ident = fields.CharField(max_length=32, null=True, default='', description='设备标识')
+    ip = fields.CharField(max_length=128, null=True, default='', description='登陆IP')
+    region = fields.CharField(max_length=20, null=True, default='', description='地区/行政区域')
+    country = fields.CharField(max_length=16, null=True, default='CN', description='国家域名')
+    openid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
+    unionid = fields.CharField(max_length=128, null=True, default='', description='用户授权唯一标识')
+    wechat = fields.SmallIntField(max_length=2, null=True, default=0, description='微信绑定标识：1已绑定 0未绑定')
+    apple_id = fields.CharField(max_length=128, index=True, default='', description='苹果平台用户授权唯一标识')
+    status = fields.SmallIntField(max_length=2, null=True, default=0, description='用户状态：1注销中 2已注销')
+    future_value = fields.SmallIntField(max_digits=20, null=True, default=0, description='福袋')
+    updated = fields.IntField(null=True, default=0, description='更新时间')
+
+    class Meta:
+        unique_together = (("platform", "openid"),("unionid", "platform"),("uid"),)  # 唯一索引
+        table = "logout_user"
