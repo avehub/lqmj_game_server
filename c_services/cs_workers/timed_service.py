@@ -133,7 +133,7 @@ class TimedService:
         # 更新赛季状态到比赛配置
         self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
-        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
         # 处理已注销用户
         self.__scheduler.add_date_job(self.clean_logout_user, run_date=now_time + timedelta(hours=0))
 
