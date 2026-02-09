@@ -41,6 +41,7 @@ class CompetitionServer(BaseServer):
             CmdCompetition.MATCH_FINISH: self.__match_finish,
             CmdCompetition.BACK_COMPETITION: self.__back_competition,
             CmdCompetition.UPDATE_SCORE: self.__update_score,
+            CmdFanOut.LOST_CONNECT: self.__lost_connect,
         })
 
         self.__rooms = {}
@@ -52,7 +53,7 @@ class CompetitionServer(BaseServer):
         self.__reward_info = None
 
         DelayCall(0.5, self.__init_data).start()
-        DelayCall((1.1,2.0), self.__loop_match_competition).loop_start()
+        DelayCall((1.1, 2.0), self.__loop_match_competition).loop_start()
 
     def get_room(self, cid):
         return self.__rooms.get(cid)
@@ -78,7 +79,6 @@ class CompetitionServer(BaseServer):
         self.__current_cycle_id = await TournamentCycleRC.get_current_cycle_id()
         await self.cycle_info_init()
 
-
     async def cycle_info_init(self):
         cycle_status, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         if cycle_status:
@@ -86,16 +86,20 @@ class CompetitionServer(BaseServer):
             reward_id = 3
             if self.__current_cycle_type != 1:
                 reward_id = 5
-            sta, reward_info= await TournamentRewardRC.get_reward_info(reward_id)
+            sta, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
             if sta:
                 self.__reward_info = self.build_rank_to_reward(reward_info)
-        _, cycle_data = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
-        if cycle_data and cycle_data["reward_id"] != 2:
-            start_time = datetime.strptime(cycle_data["cycle_start_date"], "%Y-%m-%d")
-            end_time = datetime.strptime(cycle_data["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
-            end_time_tamp = int(end_time.timestamp())
-            start_time_tamp = int(start_time.timestamp())
-            await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
+            if cycle_info and cycle_info["reward_id"] != 2:
+                start_time_tamp,end_time_tamp = self.get_competition_time(cycle_info)
+                await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
+
+    @staticmethod
+    def get_competition_time(cycle_info):
+        start_time = datetime.strptime(cycle_info["cycle_start_date"], "%Y-%m-%d")
+        end_time = datetime.strptime(cycle_info["cycle_end_date"] + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+        end_time_tamp = int(end_time.timestamp())
+        start_time_tamp = int(start_time.timestamp())
+        return start_time_tamp, end_time_tamp
 
     @UtilsTool.cal_time()
     async def __read_robot_data(self):
@@ -160,32 +164,40 @@ class CompetitionServer(BaseServer):
     async def __do_match_competition(self, uid, competition_id, req_id):
         """ 匹配比赛 """
         if self.__current_cycle_id == 0:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！",
+                                           req_id=req_id)
         conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
         if not conf_data:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛不存在", req_id=req_id)
         in_white = await TournamentLogic.check_uid_white_status(uid)
+        self.log_info("白名单状态", uid, in_white)
         if conf_data.get("status") == CompetitionStatus.CLOSED and not in_white:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL,
+                                           "【赛段收官】当前赛段已结束，后续赛程请关注官方通知", req_id=req_id)
 
-        cycle_id = conf_data.get("cycle_id") or 0
+        cycle_id = await TournamentCycleRC.get_current_cycle_id()
         if self.__current_cycle_id != cycle_id:
             self.__current_cycle_id = cycle_id
             await self.cycle_info_init()
             conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
 
+        _, cycle_info = await TournamentCycleRC.get_cycle_info(self.__current_cycle_id)
         start_time = conf_data.get("start_time")
         end_time = conf_data.get("end_time")
+        # if cycle_info and cycle_info["reward_id"] != 2:
+        #     start_time,end_time = self.get_competition_time(cycle_info)
         daily_start_time = conf_data.get("daily_start_time")
         daily_end_time = conf_data.get("daily_end_time")
         curr_time = tool_dt.cur_time()
         if start_time > 0 and curr_time < start_time and not in_white:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "稍安勿躁，比赛还未到启动时间！",
+                                           req_id=req_id)
         if 0 < end_time < curr_time and not in_white:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "比赛已结束", req_id=req_id)
         is_in_match_time = self.check_match_begin_time(curr_time, daily_start_time, daily_end_time)
         if not is_in_match_time and not in_white:
-            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, f"开赛时间为【{daily_start_time[:5]}-{daily_end_time[:5]}】\n请提前做好备战准备", req_id=req_id)
+            return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL,
+                                           f"开赛时间为【{daily_start_time[:5]}-{daily_end_time[:5]}】\n请提前做好备战准备", req_id=req_id)
         join_info = await self.__get_player_in_match(uid)
         if join_info:
             return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家已加入比赛", req_id=req_id)
@@ -199,10 +211,11 @@ class CompetitionServer(BaseServer):
         if price_type == PriceType.BY_POINT:
             sta, user_point = await TournamentUserPointRC.get_user_point(self.__current_cycle_id, uid)
             if not sta:
-                self.log_info("玩家暂未参赛", "cycle_id",self.__current_cycle_id, "uid", uid)
+                self.log_info("玩家暂未参赛", "cycle_id", self.__current_cycle_id, "uid", uid)
                 return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.FAIL, "玩家暂未参赛", req_id=req_id)
             if user_point.get("ticket") < price:
-                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.COMPETITION_POINT_NOT_ENOUGH, "参赛积分不足，请前往获取积分\n继续挑战精彩赛事！", req_id=req_id)
+                return await self.cs2ws_by_rmq(CmdCompetition.MATCH_COMPETITION, uid, StaCode.COMPETITION_POINT_NOT_ENOUGH,
+                                               "参赛积分不足，请前往获取积分\n继续挑战精彩赛事！", req_id=req_id)
             # 扣费
             user_point["ticket"] -= price
             self.__player_info[uid] = user_point
@@ -321,9 +334,9 @@ class CompetitionServer(BaseServer):
                 data["player_score"] = 0 if is_init else room.get_player_score(p_uid)
                 await self.cs2cs_by_rmq(cs_enum, CmdRoom.NEW_MATCH, data, p_uid)
                 if is_init and p_uid > R_UID_THRESHOLD:
-                    self.log_info(room.match_room_id,"比赛开始前准备","玩家",p_uid,"门票",price)
+                    self.log_info(room.match_room_id, "比赛开始前准备", "玩家", p_uid, "门票", price)
                     await TournamentUserPointRC.update_int_field(p_uid, "ticket", price, "sub")
-        self.log_info(room.match_room_id,"比赛开始前准备","轮次",room.match_round,room.game_room_info)
+        self.log_info(room.match_room_id, "比赛开始前准备", "轮次", room.match_round, room.game_room_info)
         await delay_func(0.5, self.__start_competition, player_list, data_model, req_id)
         if is_init:
             await self.__competition_info(room.match_room_id, is_init)
@@ -354,7 +367,7 @@ class CompetitionServer(BaseServer):
         room.set_game_room_info(room_id, {"status": sta, "players": players, "room_num": room_num})
         s2c_game_room_finish = S2CGameRoomFinish.pb_model(**data)
         await self.conf.rds.srem("game_room_number", room_id)
-        self.log_info(match_room_id,"room_id", room_id, "该房间已结束")
+        self.log_info(match_room_id, "room_id", room_id, "该房间已结束", data)
 
         send_list = []
         if players:
@@ -389,8 +402,8 @@ class CompetitionServer(BaseServer):
                     room.player_all_finish = True
                     self.log_info("所有真人玩家已结束")
                     cs_enum = ServiceEnum.find_member_by_val(room.cs_type)
-                    msg = {"robot_room":robot_room,"secret":self.conf.SECRET_KEY}
-                    await self.cs2cs_by_rmq(cs_enum, CmdRoom.ALL_PLAYER_FINISH,msg)
+                    msg = {"robot_room": robot_room, "secret": self.conf.SECRET_KEY}
+                    await self.cs2cs_by_rmq(cs_enum, CmdRoom.ALL_PLAYER_FINISH, msg)
 
         await self.__competition_info(match_room_id, is_finish=is_competition_finish)
         if is_competition_finish:
@@ -399,7 +412,7 @@ class CompetitionServer(BaseServer):
     async def __match_finish(self, match_room_id, room):
         """ 比赛结束 """
         rank_by_score = room.get_rank_by_score()
-        self.log_info( match_room_id, "该比赛已结束","排名", rank_by_score)
+        self.log_info(match_room_id, "该比赛已结束", "排名", rank_by_score)
         competition_result = []
         send_work_list = []
         total_players = len(room.members)
@@ -412,7 +425,7 @@ class CompetitionServer(BaseServer):
                 "rank": rank,
                 "score": score,
                 "points": points,
-                "ticket": ticket if (score >= 0 or self.__current_cycle_type == 1)  else ticket + score
+                "ticket": ticket if (score >= 0 or self.__current_cycle_type == 1) else ticket + score
             })
             self.__player_info.pop(uid)
 
@@ -425,11 +438,11 @@ class CompetitionServer(BaseServer):
             # }
             # send_work_list.append(self.send_task_to_worker(CmdWorkers.UPDATE_COMPETITION_RESULT, send_data, uid))
 
-            #暂时不通过worker更新
+            # 暂时不通过worker更新
             up_data = {
-                    "score": points,
-                    "ticket": score  # 正分不扣门票，负分输多少扣多少门票
-                }
+                "score": points,
+                "ticket": score  # 正分不扣门票，负分输多少扣多少门票
+            }
             sta, result = await TournamentUserPointRC.up_user_point(self.__current_cycle_id, uid, up_data)
             self.log_info(f"更新比赛结果：{sta} 玩家{uid}更新积分{up_data}")
             if self.__reward_info and uid > R_UID_THRESHOLD:  # 热身赛
@@ -478,7 +491,7 @@ class CompetitionServer(BaseServer):
         if player_score:
             for uid, score in player_score.items():
                 room.update_player_score(int(uid), score)
-        self.log_info( match_room_id, "room_id", room_id, "更新积分", player_score)
+        self.log_info(match_room_id, "room_id", room_id, "更新积分", player_score)
         await self.__competition_info(match_room_id)
 
     async def __competition_info(self, match_room_id, is_init=False, is_finish=False, total_round=0):
@@ -543,7 +556,7 @@ class CompetitionServer(BaseServer):
         info = {
             "competition_id": competition_id,
             "timestamp": tool_dt.cur_time(),
-            "rank":rank
+            "rank": rank
         }
         await self.conf.rds.set_hash(CacheKey.IN_MATCH, uid, info)
 
@@ -596,6 +609,9 @@ class CompetitionServer(BaseServer):
             send_list.append(self.cs2ws_by_rmq(CmdCompetition.QUIT_COMPETITION, p_uid, msg=data_model))
         if send_list:
             await asyncio.gather(*send_list)
+
+    async def __lost_connect(self,uid,_):
+        self.log_info("玩家掉线",uid)
 
     @staticmethod
     def check_match_begin_time(curr_time, daily_start_time, daily_end_time):
@@ -667,7 +683,7 @@ class CompetitionServer(BaseServer):
         """ 发送任务到worker消费 """
         await self.push_task2worker(cmd, data, uid)
 
-    async def send_competition_awards(self,uid, count):
+    async def send_competition_awards(self, uid, count):
         """ 发放比赛奖励 """
         reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
         if self.__current_cycle_type != 1:
