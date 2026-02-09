@@ -83,8 +83,8 @@ class DistributionTrend(AdminAuthApi):
                     out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
             else:
                 start_time = int(cur.timestamp())
-                end_time = tool_dt.day_end(start_time)
-                orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time, end_time=end_time)
+                orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time)
+                
                 total_income = 0
                 roomcard_income = 0
                 agriculture_income = 0

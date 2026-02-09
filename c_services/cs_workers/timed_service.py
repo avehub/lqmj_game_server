@@ -134,6 +134,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_proxy_vip, run_date=now_time + timedelta(hours=0))
         # # 统计数据推送
         # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        # 每日统计数据
+        self.__scheduler.add_date_job(self.__income_daily_stats, run_date=now_time + timedelta(hours=0))
  
    
 
