@@ -419,7 +419,7 @@ class Orders(DBModel):
 class StatsIncomeDaily(DBModel):
     """每日收入统计"""
     id = fields.IntField(pk=True, description='主键ID')
-    date = fields.DateField(description='统计日期')
+    time_node = fields.BigIntField(max_length=28, index=True, null=False, default=0, description='时间节点：天')
     total_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='总收入')
     roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='房卡收入')
     agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='助农收入')
@@ -427,9 +427,10 @@ class StatsIncomeDaily(DBModel):
     roomcard_orders = fields.IntField(default=0, description='房卡订单数')
     agriculture_orders = fields.IntField(default=0, description='助农订单数')
     updated = fields.BigIntField(default=0, description='更新时间')
+    created = fields.BigIntField(default=0, description='创建时间')
 
     class Meta:
-        unique_together = (("date",),)
+        unique_together = (("time_node",),)
         table = "stats_income_daily"
 
 
@@ -1116,5 +1117,4 @@ class LogoutUser(DBModel):
 
     class Meta:
         unique_together = (("platform", "openid"),("unionid", "platform"),("uid"),)  # 唯一索引
-
 

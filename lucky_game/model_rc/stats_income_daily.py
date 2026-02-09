@@ -39,7 +39,7 @@ class StatsIncomeDailyRC(RCModel):
                         agriculture_income += amount
                         agriculture_orders += 1
         data = {
-            "date": day.date(),
+            "time_node": start_time,
             "total_income": total_income,
             "roomcard_income": roomcard_income,
             "agriculture_income": agriculture_income,
@@ -48,15 +48,16 @@ class StatsIncomeDailyRC(RCModel):
             "agriculture_orders": agriculture_orders,
             "updated": tool_dt.cur_time(),
         }
-        exist = await cls.db_model.filter(date=day.date()).count()
+        exist = await cls.db_model.filter(time_node=start_time).count()
         if exist:
-            await cls.db_model.filter(date=day.date()).update(**data)
+            await cls.db_model.filter(time_node=start_time).update(**data)
         else:
             await cls.db_model.add_one(data)
         return True, data
 
     @classmethod
     async def get_range(cls, start_date: datetime, end_date: datetime):
-        data = await cls.db_model.filter(date__gte=start_date.date(), date__lte=end_date.date()).order_by("date").values()
+        start_ts = int(datetime(start_date.year, start_date.month, start_date.day).timestamp())
+        end_ts = tool_dt.day_end(int(end_date.timestamp()))
+        data = await cls.db_model.filter(time_node__gte=start_ts, time_node__lte=end_ts).order_by("time_node").values()
         return data or []
-

@@ -78,7 +78,7 @@ class DistributionTrend(AdminAuthApi):
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
-                    out.append({"date": r["date"].strftime("%Y-%m-%d"), "total_income": float(r["total_income"]), "roomcard_income": float(r["roomcard_income"]), "agriculture_income": float(r["agriculture_income"]), "total_orders": r["total_orders"], "roomcard_orders": r["roomcard_orders"], "agriculture_orders": r["agriculture_orders"]})
+                    out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "total_income": float(r["total_income"]), "roomcard_income": float(r["roomcard_income"]), "agriculture_income": float(r["agriculture_income"]), "total_orders": r["total_orders"], "roomcard_orders": r["roomcard_orders"], "agriculture_orders": r["agriculture_orders"]})
                 else:
                     out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
             else:
@@ -236,7 +236,7 @@ class DistributionAgriTrend(AdminAuthApi):
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
-                    out.append({"date": r["date"].strftime("%Y-%m-%d"), "agriculture_income": float(r["agriculture_income"]), "agriculture_orders": r["agriculture_orders"]})
+                    out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "agriculture_income": float(r["agriculture_income"]), "agriculture_orders": r["agriculture_orders"]})
                 else:
                     out.append({"date": cur.strftime("%Y-%m-%d"), "agriculture_income": 0.0, "agriculture_orders": 0})
             else:
