@@ -168,10 +168,8 @@ class DistributionAgriOrders(AdminAuthApi):
             where += f" AND exchange_no = '{order_no}'"
         if tracking_no:
             where += f" AND express_no = '{tracking_no}'"
-        if status_k == "1":
-            where += f" AND express_no <> ''"
-        elif status_k == "0":
-            where += f" AND (express_no = '' OR express_no = '0' OR express_no IS NULL)"
+        if status_k != "-1":
+            where += f" AND status = '{status_k}'"
         if start is not None:
             where += f" AND updated >= {start}"
         if end is not None:
