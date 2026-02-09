@@ -58,6 +58,6 @@ class StatsIncomeDailyRC(RCModel):
     @classmethod
     async def get_range(cls, start_date: datetime, end_date: datetime):
         start_ts = int(datetime(start_date.year, start_date.month, start_date.day).timestamp())
-        end_ts = tool_dt.day_end(int(end_date.timestamp()))
+        end_ts = int(datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59).timestamp())
         data = await cls.db_model.filter(time_node__gte=start_ts, time_node__lte=end_ts).order_by("time_node").values()
         return data or []

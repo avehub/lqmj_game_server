@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any
 
 
@@ -70,11 +71,11 @@ class DistributionTrend(AdminAuthApi):
         e = req.args.get("end_date")
         start_date = _parse_day_start(s)
         end_date = _parse_day_start(e)
-        today = datetime.fromtimestamp(tool_dt.day_begin())
+        today_date = datetime.now().date()
         out = []
         cur = start_date
         while cur <= end_date:
-            if cur < today:
+            if cur.date() < today_date:
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
@@ -226,11 +227,11 @@ class DistributionAgriTrend(AdminAuthApi):
         e = req.args.get("end_date")
         start_date = _parse_day_start(s)
         end_date = _parse_day_start(e)
-        today = datetime.fromtimestamp(tool_dt.day_begin())
+        today_date = datetime.now().date()
         out = []
         cur = start_date
         while cur <= end_date:
-            if cur < today:
+            if cur.date() < today_date:
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
@@ -263,11 +264,11 @@ class DistributionRoomcardTrend(AdminAuthApi):
         e = req.args.get("end_date")
         start_date = _parse_day_start(s)
         end_date = _parse_day_start(e)
-        today = datetime.fromtimestamp(tool_dt.day_begin())
+        today_date = datetime.now().date()
         out = []
         cur = start_date
         while cur <= end_date:
-            if cur < today:
+            if cur.date() < today_date:
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
