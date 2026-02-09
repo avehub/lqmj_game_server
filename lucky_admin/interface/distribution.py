@@ -2,13 +2,12 @@ from typing import Any
 
 
 from nsanic.libs import tool_dt
-from datetime import timedelta
+from datetime import timedelta, datetime
 from lucky_proxy.model_db.main import ProxyPromotionRelation
 from lucky_proxy.model_db.main import ProxyOrderDividendRecords
 from lucky_game.model_db.main import Orders
 from lucky_proxy.model_db.main import ProxyUser
 from common.model_rc.user_good_exchange import UserGoodExchangeRC
-from nsanic.libs import tool_dt
 from sanic import Request
 from lucky_admin.base_api import AdminAuthApi
 from lucky_game.model_rc.order import OrderRC
@@ -50,13 +49,28 @@ class DistributionTotal(AdminAuthApi):
         return self.answer(data={"total_income": float(total_income), "roomcard_income": float(roomcard_income), "agriculture_income": float(agriculture_income), "total_orders": total_orders, "roomcard_orders": roomcard_orders, "agriculture_orders": agriculture_orders, "pending_settlement": float(pending_settlement)})
 
 
+def _parse_day_start(val):
+    if val is None:
+        return datetime.fromtimestamp(tool_dt.day_begin())
+    if isinstance(val, (int, float)):
+        dt = datetime.fromtimestamp(int(val))
+        return datetime(dt.year, dt.month, dt.day)
+    if isinstance(val, str) and val.isdigit():
+        dt = datetime.fromtimestamp(int(val))
+        return datetime(dt.year, dt.month, dt.day)
+    try:
+        return datetime.strptime(val, "%Y-%m-%d")
+    except Exception:
+        return datetime.fromtimestamp(tool_dt.day_begin())
+
+
 class DistributionTrend(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
         s = req.args.get("start_date")
         e = req.args.get("end_date")
-        start_date = tool_dt.str_to_dt(s + " 00:00:00")
-        end_date = tool_dt.str_to_dt(e + " 00:00:00")
-        today = tool_dt.str_to_dt(tool_dt.dt_str(tool_dt.cur_time(), "%Y-%m-%d") + " 00:00:00")
+        start_date = _parse_day_start(s)
+        end_date = _parse_day_start(e)
+        today = datetime.fromtimestamp(tool_dt.day_begin())
         out = []
         cur = start_date
         while cur <= end_date:
@@ -212,9 +226,9 @@ class DistributionAgriTrend(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
         s = req.args.get("start_date")
         e = req.args.get("end_date")
-        start_date = tool_dt.str_to_dt(s + " 00:00:00")
-        end_date = tool_dt.str_to_dt(e + " 00:00:00")
-        today = tool_dt.str_to_dt(tool_dt.dt_str(tool_dt.cur_time(), "%Y-%m-%d") + " 00:00:00")
+        start_date = _parse_day_start(s)
+        end_date = _parse_day_start(e)
+        today = datetime.fromtimestamp(tool_dt.day_begin())
         out = []
         cur = start_date
         while cur <= end_date:
@@ -250,8 +264,9 @@ class PromotionUserTrend(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
         s = req.args.get("start_date")
         e = req.args.get("end_date")
-        start_date = tool_dt.str_to_dt(s + " 00:00:00")
-        end_date = tool_dt.str_to_dt(e + " 00:00:00")
+        start_date = _parse_day_start(s)
+        end_date = _parse_day_start(e)
+        
         start_ts = int(start_date.timestamp())
         end_ts = tool_dt.day_end(int(end_date.timestamp()))
         sql = f"""
