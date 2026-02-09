@@ -302,8 +302,8 @@ class PromotionUserTrend(AdminAuthApi):
         start_date = _parse_day_start(s)
         end_date = _parse_day_start(e)
         
-        start_ts = int(start_date.timestamp())
-        end_ts = tool_dt.day_end(int(end_date.timestamp()))
+        start_ts = int(datetime(start_date.year, start_date.month, start_date.day).timestamp())
+        end_ts = int(datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59).timestamp())
         sql = f"""
         SELECT DATE_FORMAT(FROM_UNIXTIME(created),'%Y-%m-%d') AS d, COUNT(DISTINCT player_id) AS cnt
         FROM proxy_promotion_relation
