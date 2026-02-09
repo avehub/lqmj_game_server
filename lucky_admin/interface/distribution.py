@@ -257,6 +257,43 @@ class DistributionAgriTrend(AdminAuthApi):
             cur = cur + timedelta(days=1)
         return self.answer(data=out)
 
+class DistributionRoomcardTrend(AdminAuthApi):
+    async def get(self, req: Request, **kwargs):
+        s = req.args.get("start_date")
+        e = req.args.get("end_date")
+        start_date = _parse_day_start(s)
+        end_date = _parse_day_start(e)
+        today = datetime.fromtimestamp(tool_dt.day_begin())
+        out = []
+        cur = start_date
+        while cur <= end_date:
+            if cur < today:
+                recs = await StatsIncomeDailyRC.get_range(cur, cur)
+                if recs:
+                    r = recs[0]
+                    out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "roomcard_income": float(r["roomcard_income"]), "roomcard_orders": r["roomcard_orders"]})
+                else:
+                    out.append({"date": cur.strftime("%Y-%m-%d"), "roomcard_income": 0.0, "roomcard_orders": 0})
+            else:
+                start_time = int(cur.timestamp())
+                end_time = tool_dt.day_end(start_time)
+                orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time, end_time=end_time)
+                roomcard_income = 0
+                roomcard_orders = 0
+                if orders:
+                    sku_list = list({o["sku"] for o in orders})
+                    goods, _ = await GoodRC.get_good_filter(sku=sku_list)
+                    g_map = {g["sku"]: g for g in goods} if goods else {}
+                    for o in orders:
+                        g = g_map.get(o["sku"])
+                        if g and g.get("type") == 4:
+                            amount = o.get("amount") or 0
+                            roomcard_income += amount
+                            roomcard_orders += 1
+                out.append({"date": cur.strftime("%Y-%m-%d"), "roomcard_income": float(roomcard_income), "roomcard_orders": roomcard_orders})
+            cur = cur + timedelta(days=1)
+        return self.answer(data=out)
+
 
 class PromotionUserTrend(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
