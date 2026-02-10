@@ -202,7 +202,7 @@ class BaseLogin(GameAuthApi):
         yesterday_now = tool_dt.cur_time() - 86400
         # 注册时间在24小时内且有邀请码
         if invite_code and yesterday_now < created:
-            await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=u_info.get('uid'), msg={'invite_code': invite_code, 'created': })
+            await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=u_info.get('uid'), msg={'invite_code': invite_code, 'created': created})
 
 class LoginByGuest(BaseLogin):
     """ 游客登陆 """
