@@ -1,5 +1,6 @@
 import asyncio
 import random
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode
 from tortoise.transactions import in_transaction

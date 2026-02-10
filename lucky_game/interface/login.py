@@ -195,7 +195,14 @@ class BaseLogin(GameAuthApi):
         if not server_info or not server_info[0].get("status"):
             self.answer(hint="As server maintenance, please visit later, thank you.")
         return server_info
-
+    
+    async def invite_user(self, invite_code: str, u_info: dict):
+        """ 邀请用户 """
+        created = u_info.get('created')
+        yesterday_now = tool_dt.cur_time() - 86400
+        # 注册时间在24小时内且有邀请码
+        if invite_code and yesterday_now < created:
+            await self.push_task2worker(CmdWorkers.PROXY_INVITE_BIND, uid=u_info.get('uid'), msg={'invite_code': invite_code, 'created': created})
 
 class LoginByGuest(BaseLogin):
     """ 游客登陆 """
@@ -218,6 +225,7 @@ class LoginByGuest(BaseLogin):
             u_info = await self.create_new_user(req, 'dev_ident', login_info, u_info, BaseUserRC.KEY_DEVICE_ID, platform=platform, invite_code=invite_code)
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
+            await self.invite_user(invite_code, u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO, hint='Failed to login')
         self.log_info('LoginByGuest suc:', u_info.get("uid"))
@@ -288,6 +296,7 @@ class LoginByWechat(BaseLogin):
                 wechat_info["name"] = req_data.get('nickname')
             u_info = await self.update_user_login_info(req, u_info, login_info, wechat_info)
             self.log_info('Wechat Login u_info:', u_info)
+            await self.invite_user(invite_code, u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         if platform == PlatForm.WECHAT_MINI_GAME:
@@ -375,6 +384,7 @@ class LoginByPhone(BaseLogin):
         else:
             u_info = await self.update_user_login_info(req, u_info, login_info)
             self.log_info('DouYinMG Login u_info:', u_info)
+            await self.invite_user(invite_code, u_info)
 
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
         server_info = await self.whether_through()
@@ -437,6 +447,7 @@ class LoginByApple(BaseLogin):
             # 老用户登录
             u_info = await self.update_user_login_info(req, u_info, login_info)
             self.log_info('Apple Login u_info:', u_info)
+            await self.invite_user(invite_code, u_info)
 
         if not u_info:
             return self.answer(StaCode.FAIL, hint="用户登录失败")
