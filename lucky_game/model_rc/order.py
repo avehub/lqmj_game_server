@@ -141,8 +141,8 @@ class OrderRC(BaseCommonRC):
         if end_time is None:
             end_time = today_start_time
         if start_time is None:
-            start_time = today_end_time - 86400
-        where = f" created>{start_time} AND created<{end_time} AND currency=5 AND status=99"
+            start_time = today_start_time - 86400
+        where = f" created>={start_time} AND created<{end_time} AND currency=5 AND status=99"
         sum_sql = f"SELECT SUM(amount) AS total_amount FROM {cls.tb_name} WHERE {where}"
         sum_data = await cls.db_model.exec_query(sum_sql)
         total_amount = sum_data[0]["total_amount"] if sum_data else 0
@@ -155,8 +155,8 @@ class OrderRC(BaseCommonRC):
         if end_time is None:
             end_time = today_start_time
         if start_time is None:
-            start_time = today_end_time - 86400
-        where = f" created>{start_time} AND created<{end_time} AND currency=5 AND status=99"
+            start_time = today_start_time - 86400
+        where = f" created>={start_time} AND created<{end_time} AND currency=5 AND status=99"
         count_sql = f"SELECT COUNT(*) AS total_count FROM {cls.tb_name} WHERE {where}"
         count_data = await cls.db_model.exec_query(count_sql)
         total_count = count_data[0]["total_count"] if count_data else 0
