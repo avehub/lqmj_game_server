@@ -19,9 +19,31 @@ from datetime import timedelta
 
 class DistributionTotal(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
+        category = req.args.get("category", "0")  # all, distribution, natural
         start_time = tool_dt.day_begin()
         end_time = tool_dt.day_end()
-        orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time, end_time=end_time)
+        if category == "1":
+            # 分销订单：在 proxy_order_dividend_records 中存在 order_id
+            sql = """
+                SELECT o.*
+                FROM orders o
+                JOIN proxy_order_dividend_records r ON o.id = r.order_id
+                WHERE o.status = 99 AND o.create_time >= ? AND o.create_time <= ?
+            """
+            rows = await OrderRC.exec_sql(sql, [start_time, end_time], query=True)
+            orders = rows or []
+        elif category == "2":
+            # 自然流：不在 proxy_order_dividend_records 中的订单
+            sql = """
+                SELECT o.*
+                FROM orders o
+                LEFT JOIN proxy_order_dividend_records r ON o.id = r.order_id
+                WHERE o.status = 99 AND o.create_time >= ? AND o.create_time <= ? AND r.order_id IS NULL
+            """
+            rows = await OrderRC.exec_sql(sql, [start_time, end_time], query=True)
+            orders = rows or []
+        else:
+            orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time, end_time=end_time)
         if not orders:
             return self.answer(data={"total_income": 0, "roomcard_income": 0, "agriculture_income": 0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0, "pending_settlement": 0})
         sku_list = list[str | Any]({o["sku"] for o in orders})
@@ -67,6 +89,7 @@ def _parse_day_start(val):
 
 class DistributionTrend(AdminAuthApi):
     async def get(self, req: Request, **kwargs):
+        category = req.args.get("category", "0")  # all, distribution, natural
         s = req.args.get("start_date")
         e = req.args.get("end_date")
         start_date = _parse_day_start(s)
@@ -79,12 +102,43 @@ class DistributionTrend(AdminAuthApi):
                 recs = await StatsIncomeDailyRC.get_range(cur, cur)
                 if recs:
                     r = recs[0]
-                    out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "total_income": float(r["total_income"]), "roomcard_income": float(r["roomcard_income"]), "agriculture_income": float(r["agriculture_income"]), "total_orders": r["total_orders"], "roomcard_orders": r["roomcard_orders"], "agriculture_orders": r["agriculture_orders"]})
+                    if category == "1":
+                        out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "total_income": float(r["distribution_income"]), "roomcard_income": float(r["distribution_roomcard_income"]), "agriculture_income": float(r["distribution_agriculture_income"]), "total_orders": r["distribution_orders"], "roomcard_orders": r["distribution_roomcard_orders"], "agriculture_orders": r["distribution_agriculture_orders"]})
+                    elif category == "2":
+                        out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "total_income": float(r["natural_income"]), "roomcard_income": float(r["natural_roomcard_income"]), "agriculture_income": float(r["natural_agriculture_income"]), "total_orders": r["natural_orders"], "roomcard_orders": r["natural_roomcard_orders"], "agriculture_orders": r["natural_agriculture_orders"]})
+                    else:
+                        out.append({"date": datetime.fromtimestamp(r["time_node"]).strftime("%Y-%m-%d"), "total_income": float(r["total_income"]), "roomcard_income": float(r["roomcard_income"]), "agriculture_income": float(r["agriculture_income"]), "total_orders": r["total_orders"], "roomcard_orders": r["roomcard_orders"], "agriculture_orders": r["agriculture_orders"]})
                 else:
-                    out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
+                    if category == "1":
+                        out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
+                    elif category == "2":
+                        out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
+                    else:
+                        out.append({"date": cur.strftime("%Y-%m-%d"), "total_income": 0.0, "roomcard_income": 0.0, "agriculture_income": 0.0, "total_orders": 0, "roomcard_orders": 0, "agriculture_orders": 0})
             else:
                 start_time = int(cur.timestamp())
-                orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time)
+                if category == "1":
+                    # 分销订单：在 proxy_order_dividend_records 中存在 order_id
+                    sql = """
+                        SELECT o.*
+                        FROM orders o
+                        JOIN proxy_order_dividend_records r ON o.id = r.order_id
+                        WHERE o.status = 99 AND o.create_time >= ?
+                    """
+                    rows = await OrderRC.exec_sql(sql, [start_time], query=True)
+                    orders = rows or []
+                elif category == "2":
+                    # 自然流：不在 proxy_order_dividend_records 中的订单
+                    sql = """
+                        SELECT o.*
+                        FROM orders o
+                        LEFT JOIN proxy_order_dividend_records r ON o.id = r.order_id
+                        WHERE o.status = 99 AND o.create_time >= ? AND r.order_id IS NULL
+                    """
+                    rows = await OrderRC.exec_sql(sql, [start_time], query=True)
+                    orders = rows or []
+                else:
+                    orders, _ = await OrderRC.get_order_filter(status=99, start_time=start_time)
                 
                 total_income = 0
                 roomcard_income = 0

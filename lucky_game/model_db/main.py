@@ -426,6 +426,20 @@ class StatsIncomeDaily(DBModel):
     total_orders = fields.IntField(default=0, description='总订单数')
     roomcard_orders = fields.IntField(default=0, description='房卡订单数')
     agriculture_orders = fields.IntField(default=0, description='助农订单数')
+    # 分销分类统计
+    distribution_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销收入')
+    distribution_orders = fields.IntField(default=0, description='分销订单数')
+    distribution_roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销房卡收入')
+    distribution_roomcard_orders = fields.IntField(default=0, description='分销房卡订单数')
+    distribution_agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销助农收入')
+    distribution_agriculture_orders = fields.IntField(default=0, description='分销助农订单数')
+    # 自然流分类统计
+    natural_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流收入')
+    natural_orders = fields.IntField(default=0, description='自然流订单数')
+    natural_roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流房卡收入')
+    natural_roomcard_orders = fields.IntField(default=0, description='自然流房卡订单数')
+    natural_agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流助农收入')
+    natural_agriculture_orders = fields.IntField(default=0, description='自然流助农订单数')
     updated = fields.BigIntField(default=0, description='更新时间')
     created = fields.BigIntField(default=0, description='创建时间')
 
