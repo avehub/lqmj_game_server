@@ -40,12 +40,11 @@ class ProxyIncomeQuery(ProxyAuthApi):
                     "assistance_program_income"),
                 "room_income": wallet.get("room_income") + level2_month_income.get("room_income"),
             }
-            # if user_proxy and user_proxy.get("is_channel") == 1:
-            #     ch = await ProxyOrderStatistics.proxy_channel_income_query(kwargs.get("uid"), month, today)
-            #     self.log_info(f"channel_income={ch}")
-            #     income["today_income"] = income["today_income"] + ch.get("today_income", 0)
-            #     income["current_month_income"] = income["current_month_income"] + ch.get("income", 0)
-            #     income["room_income"] = income["room_income"] + ch.get("room_income", 0)
+            if user_proxy and user_proxy.get("is_channel") == 1:
+                ch = await ProxyOrderStatistics.proxy_channel_income_query(kwargs.get("uid"), month, today)
+                self.log_info(f"channel_income={ch}")
+                income["today_income"] = income["today_income"] + ch.get("today_income", 0)
+                income["current_month_income"] = income["current_month_income"] + ch.get("income", 0)
         else:
             income = {
                 "today_income": month_income.get("today_income"),
