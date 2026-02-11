@@ -209,6 +209,7 @@ class LoginByGuest(BaseLogin):
     decorators = [LimitTestCall]
 
     async def post(self, req: Request):
+        self.log_info('LoginByGuest Req_Body:', req.json)
         server_info = await self.whether_through()
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台ID")
         dev_ident = req.json and req.json.get('device_id') or req.headers.get('device_id')
@@ -240,6 +241,7 @@ class LoginByWechat(BaseLogin):
     async def post(self, req: Request):
         """ 通过code登录 """
         # 获取客户端code
+        self.log_info('LoginByWechat Req_Body:', req.json)
         server_info = await self.whether_through()
         code = req.json.get('code')
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
@@ -314,8 +316,10 @@ class LoginByWechat(BaseLogin):
 class LoginByToken(BaseLogin):
     """ 通过token登录 """
     async def post(self, req: Request, **kwargs):
+        self.log_info('LoginByToken Req_Body:', req.json)
         server_info = await self.whether_through()
         u_info = kwargs.get("u_info")
+        invite_code = self.check_str(req.json.get("invite"), require=False, p_name="invite")
         login_info = await self.get_login_info(req, LoginWay.TOKEN)
         u_info = await self.update_user_login_info(req, u_info, login_info)
         (not u_info) and self.answer(StaCode.NO_PLAYER_INFO)
@@ -332,6 +336,7 @@ class LoginByToken(BaseLogin):
             u_info.update({'token': req.headers.get("Authorization")})
 
         self.log_info('LoginByToken suc:', u_info.get("uid"), issued)
+        await self.invite_user(invite_code, u_info)
         return await self.format_login_info(u_info, server_info, issued=issued)
 
 
@@ -356,6 +361,7 @@ class LoginByPhone(BaseLogin):
     """ 通过手机号登录 """
     decorators = []
     async def post(self, req: Request):
+        self.log_info('LoginByPhone Req_Body:', req.json)
         phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
         scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
@@ -398,6 +404,7 @@ class LoginByApple(BaseLogin):
 
     async def post(self, req: Request):
         # 1. 获取请求参数
+        self.log_info('LoginByApple Req_Body:', req.json)
         name = self.check_str(req.json.get('name'), require=False,  p_name="昵称")
         email = self.check_str(req.json.get('email'), require=False,  p_name="邮箱")
         platform = self.check_int(req.args.get('platform'), require=True, p_name="平台")
