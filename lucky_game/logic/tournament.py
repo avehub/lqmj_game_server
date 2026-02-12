@@ -137,16 +137,15 @@ class TournamentLogic:
     @staticmethod
     async def send_ranking_reward_by_one(cycle_id: int, uid: int, award_id: int, ranked: int):
         """ 发送玩家奖励至邮件 """
-        # reward_content, _ = await AwardRC.get_award_info(award_id)
-        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        reward, _ = await AwardRC.get_award_info(award_id, is_content=False)
         NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, award_id: {award_id}")
         mail_type = 2
-        sender = "1"
-        title = "【赛事奖励】" + cycle_info["reward_name"]
+        sender = "金州杯赛事组委会"
+        title = "【金州杯热身赛】恭喜您获得排行奖励"
         if uid > R_UID_THRESHOLD:
-                content = f"尊敬的选手：{cycle_info['reward_name']}已结束，您在本次赛事中斩获第 {ranked}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
-                attachment = '{"award_ids": ' + f"{award_id}" + '}'
-                await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+            content = f"尊敬的选手您好！恭喜您在贵州首届“金州杯”闷胡血流大奖赛线上热身赛中，斩获第{ranked}名的优异成绩，成功获得{reward['name']}奖励！感谢您的积极参与与精彩博弈！\n【兑换指引】所有奖品已为您发放至游戏【背包】，请您在背包内点击对应奖品，填写完整真实信息完成兑换哦~\n【温馨提醒】若未找到背包内奖品，可联系游戏客服核查"
+            attachment = '{"award_ids": ' + f"{award_id}" + '}'
+            await MailsRC.create_mail(mail_type, sender, str(uid), title, content, attachment)
         return True
 
 
