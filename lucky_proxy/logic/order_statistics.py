@@ -14,18 +14,28 @@ class ProxyOrderStatistics(LogMeta):
                                         , level1_proxy_id: int | None = None
                                         , order_month: str | None = None
                                         , order_day: str | None = None
+                                        , player_id: int | None = None
+                                        , start_day: str | None = None
+                                        , end_day: str | None = None
                                         , last_id: int | None = None
                                         , page_size=20):
-        sql = f"select  t.id ,t.order_amount,t.order_month" \
-              f",t.proxy_income,t.order_type,t.created  " \
+        sql = f"select  t.id, t.player_id, u.name, u.avatar, t.order_amount, t.order_month" \
+              f", CASE WHEN t.channel_proxy_id = {proxy_id} THEN t.channel_proxy_income ELSE t.proxy_income END as proxy_income" \
+              f", t.order_type, t.created  " \
               f" from proxy_order_dividend_records t  " \
-              f" where t.proxy_id={proxy_id} " \
-              f" and t.order_month='{order_month}'"
+              f" left join user u on u.uid = t.player_id " \
+              f" where (t.proxy_id={proxy_id} OR t.channel_proxy_id={proxy_id}) " \
+              f" and (CASE WHEN t.channel_proxy_id = {proxy_id} THEN t.channel_proxy_income ELSE t.proxy_income END) > 0 "
+        if order_month:
+            sql += f" and t.order_month='{order_month}'"
         if level1_proxy_id:
             sql = sql + f" and level1_proxy_id={level1_proxy_id} "
-
-        if order_day:
-            sql = sql + f" and  t.order_day='{order_day}'"
+        if player_id:
+            sql = sql + f" and t.player_id={player_id}"
+        if start_day and end_day:
+            sql = sql + f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
+        elif order_day:
+            sql = sql + f" and t.order_day='{order_day}'"
 
         if last_id and last_id > 0:
             sql = sql + f" and  t.id <{last_id}"
@@ -47,12 +57,12 @@ class ProxyOrderStatistics(LogMeta):
     @classmethod
     async def proxy_level2_income_query(cls, proxy_id: int, month: str, today: str):
         sql = f"""
-                 select  ifnull(sum(t.level1_proxy_income),0.00)  income
-                   , ifnull(sum(case when t.order_day='{today}'  then t.level1_proxy_income else 0 end),0.00) today_income
+                 select  ifnull(sum(case when t.order_month='{month}' then t.level1_proxy_income else 0 end),0.00) income
+                    , ifnull(sum(case when t.order_day='{today}'  then t.level1_proxy_income else 0 end),0.00) today_income
                     , ifnull(sum(case when t.order_type=1  then t.level1_proxy_income else 0 end),0.00) room_income
                     , ifnull(sum(case when t.order_type=2  then t.level1_proxy_income else 0 end),0.00) assistance_program_income
                    from proxy_order_dividend_records t 
-                 where  t.level1_proxy_id={proxy_id}  and  t.order_month='{month}' and t.level=2
+                 where  t.level1_proxy_id={proxy_id}   and t.level=2
               """
         return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
     @classmethod
@@ -64,5 +74,16 @@ class ProxyOrderStatistics(LogMeta):
               , ifnull(sum(case when t.order_type=2  then t.proxy_income else 0 end),0.00) assistance_program_income
              from proxy_order_dividend_records t 
            where  t.proxy_id={proxy_id}  and  t.order_month='{month}' 
+        """
+        return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
+
+    @classmethod
+    async def proxy_channel_income_query(cls, proxy_id: int, month: str, today: str):
+        sql = f"""
+           select  ifnull(sum(case when t.order_month='{month}' then t.channel_proxy_income else 0 end),0.00) income
+             , ifnull(sum(case when t.order_day='{today}'  then t.channel_proxy_income else 0 end),0.00) today_income
+             , ifnull(sum(case when t.order_type=1  then t.channel_proxy_income else 0 end),0.00) room_income
+             from proxy_order_dividend_records t 
+           where  t.channel_proxy_id={proxy_id} 
         """
         return await ProxyOrderDividendRecords.exec_query(sql, for_one=True)
