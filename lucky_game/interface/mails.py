@@ -25,7 +25,7 @@ class MailsListHandler(GameAuthApi):
         user = kwargs.get("u_info")
         uid = user.get("uid")
         sta, mail_list = await MailsRC.get_mails_list(uid=uid, mail_sta=[MailSta.UNREAD, MailSta.READ])
-        if sta:
+        if sta and mail_list:
             mail_list = await MailsRC.get_mail_awards(mail_list)
         return self.answer(data=mail_list)
 
