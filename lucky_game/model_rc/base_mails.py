@@ -138,6 +138,7 @@ class MailsRC(BaseCommonRC):
         """创建邮件"""
         try:
             receiver_list = json_parse(receiver)
+            print("receiver", receiver, receiver_list)
             attachment_data = json_parse(attachment)
             now = int(datetime.now().timestamp())
             if isinstance(receiver_list, list):

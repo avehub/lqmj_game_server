@@ -310,13 +310,15 @@ class UserExchangeFutureValuea(GameAuthApi):
         if uid:
             u_info = await BaseUserRC.cache_by_pk(uid)
         # 查询用户
+        uid = str(u_info.get("uid"))
         future_value = u_info.get("future_value")
         num = 0
-        if future_value > 0 and future_value <= 10:
-            num = 1
-        elif future_value > 10:
-            future_num = future_value / 10
-            num = self.custom_round(future_num)
+        if future_value > 0:
+            if future_value <= 10:
+                num = 1
+            elif future_value > 10:
+                future_num = future_value / 10
+                num = self.custom_round(future_num)
         if num:
             # 清理福袋
             await BaseUserRC.update_info(u_info, {"future_value": 0})
@@ -333,9 +335,9 @@ class UserExchangeFutureValuea(GameAuthApi):
             # 更新背包
             express = [{
                 "good_id": 111,
-                "count": num,
+                "count": int(num),
                 "end_time": 0,
             }]
-            await UserBagRC.update_user_bag(uid, express)
+            await UserBagRC.update_user_bag(int(uid), express)
         return self.answer()
 
