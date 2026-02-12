@@ -137,9 +137,9 @@ class TournamentLogic:
     @staticmethod
     async def send_ranking_reward_by_one(cycle_id: int, uid: int, award_id: int, ranked: int):
         """ 发送玩家奖励至邮件 """
-        reward_content, _ = await AwardRC.get_award_info(award_id)
+        # reward_content, _ = await AwardRC.get_award_info(award_id)
         sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
-        NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, reward_content: {reward_content}")
+        NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, award_id: {award_id}")
         mail_type = 2
         sender = "1"
         title = "【赛事奖励】" + cycle_info["reward_name"]
