@@ -2,6 +2,7 @@
 import decimal
 import random
 
+from lucky_game.model_rc.base_award import AwardRC
 from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -132,6 +133,20 @@ class TournamentLogic:
             if uid in conf_data["special_uid"]:
                 status = True
         return status
+    
+    async def send_ranking_reward(self, cycle_id: int, uid: int, award_id: int, ranked: int):
+        """ 发送玩家奖励至邮件 """
+        reward_content, _ = await AwardRC.get_award_info(award_id)
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, reward_content: {reward_content}")
+        mail_type = 2
+        sender = "1"
+        title = "【赛事奖励】" + cycle_info["reward_name"]
+        if uid > R_UID_THRESHOLD:
+                content = f"尊敬的选手：{cycle_info['reward_name']}已结束，您在本次赛事中斩获第 {ranked}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
+                attachment = '{"award_ids": ' + f"{award_id}" + '}'
+                await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+        return True
 
 
 
