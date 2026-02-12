@@ -386,7 +386,7 @@ class CompetitionServer(BaseServer):
                 room.add_match_round()
                 room.player_all_finish = False
                 conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(room.competition_id)
-                await delay_func(10, self.__competition_before_start, conf_data, room, "")
+                await delay_func(12, self.__competition_before_start, conf_data, room, "")
         else:
             if not room.player_all_finish:
                 player_all_finish = True
