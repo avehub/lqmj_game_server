@@ -14,12 +14,14 @@ from lucky_game.logic.tournament import TournamentLogic
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.handler.stats_expert import StatsExpert
 from lucky_game.model_rc.base_records_game import BaseRecordsGameRC
+from lucky_game.model_rc.base_user import BaseUserRC
 from lucky_game.model_rc.conf_competition import ConfCompetitionRC
 from lucky_game.model_rc.logout_user import LogoutUserRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.script.timed_task import BaseTimed
 from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
+from lucky_proxy.logic.proxy_user import ProxyUserLogic
 from nsanic.libs.mult_log import NLogger
 
 
@@ -130,6 +132,8 @@ class TimedService:
         self.__scheduler.add_date_job(self.check_certification_useful_time, run_date=now_time + timedelta(hours=9))
         # 赛季状态检查更新
         self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(hours=0))
+        # 代理商状态检查
+        self.__scheduler.add_date_job(self.check_proxy_vip, run_date=now_time + timedelta(hours=0))
         # 更新赛季状态到比赛配置
         self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
@@ -269,6 +273,16 @@ class TimedService:
                    f"房间总数：{order_count_data}\n" \
                    f"多个玩法房间数：{group_dict}"
         ding_server.send_text_message(content)
+
+    async def check_proxy_vip(self):
+        # 检查代理vip是否过期
+        today = int(datetime.now().replace(hour=0, minute=0, second=0).timestamp())
+        data = await ProxyUserLogic.get_proxy_user_filter(status=1, vip_end_time=today)
+        if data:
+            u_ids = [d["id"] for d in data]
+            await BaseUserRC.many_update_user(u_ids, discount=1)
+            await ProxyUserLogic.update_many_proxy_user(u_ids, {"status": 0})
+
 
     @classmethod
     async def clean_logout_user(cls):

@@ -14,6 +14,7 @@ from common.public.common_class import CommonApi
 from lucky_game.handler.vivo_pay import vivo_payment
 from lucky_game.logic.activity import FirstCharge
 from lucky_game.logic.tournament import TournamentLogic
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.model_rc.base_user import BaseUserRC
@@ -111,7 +112,10 @@ class PaymentLogic:
                 if express.get("type") == StoreType.SKIN and discount < 1:
                     if platform in [PlatForm.WEBPAGE, PlatForm.WECHAT_MP] or (platform == PlatForm.NATIVE_APP and os == OperatingSystem.Android):
                         # 安卓、H5购买房卡才享受折扣
-                        price *= decimal.Decimal(discount)
+                        original = express.get("original")
+                        if isinstance(original, (int, float, str)):
+                            original = decimal.Decimal(original)
+                        price = decimal.Decimal(discount) * original
         else:
             field_name = "免费领取"
             field = "gold"
@@ -520,19 +524,6 @@ class PaymentLogic:
                 await OrderRC.up_order(up_data, order_no)
                 # 如果订单为活动订单需要更新活动进度
                 if order_status == OrderStatus.PAID:
-
-                    # 临时处理 dev分支已经封装方法等合并后优化
-                    room_card_ids = [17, 18, 19, 20, 21, 22, 23, 24, 62, 63, 64, 65, 66, 67, 68, 69, 71, 72]
-                    fink_ids = [59]
-                    order_type = 0
-                    # 房卡分成
-                    if order_info["good_id"] in room_card_ids:
-                        order_type = 1
-                    elif order_info["good_id"] in fink_ids:
-                        order_type = 2
-                    if order_type:
-                        order_info["order_type"] = order_type
-                        await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order_info["uid"], msg=order_info)
                     await self.pay_success(order_info)
                 else:
                     await self.pay_fail(order_info)
@@ -572,10 +563,22 @@ class PaymentLogic:
 
     async def pay_success(self, order: dict) -> bool:
         """订单支付成功"""
+
         express = await GoodRC.get_good_info(order["sku"])
         # 商品类型判断-方便后续操作
         # 商品为活动订单：10金币补足 11复仇礼包 12返还礼包
         good_type = express.get("type")
+        # 房卡分成
+        order_type = 0
+        if good_type == 4:
+            order_type = 1
+        elif good_type == 15:
+            order_type = 2
+        if order_type:
+            order["order_type"] = order_type
+            order["express_content"] = express.get("content")
+            await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order["uid"], msg=order)
+
         if good_type in [10, 11, 12]:
             await FirstCharge().charge_order(order)
         # 商品为赛事订单：15 农产品

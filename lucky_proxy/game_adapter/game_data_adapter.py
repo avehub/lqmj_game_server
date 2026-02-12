@@ -7,7 +7,8 @@ from common.public.enum_const import DbKey
 from common.utils.utils import UtilsTool
 from lucky_proxy.config import ConfSrv, conf_srv
 from lucky_proxy.const import ProxyLevel, ProxyVipLevel
-from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
+from lucky_proxy.logic.game_data_sync import GameDataSync, PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO, \
+    UpgradeProxyDTO
 from lucky_proxy.model_db.main import ProxyPromotionCode, ProxyPromotionRelation, ProxyUser
 
 """
@@ -24,10 +25,24 @@ class GameDataAdapter(LogMeta):
 
     @classmethod
     async def add_level1_proxy(cls, data: Level1ProxyDTO):
-        proxy_user: ProxyUser = await  ProxyUser.get_by_pk(data.player_id, field=["id"])
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(data.player_id, field=["id"])
         if proxy_user:
             return False, "EXISTS"
         return await GameDataSync.init_level1_proxy(data)
+
+    @classmethod
+    async def upgrade_level1_proxy(cls, data: UpgradeProxyDTO):
+        
+        proxy_user: ProxyUser = await ProxyUser.get_by_pk(data.player_id,
+                                                          field=["id", "proxy_level", "is_deleted", "status"])
+        if not proxy_user:
+            return False, "PROXY_NOT_EXISTS"
+        if proxy_user.get("proxy_level") != ProxyLevel.LEVEL_2:
+            return False, "PROXY_LEVEL_ERROR"
+        if proxy_user.get("is_deleted") == 1 or proxy_user.get("status") == 0:
+            return False, "PROXY_DELETED_OR_BANNED"
+
+        return await GameDataSync.upgrade_level1_proxy(data)
 
     """
      同步分销订单数据
@@ -42,7 +57,7 @@ class GameDataAdapter(LogMeta):
         relation: ProxyPromotionRelation = await ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
         if not relation:
             cls.log_info(f"【重要日志】【关系不存在】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}")
-            return 0
+            return 1
         proxy_id = relation.get("proxy_id")
         query_user = {
             "id": proxy_id,
@@ -53,19 +68,20 @@ class GameDataAdapter(LogMeta):
                                                              "assistance_program_rate", "vip_level",
                                                              "vip_expire_time", "proxy_level"],
                                                             limit=1)
+
         if not proxy_user:
             cls.log_info(
                 f"【重要日志】忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id},reason={proxy_id} 已被清退或者不存在")
-            return 0
-
+            return 1
+        level1_proxy_id = proxy_user.get("level1_proxy_id")
         level1_proxy_user = proxy_user
-        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
+        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2 or (level1_proxy_id and level1_proxy_id > 0):
             level1_proxy_user = await ProxyUser.get_by_pk(proxy_user.get("level1_proxy_id"),
                                                           ["vip_level", "vip_expire_time"])
         if not level1_proxy_user:
             cls.log_info(
                 f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略订单同步，订单={data}")
-            return 0
+            return 1
 
         vip_expire_time = level1_proxy_user.get("vip_expire_time")
         # 非永久会员 会员过期
@@ -74,7 +90,7 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【重要日志】会员已过期，忽略游戏同步代理订单数据uid={data.player_id},order_id={data.order_id}"
                 f",order_time={data.order_time},vip_expire_time={vip_expire_time},reason={proxy_id} 会员已过期或所属的一级代理会员已过期")
-            return 0
+            return 1
         await GameDataSync.save_dividend_records(data, relation, proxy_user)
         return 1
 
@@ -119,12 +135,16 @@ class GameDataAdapter(LogMeta):
         query_relation = {
             "player_id": data.player_id,
         }
-        exists_relation: ProxyPromotionRelation = await  ProxyPromotionRelation.get_by_dict(query_relation, limit=1)
+        exists_relation: ProxyPromotionRelation = await  ProxyPromotionRelation.get_by_dict(query_relation,
+                                                                                            field=["id"], limit=1)
         if exists_relation:
             cls.log_info(f"游戏同步邀请关系已被绑定uid={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
             return 0
         data_date = datetime.fromtimestamp(data.promotion_time)
+        level1_proxy_id = 0
+        if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
+            level1_proxy_id = proxy_user.get("level1_proxy_id")
         relation = {
             "player_id": data.player_id,
             "promotion_time": data.promotion_time,
@@ -133,8 +153,9 @@ class GameDataAdapter(LogMeta):
             "promotion_day": data_date.strftime("%Y-%m-%d"),
             "promotion_type": data.promotion_type,
             "proxy_id": proxy_user.get("id"),
-            "level1_proxy_id": proxy_user.get("level1_proxy_id"),
+            "level1_proxy_id": level1_proxy_id,
             "level": proxy_user.get("proxy_level"),
+            "upgrade_flag": 0,
 
         }
         try:

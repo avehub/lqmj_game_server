@@ -1,0 +1,5 @@
+ALTER TABLE proxy_promotion_relation ADD COLUMN `channel_proxy_id` bigint DEFAULT NULL COMMENT '代理（服务商id）',
+ALTER TABLE proxy_user ADD COLUMN `is_channel` int DEFAULT '0' COMMENT '1、是 0否',
+ALTER TABLE proxy_user ADD COLUMN `channel_proxy_id` bigint DEFAULT NULL COMMENT 'channel代理id',
+ALTER TABLE proxy_order_dividend_records ADD COLUMN `channel_proxy_income` decimal(10,2) DEFAULT '0.00' COMMENT '渠道代理分红金额',
+ALTER TABLE proxy_order_dividend_records ADD COLUMN `channel_proxy_id` bigint DEFAULT NULL COMMENT '渠道代理id', 

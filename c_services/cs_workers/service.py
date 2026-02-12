@@ -9,35 +9,25 @@ from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, Cm
 from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
+from common.public.common_class import CommonApi
 from common.public.conf import ROBOT_RANK
 from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
-from common.utils.kit_async import DelayCall
-from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
-from lucky_game.interface.user import UserInvite
 from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
 from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
-# from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.base_mails import MailsRC
-# from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-# from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
 from lucky_game.model_rc.distribution_settle_conf import DistributionSettleConfRC
-from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
+from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
-# from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
 from lucky_game.model_db.main import Mails, Orders
-from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
-    CompleteSta, EventTracking, OrderStatus, GoodsSku
+from lucky_game.const import ActivityItem, TaskType, AwardType,  ActivityType, EventTracking, OrderStatus, GoodsSku
 from lucky_game.logic.activity import act_count, Base, Package, FirstCharge, InfinitePlay
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
@@ -50,7 +40,7 @@ from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
-from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO
+from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
 
 
 class WorkersServer(JsonBaseServer):
@@ -81,7 +71,8 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
             CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
-            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop
+            CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
+            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -733,9 +724,9 @@ class WorkersServer(JsonBaseServer):
 
     async def __proxy_order_sync(self, uid, order_info):
         # 调用分销模块接口
-        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(order_info["num"], order_info["order_type"])
+        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"])
         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
-                                              order_type=order_info["order_type"], goods_number=order_info["num"],
+                                              order_type=order_info["order_type"], goods_number=int(order_info["express_content"]["amount"]) * int(order_info["num"]),
                                               price=float(float(order_info["amount"]) / order_info["num"]),
                                               order_amount=order_info["amount"], dividend_rate=dividend_rate,
                                               order_time=order_info["created"])
@@ -743,3 +734,29 @@ class WorkersServer(JsonBaseServer):
         self.log_info(f"订单分销结果：{sta}")
         if not sta:
             self.log_err(f"用户{uid}分销失败")
+
+    async def __proxy_user_set(self, uid, order):
+        # 修改用户折扣并设置分销用户信息
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
+        u_info = await BaseUserRC.cache_by_pk(order["uid"])
+        if u_info:
+            if conf and conf.get("discount"):
+                await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
+            vip_level = 1
+            vip_expire_time = tool_dt.cur_time()
+            if order["sku"] == "NHEYRPIA":
+                # 月费会员
+                vip_expire_time += 30 * 86400
+            elif order["sku"] == "NHEYRPIB":
+                # 季度会员
+                vip_expire_time += 90 * 86400
+            elif order["sku"] == "NHEYRPIC":
+                # 年度会员
+                vip_expire_time += 365 * 86400
+            add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=u_info["phone"] if u_info["phone"] else 13888888888,
+                                      vip_level=vip_level, vip_expire_time=vip_expire_time)
+            sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
+            self.log_info(f"订单分销结果：{sta} {msg}")
+
+
+

@@ -90,3 +90,10 @@ class ProxyVipLevel(BaseEnum):
     LEVEL_2 = 2, "季卡"
     LEVEL_3 = 3, "年卡"
     LEVEL_999 = 999, "永久"
+
+
+class ChargeOrderType(BaseEnum):
+    """ 充值订单类型 """
+    TYPE_1 = 1, "房卡"
+    TYPE_2 = 2, "助农"
+
