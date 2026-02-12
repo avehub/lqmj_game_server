@@ -133,7 +133,7 @@ class TournamentLogic:
             if uid in conf_data["special_uid"]:
                 status = True
         return status
-    
+
     @staticmethod
     async def send_ranking_reward_by_one(cycle_id: int, uid: int, award_id: int, ranked: int):
         """ 发送玩家奖励至邮件 """
