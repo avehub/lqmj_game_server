@@ -87,8 +87,10 @@ class CompetitionServer(BaseServer):
             if self.__current_cycle_type != 1:
                 reward_id = 5
             sta, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
+            print("reward_info",reward_info)
             if sta:
                 self.__reward_info = self.build_rank_to_reward(reward_info)
+                print(self.__reward_info)
             if cycle_info and cycle_info["reward_id"] != 2:
                 start_time_tamp,end_time_tamp = self.get_competition_time(cycle_info)
                 await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
@@ -386,7 +388,7 @@ class CompetitionServer(BaseServer):
                 room.add_match_round()
                 room.player_all_finish = False
                 conf_data = await ConfCompetitionRC.cache_conf_data_by_pk(room.competition_id)
-                await delay_func(10, self.__competition_before_start, conf_data, room, "")
+                await delay_func(12, self.__competition_before_start, conf_data, room, "")
         else:
             if not room.player_all_finish:
                 player_all_finish = True
@@ -448,10 +450,13 @@ class CompetitionServer(BaseServer):
             if self.__reward_info and uid > R_UID_THRESHOLD:  # 热身赛
                 info = self.__reward_info.get(rank, None)
                 amount = 0
+                award_type = ""
+                award_id = 0
                 if info:
                     amount = info["amount"]
-                sta, result = await self.send_competition_awards(uid, amount)
-                self.log_info(f"更新福袋奖励：{sta} 玩家{uid} 福袋奖励{amount} 排名{rank}")
+                    award_type = info["type"]
+                    award_id = info["award_id"]
+                await self.send_competition_awards(uid, amount,award_type,award_id,rank)
         data = {
             "competition_result": competition_result,
         }
@@ -683,12 +688,17 @@ class CompetitionServer(BaseServer):
         """ 发送任务到worker消费 """
         await self.push_task2worker(cmd, data, uid)
 
-    async def send_competition_awards(self, uid, count):
+    async def send_competition_awards(self, uid, count,award_type,award_id,ranked):
         """ 发放比赛奖励 """
+        if award_type == "phone_charge":
+            await TournamentLogic.send_ranking_reward_by_one(self.__current_cycle_id,uid,award_id,ranked)
+            return
         reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
         if self.__current_cycle_type != 1:
             reason = ReasonCostGold.COMPETITION_AWARDS
-        return await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=reason)
+        sta, result = await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=reason)
+        self.log_info(f"更新福袋奖励：{sta} 玩家{uid} 福袋奖励{count} 排名{ranked}")
+        return
 
     @staticmethod
     def build_rank_to_reward(reward_info):
@@ -700,10 +710,14 @@ class CompetitionServer(BaseServer):
 
             title = reward_item["title"]
             amount = reward_item["amount"]
+            award_type = reward_item["type"]
+            award_id = item["award_content"][0]["award_id"]
 
             for rank in range(start, end + 1):
                 rank_reward_map[rank] = {
                     "title": title,
-                    "amount": amount
+                    "amount": amount,
+                    "type": award_type,
+                    "award_id": award_id
                 }
         return rank_reward_map
