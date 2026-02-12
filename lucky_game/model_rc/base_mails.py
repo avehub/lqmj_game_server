@@ -102,7 +102,11 @@ class MailsRC(BaseCommonRC):
     async def get_mail_awards(cls, mail_list: list):
         """获取邮件奖励"""
         # 邮件奖励
-        attachments = [i.get('attachment').get("award_ids") for i in mail_list]
+        attachments = []
+        for i in mail_list:
+            attachment = i.get('attachment')
+            if attachment:
+                attachments.append(attachment.get("award_ids"))
         if attachments:
             award_ids = []
             for i in attachments:
