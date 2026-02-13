@@ -318,8 +318,6 @@ class UserExchangeFutureValuea(GameAuthApi):
             future_num = future_value / 10
             num = self.custom_round(future_num)
         if num:
-            # 清理福袋
-            await BaseUserRC.update_info(u_info, {"future_value": 0})
             # 发送邮件
             sender = "1"
             mail_type = 1
@@ -337,5 +335,7 @@ class UserExchangeFutureValuea(GameAuthApi):
                 "end_time": 0,
             }]
             await UserBagRC.update_user_bag(uid, express)
+            # 清理福袋
+            await BaseUserRC.update_info(u_info, {"future_value": 0})
         return self.answer()
 
