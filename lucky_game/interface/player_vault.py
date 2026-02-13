@@ -80,9 +80,8 @@ class UserInformationGather(GameAuthApi):
         address = self.check_str(req.json.get("address"), require=check_sta, p_name="详细地址")
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        good_info = await GoodRC.get_good_by_id(good_id)
-        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("type"),
-                                                          platform, region, address, num=good_num)
+        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("type"), platform,
+                                                         region, address, num=good_num, select_good_id=select_good_id)
 
         if not sta:
             return self.answer(self.sta_code.FAIL, hint="添加兑换信息失败")
