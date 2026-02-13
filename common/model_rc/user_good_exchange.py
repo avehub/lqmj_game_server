@@ -19,12 +19,12 @@ class UserGoodExchangeRC(BaseCommonRC):
 
     @classmethod
     async def add_exchange(cls, uid: int, phone: str, real_name: str, good_id: int, good_type: int, platform: int, region: str,
-                           address: str, num: int = 1, check_status: int = 0, status: int = 0):
+                           address: str, num: int = 1, check_status: int = 0, status: int = 0, select_good_id: int = 0):
         """新增兑换信息"""
         try:
             data = {
                 "uid": uid,
-                "good_id": good_id,
+                "good_id": select_good_id if select_good_id else good_id,
                 "good_type": good_type,
                 "platform": platform,
                 "phone": phone,
