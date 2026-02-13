@@ -696,8 +696,8 @@ class CompetitionServer(BaseServer):
         reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
         if self.__current_cycle_type != 1:
             reason = ReasonCostGold.COMPETITION_AWARDS
-        sta, result = await ExtraUserResourceChangesRC.change_user_resource(uid, "future_value", count, "add", reason=reason)
-        self.log_info(f"更新福袋奖励：{sta} 玩家{uid} 福袋奖励{count} 排名{ranked}")
+        sta, result = await ExtraUserResourceChangesRC.change_user_resource(uid, award_type, count, "add", reason=reason)
+        self.log_info(f"更新福袋奖励：{sta} 玩家{uid} 福袋奖励{count} 排名{ranked} 奖励类型{award_type}")
         return
 
     @staticmethod
