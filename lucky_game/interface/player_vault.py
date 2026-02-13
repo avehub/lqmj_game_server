@@ -28,6 +28,8 @@ class BagList(GameAuthApi):
             now = tool_dt.cur_time()
             for i in data:
                 good_id = i.get("good_id")
+                if good_id not in good_dict:
+                    continue
                 i.update({
                     "good_type": good_dict[good_id]["type"],
                     "sku": good_dict[good_id]["sku"],
