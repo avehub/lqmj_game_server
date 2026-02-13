@@ -164,12 +164,16 @@ class Base:
                 award_amount = award.get("amount")
                 # if award_type in field_values:
                 NLogger.info(f"发放奖励：uid={uid}，award_type={award_type}，award_amount={award_amount}")
+                good_id = award.get("good_id", 0)
+                remark = {"type": award_type, "amount": award_amount}
+                if good_id:
+                    remark["good_id"] = good_id
                 sta, e = await AwardGainsRC.add_gains(
                     uid,
                     act_id,
                     award_id if award_id else award.get("award_id"),
                     reward_type,
-                    remark={"type": award_type, "amount": award_amount}
+                    remark=remark
                 )
                 NLogger.info(f"发放奖励入库结果：sta={sta}，e={e}")
         else:
@@ -235,8 +239,8 @@ class Base:
                                     "count": reward_amount,
                                     "end_time": 0,
                                 }]
-                                sta, e = await UserBagRC.update_user_bag(uid, express)
-                                NLogger.info(f"领取门票奖励：sta={sta}, e={e}")
+                                sta = await UserBagRC.update_user_bag(uid, express)
+                                NLogger.info(f"领取门票奖励：sta={sta}")
         return sta, "OK"
 
     async def act_progress(self, ac: dict, u_info: dict):

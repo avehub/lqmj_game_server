@@ -318,7 +318,7 @@ class UserExchangeFutureValuea(GameAuthApi):
                 num = 1
             elif future_value > 10:
                 future_num = future_value / 10
-                num = self.custom_round(future_num)
+                num = await self.custom_round(future_num)
         if num:
             # 发送邮件
             sender = "1"
@@ -333,7 +333,7 @@ class UserExchangeFutureValuea(GameAuthApi):
             # 更新背包
             express = [{
                 "good_id": 111,
-                "count": int(num),
+                "count": num if isinstance(num, int) else int(num),
                 "end_time": 0,
             }]
             await UserBagRC.update_user_bag(int(uid), express)

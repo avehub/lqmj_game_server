@@ -64,7 +64,10 @@ class UserInformationGather(GameAuthApi):
     async def post(self, req: Request, **kwargs):
         phone = self.check_phone_number(req.json.get("phone"), require=True)
         good_id = self.check_int(req.json.get("good_id"), require=True, p_name="兑换ID")
+        select_good_id = self.check_int(req.json.get("select_good_id"), require=False, p_name="选择的兑换商品ID")
         good_info = await GoodRC.get_good_by_id(good_id)
+        if select_good_id:
+            good_info = await GoodRC.get_good_by_id(select_good_id)
         if not good_info:
             return self.answer(self.sta_code.GOODS_NOT_FOUND, hint="兑换商品已下架")
         check_sta = True
@@ -102,6 +105,8 @@ class UserExchangeList(GameAuthApi):
             good_dict = {i.get("good_id"): i for i in good_data}
             for i in data["list"]:
                 good_id = i.get("good_id")
+                if good_id not in good_dict:
+                    continue
                 i.update({
                     "sku": good_dict[good_id]["sku"],
                     "kind": good_dict[good_id]["kind"],
