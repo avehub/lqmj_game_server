@@ -310,13 +310,15 @@ class UserExchangeFutureValuea(GameAuthApi):
         if uid:
             u_info = await BaseUserRC.cache_by_pk(uid)
         # 查询用户
+        uid = u_info.get("uid")
         future_value = u_info.get("future_value")
         num = 0
-        if future_value > 0 and future_value <= 10:
-            num = 1
-        elif future_value > 10:
-            future_num = future_value / 10
-            num = self.custom_round(future_num)
+        if future_value > 0:
+            if future_value <= 10:
+                num = 1
+            elif future_value > 10:
+                future_num = future_value / 10
+                num = self.custom_round(future_num)
         if num:
             # 发送邮件
             sender = "1"
@@ -327,15 +329,16 @@ class UserExchangeFutureValuea(GameAuthApi):
 所有奖品已为您发放至游戏【背包】，请您在背包内点击对应奖品，填写完整真实信息完成兑换哦~
 【温馨提醒】
  若未找到背包内奖品或有疑问，可联系游戏客服核查。"""
-            await MailsRC.create_mail(mail_type, sender, uid, title, content, "") 
+            await MailsRC.create_mail(mail_type, sender, str(uid), title, content, "") 
             # 更新背包
             express = [{
                 "good_id": 111,
-                "count": num,
+                "count": int(num),
                 "end_time": 0,
             }]
-            await UserBagRC.update_user_bag(uid, express)
+            await UserBagRC.update_user_bag(int(uid), express)
             # 清理福袋
             await BaseUserRC.update_info(u_info, {"future_value": 0})
+            
         return self.answer()
 
