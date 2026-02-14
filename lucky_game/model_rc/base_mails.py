@@ -102,7 +102,11 @@ class MailsRC(BaseCommonRC):
     async def get_mail_awards(cls, mail_list: list):
         """获取邮件奖励"""
         # 邮件奖励
-        attachments = [i.get('attachment').get("award_ids") for i in mail_list]
+        attachments = []
+        for i in mail_list:
+            attachment = i.get('attachment')
+            if attachment:
+                attachments.append(attachment.get("award_ids"))
         if attachments:
             award_ids = []
             for i in attachments:
@@ -113,10 +117,11 @@ class MailsRC(BaseCommonRC):
                 for i in mail_list:
                     i_award_ids = i.get('attachment').get("award_ids")
                     i['attachment']['awards'] = []
-                    for i_award_id in i_award_ids:
-                        i_award = award_dict.get(i_award_id)
-                        if i_award:
-                            i['attachment']['awards'].extend(i_award.get("content")["rewards"])
+                    if i_award_ids:
+                        for i_award_id in i_award_ids:
+                            i_award = award_dict.get(i_award_id)
+                            if i_award:
+                                i['attachment']['awards'].extend(i_award.get("content")["rewards"])
         # 邮件商品
         good_ids = [i.get('attachment').get("good_ids") for i in mail_list]
         if good_ids:
@@ -138,6 +143,7 @@ class MailsRC(BaseCommonRC):
         """创建邮件"""
         try:
             receiver_list = json_parse(receiver)
+            print("receiver", receiver, receiver_list)
             attachment_data = json_parse(attachment)
             now = int(datetime.now().timestamp())
             if isinstance(receiver_list, list):

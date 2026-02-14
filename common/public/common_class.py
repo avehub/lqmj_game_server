@@ -397,3 +397,11 @@ class CommonApi(LogMeta):
         q3 = get_percentile(0.75)
 
         return q1, q2, q3
+    
+    @classmethod
+    async def custom_round(cls, num):
+        """ 四舍五入 """
+        if num - int(num) >= 0.5:
+            return int(num) + 1
+        else:
+            return int(num)
