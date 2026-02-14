@@ -85,12 +85,11 @@ class CompetitionServer(BaseServer):
             self.__current_cycle_type = cycle_info.get("cycle_type")
             reward_id = 3
             if self.__current_cycle_type != 1:
-                reward_id = 5
+                reward_id = 0
+                self.__reward_info = None
             sta, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
-            print("reward_info",reward_info)
             if sta:
                 self.__reward_info = self.build_rank_to_reward(reward_info)
-                print(self.__reward_info)
             if cycle_info and cycle_info["reward_id"] != 2:
                 start_time_tamp,end_time_tamp = self.get_competition_time(cycle_info)
                 await ConfCompetitionRC.update_competition_time(2, start_time_tamp, end_time_tamp, self.__current_cycle_id)
