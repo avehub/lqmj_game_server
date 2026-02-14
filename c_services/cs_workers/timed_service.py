@@ -265,8 +265,7 @@ class TimedService:
         ding_server.config.webhook_url = DINGTALK_STATISTICS_WEBHOOK
         ding_server.config.secret = DINGTALK_STATISTICS_SECRET
         now = tool_dt.cur_time()
-        yesterday = now - 86400
-        content = f"- 时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
+        content = f"时间：{tool_dt.dt_str(now, fmt='%Y-%m-%d')}\n" \
                    f"订单数：{order_count_data}\n" \
                    f"订单金额：{order_sum_data}\n" \
                    f"房间总数：{count_data}\n" \
