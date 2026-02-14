@@ -689,16 +689,18 @@ class CompetitionServer(BaseServer):
 
     async def send_competition_awards(self, uid, count,award_type,award_id,ranked):
         """ 发放比赛奖励 """
-        if award_type == "phone_charge":
-            await TournamentLogic.send_ranking_reward_by_one(self.__current_cycle_id,uid,award_id,ranked)
-            self.log_info(f"邮件下发比赛奖励玩家{uid} 比赛奖励{count} 排名{ranked} 奖励类型{award_type}")
-            return
-        reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
-        if self.__current_cycle_type != 1:
-            reason = ReasonCostGold.COMPETITION_AWARDS
-        sta, result = await ExtraUserResourceChangesRC.change_user_resource(uid, award_type, count, "add", reason=reason)
-        self.log_info(f"更新比赛奖励：{sta} 玩家{uid} 比赛奖励{count} 排名{ranked} 奖励类型{award_type}")
-        return
+        await TournamentLogic.send_ranking_reward_by_one(self.__current_cycle_id, uid, award_id, ranked)
+        self.log_info(f"邮件下发比赛奖励玩家{uid} 比赛奖励{count} 排名{ranked} 奖励类型{award_type}")
+        # if award_type == "phone_charge":
+        #     await TournamentLogic.send_ranking_reward_by_one(self.__current_cycle_id,uid,award_id,ranked)
+        #     self.log_info(f"邮件下发比赛奖励玩家{uid} 比赛奖励{count} 排名{ranked} 奖励类型{award_type}")
+        #     return
+        # reason = ReasonCostGold.PREHEAT_COMPETITION_AWARDS
+        # if self.__current_cycle_type != 1:
+        #     reason = ReasonCostGold.COMPETITION_AWARDS
+        # sta, result = await ExtraUserResourceChangesRC.change_user_resource(uid, award_type, count, "add", reason=reason)
+        # self.log_info(f"更新比赛奖励：{sta} 玩家{uid} 比赛奖励{count} 排名{ranked} 奖励类型{award_type}")
+        # return
 
     @staticmethod
     def build_rank_to_reward(reward_info):

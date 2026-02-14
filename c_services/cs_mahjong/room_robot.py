@@ -31,7 +31,9 @@ class RoomRobot(Room):
 
     async def exchange_three_auto(self,p):
         if not self.exchange_cards_info.get(p.seat_id):
-            exchange_cards = self.recommend_exchange_cards(p)
+            is_same_suit = self.is_same_suit()
+            exchange_cards = self.recommend_exchange_cards(p,is_same_suit)
+            self.log_info(p.uid, "推荐换牌：", exchange_cards)
             code, _ = await self.on_player_exchange_cards(p, exchange_cards)
             if StaCode.PASS != code:
                 self.log_info(p.uid, "超时换牌有误", code)
@@ -375,91 +377,55 @@ class RoomRobot(Room):
 
         return hu_cards_count
 
-
-    @staticmethod
-    def recommend_exchange_cards(player):
+    def recommend_exchange_cards(self,player, same_suit=False):
         """
         推荐换三张牌的策略
         :param player: 玩家对象
-        :return: 推荐舍弃的三张牌列表
+        :param same_suit: 若为 True，优先从同一花色中选择三张（若存在）；
+                          若不存在，则退化为普通策略。
+        :return: 推荐舍弃的三张牌列表（长度 <=3，通常为3）
         """
-        # 获取玩家手牌
         hand_cards = player.cards.copy()
-        if not hand_cards:
-            return []
+        if len(hand_cards) < 3:
+            return hand_cards[:]  # 全换
 
         # 按花色分组
         suit_cards = {}
         for card in hand_cards:
-            # 计算花色（假设牌的表示为两位数，十位为花色，个位为牌值）
             suit = card // 10
-            if suit not in suit_cards:
-                suit_cards[suit] = []
-            suit_cards[suit].append(card)
+            suit_cards.setdefault(suit, []).append(card)
 
-        # 计算每种花色的数量
-        suit_counts = []
-        for suit, cards in suit_cards.items():
-            suit_counts.append((suit, len(cards), cards))
+        # 如果要求同花色且存在 >=3 的花色
+        if same_suit:
+            candidates = [(s, cs) for s, cs in suit_cards.items() if len(cs) >= 3]
+            if candidates:
+                # 选牌数最多的花色（可调整策略）
+                _, best_cards = max(candidates, key=lambda x: len(x[1]))
+                return self.select_most_isolated(best_cards, 3)
 
-        # 按花色数量排序（升序）
-        suit_counts.sort(key=lambda x: x[1])
-
-        # 初始化推荐舍弃的牌列表
-        recommended_cards = []
-
-        # 优先从数量最少的花色中选择
-        for suit, count, cards in suit_counts:
-            # 如果已经选够三张牌，停止选择
-            if len(recommended_cards) >= 3:
+        # 普通策略：按花色数量升序处理（先处理杂花）
+        suit_list = sorted(suit_cards.items(), key=lambda x: len(x[1]))
+        recommended = []
+        for suit, cards in suit_list:
+            if len(recommended) >= 3:
                 break
+            to_select = 3 - len(recommended)
+            isolated = self.select_most_isolated(cards, to_select)
+            recommended.extend(isolated)
 
-            # 对当前花色的牌进行排序
-            sorted_cards = sorted(cards)
+        return recommended[:3]
 
-            # 计算每张牌的孤立程度（与相邻牌的距离）
-            isolation_scores = []
-            for i, card in enumerate(sorted_cards):
-                # 计算与前一张牌的距离
-                prev_distance = float('inf')
-                if i > 0:
-                    prev_distance = card - sorted_cards[i - 1]
-
-                # 计算与后一张牌的距离
-                next_distance = float('inf')
-                if i < len(sorted_cards) - 1:
-                    next_distance = sorted_cards[i + 1] - card
-
-                # 孤立程度为前后距离的最小值
-                isolation_score = min(prev_distance, next_distance)
-                isolation_scores.append((card, isolation_score))
-
-            # 按孤立程度排序（降序），优先选择孤立程度高的牌
-            isolation_scores.sort(key=lambda x: x[1], reverse=True)
-
-            # 选择当前花色中最孤立的牌
-            for card, _ in isolation_scores:
-                if len(recommended_cards) >= 3:
-                    break
-                recommended_cards.append(card)
-
-        # 如果还没选够三张牌，从剩余牌中选择
-        if len(recommended_cards) < 3:
-            remaining_cards = [card for card in hand_cards if card not in recommended_cards]
-            # 对剩余牌按孤立程度排序
-            remaining_isolation = []
-            for card in remaining_cards:
-                # 简化计算：如果牌的前后都没有相邻牌，则认为是孤立的
-                prev_card = card - 1
-                next_card = card + 1
-                is_isolated = prev_card not in remaining_cards and next_card not in remaining_cards
-                remaining_isolation.append((card, is_isolated))
-            # 优先选择孤立的牌
-            remaining_isolation.sort(key=lambda x: x[1], reverse=True)
-            for card, _ in remaining_isolation:
-                if len(recommended_cards) >= 3:
-                    break
-                recommended_cards.append(card)
-
-        # 确保返回的是三张牌
-        return recommended_cards[:3]
+    @staticmethod
+    def select_most_isolated(cards, n):
+        """从 cards 中选出 n 张最孤立的牌"""
+        if len(cards) <= n:
+            return cards[:]
+        sorted_cards = sorted(cards)
+        scores = []
+        for i, card in enumerate(sorted_cards):
+            prev_gap = card - sorted_cards[i - 1] if i > 0 else float('inf')
+            next_gap = sorted_cards[i + 1] - card if i < len(sorted_cards) - 1 else float('inf')
+            score = min(prev_gap, next_gap)
+            scores.append((card, score))
+        scores.sort(key=lambda x: x[1], reverse=True)  # 孤立度高优先
+        return [card for card, _ in scores[:n]]

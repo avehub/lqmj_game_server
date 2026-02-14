@@ -297,6 +297,9 @@ class Room(BaseCardRoom):
     def exchange_cards_info(self):
         return self.__exchange_cards_info
 
+    def is_same_suit(self):
+        return self.__exchange_cards_type == ChangeCardsType.SAME_SUIT_CARDS
+
     def serialize_room_info(self):
         room_info = self.room_info()
         if self.room_status in (RoomStatus.T_PLAYING, RoomStatus.T_DISMISS):
