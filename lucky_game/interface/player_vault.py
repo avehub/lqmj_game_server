@@ -28,6 +28,8 @@ class BagList(GameAuthApi):
             now = tool_dt.cur_time()
             for i in data:
                 good_id = i.get("good_id")
+                if good_id not in good_dict:
+                    continue
                 i.update({
                     "good_type": good_dict[good_id]["type"],
                     "sku": good_dict[good_id]["sku"],
@@ -64,7 +66,10 @@ class UserInformationGather(GameAuthApi):
     async def post(self, req: Request, **kwargs):
         phone = self.check_phone_number(req.json.get("phone"), require=True)
         good_id = self.check_int(req.json.get("good_id"), require=True, p_name="兑换ID")
+        select_good_id = self.check_int(req.json.get("select_good_id"), require=False, p_name="选择的兑换商品ID")
         good_info = await GoodRC.get_good_by_id(good_id)
+        if select_good_id:
+            good_info = await GoodRC.get_good_by_id(select_good_id)
         if not good_info:
             return self.answer(self.sta_code.GOODS_NOT_FOUND, hint="兑换商品已下架")
         check_sta = True
@@ -77,9 +82,8 @@ class UserInformationGather(GameAuthApi):
         address = self.check_str(req.json.get("address"), require=check_sta, p_name="详细地址")
         user = kwargs.get("u_info")
         uid = user.get("uid")
-        good_info = await GoodRC.get_good_by_id(good_id)
-        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("type"),
-                                                          platform, region, address, num=good_num)
+        sta, new = await UserGoodExchangeRC.add_exchange(uid, phone, real_name, good_id, good_info.get("type"), platform,
+                                                         region, address, num=good_num, select_good_id=select_good_id)
 
         if not sta:
             return self.answer(self.sta_code.FAIL, hint="添加兑换信息失败")
@@ -102,6 +106,8 @@ class UserExchangeList(GameAuthApi):
             good_dict = {i.get("good_id"): i for i in good_data}
             for i in data["list"]:
                 good_id = i.get("good_id")
+                if good_id not in good_dict:
+                    continue
                 i.update({
                     "sku": good_dict[good_id]["sku"],
                     "kind": good_dict[good_id]["kind"],
