@@ -54,7 +54,7 @@ class TournamentLogic:
             reward_sta, reward_content = await TournamentRewardRC.get_reward_list(reward)
         mail_type = 2
         sender = "金州杯赛事组委会"
-        title = cycle_info["reward_name"] + "恭喜您获得周赛奖励"
+        title = f"【{cycle_info['reward_name']}】恭喜您获得周赛奖励"
         for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
@@ -142,7 +142,7 @@ class TournamentLogic:
         NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, award_id: {award_id}")
         mail_type = 2
         sender = "金州杯赛事组委会"
-        title = cycle_info["reward_name"] + "恭喜您获得排行奖励"
+        title = f"【{cycle_info['reward_name']}】恭喜您获得排行奖励"
         if uid > R_UID_THRESHOLD:
             content = f"尊敬的选手您好！恭喜您在贵州首届“金州杯”闷胡血流大奖赛线上热身赛中，斩获第{ranked}名的优异成绩，成功获得{reward['name']}奖励！感谢您的积极参与与精彩博弈！\n【兑换指引】所有奖品已为您发放至游戏【背包】，请您在背包内点击对应奖品，填写完整真实信息完成兑换哦~\n【温馨提醒】若未找到背包内奖品，可联系游戏客服核查"
             attachment = '{"award_ids": ' + f"{[award_id]}" + '}'
