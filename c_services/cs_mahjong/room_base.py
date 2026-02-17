@@ -67,7 +67,7 @@ class Room(BaseCardRoom):
         self.__zha_jian_seats = set()  # 记录炸捡玩家，主要解决A打牌，B炸捡，C正常捡的情况
         self.__record_operates = {}  # 当玩家手牌未固定时，别人出的牌与自己手牌形成能胡 或和手牌固定后都记录
         self.__exchange_three = self.rule_detail.get("exchange_three", 0)  # 换3张
-        self.__exchange_cards_type = self.rule_detail.get("__exchange_cards_type", 0)
+        self.__exchange_cards_type = self.rule_detail.get("exchange_cards_type", 0)
         self.__four_card_bao_ting = self.rule_detail.get("four_card_bao_ting", 0)
         self.__shang_ga = int(self.rule_detail.get("shang_ga", 0))  # 估卖（额外卖）
         self.__gu_mai_score = self.rule_detail.get("gu_mai_score", 0)
