@@ -959,8 +959,8 @@ class BaseCardRoom(BaseRoom):
         self.__match_round = match_round
         if self.__match_room_id > 0:
             player.is_ready = True
-            if self.ready_player_count <= self.in_room_count:
-                self.call_flow(1, self.try_start_game)
+            if self.ready_player_count >= self.in_room_count:
+                self.call_flow(1.5, self.try_start_game)
 
     def cancel_all_timer(self):
         """ 取消所有延时 """
