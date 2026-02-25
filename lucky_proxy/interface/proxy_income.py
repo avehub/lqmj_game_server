@@ -110,6 +110,8 @@ class TeamMemberIncomeDetailQuery(ProxyAuthApi):
 class TeamMemberIncomeQuery(ProxyAuthApi):
     async def get(self, req: Request, **kwargs):
         proxy_id = kwargs.get("uid")
+        query_uid = self.check_int(req.args.get("uid"), require=False, p_name="uid")
+
         start_day = self.check_str(req.args.get("start_day"), require=False, p_name="start_day")
         end_day = self.check_str(req.args.get("end_day"), require=False, p_name="end_day")
 
@@ -121,6 +123,10 @@ class TeamMemberIncomeQuery(ProxyAuthApi):
         order_day_query = " "
         if last_id and last_id > 0: 
             sql_offset = f" and t.proxy_id<{last_id}"
+        
+        if query_uid:
+             sql_offset += f" and t.proxy_id={query_uid}"
+
         if start_day and end_day:
             order_day_query = f" and t.order_day>='{start_day}' and t.order_day<='{end_day}'"
         sql = f"""
