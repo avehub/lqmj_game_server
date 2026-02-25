@@ -4449,7 +4449,7 @@ class Room(BaseCardRoom):
                             hu_info, extra_hu_lst, get_bearer.seat_id, is_zi_mo=True)
 
                         pei_seat = bearer.seat_id
-                        self.update_score(check_type, seat_id, pei_seat, total_score, card, accounts, -1, hu_type,
+                        self.update_score(check_type, seat_id, pei_seat, -total_score, card, accounts, -1, hu_type,
                                           extra_hu_lst)
                         if self.__shang_ga:
                             pei_p = self.get_player_by_seat_id(pei_seat)
@@ -4474,6 +4474,7 @@ class Room(BaseCardRoom):
                      extra_hu_type=None):
         if check_type_ == CheckType.WIND_JI:
             score = 0
+        print("score",score)
         other_data = self.other_ming_xi_data(check_type_, seat_id, score, card, hu_type, extra_hu_type, get_bearer)
         self_data = self.self_ming_xi_data(check_type_, [pei_seat], -score, card, hu_type, extra_hu_type)
         self.update_result_score(accounts, pei_seat, 0, other_data)
