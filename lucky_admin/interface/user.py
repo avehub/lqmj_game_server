@@ -219,7 +219,7 @@ class UserResource(AdminAuthApi):
         )
         if field_value == "ticket":
             sta, msg = await ExtraUserResourceChangesRC.change_user_tournament_ticket(uid, change_val, change_field=field_value, operation=operation)
-            return self.answer(code= self.sta_code.SUCC if sta else self.sta_code.FAIL, hint=msg)
+            return self.answer(code=self.sta_code.PASS if sta else self.sta_code.FAIL, hint=msg)
         
         change_field = self.check_type(
             req.json.get("change_field"),
