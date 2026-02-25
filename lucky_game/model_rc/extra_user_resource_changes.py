@@ -3,6 +3,8 @@
 """
 import decimal
 
+from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from tortoise.exceptions import OperationalError
 
 from lucky_game.const import ReasonCostGold
@@ -203,3 +205,29 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"查询失败:{e}"
         return True, result
+    
+    @classmethod
+    async def change_user_tournament_ticket(cls, uid: int, change_value: [int, decimal.Decimal], change_field: str = "ticket", operation: str = 'add', explain: str = "", reason: int = ReasonCostGold.ADMIN_ALTER_USER):
+        """用户资源变更"""
+        if change_value <= 0:
+            return False, "无效的资源数量"
+        try:
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                if operation == "sub":
+                    ticket = 0 - ticket
+                
+                cycle_id = await TournamentCycleRC.get_current_cycle_id()
+                u_sta, e = await TournamentUserPointRC.up_user_point(cycle_id, uid, {change_field: ticket})
+                if not u_sta:
+                    return False, "资源变更失败"
+                currency = 7
+                if not explain and reason is not None:
+                    reason_enum = ReasonCostGold.find_member_by_val(reason)
+                    explain = reason_enum.phrase
+                c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)
+                if not c_sta:
+                    return False, "资源变更生成失败"
+            cls.conf.log.info(f"资源变更：uid {uid} change_field {change_field} operation {operation} change_value {change_value}")
+        except OperationalError as e:
+            return False, f"操作失败: {str(e)}"
+        return True, "成功"
