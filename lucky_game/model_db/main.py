@@ -323,7 +323,7 @@ class ExtraUserResourceChanges(DBModel):
     status = fields.SmallIntField(max_length=2, null=True, default=0, description='方式：1充值 0消耗')
     reason = fields.SmallIntField(max_length=2, null=True, default=0, description='变更原因：查看ReasonCostGold常量类')
     currency = fields.SmallIntField(max_length=2, null=True, default=0,
-                                    description='类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币')
+                                    description='类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币 6福袋 7赛事门票')
     num = fields.DecimalField(max_digits=65, null=True, decimal_places=2, default=0, description="变动数量")
     explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
 
