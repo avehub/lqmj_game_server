@@ -89,7 +89,8 @@ class TournamentLogic:
 
     async def up_cycle_status(self, cycle_id: int):
         """ 更新赛事周期状态 """
-        sta, _ = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
+        sta, e = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
+        NLogger.info("赛季更新状态：", sta, e)
         if sta:
             next_cycle_id = 1 + cycle_id
             await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
