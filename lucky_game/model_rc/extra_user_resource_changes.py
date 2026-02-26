@@ -212,9 +212,10 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         if change_value <= 0:
             return False, "无效的资源数量"
         try:
+            ticket = change_value
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 if operation == "sub":
-                    ticket = 0 - ticket
+                    ticket = 0 - change_value
                 
                 cycle_id = await TournamentCycleRC.get_current_cycle_id()
                 u_sta, e = await TournamentUserPointRC.up_user_point(cycle_id, uid, {change_field: ticket})
@@ -225,6 +226,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                     reason_enum = ReasonCostGold.find_member_by_val(reason)
                     explain = reason_enum.phrase
                 c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)
+
                 if not c_sta:
                     return False, "资源变更生成失败"
             cls.conf.log.info(f"资源变更：uid {uid} change_field {change_field} operation {operation} change_value {change_value}")
