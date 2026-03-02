@@ -87,6 +87,7 @@ class CompetitionServer(BaseServer):
             if self.__current_cycle_type != 1:
                 reward_id = 5
             sta, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
+            self.log_info(reward_id,"当前赛事周期奖励信息", reward_info)
             if sta:
                 self.__reward_info = self.build_rank_to_reward(reward_info)
             if cycle_info and cycle_info["reward_id"] != 2:
