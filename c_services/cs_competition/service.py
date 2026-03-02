@@ -710,7 +710,7 @@ class CompetitionServer(BaseServer):
             end = item["ranking_end"]
             reward_item = item["award_content"][0]["content"]["rewards"][0]
 
-            title = reward_item["title"]
+            title = item["award_content"][0]["name"]
             amount = reward_item["amount"]
             award_type = reward_item["type"]
             award_id = item["award_content"][0]["award_id"]
