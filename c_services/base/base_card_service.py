@@ -53,7 +53,7 @@ class BaseCardService(BaseService):
 
         player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
         match_room_id = data.get("match_room_id") or 0
-        if player.seat_id <= 0:
+        if player.seat_id <= 0 or player.is_robot:
             room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
