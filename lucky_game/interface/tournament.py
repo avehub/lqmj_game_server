@@ -7,6 +7,7 @@ from datetime import datetime
 from urllib import parse
 from urllib.parse import urlparse, urlunparse
 from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from nsanic.libs import tool_dt
 
 from sanic import Request, response
@@ -142,3 +143,22 @@ class CompetitionConfig(GameAuthApi):
         competition_id = self.check_int(req.args.get("competition_id"), require=False, default=1, p_name="赛事玩法ID")
         data = await ConfCompetitionRC.cache_conf_data_by_pk(competition_id)
         return self.answer(data=data)
+    
+class TournamentTicket(GameAuthApi):
+    async def post(self, req: Request, **kwargs):
+        """
+        赛事门票变更
+        """
+        type = self.check_int(req.args.get("type"), require=True, p_name="类型")
+        cycle_id = self.check_int(req.args.get("cycle_id"), require=False, p_name="场次ID")
+        uid = kwargs.get("u_info").get("uid")
+        if not cycle_id:
+            cycle_id = await TournamentCycleRC.get_current_cycle_id()
+        change_value = 0
+        operation = ""
+        if type == 1:
+            # 广告
+            change_value = 1
+            operation = "add"
+        sta, msg = await ExtraUserResourceChangesRC.change_user_tournament_ticket(uid, change_value, change_field="ticket", operation=operation)
+        return self.answer(code=self.sta_code.PASS if sta else self.sta_code.FAIL, hint=msg)
