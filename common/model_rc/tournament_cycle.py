@@ -66,6 +66,8 @@ class TournamentCycleRC(BaseCommonRC):
             query = {"id": cycle_id}
             valid_fields = {"cycle_name", "template_id", "reward_id", "cycle_year", "cycle_month", "updated", "cycle_start_date", "cycle_end_date", "status"}
             update_data = {k: v for k, v in up_data.items() if k in valid_fields}
+            cls.conf.log.info("赛季更新cycle_id：", cycle_id)
+            cls.conf.log.info("赛季更新update_data：", update_data)
             if update_data:
                 await cls.db_model.filter(**query).update(**update_data)
                 await cls.cache_session_del(cycle_id)
