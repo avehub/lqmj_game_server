@@ -149,8 +149,8 @@ class TournamentTicket(GameAuthApi):
         """
         赛事门票变更
         """
-        type = self.check_int(req.args.get("type"), require=True, p_name="类型")
-        cycle_id = self.check_int(req.args.get("cycle_id"), require=False, p_name="场次ID")
+        type = self.check_int(req.json.get("type"), require=True, p_name="类型")
+        cycle_id = self.check_int(req.json.get("cycle_id"), require=False, p_name="场次ID")
         uid = kwargs.get("u_info").get("uid")
         if not cycle_id:
             cycle_id = await TournamentCycleRC.get_current_cycle_id()
