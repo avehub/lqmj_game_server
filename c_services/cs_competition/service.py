@@ -85,9 +85,9 @@ class CompetitionServer(BaseServer):
             self.__current_cycle_type = cycle_info.get("cycle_type")
             reward_id = 3
             if self.__current_cycle_type != 1:
-                reward_id = 0
-                self.__reward_info = None
+                reward_id = 5
             sta, reward_info = await TournamentRewardRC.get_reward_info(reward_id)
+            self.log_info(reward_id,"当前赛事周期奖励信息", reward_info)
             if sta:
                 self.__reward_info = self.build_rank_to_reward(reward_info)
             if cycle_info and cycle_info["reward_id"] != 2:
@@ -710,7 +710,7 @@ class CompetitionServer(BaseServer):
             end = item["ranking_end"]
             reward_item = item["award_content"][0]["content"]["rewards"][0]
 
-            title = reward_item["title"]
+            title = item["award_content"][0]["name"]
             amount = reward_item["amount"]
             award_type = reward_item["type"]
             award_id = item["award_content"][0]["award_id"]

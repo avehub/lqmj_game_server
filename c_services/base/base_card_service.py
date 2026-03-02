@@ -31,9 +31,9 @@ class BaseCardService(BaseService):
         await self.conf.locker.locked(uid, self.new_match, (uid, data))
 
     async def new_match(self, uid, data):
-
+        is_robot = uid < R_UID_THRESHOLD
         player = self.get_player(uid)
-        if player:
+        if player and not is_robot:
             old_room = self.get_room(player.tid)
             if old_room:
                 enter_room_model.reenter = True
@@ -50,10 +50,10 @@ class BaseCardService(BaseService):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint="房间已满")
             if not room.room_status_is_equal(RoomStatus.T_IDLE):
                 return await self.cs2ws_by_rmq(CmdRoom.ENTER_ROOM, uid, code=StaCode.FAIL, hint=f"房间不处于空闲中({room.room_status})")
-        is_robot = uid < R_UID_THRESHOLD
+
         player = self.get_or_create_player(uid, self.PLAYER, is_robot=is_robot)
         match_room_id = data.get("match_room_id") or 0
-        if player.seat_id <= 0:
+        if player.seat_id <= 0 or player.is_robot:
             room.online_group_user = data.get("online_group_user") or []
             await room.player_join_room([player])
         self.log_info("玩家加入房间", player.uid, player.seat_id, "最大人数", room.max_player_count)
