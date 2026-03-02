@@ -119,8 +119,8 @@ class TimedService:
     async def __test_tasks(self):
         # 统计数据推送
         now_time = datetime.now()
-        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
-        # self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=2))
 
 
 
