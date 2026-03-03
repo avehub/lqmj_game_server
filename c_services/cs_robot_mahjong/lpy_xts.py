@@ -880,9 +880,9 @@ class LpyMoveGenerator:
         # todo: 开始构建较大牌型组合并选择最优出牌
         for yxp_infos in min_xts:
             if yxp_infos[1] < 0:
-                if len(min_xts)==1 and yxp_infos[0] == "ph":
+                if len(min_xts) == 1 and yxp_infos[0] == "ph":
                     return random.choice(yxp_infos[2])
-                elif len(min_xts)>1 and yxp_infos[0] != "ph":
+                elif len(min_xts) > 1 and yxp_infos[0] != "ph":
                     return random.choice(yxp_infos[2])
             if yxp_infos[1] < self.xqd_flag_len and yxp_infos[0] != "ph":
                 if yxp_infos[0] in self.fc_hu_types:
@@ -930,7 +930,7 @@ class LpyMoveGenerator:
                 return random.choice(ph_best_cards or all_played_cards)
             xts_cards_res = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
             return self.control_play_card(ph_best_cards, xts_cards_res)
-        
+
         # 存在多种胡牌牌型
         if len(all_xts_cards) > 1:
             return self.calc_best_play_card(all_xts_cards, ph_best_cards)
