@@ -54,8 +54,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         return start_time, end_time
 
     @classmethod
-    async def get_record_list(cls, uid: int, club_id: int, start_time: int = None, end_time: int = None, cs_type: int = None,
-                         page_size: int = None, page: int = None):
+    async def get_record_list(cls, uid: int = None, club_id: int = None, start_time: int = None, end_time: int = None, cs_type: int = None,
+                         page_size: int = None, page: int = None, room_id: int = None):
         """根据用户ID获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
@@ -67,12 +67,14 @@ class BaseRecordsGameRC(BaseCommonRC):
                 cs_type=cs_type,
                 page_size=page_size,
                 page=page,
+                room_id=room_id,
+                club_id=club_id,
             )
             if data.get("total") > 0:
                 room_data, _ = await RecordsGameRoomRC.get_record_room_by_filter(
                     record_rid=[item["record_rid"] for item in data["list"]],
                 )
-                data["list"] = cls.merge_by_key(data["list"], room_data, "record_rid", ["total_round", "max_player", "start_time", "end_time"])
+                data["list"] = await cls.merge_by_key(data["list"], room_data, "record_rid", ["total_round", "max_player", "start_time", "end_time"])
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
@@ -99,9 +101,8 @@ class BaseRecordsGameRC(BaseCommonRC):
         return data, "成功"
 
     @classmethod
-    async def get_by_room_id(cls, room_id: int = None, uid: int = None,  start_time: int = None,
-                             end_time: int = None, cs_type: int = None, page_size: int = None,
-                             page: int = None):
+    async def get_by_game_record(cls, room_id: int = None, uid: int = None,  start_time: int = None,
+                             end_time: int = None, cs_type: int = None):
         """根据房间号获取战绩 (默认七日内)"""
         try:
             if start_time is None and end_time is None:
@@ -112,11 +113,22 @@ class BaseRecordsGameRC(BaseCommonRC):
                 start_time=start_time,
                 end_time=end_time,
                 cs_type=cs_type,
-                page_size=page_size,
-                page=page,
             )
             if not data:
                 return data, e
+            t_ids = []
+            data_dict = {}
+            for item in data:
+                t_ids.append(item["record_tid"])
+                data_dict[item["record_tid"]] = item
+            segment_data, _ = await RecordsGameSegmentRC.get_record_segment_by_filter(
+                record_tid=t_ids,
+            )
+            for item in data:
+                item["segment"] = []
+                for segment in segment_data:
+                    if item["record_tid"] in data_dict:
+                        item["segment"].append(segment)
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return data, "成功"
@@ -193,7 +205,7 @@ class BaseRecordsGameRC(BaseCommonRC):
             record_rids = [item["record_rid"] for item in result_temp]
             result_total, e = await RecordsGameTotalRC.query_record_total_by_sql(
                 record_rid=record_rids,
-                filtration="uid, record_tid, record_rid, final_score, final_grade, final_ranking, final_status"
+                filtration="uid, record_tid, record_rid, final_score, final_grade, final_ranking, final_status, final_result"
             )
             result_room, e = await RecordsGameRoomRC.get_record_room_by_filter(
                 record_rid=record_rids,
@@ -236,7 +248,7 @@ class BaseRecordsGameRC(BaseCommonRC):
                 date_time = int((datetime.now() - timedelta(hours=1)).timestamp())
             # 查询1小时前未完善的战绩
             async with in_transaction(connection_name=DbKey.DEFAULT):
-                record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(start_time=date_time)
+                record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_time=date_time)
                 if record_room:
                     record_rid = [item["record_rid"] for item in record_room]
                     record_segment, _ = await RecordsGameSegmentRC.query_record_segment_by_sql(
@@ -261,6 +273,30 @@ class BaseRecordsGameRC(BaseCommonRC):
                         )
                         if not sta:
                             cls.log_info(f"总局战绩更新失败record_rid:{item['record_rid']}, uid:{item['uid']}")
+        except OperationalError as e:
+            return None, f"失败: {str(e)}"
+        return True, "成功"
+
+    @classmethod
+    async def del_history_game_record(cls, date_time: int = None):
+        """删除历史游戏战绩数据"""
+        try:
+            # 默认删除7天前的数据
+            if date_time is None:
+                date_time = int((datetime.now() - timedelta(days=7)).timestamp())
+            record_room, _ = await RecordsGameRoomRC.get_record_room_by_filter(end_start_time=date_time)
+            if record_room:
+                async with in_transaction(connection_name=DbKey.DEFAULT):
+                    record_rids = [item["record_rid"] for item in record_room]
+                    record = await RecordsGameSegmentRC.delete_many_record(record_rids)
+                    if not record:
+                        return False, "子局战绩删除失败"
+                    record = await RecordsGameTotalRC.delete_many_record(record_rids)
+                    if not record:
+                        return False, "总局战绩删除失败"
+                    record_room, msg = await RecordsGameRoomRC.delete_many_record(record_rids)
+                    if not record_room:
+                        return False, "房间战绩删除失败"
         except OperationalError as e:
             return None, f"失败: {str(e)}"
         return True, "成功"

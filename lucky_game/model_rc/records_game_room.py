@@ -51,11 +51,14 @@ class RecordsGameRoomRC(BaseCommonRC):
                 return None, "战绩不存在"
             end_time = kwargs.get("end_time")
             round_num = kwargs.get("round_num")
+            room_status = kwargs.get("room_status")
             update = {}
             if end_time:
                 update["end_time"] = end_time
             if round_num:
                 update["round_num"] = round_num
+            if room_status:
+                update["room_status"] = room_status
             if update:
                 up_sta = await cls.db_model.update_by_pk(record_rid, update, old_data=record)
                 if not up_sta:
@@ -79,7 +82,7 @@ class RecordsGameRoomRC(BaseCommonRC):
     async def get_record_room_by_filter(cls, club_id: any = None, room_id: any = None, start_time: any = None
                                         , end_time: any = None, play_type: any = None, cs_type: any = None,
                                         creator: any = None, record_rid: any = None, order_field: any = None,
-                                        page: int = None, page_size: int = None):
+                                        page: int = None, page_size: int = None, field: any = None, end_start_time: any = None):
         """根据条件获取房间战绩列表"""
         try:
             query = {}
@@ -115,8 +118,10 @@ class RecordsGameRoomRC(BaseCommonRC):
                     query["creator"] = creator
             if start_time is not None:
                 query["start_time__gte"] = start_time
+            if end_start_time is not None:
+                query["start_time__lte"] = end_start_time
             if end_time is not None:
-                query["end_time__lt"] = end_time
+                query["end_time__lte"] = end_time
             if order_field is None:
                 order_field = "-record_rid"
             if page and page_size:
@@ -127,7 +132,10 @@ class RecordsGameRoomRC(BaseCommonRC):
                     records = await cls.db_model.filter(**query).order_by(order_field).limit(page_size).offset(offset).values()
                 result = await cls.page_result(page, page_size, total, records)
             else:
-                result = records = await cls.db_model.filter(**query).order_by(order_field).values()
+                if field:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values(*field)
+                else:
+                    result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
                 return result, "暂无战绩"
         except OperationalError as e:
@@ -153,5 +161,43 @@ class RecordsGameRoomRC(BaseCommonRC):
         except OperationalError as e:
             return False, f"删除失败: {str(e)}"
         return record, "删除成功"
+
+    @classmethod
+    async def delete_many_record(cls, record_rids: list):
+        """删除房间战绩记录"""
+        try:
+            record = await cls.db_model.filter(record_rid__in=record_rids).delete()
+            if not record:
+                return record, "删除失败"
+        except OperationalError as e:
+            return False, f"删除失败: {str(e)}"
+        return record, "删除成功"
+
+    @classmethod
+    async def statistics_game_room_by_count(cls, start_time: int = None, end_time: int = None):
+        """获取昨日游戏房间统计数据"""
+        today_start_time, today_end_time = await cls.get_time_range("day")
+        if end_time is None:
+            end_time = today_start_time
+        if start_time is None:
+            start_time = today_start_time - 86400
+        where = f" created >= {start_time} AND created < {end_time}"
+        count_sql = f"SELECT COUNT(*) AS total_count FROM {cls.tb_name} WHERE {where}"
+        count_data = await cls.db_model.exec_query(count_sql)
+        total_count = count_data[0]["total_count"] if count_data else 0
+        return total_count if total_count and total_count > 0 else 0
+
+    @classmethod
+    async def statistics_game_room_by_group_count(cls, start_time: int = None, end_time: int = None):
+        """获取昨日游戏房间统计数据"""
+        today_start_time, today_end_time = await cls.get_time_range("day")
+        if end_time is None:
+            end_time = today_start_time
+        if start_time is None:
+            start_time = today_start_time - 86400
+        where = f" created >= {start_time} AND created < {end_time}"
+        group_sql = f"SELECT cs_type, COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY cs_type"
+        group_data = await cls.db_model.exec_query(group_sql)
+        return group_data if group_data else []
 
 

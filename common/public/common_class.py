@@ -1,11 +1,15 @@
 from typing import Optional
 
 from aio_pika import DeliveryMode
-from nsanic.base_conf import BaseConf
+# from nsanic.base_conf import BaseConf
+from nsanic.libs import tool_dt
+from nsanic.libs.rds_client import RdsClient
+from c_services.base.base_conf import base_conf
 from nsanic.libs.component import LogMeta
 from nsanic.libs.tool import json_encode, json_parse
-
+from c_services.base.rmq_client import Rmq
 from common.proto.py_pb2.ws_base import PbWsBaseRep
+from common.public.conf import C_SERVICE_SECRET_KEY
 from common.public.enum_const import ServiceEnum, Channel, CacheKey, StaCode
 from common.utils.utils import UtilsTool
 from datetime import datetime
@@ -13,15 +17,41 @@ import calendar
 from typing import Tuple, Union
 from c_services.const.cs_enum_const import CmdNotice
 from common.proto.py_pb2.common import common_pb2
+from dateutil.relativedelta import relativedelta
+
 
 
 class CommonApi(LogMeta):
-    conf: BaseConf
+    conf = base_conf
+    SUBSCRIBE_FANOUT = Channel.C_SERVICES_COMMON
+    if not conf.rds:
+        conf.rds = RdsClient.init(conf.CONF_RDS['default'], logs=conf.log)
+    if not conf.rmq:
+        conf.rmq = Rmq.init(conf.CONF_AMQP['default'], logs=conf.log)
 
     @classmethod
     async def get_player_ws_id(cls, uid):
         ws_id, _ = await cls.get_player_ws_info(uid)
         return ws_id
+
+    @classmethod
+    async def get_player_join_gold(cls, uid):
+        try:
+            user_gold_key = f"{CacheKey.PLAYER_GOLD}:{uid}"
+            gold = await cls.conf.rds.get_item(user_gold_key, jsparse=True)
+            if gold is None:
+                gold = {"gold": 0}
+        except Exception as e:
+            gold = {"gold": 0}
+        return gold
+
+    @classmethod
+    async def get_player_in_game(cls, uid):
+        try:
+            is_gaming = await cls.conf.rds.get_hash(CacheKey.PLAYER_GOLD, uid, jsparse=True)
+        except Exception as e:
+            is_gaming = {"is_gaming": False}
+        return is_gaming
 
     @classmethod
     async def get_player_ws_info(cls, uid):
@@ -46,8 +76,6 @@ class CommonApi(LogMeta):
         通过rmq推送消息到网关
         该方法默认消息不持久化
         """
-
-        cls.loginfo(f"cs2cs_by_rmq: {cs_type}, {c_code}, {uid}, {msg}, {r_key}, {exp}, {delivery_mode}")
         await cls.conf.rmq.cs2cs_rmp(cs_type, c_code, uid, msg, r_key, exp, delivery_mode)
 
     @classmethod
@@ -56,7 +84,7 @@ class CommonApi(LogMeta):
         推送消息到worker服务，该服务的消息不会过期
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
 
     @classmethod
@@ -65,8 +93,23 @@ class CommonApi(LogMeta):
         推送消息到chat服务
         """
         msg = msg or {}
-        msg["secret"] = cls.conf.SECRET_KEY
+        msg["secret"] = C_SERVICE_SECRET_KEY
         await cls.cs2cs_by_rmq(cs_type, c_code, msg, uid, r_key, exp=None, delivery_mode=DeliveryMode.PERSISTENT)
+
+    async def publish_to_fanout(cls, cmd, uid = 1, msg= None):
+        """
+        向SUBSCRIBE_FANOUT频道发送消息
+        """
+        if not isinstance(msg, bytes):
+            msg = json_encode(msg, u_byte=True)
+        pack_data = UtilsTool.pack_inner_msg(cmd, uid, msg)
+        try:
+            await cls.conf.rmq.publish(
+                msg=pack_data,
+                exchange_name=cls.SUBSCRIBE_FANOUT,
+            )
+        except Exception as e:
+            cls.log_err(f"publish_to_fanout error: {e}")
 
     @classmethod
     async def inner_cs2ws(
@@ -111,6 +154,7 @@ class CommonApi(LogMeta):
         pb_data = PbWsBaseRep.encode(code, hint, msg, req_id)
         cmd = UtilsTool.packet_command(cs_type, c_code)
         await cls.cs2cs_by_rmq(ServiceEnum.WS_HALL, cmd, pb_data, uid, r_key=r_key)
+
     @classmethod
     async def send_red_dot(cls, uid, rd_type):
         """ 红点消息 """
@@ -259,4 +303,105 @@ class CommonApi(LogMeta):
         else:
             return f"{url}?{query_string}"
 
+    @classmethod
+    async def date_time_range(cls, start_time: datetime, end_time: datetime) -> list[datetime]:
+        """
+        获取时间段内的所有时间点
+        :param start_time: 开始时间
+        :param end_time: 结束时间
+        :return: 时间点列表
+        """
+        start_date = tool_dt.dt_str(start_time, '%Y-%m-%d').split('-')
+        end_date = tool_dt.dt_str(end_time, '%Y-%m-%d').split('-')
+        date_range = tool_dt.date_range(start=datetime(int(start_date[0]), int(start_date[1]), int(start_date[2])),
+                                        end=datetime(int(end_date[0]), int(end_date[1]), int(end_date[2])))
+        return date_range
 
+    @classmethod
+    async def get_month_start_timestamps(cls, start_timestamp: int, end_timestamp: int) -> list[int]:
+        """
+        使用 dateutil 库实现相同功能
+        Args:
+            start_timestamp (int): 起始时间戳(10位)
+            end_timestamp (int): 结束时间戳(10位)
+        Returns:
+            list[int]: 包含每个月第一天时间戳的列表
+        """
+        start_date = datetime.fromtimestamp(start_timestamp)
+        end_date = datetime.fromtimestamp(end_timestamp)
+        # 调整开始时间为当月第一天
+        current_date = start_date.replace(day=1)
+        result = []
+        while current_date <= end_date:
+            result.append(int(current_date.timestamp()))
+            # 增加一个月
+            current_date += relativedelta(months=1)
+        return result
+
+    @classmethod
+    async def get_month_end_timestamp(cls, start_timestamp: int) -> int:
+        """
+        使用dateutil获取月末时间戳
+        Args:
+            start_timestamp (int): 月份开始时间戳
+
+        Returns:
+            int: 月末23:59:59的时间戳
+        """
+        # 将时间戳转换为datetime对象
+        start_date = datetime.fromtimestamp(start_timestamp)
+
+        # 获取下个月第一天，然后减去一秒
+        next_month_first = start_date.replace(day=1) + relativedelta(months=1)
+        end_date = next_month_first - relativedelta(seconds=1)
+
+        return int(end_date.timestamp())
+
+    @classmethod
+    async def calculate_quartiles(cls, data):
+        """
+        计算下四分位数(Q1)、中位数(Q2)、上四分位数(Q3)
+        支持浮点数和Decimal类型
+
+        参数:
+            data: 数值列表，可以是float或Decimal类型
+
+        返回:
+            包含下四分位、中位、上四分位值的元组 (q1, q2, q3)
+        """
+        if not data:
+            return 0, 0, 0
+
+        # 确保数据是列表并排序
+        sorted_data = sorted(data)
+        n = len(sorted_data)
+
+        def get_percentile(p):
+            """
+            获取指定百分位的值
+            p: 百分位 (0-1)
+            """
+            if not (0 <= p <= 1):
+                raise ValueError("百分位必须在0到1之间")
+
+            k = (n - 1) * p
+            f = int(k)
+            c = k - f
+
+            if f + 1 >= n:
+                return sorted_data[-1]
+            return sorted_data[f] + c * (sorted_data[f + 1] - sorted_data[f])
+
+        q1 = get_percentile(0.25)
+        q2 = get_percentile(0.5)
+        q3 = get_percentile(0.75)
+
+        return q1, q2, q3
+    
+    @classmethod
+    async def custom_round(cls, num):
+        """ 四舍五入 """
+        if num - int(num) >= 0.5:
+            return int(num) + 1
+        else:
+            return int(num)

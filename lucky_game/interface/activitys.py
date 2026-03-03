@@ -8,7 +8,8 @@ from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
 
 from c_services.base.base_server import BaseServer
-from common.public.enum_const import DbKey
+from common.public.common_class import CommonApi
+from common.public.enum_const import DbKey, CacheKey
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi
 from lucky_game.handler.up_assets import UpAssets, StatFlow
@@ -17,7 +18,8 @@ from lucky_game.model_rc.base_award import AwardRC
 # from lucky_game.model_rc.base_skin import UserSkinRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
-from lucky_game.const import ActivityType, ActivitySta, ConditionType, AwardType, ActivityStatus, PayMode
+from lucky_game.const import ActivityType, ActivitySta, ConditionType, AwardType, ActivityStatus, PayMode, \
+    ReasonCostGold
 from lucky_game.logic.activity import Base, SignIn, Package, InfinitePlay, FirstCharge
 
 
@@ -28,19 +30,20 @@ class ActivityDetail(GameAuthApi):
     """
 
     async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
+        act_type = req.args.get("act_type")
+        uid = kwargs.get("u_info").get("uid")
+        # 1.获取活动配置
+        if act_type:
+            act_type = self.check_int(act_type, p_name="act_type")
+            act_enum = ActivityType.find_member_by_val(act_type)
+            (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
+            ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
+        else:
+            act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
+            ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
+        (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
         try:
-            act_type = req.args.get("act_type")
-            uid = kwargs.get("u_info").get("uid")
-            # 1.获取活动配置
-            if act_type:
-                act_type = self.check_int(act_type, p_name="act_type")
-                act_enum = ActivityType.find_member_by_val(act_type)
-                (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-                ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
-            else:
-                act_id = self.check_int(req.args.get("act_id"), require=True, p_name="活动ID")
-                ac, e = await ConfActivityRC.get_activity_by_once(act_id=act_id)
-            (not ac) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
             # 2.奖励内容
             once_awards, condition_awards = await Base().act_by_awards(uid, ac)
             ac["once_awards"] = once_awards
@@ -60,13 +63,14 @@ class ActivityList(GameAuthApi):
     """
 
     async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
         act_type = req.args.get("act_type")
         uid = kwargs.get("u_info").get("uid")
         # 1.获取活动配置
         act_type = self.check_int(act_type, p_name="act_type", default=None, require=True)
         act_enum = ActivityType.find_member_by_val(act_type)
         (not isinstance(act_enum, ActivityType)) and self.answer(self.sta_code.ERR_ARG, hint='暂时没找到活动类型')
-        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type)
+        ac_list, e = await ConfActivityRC.get_activity_filter(act_type=act_type, platform=platform)
         (not ac_list) and self.answer(self.sta_code.NO_CONFIGURATION, hint=e)
         try:
             # 2.奖励内容
@@ -123,11 +127,15 @@ class GainActivity(GameAuthApi):
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
-        sta, e = await Base().act_gain(ac, uid, award_id)
+        sta, e = await Base().give_awards(uid, award_id, act_id, reason=ReasonCostGold.ACTIVITY_GIFT)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=e)
-        gain_awards, _ = await AwardRC.get_award_by_filter(award_id=award_id)
-        return self.answer(data={"status": sta, "gain_awards": gain_awards}, hint=e)
+        award_content, _ = await AwardRC.get_award_info(award_id=award_id)
+        result = {
+            "award": {"gain_awards": award_content["rewards"]},
+            "pay_info": {}
+        }
+        return self.answer(data={"status": sta, "result": result}, hint="领取成功")
 
 
 class ProgressActivity(GameAuthApi):
@@ -138,7 +146,8 @@ class ProgressActivity(GameAuthApi):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         act_type = self.check_int(req.args.get("act_type"), require=True, p_name="活动类型")
-        ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type)
+        platform = self.check_str(req.args.get("platform"), require=True, p_name="平台ID")
+        ac, e = await ConfActivityRC.get_activity_by_once(act_type=act_type, platform=platform)
         # 校验活动
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
@@ -152,7 +161,7 @@ class ProgressActivity(GameAuthApi):
             elif act_type == ActivityType.PACKAGE:
                 result = await Package().progress_data(uid, ac, gains)
             elif act_type == ActivityType.INFINITE_PLAY:
-                result = await InfinitePlay().progress_data(ac, progress, gains, u_info)
+                result = await InfinitePlay().progress_data(ac, progress, u_info)
             else:
                 result = {
                     "progress": progress,
@@ -174,8 +183,8 @@ class ActivityReturnGold(GameAuthApi):
     async def get(self, req: Request, **kwargs):
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
-        return_gold = await BaseServer().get_play_gold(uid)
-        sta = hasattr(return_gold, "gold")
+        return_gold = await CommonApi.get_player_join_gold(uid)
+        sta = return_gold.get('gold', None)
         return self.answer(data={"return_gold": return_gold.get("gold") if sta and return_gold.get("gold") > 0 else 0})
 
 

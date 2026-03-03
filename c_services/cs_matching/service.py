@@ -18,7 +18,7 @@ from lucky_game.model_rc.base_robot import BaseRobotRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from common.utils.kit_async import DelayCall, delay_func
 from c_services.const.cs_enum_const import CmdMatch, CmdRoom
-from common.public.enum_const import ServiceEnum, StaCode, GameType
+from common.public.enum_const import ServiceEnum, StaCode, GameType, CacheKey
 from common.public.conf import LIVE_SERVER, ROBOT_BATTLE, R_UID_THRESHOLD
 from common.utils.kit_dt import KitDt
 from c_services.cs_matching.const import MatchingMode
@@ -29,6 +29,7 @@ from c_services.cs_matching.session import Session
 from typing import Iterable
 from c_services.base.base_leisure_service import LeisureService
 from c_services.base.base_server import BaseServer
+from lucky_game.model_rc.conf_json import ConfJsonRC
 
 
 class MatchServer(BaseServer, LeisureService):
@@ -37,6 +38,8 @@ class MatchServer(BaseServer, LeisureService):
     包括：等待匹配、匹配中、匹配完成、离开匹配
     """
     enable_rpc = False
+    SUBSCRIBE_FANOUT = None
+
 
     def __init__(self):
         BaseServer.__init__(self)
@@ -235,6 +238,16 @@ class MatchServer(BaseServer, LeisureService):
             timestamp = info.get("timestamp") or 0
             data_model = s2c_in_service_model(tid=tid, cs_type=cs_type, timestamp=timestamp)
             return await self.cs2ws_by_rmq(cmd, uid, StaCode.ALREADY_IN_SERVICE, msg=data_model, req_id=req_id)
+
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_ROOM_STOP)
+        if conf and conf.get("status"):
+            hint = "游戏玩法正在维护，喝杯茶，休息一下!"
+            return await self.cs2ws_by_rmq(cmd, uid, StaCode.FORBID, hint, req_id=req_id)
+
+        match_info = await self.conf.rds.get_hash(CacheKey.IN_MATCH, uid, jsparse=True)
+        if match_info:
+            hint = "您已在比赛匹配中"
+            return await self.cs2ws_by_rmq(cmd, uid, StaCode.FORBID, hint, req_id=req_id)
 
         forbid_str = self.__forbid_match_set.get(cs_type) or ""
         if forbid_str:

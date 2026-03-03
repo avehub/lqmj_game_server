@@ -18,6 +18,8 @@ class PlatForm(BaseEnum):
     WECHAT_MINI_GAME = 4, "minigame_wechat", '微信小游戏'
     ALI_MINI_GAME = 5, "minigame_alipay", '支付宝小游戏'
     DOUYIN_MINI_GAME = 6, "minigame_douyin", '抖音小游戏'
+    ANDROID_APP = 7, "android", '安卓app'
+    IOS_APP = 8, "ios", '苹果app'
 
     @classmethod
     def get_val_by_phrase(cls, phrase):
@@ -73,8 +75,8 @@ class PayType(BaseEnum):
     BY_ROOM_CARD = 3, "房卡兑换"
     BY_YELLOW_DIAMOND = 4, "黄钻兑换"
     BY_RMB = 5, "人民币"
-    BY_WATCH_AD = 6, "看广告领取"
-    BY_DY_DIAMOND = 7, "抖音钻石"
+    BY_FUTURE_VALUE = 6, "福袋兑换"
+    BY_WATCH_AD = 7, "看广告领取"
 
 
 class CurrencyType(BaseEnum):
@@ -85,7 +87,7 @@ class CurrencyType(BaseEnum):
     BY_ROOM_CARD = 3, "房卡"
     BY_YELLOW_DIAMOND = 4, "黄钻"
     BY_RMB = 5, "人民币"
-    BY_WATCH_AD = 6, "看广告"
+    BY_FUTURE_VALUE = 6, "福袋"
 
 
 @unique
@@ -492,6 +494,7 @@ class GoodsItem(BaseEnum):
 class GoodsSku(StrEnum):
     """特定商品SKU"""
     SKU_FIRST = "NOMYLPAA"  #首充
+    SKU_FIRST_MINI = "NOMYLPAB"  #微信小游戏首充
     SKU_FREE = "XXOLQQTL"   #免费
     SKU_REPLENISH_1 = "OCNMZOAS"    #金币补足初级场礼包
     SKU_REPLENISH_2 = "AAIAHTGS"    #金币补足中级场礼包
@@ -505,6 +508,8 @@ class GoodsSku(StrEnum):
     SKU_RETURN_2 = "NSPEJTCZ"   #返还中级场礼包
     SKU_RETURN_3 = "MWSZUWJK"   #返还高级场礼包
     SKU_RETURN_4 = "TIAOJRKA"   #返还王者场礼包
+    # 赛事农产品
+    SKU_TOURNAMENT = "WCRVIABC"
 
 
 @unique
@@ -554,8 +559,8 @@ class LvDefendType(BaseEnum):
 
 
 RED_DOTS_OPPORTUNITY_MAP = {
-    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
-    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN],
+    red_dots_opportunity.GAME_RETURN_HALL: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN, RedDotType.RD_RELIEF],
+    red_dots_opportunity.RECONNECT: [RedDotType.RD_MAILS, RedDotType.RD_CLUB_APPLY, RedDotType.RD_LIMIT_LOGIN, RedDotType.RD_RELIEF],
 }
 
 
@@ -597,7 +602,7 @@ class ReasonCostGold(BaseEnum):
     OPEN_TREASURE_BOX = 32, "开启宝盒"
     SKIN_EQUIP_EFFECT = 33, "皮肤装备打出效果"
     MONOPOLY_AWARDS = 34, "玩大富翁奖励"
-    CONVERT_AWARDS = 35, "兑换/折现奖励"
+    CONVERT_AWARDS = 35, "兑换/充值礼包"
     SIGN_IN_AWARDS = 36, "签到立得奖励"
     CHECK_OUT_MAHJONG = 37, "麻将结算"
     ACTIVITY_GIFT = 38, "活动礼包"
@@ -605,12 +610,16 @@ class ReasonCostGold(BaseEnum):
     ACTIVITY_SHARE = 40, "分享奖励"
     CLUB_ROOM_CARD = 41, "茶馆房卡变更"
     CLUB_YELLOW_DIAMOND = 42, "茶馆黄钻变更"
-    CLUB_ROOM_CARD_TICKETS = 43, "茶馆场内房卡门票"
-    CLUB_YELLOW_DIAMOND_TICKETS = 44, "茶馆场内黄钻门票"
+    CLUB_ROOM_CARD_TICKETS = 43, "游戏房卡门票"
+    CLUB_YELLOW_DIAMOND_TICKETS = 44, "游戏黄钻门票"
     ACTIVITY_RETURN_GOLD = 45, "活动返还金币"
+    WECHAT_STORE_SHOPPING = 46, "微信商店购物"
+    PREHEAT_COMPETITION_AWARDS = 47, "预热赛奖励"
+    COMPETITION_AWARDS = 48, "正式赛事奖励"
+
 
     # 100 - 200留给管理员使用
-    ADMIN_MODIFY_GOLD = 100, ""
+    ADMIN_ALTER_USER = 100, "修改用户资产"
 
 
 @unique
@@ -700,3 +709,21 @@ class ChatConst:
     """ 聊天相关常量 """
     WORLD_MAX_VAL = 50  # 世界最大消息长度
     COOLDOWN_TIME = 5  # 冷却时间设置为5秒
+
+class CompetitionType(BaseEnum):
+    """ 赛事类型 """
+    DEFAULT = 0, "默认"
+    POINT = 1, "积分制"
+
+class PriceType(BaseEnum):
+    """ 支付类型 """
+    BY_FREE = 0, "免费"
+    BY_DIAMOND = 1, "钻石"
+    BY_GOLD = 2, "金币"
+    BY_POINT = 3, "积分"
+
+class CompetitionStatus(BaseEnum):
+    """ 赛事状态 """
+    DEFAULT = 0, "默认"
+    PLAYING = 1, "进行中"
+    CLOSED = 2, "已结束"

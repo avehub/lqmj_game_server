@@ -6,7 +6,7 @@ from nsanic.libs.tool import json_encode
 from c_services.base.base_room import BaseRoom
 from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement
 from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
-    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CChangeConnect
 from common.public.conf import LIVE_SERVER
 from common.public.enum_const import TaskId, StaCode
 from common.utils.kit_async import DelayCall
@@ -126,6 +126,7 @@ class BaseLeisureRoom(BaseRoom):
             await self.service.del_player_in_service(player.uid)
             await self.try_round_over()
 
+
     async def try_round_over(self):
         """ 尝试解散房间 """
         for player in self.seats:
@@ -133,8 +134,10 @@ class BaseLeisureRoom(BaseRoom):
                 continue
             if not (player.is_out and player.offline):
                 return  # 但凡有真实玩家 没有 破产和离线则不解散房间
+        if self.room_status == RoomStatus.T_IDLE:
+            return
         self.log_info("房间内已经没有真人玩家，enter force_dismiss")
-        await self.delay_func(0.5, self.force_dismiss)
+        await self.force_dismiss()
 
     async def deduct_tickets(self):
         """ 扣除门票 """
@@ -248,13 +251,18 @@ class BaseLeisureRoom(BaseRoom):
         if update_task:
             await asyncio.gather(*update_task)
 
+    async def player_change_connect(self, player,data):
+        data_connect = {"seat_id":player.seat_id,"offline":data}
+        data_model = S2CChangeConnect.pb_model(**data_connect)
+        await self.inner_broadcast(CmdRoom.CHANGE_CONNECT, data_model,exclude_uid =player.uid)
+
     async def game_over(self, is_force=False):
         """ 游戏结束 """
         self.set_room_status(RoomStatus.T_DISMISS)
         await self.inner_broadcast(CmdRoom.GAME_OVER)
-        not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
+        # not is_force and await self.round_over_check_gold_enough_or_not()  # 检测金币是否足够6下发礼包等
         # await self.update_game_states()  # 更新游戏胜场/总场等
-        await self.send_task()  # 发送任务
+        # await self.send_task()  # 发送任务
         # await self.tigger_big_win_announcement()
         await super().game_over()
 
@@ -363,7 +371,6 @@ class BaseLeisureRoom(BaseRoom):
             await asyncio.gather(*send_list)
 
     async def __do_resurgence(self, player, solid_time=0):
-        print("进入机器人复活")
         sta, data = await ReturnGift().act_award(self.level)
         if sta:
             amount_value = data[0]["content"]["rewards"][0]["amount"]
@@ -408,12 +415,12 @@ class BaseLeisureRoom(BaseRoom):
 
     async def robot_go_broke(self, player):
         """ 机器人概率复活 """
-        # #flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5]) 暂未配置 暂时注释
-        # flag = 0
-        flag = UtilsTool.random_choice_num([0, 1], [0.5, 0.5])
+        flag = UtilsTool.random_choice_num([0, 1], [0.7, 0.3])
+        if self.poker.left_count < 3:  #剩余牌量小于3 机器人不复活
+            flag = 0
+            self.log_info("剩余牌量小于3 机器人不复活")
         if flag:
             return await self.__do_resurgence(player)
-        print("机器人认输")
         return DelayCall(random.randint(2, 5), self.player_give_up, player).start()
 
     async def notify_resurgence(self, player):
@@ -487,9 +494,8 @@ class BaseLeisureRoom(BaseRoom):
 
     async def player_recharge(self, player):
         """ 玩家充值回调 """
-        if player.seat_id != self.curr_seat_id:
-            return
         await self.service.init_player(player)
+        self.log_info("收到玩家复活",player.uid,player.seat_id,player.gold)
         if player.gold <= 0:
             return await self.inner_send(player, CmdRoom.RECHARGE, code=StaCode.GOLD_NOT_ENOUGH)
         if player.is_out:

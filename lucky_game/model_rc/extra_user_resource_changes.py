@@ -3,6 +3,8 @@
 """
 import decimal
 
+from common.model_rc.tournament_cycle import TournamentCycleRC
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from tortoise.exceptions import OperationalError
 
 from lucky_game.const import ReasonCostGold
@@ -20,10 +22,18 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
 
     # 资源类型映射（与User表字段对应）
     CURRENCY_MAP = {
-        1: "gold",           # 金币
-        2: "diamond",        # 钻石
-        3: "room_card",      # 房卡
-        4: "yellow_diamond"  # 黄钻
+        1: "gold",            # 金币
+        2: "diamond",         # 钻石
+        3: "room_card",       # 房卡
+        4: "yellow_diamond",  # 黄钻
+        6: "future_value",    # 福袋
+    }
+    CURRENCY_DESC = {
+        "gold": "金币",
+        "diamond": "钻石",
+        "room_card": "房卡",
+        "yellow_diamond": "黄钻",
+        "future_value": "福袋",
     }
     OPERATION_MAP = {
         "sub": 0,
@@ -54,19 +64,21 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     async def create_change_record(cls, uid: int, operation: str, currency: int, num: [int, decimal.Decimal], explain: str = "", reason: int = None):
         """创建资源变动记录"""
         try:
-            record_data = {
-                "uid": uid,
-                "status": cls.OPERATION_MAP.get(operation),
-                "currency": currency,
-                "num": abs(num),
-                "explain": explain,
-                "reason": reason if reason else 0,
-            }
-            new_record = await cls.db_model.add_one(record_data)
-            cls.conf.log.info(f"创建资源变动记录{new_record}")
-            return new_record, "成功"
+            if num > 0:
+                record_data = {
+                    "uid": uid,
+                    "status": cls.OPERATION_MAP.get(operation),
+                    "currency": currency,
+                    "num": abs(num),
+                    "explain": explain,
+                    "reason": reason if reason else 0,
+                }
+                new_record = await cls.db_model.add_one(record_data)
+                cls.conf.log.info(f"创建资源变动记录{new_record}")
+                return new_record, "成功"
         except OperationalError as e:
             return None, f"记录创建失败: {str(e)}"
+        return {}, "成功"
 
     @classmethod
     async def bulk_register_change_record(cls, uid: int, gifts: dict, register_type: int = 0, explain: str = "注册奖励"):
@@ -108,6 +120,8 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
     @classmethod
     async def change_user_resource(cls, uid: int, change_field: str, change_value: [int, decimal.Decimal], operation: str = 'add', explain: str = "", reason: int = None):
         """用户资源变更"""
+        if change_value <= 0:
+            return False, "无效的资源数量"
         if change_field not in cls.CURRENCY_MAP.values():
             return False, "无效的资源类型"
         try:
@@ -116,7 +130,7 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
                 if not u_sta:
                     return False, "资源变更失败"
                 currency = next((k for k, v in cls.CURRENCY_MAP.items() if v == change_field), 0)
-                if reason is None:
+                if not explain and reason is not None:
                     reason_enum = ReasonCostGold.find_member_by_val(reason)
                     explain = reason_enum.phrase
                 c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)
@@ -153,3 +167,69 @@ class ExtraUserResourceChangesRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"批量创建失败: {str(e)}"
 
+    @classmethod
+    async def get_resource_changes_filter(cls, uid: any = None, status: int = None, start_time: int = None, end_time: int = None,
+                               currency: int = None, count: bool = False, page: int = None, page_size: int = None):
+        """获取用户资源变动记录"""
+        try:
+            query = {}
+            if uid is not None:
+                if isinstance(uid, list):
+                    query["uid__in"] = uid
+                else:
+                    query["uid"] = uid
+            if status is not None:
+                query["status"] = status
+            if currency is not None:
+                query["currency"] = currency
+            if start_time is not None:
+                query["created__gte"] = start_time
+            if end_time is not None:
+                query["created__lte"] = end_time
+            order_field = "-id"
+            if count:
+                result = await cls.db_model.filter(**query).count()
+            else:
+                if page and page_size:
+                    total = await cls.db_model.filter(**query).count()
+                    data = []
+                    if total > 0:
+                        offset = (page - 1) * page_size
+                        data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                            offset).limit(page_size).values()
+                    result = await cls.page_result(page, page_size, total, data)
+                else:
+                    result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+                if not data:
+                    return False, result
+        except OperationalError as e:
+            return None, f"查询失败:{e}"
+        return True, result
+    
+    @classmethod
+    async def change_user_tournament_ticket(cls, uid: int, change_value: [int, decimal.Decimal], change_field: str = "ticket", operation: str = 'add', explain: str = "", reason: int = ReasonCostGold.ADMIN_ALTER_USER):
+        """用户资源变更"""
+        if change_value <= 0:
+            return False, "无效的资源数量"
+        try:
+            ticket = change_value
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                if operation == "sub":
+                    ticket = 0 - change_value
+                
+                cycle_id = await TournamentCycleRC.get_current_cycle_id()
+                u_sta, e = await TournamentUserPointRC.up_user_point(cycle_id, uid, {change_field: ticket})
+                if not u_sta:
+                    return False, "资源变更失败"
+                currency = 7
+                if not explain and reason is not None:
+                    reason_enum = ReasonCostGold.find_member_by_val(reason)
+                    explain = reason_enum.phrase
+                c_sta, e = await cls.create_change_record(uid, operation, currency, change_value, explain, reason)
+
+                if not c_sta:
+                    return False, "资源变更生成失败"
+            cls.conf.log.info(f"资源变更：uid {uid} change_field {change_field} operation {operation} change_value {change_value}")
+        except OperationalError as e:
+            return False, f"操作失败: {str(e)}"
+        return True, "成功"

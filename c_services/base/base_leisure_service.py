@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict
 
 from c_services.base.base_service import BaseService
@@ -9,6 +10,7 @@ from nsanic.libs import tool
 
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from ..const.cs_enum_const import CmdRoom, RoomType
+from ..cs_mahjong.const import OverType
 
 
 class LeisureService():
@@ -55,6 +57,7 @@ class BaseLeisureService(BaseService, LeisureService):
             CmdRoom.GIVE_UP.val: self.__on_give_up,
             CmdRoom.RECHARGE.val: self.__on_recharge,
             CmdRoom.RECHARGE_ING.val: self.__on_recharge_ing,
+            CmdRoom.FORCE_DISMISS_ROOM.val: self.__force_dismiss_room,
         })
 
     async def get_level_conf(self, level, play_type=1) -> dict:
@@ -97,8 +100,12 @@ class BaseLeisureService(BaseService, LeisureService):
             "round_num": 1,
         }
         new_room,err = await GameRoomsRC.create_game_room(platform,user_list[0].get("uid"),{},play_type,0,**room_data)
+        if not new_room:
+            self.log_info("休闲场创建房间失败",err,"参数",platform,user_list[0].get("uid"),play_type,room_data)
+            return
         extra_room_info["tid"] = new_room
-        room = self.create_room(room, room_conf, **extra_room_info)
+        copy_room_conf = deepcopy(room_conf)
+        room = self.create_room(room, copy_room_conf, **extra_room_info)
         self.log_info("接收到新匹配：", data, "开启新桌子：", room.tid)
         player_list = []
         for u_info in user_list:
@@ -125,3 +132,9 @@ class BaseLeisureService(BaseService, LeisureService):
     async def __on_recharge_ing(player, room, _):
         """ 充值中回调 """
         await room.player_recharge_ing(player)
+
+    async def __force_dismiss_room(self, _, data):
+        tid = data.get("room_id")
+        room = self.get_room(tid)
+        if room:
+            await room.force_dismiss()

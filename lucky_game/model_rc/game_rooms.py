@@ -2,6 +2,8 @@
 游戏房间模型
 """
 from tortoise.exceptions import OperationalError
+
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_db.main import GameRooms
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
@@ -13,9 +15,10 @@ from lucky_game.model_rc.base_clubs import BaseClubRC
 from lucky_game.model_rc.base_user import BaseUserRC
 from c_services.const.cs_enum_const import RoomStatus
 from lucky_game.const.const import PlatForm, ReasonCostGold
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
+from lucky_game.model_rc.conf_game_room_rules import ConfGameRoomRulesRC
 from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.extra_club_event import ExtraClubEventRC
-from nsanic.libs import tool_dt
 from common.public.enum_const import CacheKey
 from lucky_game.model_rc.club_group import ClubGroupRC
 from tortoise.expressions import F
@@ -30,9 +33,10 @@ class GameRoomsRC(BaseCommonRC):
     KEY_CLUB_ID = 'club_id'
     SESSION_KEY = "room_player"
     SESSION_DISK_KEY = "room_player_uid"  # 单个游戏房间号内的用户ID集合
-    SESSION_ROOM_KEY = "game_room" # 游戏房间信息缓存
-    SESSION_ROOM_USER_KEY = "game_room_user"  # 游戏房间中的用户ID集合
+    SESSION_ROOM_KEY = "game_room"  # 游戏房间信息缓存
+    SESSION_ROOM_USER_KEY = "game_room_user"  # 游戏房间中的所有用户ID集合
     SESSION_ROOM_NUMBER_KEY = "game_room_number"  # 游戏中的房间ID集合
+    SESSION_USER_JOIN_ROOM_KEY = "user_join_room"  # 用户加入的房间ID集合
     NULL_MEG = "房间已解散"
     RULE_DETAILS = {
         "shang_xia_ji": {0, 1},  #上下鸡选项 0未选 1选
@@ -47,16 +51,35 @@ class GameRoomsRC(BaseCommonRC):
         "shang_ga": {0, 1},  #估卖选项 0未选 1选
         "gu_mai_score": {0, 1, 2, 3, 4, 5},  #所选卖分 0自由分 1-5对应1-5分
         "suo_de_jia_1": {0, 1},  #所得加1选项 0未选 1选
-        "hu_pai_ti_shi": {0, 1},  #胡牌提示  捡漏血流才有选项 0未选 1选  闷胡血流固定是1
         "huang_zhuang_bu_huang_ji": {0, 1},  #黄庄不黄鸡杠 0未选 1选
         "four_card_bao_ting": {0, 4},  #四张报听 0未选 4选
-        "xiao_pai_bi_men": {0, 1},  #小牌必闷  闷胡血流才有 0未选 1选  捡漏血流固定是1
-        "tui_zhang_can_hu": {0, 1},  #退张可开  闷胡血流才有 0未选 1选  捡漏血流固定是0
-        "bao_ting_bi_men": {0, 1},  #报听必闷   闷胡血流才有 0未选 1选  捡漏血流固定是0
         "exchange_three": {0, 1, 2, 3},  #是否换三张  0不换 1换三张 2豹子换 3 黄牌换
         "exchange_cards_type": {0, 1, 2},  # 换三张方式  1任意牌 2同色牌
         "exchange_first": {0, 1},  # 是否换三张优先 0否 1是
     }
+
+    # 捡漏血流
+    RULE_DETAILS_JLXL = RULE_DETAILS | {
+        "xiao_pai_bi_men": {1},   #小牌必闷 固定是1
+        "tui_zhang_can_hu": {0},  #退张可开 固定是0
+        "bao_ting_bi_men": {0},   #报听必闷 固定是0
+        "hu_pai_ti_shi": {0, 1},  #胡牌提示 选项 0未选 1选
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
+    }
+
+    # 闷胡血流
+    RULE_DETAILS_MHXL = RULE_DETAILS | {
+        "xiao_pai_bi_men": {0, 1},   #小牌必闷   0未选 1选
+        "tui_zhang_can_hu": {0, 1},  #退张可开  0未选 1选
+        "bao_ting_bi_men": {0, 1},   #报听必闷   0未选 1选
+        "hu_pai_ti_shi": {1},     #胡牌提示  固定是1
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
+    }
+
     # 毕节麻将
     RULE_DETAILS_BJMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
@@ -64,12 +87,17 @@ class GameRoomsRC(BaseCommonRC):
         "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
         "lian_zhuang": {0, 1},  #连庄 0未勾选 1勾选
     }
+
     # 贵阳麻将（两丁拐、三丁拐）
     RULE_DETAILS_GYMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
         "shu_zi_ji": {0, 1},  #数字鸡 0未勾选 1勾选
         "yin_ji": {0, 1},  #银鸡 0未勾选 1勾选
+        "four_card_no_near": {0, 1},  #四张不挨 选项 0未选 1选
+        "four_card_tian_hu": {0, 1},  #四张天胡 选项 0未选 1选
+        "eight_card_tian_hu": {0, 8},  #八张天胡 选项 0未选 8选
     }
+
     # 遵义麻将（玄同麻将）
     RULE_DETAILS_ZYMJ = RULE_DETAILS | {
         "yuan_bao": {0, 1},  #原报 0未勾选 1勾选
@@ -82,8 +110,10 @@ class GameRoomsRC(BaseCommonRC):
 
     @classmethod
     async def get_play_rule(cls, play_type: int):
-        if play_type in [PlayType.JIAN_LOU_XUE_LIU, PlayType.AN_LONG_XUE_ZHAN]:
-            return cls.RULE_DETAILS
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return cls.RULE_DETAILS_JLXL
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return cls.RULE_DETAILS_MHXL
         elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
             return cls.RULE_DETAILS_GYMJ
         elif PlayType.BI_JIE_MJ == play_type:
@@ -92,12 +122,41 @@ class GameRoomsRC(BaseCommonRC):
             return cls.RULE_DETAILS_ZYMJ
 
     @classmethod
+    async def own_default_play_field(cls, play_type: int):
+        """非必传玩法字段及默认值"""
+        default_fields = ["four_card_no_near", "four_card_tian_hu", "eight_card_tian_hu"]
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return default_fields
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return default_fields
+        elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
+            return default_fields
+
+    @classmethod
+    async def own_default_play_value(cls, play_type: int, rule_details: dict = None):
+        """非必传玩法字段及默认值"""
+        default_values = {"four_card_no_near": 0, "four_card_tian_hu": 0, "eight_card_tian_hu": 0}
+        if rule_details:
+            for k, v in rule_details.items():
+                if k in default_values:
+                    default_values[k] = v
+        if PlayType.JIAN_LOU_XUE_LIU == play_type:
+            return default_values
+        elif PlayType.AN_LONG_XUE_ZHAN == play_type:
+            return default_values
+        elif play_type in [PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2]:
+            return default_values
+
+
+    @classmethod
     async def cache_room_player_up(cls, room_id, value=1):
         return await cls.conf.rds.incr(f"{cls.SESSION_KEY}:{room_id}", value)
 
     @classmethod
     async def cache_room_player_get(cls, room_id):
         data = await cls.conf.rds.get_item(f"{cls.SESSION_KEY}:{room_id}")
+        if not data:
+            return None
         if isinstance(data, bytes):
             data = json_parse(data.decode())
         return data
@@ -109,48 +168,112 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def cache_room_get(cls, room_id):
         data = await cls.conf.rds.get_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+        if not data:
+            return None
         if isinstance(data, bytes):
             data = json_parse(data.decode())
         return data
 
     @classmethod
+    async def cache_user_room_set(cls, uid, room_data):
+        return await cls.conf.rds.set_item(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}", room_data)
+
+    @classmethod
+    async def cache_user_room_get(cls, uid):
+        data = await cls.conf.rds.get_item(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}")
+        if data and isinstance(data, bytes):
+            data = json_parse(data.decode())
+        return data
+
+
+    @classmethod
+    async def cache_user_room_del(cls, uid):
+        return await cls.conf.rds.del_item(f"{cls.SESSION_USER_JOIN_ROOM_KEY}:{uid}")
+
+    @classmethod
     async def cache_room_drop(cls, room_id):
         return await cls.conf.rds.del_item(f"{cls.SESSION_ROOM_KEY}:{room_id}")
+
+
+    @classmethod
+    async def cache_room_in_user_get(cls, room_id):
+        data = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
+        return [p.decode('utf-8') for p in data]
 
     @classmethod
     async def unique_room_id(cls, num: int = 6):
         """生成唯一房间ID"""
         while True:
             room_id = generate_natural_random(num)
-            has = await cls.conf.rds.sismember(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+            has = await cls.conf.rds.sismember(cls.SESSION_ROOM_NUMBER_KEY, room_id)
             if not has:
-                await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.conf.rds.sadd(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 return room_id
+
+
 
     @classmethod
     async def before_room(cls, club_id: int, uid: int):
         """可以在加入房间前做一些操作"""
         # 获取除隔离组用户以外的房间
         not_join_room = set()
+        on_line_ids = await cls.get_online_user_group(uid, club_id)
+        if not on_line_ids:
+            return not_join_room
+        # 过滤出在房间内的用户
+        u_ids = await cls.get_room_user_group(on_line_ids)
+        cls.conf.log.info("获取当前在房间内用户ID", u_ids)
+        if not u_ids:
+            return not_join_room
+        for u_id in u_ids:
+            room_data = await cls.cache_user_room_get(u_id)
+            if room_data:
+                not_join_room.add(room_data["room_id"])
+        cls.conf.log.info("获取用户所在隔离组房间ID", not_join_room)
+        return not_join_room
+
+    @classmethod
+    async def get_online_user_group(cls, uid: int, club_id: int = 0):
+        """获取当前用户所在隔离组的其他在线用户ID"""
         # 获取用户所在的所有隔离组关联用户ID
         sta, group_ids = await ClubGroupRC.check_uid_by_club(
             uid=uid,
             club_id=club_id,
         )
+        cls.conf.log.info("获取用户所在所有隔离组关联用户ID", sta, group_ids)
         if not sta:
-            return not_join_room
+            return []
         # 过滤隔离组内在线用户
         on_line_ids = await BaseUserRC.get_online_uid(group_ids)
-        if on_line_ids:
-            # 过滤出在房间内的用户
-            u_ids = await cls.get_room_user_group(on_line_ids)
-            if not u_ids:
-                return not_join_room
-            for uid in u_ids:
-                room_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
-                if room_info:
-                    not_join_room.add(room_info["tid"])
-        return not_join_room
+        cls.conf.log.info("获取用户所在隔离组在线的用户ID", on_line_ids)
+        return [item for item in on_line_ids if item != uid]
+
+    @classmethod
+    async def check_room_group(cls, room_data: dict, uid: int):
+        """检查将要加入房间用户是否与房间成员在隔离组"""
+        room_uid = await cls.cache_room_in_user_get(room_data['room_id'])
+        exist = await ClubGroupRC.check_uid_by_room(
+            room_data["club_id"],
+            room_uid,
+            uid,
+        )
+        if not exist:
+            return True, "房间可加入"
+        return False, "您与房间内用户在同一隔离组中，请联系馆主"
+
+
+    @classmethod
+    async def check_user_group(cls, room_data: dict, uid: int):
+        """检查用户是否与房间成员在禁止同桌配置"""
+        room_uid = await cls.cache_room_in_user_get(room_data['room_id'])
+        exist = await ClubUserGroupRC.check_uid_by_room(
+            room_data["club_id"],
+            uid,
+            room_uid,
+        )
+        if exist:
+            return False, "房间内玩家配置了禁止同桌，请换个房间"
+        return True, "房间可加入"
 
 
     @classmethod
@@ -182,9 +305,9 @@ class GameRoomsRC(BaseCommonRC):
                 if not new_room:
                     return None, "创建失败"
                 # 预扣除房卡
-                room_card_sta, e = await cls.settle_room_card(room_data)
-                if not room_card_sta:
-                    return False, e
+                # room_card_sta, e = await cls.settle_room_card(room_data)
+                # if not room_card_sta:
+                #     return False, e
         except OperationalError as e:
             return None, f"房间创建失败: {str(e)}"
         return room_data["room_id"], "成功"
@@ -193,52 +316,108 @@ class GameRoomsRC(BaseCommonRC):
     async def settle_room_card(cls, room_data):
         """结算房卡"""
         key = "room_card"
-        userinfo = await BaseUserRC.cache_by_pk(room_data["creator"])
+        price = room_data['price']
         if room_data["club_id"] and room_data["club_id"] > 0:
             # 扣除茶馆基金
             if room_data["pay_type"] == 2:
                 up_room_card = await BaseClubRC.update_club_int_field(
                     room_data["club_id"],
                     key,
-                    room_data["price"],
+                    price,
                     "sub"
                 )
             else:
+
+                if room_data["pay_type"] == 3:
+                    price = room_data['price']/room_data['max_player']
                 up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
                     room_data["creator"],
                     key,
-                    room_data['price'],
+                    price,
                     "sub",
                     reason=ReasonCostGold.CLUB_ROOM_CARD_TICKETS
                 )
             # 记录茶馆事件
-            event_type = ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"]
-            event_msg = ExtraClubEventRC.EVENT_MSG[event_type].format(
-                name=userinfo["name"],
-                uid=userinfo["uid"],
-                price=room_data["price"],
-                play_type=room_data["play_type"],
+            await ClubLogic.club_event(
+                room_data["club_id"],
+                ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
+                room_data["creator"],
+                num=price,
                 room_id=room_data["room_id"],
             )
-            add_club_behavior, _ = await ExtraClubEventRC.create_event(
-                room_data["club_id"],
-                event_type,
-                room_data["creator"],
-                event_msg,
-            )
         else:
-            # 扣除黄钻
             if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+                # 扣除黄钻
                 key = "yellow_diamond"
+                price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
+                cls.conf.log.info("查询待扣除黄钻价格", price, e)
+                if price:
+                    price = price/room_data['max_player']
             up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
                 room_data["creator"],
                 key,
-                room_data['price'],
+                price,
                 "sub",
                 reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
             )
         if not up_room_card:
             return False, "房卡结算失败"
+        return True, "成功"
+
+    @classmethod
+    async def room_start_sub(cls, room_id: int, room_uid: list):
+        """房间开始扣除资源"""
+        room_data, e = await cls.get_game_room_by_room_id(room_id)
+        if not room_data or room_data["price"] == 0:
+            return False, "房间无需资源扣除"
+        if not room_uid:
+            return False, "房间无用户"
+        # 扣除资源判断
+        key = "room_card"
+        if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+            key = "yellow_diamond"
+        price = room_data['price']
+        async with in_transaction(connection_name=DbKey.DEFAULT):
+            # 茶馆
+            if room_data["club_id"] and room_data["club_id"] > 0 and room_data["pay_type"] == 2:
+                # 茶馆基金
+                up_room_card = await BaseClubRC.update_club_int_field(
+                    room_data["club_id"],
+                    key,
+                    price,
+                    "sub"
+                )
+                # 记录茶馆事件
+                await ClubLogic.club_event(
+                    room_data["club_id"],
+                    ExtraClubEventRC.EVENT_TYPE["FUND_CONSUME"],
+                    room_data["creator"],
+                    num=price,
+                )
+            else:
+                reason = ReasonCostGold.CLUB_ROOM_CARD_TICKETS if key == "room_card" else ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
+                # AA付费
+                if room_data["pay_type"] == 3:
+                    price = price / room_data['max_player']
+                    # 扣除房间成员资源
+                    for uid in room_uid:
+                        await ExtraUserResourceChangesRC.change_user_resource(
+                            uid,
+                            key,
+                            price,
+                            "sub",
+                            reason=reason
+                        )
+                # 扣除房主资源
+                up_room_card = await ExtraUserResourceChangesRC.change_user_resource(
+                    room_data["creator"],
+                    key,
+                    price,
+                    "sub",
+                    reason=reason
+                )
+                if not up_room_card:
+                    return False, "房卡结算失败"
         return True, "成功"
 
     @classmethod
@@ -297,22 +476,22 @@ class GameRoomsRC(BaseCommonRC):
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 if delete:
-                    sta = await cls.db_model.filter(room_id=room_id).delete()
+                    await cls.db_model.filter(room_id=room_id).delete()
+                    sta = True
                 else:
                     sta, _ = await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
                 if not sta:
                     return False, cls.NULL_MEG
-                # TODO 游戏战绩标记
 
                 # 删除缓存
                 uids = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
                 if uids:
                     uids = await CommonApi.bytes_by_int_list(uids)
                     for uid in uids:
-                        await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
-                        await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+                        await cls.conf.rds.srem(cls.SESSION_ROOM_USER_KEY, uid)
+                        await cls.cache_user_room_del(uid)
                 await cls.conf.rds.del_item(f"{cls.SESSION_DISK_KEY}:{room_id}")
-                await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
+                await cls.conf.rds.srem(cls.SESSION_ROOM_NUMBER_KEY, room_id)
                 await cls.cache_room_drop(room_id)
         except OperationalError as e:
             return False, f"房间删除失败: {str(e)}"
@@ -353,7 +532,8 @@ class GameRoomsRC(BaseCommonRC):
     @classmethod
     async def get_game_rooms_by_filter(cls, club_id: int = None, status: any = None, creator: int = None,
                                        cs_type: int = None, not_room_id: any = None, play_type: any = None,
-                                       full: bool = False):
+                                       full: bool = False, room_id: int = None, page: int = None,
+                                       page_size: int = None, order_field: str = "status"):
         """多条件查询房间列表"""
         try:
             query = {}
@@ -373,16 +553,36 @@ class GameRoomsRC(BaseCommonRC):
                     query["play_type"] = play_type
             if cs_type is not None:
                 query["cs_type"] = cs_type
+            if room_id is not None:
+                query["room_id"] = room_id
             if not_room_id is not None:
                 query["room_id__not_in"] = not_room_id
             if full:
                 query["round_num"] = F("total_round")
-            rooms = await cls.db_model.filter(**query).order_by("status").values()
-            if not rooms:
+            if page and page_size:
+                _, total = await cls.count_room_total(**query)
+                data = []
+                if total > 0:
+                    offset = (page - 1) * page_size
+                    data = await cls.db_model.filter(**query).order_by(order_field).offset(
+                        offset).limit(page_size).values()
+                result = await cls.page_result(page, page_size, total, data)
+            else:
+                result = data = await cls.db_model.filter(**query).order_by(order_field).values()
+            if not data:
                 return [], "未找到符合条件的房间"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
-        return rooms, "成功"
+        return result, "成功"
+
+    @classmethod
+    async def count_room_total(cls, **perms):
+        """获取房间数量"""
+        try:
+            count = await cls.db_model.filter(**perms).count()
+        except OperationalError as e:
+            return None, f"查询失败: {str(e)}"
+        return True, count
 
     @classmethod
     async def join_room(cls, room_data: dict, uid: int):
@@ -392,14 +592,31 @@ class GameRoomsRC(BaseCommonRC):
                 return False, "房间已满"
             room_id = room_data["room_id"]
             max_player = room_data["max_player"]
-            sta = await cls.conf.rds.sadd(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
-            if sta == 0:
-                return False, "用户已加入房间或加入房间失败"
-            disk_uid = await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}")
-            if len(disk_uid) > max_player:
+            sta = await cls.conf.rds.sismember(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            cls.conf.log.info("加入房间", room_id, uid, sta)
+            if not sta:
+                await cls.conf.rds.sadd(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            total = await cls.conf.rds.scard(f"{cls.SESSION_DISK_KEY}:{room_id}")
+            if total > max_player:
                 await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
                 return False, "房间已满"
-            await cls.conf.rds.sadd(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+            # if room_data["platform"] == PlatForm.WECHAT_MINI_GAME:
+            #     # 扣除黄钻
+            #     key = "yellow_diamond"
+            #     price, e = await ConfGameRoomRulesRC.get_game_rule_price(room_data["play_type"], room_data["max_player"], room_data["total_round"], rule_type=3)
+            #     cls.conf.log.info("查询待扣除黄钻价格", price, e)
+            #     if price:
+            #         price = price/room_data['max_player']
+            #         await ExtraUserResourceChangesRC.change_user_resource(
+            #             uid,
+            #             key,
+            #             price,
+            #             "sub",
+            #             reason=ReasonCostGold.CLUB_YELLOW_DIAMOND_TICKETS
+            #         )
+            await cls.conf.rds.sadd(cls.SESSION_ROOM_USER_KEY, uid)
+            await cls.cache_user_room_set(uid, room_data)
+            cls.conf.log.info("加入房间的所有成员", await cls.conf.rds.smembers(f"{cls.SESSION_DISK_KEY}:{room_id}"))
         except OperationalError as e:
             return False, f"加入房间失败: {str(e)}"
         return True, "成功"
@@ -409,20 +626,20 @@ class GameRoomsRC(BaseCommonRC):
         """离开（解散）房间"""
         try:
             room_data, e = await cls.get_game_room_by_room_id(room_id)
-            if not room_data:
-                return False, e
-            if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
-                return False, "离开房间状态异常"
-            sta = await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
-            if sta == 0:
-                return False, "用户已离开房间或离开房间失败"
-            if room_data['creator'] == uid:
-                # 关闭房间
-                await cls.update_game_room(room_id, status=RoomStatus.T_CLOSED)
-                await cls.conf.rds.srem(f"{cls.SESSION_ROOM_NUMBER_KEY}", room_id)
-                await cls.cache_room_drop(room_id)
-            await cls.conf.rds.srem(f"{cls.SESSION_ROOM_USER_KEY}", uid)
-            await cls.conf.rds.drop_hash(CacheKey.IN_SERVICE, uid)
+            if room_data:
+                # if room_data['status'] in [RoomStatus.T_PLAYING, RoomStatus.T_RECHARGE_ING]:
+                #     return False, "房间正在游戏中"
+                if room_data['creator'] == uid:
+                    # 删除房间
+                    await cls.delete_game_room(room_id, True)
+                    await cls.conf.rds.del_item(f"{cls.SESSION_DISK_KEY}:{room_id}")
+            sta = await cls.conf.rds.sismember(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            if sta:
+                await cls.conf.rds.srem(f"{cls.SESSION_DISK_KEY}:{room_id}", uid)
+            await cls.conf.rds.srem(cls.SESSION_ROOM_USER_KEY, uid)
+            await cls.conf.rds.srem(cls.SESSION_ROOM_NUMBER_KEY, room_id)
+            await cls.cache_user_room_del(uid)
+            cls.conf.log.info("解散房间", uid, room_id)
         except OperationalError as e:
             return False, f"离开房间失败: {str(e)}"
         return True, "成功"
@@ -445,22 +662,23 @@ class GameRoomsRC(BaseCommonRC):
     async def get_room_user_all(cls):
         """获取所有在房间用户"""
         try:
-            data = await cls.conf.rds.smembers(f"{cls.SESSION_ROOM_USER_KEY}")
+            data = await cls.conf.rds.smembers(cls.SESSION_ROOM_USER_KEY)
             if data:
                 data = [p.decode('utf-8') for p in data]
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
-        return data, "成功"
+        return data
 
     @classmethod
     async def get_room_user_group(cls, u_ids: list):
         """过滤隔离组内所有在房间用户"""
         ids = set()
-        data, _ = await cls.get_room_user_all()
+        data = await cls.get_room_user_all()
+        cls.conf.log.info("当前Redis中在房间内的用户ID:", data)
         if data:
             for uid in u_ids:
-                if uid in data:
-                    ids.update(uid)
+                if str(uid) in data or uid in data:
+                    ids.add(uid)
         return ids
 
 
@@ -468,7 +686,7 @@ class GameRoomsRC(BaseCommonRC):
     async def check_uid_room_user(cls, uid: int):
         """检查用户是否在房间"""
         try:
-            sta = await cls.conf.rds.sismember(f"{cls.SESSION_ROOM_USER_KEY}", uid)
+            sta = await cls.conf.rds.sismember(cls.SESSION_ROOM_USER_KEY, uid)
         except OperationalError as e:
             return None, f"获取房间玩家失败: {str(e)}"
         return sta, "成功"
@@ -480,7 +698,7 @@ class GameRoomsRC(BaseCommonRC):
             # 退还房卡
             await cls.refund_room_card(room_id)
             # 关闭房间
-            await cls.delete_game_room(room_id)
+            await cls.delete_game_room(room_id, True)
             # 记录日志
             # cls.conf.info_log(msg + f"房间ID: {room_id}")
         except OperationalError as e:
@@ -511,3 +729,20 @@ class GameRoomsRC(BaseCommonRC):
         except OperationalError as e:
             return None, f"服务处理失败: {str(e)}"
         return True, failed_ids
+
+    @classmethod
+    async def check_uid_club_room(cls, uid: int, club_id: int = None) -> bool:
+        """检查用户是否在茶馆房间"""
+        result = False
+        cs_info = await cls.conf.rds.get_hash(CacheKey.IN_SERVICE, uid, jsparse=True)
+        if cs_info:
+            tid = cs_info.get("tid") or 0
+            if tid:
+                room_data, _ = await cls.get_game_room_by_room_id(tid)
+                if club_id is not None:
+                    if room_data and room_data["club_id"] == club_id:
+                        result = True
+                else:
+                    if room_data:
+                        result = True
+        return result

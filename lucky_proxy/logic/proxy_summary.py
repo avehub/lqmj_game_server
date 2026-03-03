@@ -1,0 +1,145 @@
+import random
+import string
+
+from nsanic.libs.component import LogMeta
+
+from lucky_proxy.config import ConfSrv, conf_srv
+from lucky_proxy.model_db.main import ProxyPromotionRelation, ProxyOrderDividendRecords
+
+"""
+创建推广码
+"""
+
+
+class ProxySummary(LogMeta):
+    conf: ConfSrv = conf_srv
+    """
+    推广链接下的玩家分页查询
+    """
+
+    @classmethod
+    async def query_player_page(cls, proxy_id: int
+                                , page_size: int
+                                , page: int
+                                , sort: int):
+        sql = f"select t.id,t.player_id,t.promotion_day ,t.total_amount , u.avatar,u.name," \
+              f"t.created,t.upgrade_flag, pu.vip_level, pu.vip_expire_time from " \
+              f"proxy_promotion_relation t left join  user u  on u.uid=t.player_id " \
+              f"left join proxy_user pu on pu.id = t.player_id where   t.proxy_id={proxy_id}"
+
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+        elif sort == 0:
+            sql = sql + f" order by t.id desc"
+
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
+
+    @classmethod
+    async def query_vip_player_page(cls, proxy_id: int 
+                                , page_size: int
+                                , page: int
+                                , sort: int
+                                , expire_start: int | None = None
+                                , expire_end: int | None = None):
+        base_direct = f"""
+            select t.id,t.player_id,t.promotion_day,t.total_amount,u.avatar,u.name,
+                   t.created,t.upgrade_flag,pu.vip_level,pu.vip_expire_time,0 as is_channel_partner
+            from proxy_promotion_relation t
+            left join user u on u.uid=t.player_id
+            left join proxy_user pu on pu.id=t.player_id
+            where t.proxy_id={proxy_id} and t.upgrade_flag=1
+        """
+        base_channel = f"""
+            select t.id,t.player_id,t.promotion_day,t.total_amount,u.avatar,u.name,
+                   t.created,t.upgrade_flag,pu.vip_level,pu.vip_expire_time,1 as is_channel_partner
+            from proxy_promotion_relation t
+            left join user u on u.uid=t.player_id
+            left join proxy_user pu on pu.id=t.player_id
+            join proxy_user s on s.id=t.channel_proxy_id and s.is_channel=1
+            where t.channel_proxy_id={proxy_id} and t.upgrade_flag=1
+        """
+        if expire_start is not None:
+            base_direct += f" and pu.vip_expire_time >= {expire_start}"
+            base_channel += f" and pu.vip_expire_time >= {expire_start}"
+        if expire_end is not None:
+            base_direct += f" and pu.vip_expire_time <= {expire_end}"
+            base_channel += f" and pu.vip_expire_time <= {expire_end}"
+        union_sql = f"({base_direct}) union all ({base_channel})"
+        order_sql = ""
+        if sort == 1:
+            order_sql = " order by total_amount desc, id desc"
+        elif sort == 2:
+            order_sql = " order by total_amount asc, id desc"
+        elif sort == 0:
+            order_sql = " order by id desc"
+        sql = f"select * from ({union_sql}) a {order_sql} limit {(page - 1) * page_size} ,{page_size}"
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
+
+    @classmethod
+    async def query_team_member_page(cls, level1_proxy_id: int
+                                     , page_size: int
+                                     , page: int
+                                     , sort: int):
+        # 过滤已经升级为一级代理的用户
+        sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
+              f" from  proxy_user_wallet t  JOIN proxy_user pu ON t.id = pu.id   left join  user u  on u.uid=t.id   " \
+              f" where  t.id=pu.id  and pu.proxy_level=2 and  pu.is_deleted=0   and t.level1_proxy_id={level1_proxy_id}"
+
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
+
+
+    @classmethod
+    async def query_team_member_page_filter_level(cls, level1_proxy_id: int, proxy_level: int,
+                                     page_size: int,
+                                     page: int,
+                                     sort: int):
+        # 过滤已经升级为一级代理的用户
+        sql = " select t.id ,t.total_player,t.total_amount ,t.created, u.avatar,u.name  " \
+              f" from  proxy_user_wallet t  JOIN proxy_user pu ON t.id = pu.id   left join  user u  on u.uid=t.id   " \
+              f" where  t.id=pu.id  and pu.proxy_level={proxy_level} and  pu.is_deleted=0  and t.level1_proxy_id={level1_proxy_id}"
+
+        if sort == 1:
+            sql = sql + f" order by t.total_amount  desc ,t.id desc"
+        elif sort == 2:
+            sql = sql + f" order by t.total_amount  asc ,t.id desc"
+
+        sql += f" limit {(page - 1) * page_size} ,{page_size} "
+        return await ProxyPromotionRelation.exec_sql(sql, query=True)
+
+"""
+收益明细查询
+"""
+
+
+class IncomeDetailQuery(LogMeta):
+    async def get(self
+                  , proxy_id: int
+                  , level1_proxy_id: int | None = None
+                  , order_month: str | None = None
+                  , order_day: str | None = None
+                  , page_size: int | None = None
+                  , last_id: int | None = None):
+        sql = f"select  t.id ,t.order_amount,t.order_month,t.order_month" \
+              f",t.proxy_income,t.order_type,t.created  from proxy_order_dividend_records t  " \
+              f" where t.proxy_id={proxy_id} " \
+              f" and t.order_month='{order_month}'"
+        if level1_proxy_id:
+            sql = sql + f" and level1_proxy_id={level1_proxy_id} "
+        if order_day:
+            sql = sql + f" and  t.order_day='{order_day}'"
+        if last_id and last_id > 0:
+            sql = sql + f" and  t.id <{last_id}"
+        sql = sql + f" order by t.id desc  limit {page_size}"
+        detail = await ProxyOrderDividendRecords.exec_query(sql),
+        if detail:
+            self.answer(self.sta_code.PASS, detail[0], hint="查询成功!")
+        self.answer(self.sta_code.PASS, None, hint="查询成功!")

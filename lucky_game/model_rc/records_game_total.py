@@ -4,6 +4,7 @@
 from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import RecordsGameTotal
 from lucky_game.model_rc.base_rc import BaseCommonRC
+from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
 from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from tortoise.transactions import in_transaction
@@ -21,12 +22,12 @@ class RecordsGameTotalRC(BaseCommonRC):
     @classmethod
     async def create_record_game_total(cls, record_rid: int, uid: int, final_status: int, final_score: int,
                                        final_ranking: int,
-                                       final_grade: int, final_result: dict, num: int = 0):
+                                       final_grade: int, final_result: dict, num: int = 0, room_status: int = None):
         """创建战绩总局记录"""
         try:
             async with in_transaction(connection_name=DbKey.DEFAULT):
                 record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
-                price = await cls.get_settle_price(record_rid, uid)
+                price = await cls.get_settle_price(record, uid, final_status)
                 record_data = {
                     "record_rid": record["record_rid"],
                     "room_id": record["room_id"],
@@ -53,6 +54,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                         record_rid,
                         end_time=int(datetime.now().timestamp()),
                         round_num=record["total_round"],
+                        room_status=room_status,
                     )
                     if not up_room_sta:
                         return new_record, "创建失败"
@@ -156,7 +158,8 @@ class RecordsGameTotalRC(BaseCommonRC):
             if record_tid:
                 record = await cls.db_model.del_by_pk(record_tid)
             if record_rid:
-                record = await cls.db_model.filter(**{"record_rid": record_rid}).delete()
+                await cls.db_model.filter(**{"record_rid": record_rid}).delete()
+                record = True
             if not record:
                 return record, "删除失败"
         except OperationalError as e:
@@ -169,7 +172,7 @@ class RecordsGameTotalRC(BaseCommonRC):
                                         end_time: int = None, cs_type: any = None, final_score: int = None,
                                         order_field: str = None, page: int = None, page_size: int = None,
                                         group_field: str = None, order_type: str = None, play_type: any = None,
-                                        filtration: str = "*"):
+                                        filtration: str = "*", final_grade: int = None):
         """战绩查询原生SQL"""
         try:
             where = " 1=1 "
@@ -200,13 +203,21 @@ class RecordsGameTotalRC(BaseCommonRC):
                     where += f" AND record_tid = {record_tid}"
             if play_type is not None:
                 if isinstance(play_type, list):
+                    # if len(play_type) == 1:
+                    #     where += f" AND play_type = {play_type[0]}"
+                    # else:
                     where += f" AND play_type in ({','.join(map(str, play_type))})"
+
+                    # play_types = ','.join([str(p) for p in play_type])
+                    # where += f" AND play_type in ({play_types})"
+
+                    # where += f" AND play_type in ({','.join(map(str, play_type))})"
                 else:
                     where += f" AND play_type = {play_type}"
             if start_time is not None:
                 where += f" AND created >= {start_time}"
             if end_time is not None:
-                where += f" AND created < {end_time}"
+                where += f" AND created <= {end_time}"
             if cs_type is not None:
                 if isinstance(cs_type, list):
                     where += f" AND cs_type in ({','.join(map(str, cs_type))})"
@@ -220,9 +231,10 @@ class RecordsGameTotalRC(BaseCommonRC):
                 group_field = "record_tid"
             if order_type is None:
                 order_type = "DESC"
+            if final_grade == 1:
+                where += f" AND final_grade = {final_grade}"
             total = 0
             sql = f"SELECT {filtration} FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} ORDER BY {order_field} {order_type}"
-            print(sql)
             if page and page_size:
                 total = await cls.db_model.exec_query(f"SELECT COUNT(*) as total FROM {cls.tb_name} WHERE {where} GROUP BY {group_field} {order_type}")
                 if isinstance(total, list):
@@ -238,39 +250,39 @@ class RecordsGameTotalRC(BaseCommonRC):
         return result, "成功"
 
     @classmethod
-    async def get_settle_info(cls, record_rid: int):
+    async def get_settle_info(cls, record: dict, uid: int, final_status: int):
         """获取结算信息"""
-        record, _ = await RecordsGameRoomRC.get_record_room_by_id(record_rid)
-        result_total, e = await cls.query_record_total_by_sql(
-            record_rid=record_rid,
-            filtration="uid, final_status, price"
-        )
         # 默认茶馆基金支付
-        uid = 0
+        price_uid = 0
         price = record["price"]
         club_id = record.get("club_id", 0)
         # 房主支付
         if record["pay_type"] == 0:
-            uid = record["creator"]
-            price = record["price"]
+            price_uid = record["creator"]
         # 冠军支付
-        elif record["pay_type"] == 1:
-            for item in result_total:
-                if item["final_status"] == 1:
-                    uid = item["uid"]
-                    price = item["price"]
-                    break
+        elif record["pay_type"] == 1 and final_status == 1:
+            price_uid = uid
         # AA支付
         elif record["pay_type"] == 3:
-            uid = [item["uid"] for item in result_total]
-            price = record["price"] / len(result_total)
-        return {"uid": uid, "club_id": club_id, "price": price}
+            price = record["price"] / record["max_player"]
+        return {"uid": price_uid, "club_id": club_id, "price": price}
 
     @classmethod
-    async def get_settle_price(cls, record_rid: int, uid: int):
+    async def get_settle_price(cls, record: dict, uid: int, final_status: int):
         """获取结算费用"""
-        settle_info = await cls.get_settle_info(record_rid)
+        settle_info = await cls.get_settle_info(record, uid, final_status)
         price = settle_info["price"]
         if settle_info["uid"] == 0 or settle_info["uid"] != uid:
             price = 0
         return price
+
+    @classmethod
+    async def delete_many_record(cls, record_rids: list):
+        """删除房间战绩记录"""
+        try:
+            record = await cls.db_model.filter(record_rid__in=record_rids).delete()
+            if not record:
+                return record, "删除失败"
+        except OperationalError as e:
+            return False, f"删除失败: {str(e)}"
+        return record, "删除成功"

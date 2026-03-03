@@ -5,6 +5,8 @@ from tortoise.exceptions import OperationalError
 from lucky_game.model_db.main import ClubUsers
 from lucky_game.model_rc.base_rc import BaseCommonRC
 from nsanic.libs.tool import json_parse
+
+from lucky_game.model_rc.club_user_group import ClubUserGroupRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from tortoise.transactions import in_transaction
 from common.public.enum_const import DbKey
@@ -79,21 +81,53 @@ class ClubUsersRC(BaseCommonRC):
         return True, "添加成功"
 
     @classmethod
-    async def update_club_user(cls, relation_id: int, role: int = None, status: int = None):
+    async def update_club_user(cls, relation_id: int, role: int = None, status: int = None, check_uid: int = None):
         """更新用户茶馆关系"""
         try:
-            data, e = await cls.get_club_user_by_id(relation_id)
-            if not data:
-                return False, e
-            up_data = {}
-            if role is not None:
-                up_data["role"] = role
-            if status is not None:
-                up_data["status"] = status
-            if up_data:
-                await cls.db_model.update_by_pk(relation_id, up_data)
-                await cls.cache_session_uid_drop(data["uid"])
-                await cls.cache_session_clubid_drop(data["club_id"])
+            async with in_transaction(connection_name=DbKey.DEFAULT):
+                data, e = await cls.get_club_user_by_id(relation_id)
+                if not data:
+                    return False, e
+                up_data = {}
+                if role is not None:
+                    up_data["role"] = role
+                if status is not None:
+                    up_data["status"] = status
+                if up_data:
+                    await cls.db_model.update_by_pk(relation_id, up_data)
+                    await cls.cache_session_uid_drop(data["uid"])
+                    await cls.cache_session_clubid_drop(data["club_id"])
+                # 管理员变更写入行为记录
+                if role is not None and role != data["role"]:
+                    # 管理员->普通成员
+                    status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL
+                    group_status = ClubUserGroupRC.GROUP_STATUS_NORMAL
+                    if role == cls.ROLE_MANAGE:
+                        # 普通成员->管理员
+                        status = ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
+                        group_status = ClubUserGroupRC.GROUP_STATUS_DISABLE
+                    # 写入行为记录
+                    sta, msg = await ExtraClubBehaviorRC.create_club_behavior(
+                        ExtraClubBehaviorRC.BEHAVIOR_MANAGE_INDEX,
+                        data["uid"],
+                        data["club_id"],
+                        check_uid=check_uid,
+                        status=status
+                    )
+                    if not sta:
+                        return False, msg
+                    # 更新禁止同桌状态
+                    groups, e = await ClubUserGroupRC.get_club_user_group_by_filter(
+                        data["club_id"],
+                        uid=data["uid"]
+                    )
+                    if groups and groups[0]["u_ids"]:
+                        group_id, e = await ClubUserGroupRC.update_club_user_group(
+                            groups[0]["gid"],
+                            status=group_status
+                        )
+                        if not group_id:
+                            return False, msg
         except OperationalError as e:
             return False, e
         return True, "更新成功"
@@ -122,15 +156,6 @@ class ClubUsersRC(BaseCommonRC):
                     await cls.db_model.del_by_pk(data.id)
                     await cls.cache_session_uid_drop(data.uid)
                     await cls.cache_session_clubid_drop(data.club_id)
-                sta, e = await ExtraClubBehaviorRC.create_club_behavior(
-                    ExtraClubBehaviorRC.BEHAVIOR_OUT_INDEX,
-                    data.uid,
-                    data.club_id,
-                    0 if check_uid == data.uid else check_uid,  # 主动离开check_id=0
-                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
-                )
-                if not sta:
-                    return False, e
         except OperationalError as e:
             return False, e
         return True, "删除成功"
@@ -226,10 +251,10 @@ class ClubUsersRC(BaseCommonRC):
                 count = await cls.db_model.get_count(query)
                 if count > 0:
                     offset = (page - 1) * page_size
-                    data = await cls.db_model.filter(**query).offset(offset).limit(page_size).values()
+                    data = await cls.db_model.filter(**query).order_by("-role").offset(offset).limit(page_size).values()
                 result = await cls.page_result(page, page_size, count, data)
             else:
-                result = data = await cls.db_model.filter(**query).values()
+                result = data = await cls.db_model.filter(**query).order_by("-role").values()
             if not data:
                 return result, "暂无数据"
         except OperationalError as e:
@@ -274,7 +299,7 @@ class ClubUsersRC(BaseCommonRC):
                         ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                         uid,
                         club_id,
-                        check_uid,
+                        check_uid=check_uid,
                         status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED
                     )
                     if not sta:
@@ -300,8 +325,8 @@ class ClubUsersRC(BaseCommonRC):
                     ExtraClubBehaviorRC.BEHAVIOR_BLACK_INDEX,
                     club_user["uid"],
                     club_user["club_id"],
-                    check_uid,
-                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_SUCCEED,
+                    check_uid=check_uid,
+                    status=ExtraClubBehaviorRC.BEHAVIOR_STATUS_CANCEL,
                 )
                 if not sta:
                     return False, e

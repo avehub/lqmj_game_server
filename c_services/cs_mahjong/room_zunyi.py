@@ -90,7 +90,6 @@ class RoomZY(RoomBJ):
                 pai_xing_score_map=self.pai_xing_score_map, extra_score_map=self.extra_score_map)
             p.jiao_pai = hu_type
             p.hu_path = hu_path or []
-        print("hu_type:", hu_type, "p.hu_path", p.hu_path)
         if not hu_type:
             return {}, False, []
 
@@ -151,7 +150,7 @@ class RoomZY(RoomBJ):
         if is_sha_bao:
             extra_fan.append(ExtraHuPai.SHA_BAO)
 
-        if self.poker.left_count <= const.LIU_JU_COUNT:
+        if self.play_type == PlayType.AN_SHUN_MJ and self.poker.left_count <= const.LIU_JU_COUNT:
             extra_fan.append(ExtraHuPai.SEA_MOON)
 
         qing_upgrade_map = {
@@ -266,6 +265,9 @@ class RoomZY(RoomBJ):
 
     async def deal_first_ji(self, curr_p: Player):
         await super().deal_first_ji(curr_p)
+        if not self.flow_status_is_equal(FlowStatus.T_IN_PUBLIC_OPRATE):
+            self.log_info(self.tid, "冲锋鸡必须是成功打牌后")
+            return
         if self.play_type == PlayType.ZUN_YI_LAI_ZI and self.curr_card == self.lai_zi and self.__round_first_yi_tong == 0:
             self.__round_first_yi_tong = 1
             self.__cf_yi_tong_seat_id = self.curr_seat_id
@@ -643,5 +645,8 @@ class RoomZY(RoomBJ):
             return 1,self.__ze_ren_yi_wan_seat_id
         return 0,0
 
+    def clear_room(self):
+        super().clear_room()
+        self.__fan_ji_score.clear()
 
 

@@ -58,6 +58,15 @@ class CmdClub(BaseEnum):
     CLUB_OWNER_DISMISS = 4, "茶馆房主解散"
     PLAYER_READY_EXCEPT_OWNER = 5, "所有玩家准备，除了房主", CallCheck.INNER.val
     LEAVE_CLUB = 6, "离开茶馆"
+    CLUB_NOTICE = 7,"茶馆公告通知", CallCheck.INNER.val
+    UPDATE_ROOM_SET = 8,"茶馆设置更新"
+    CHECK_GAME_STATUS = 9, "检查是否在游戏中"
+    JOIN_NEW_GAME = 10, "加入新游戏房间"
+    JOIN_NEW_GAME_SUC = 11, "加入新游戏房间成功",CallCheck.INNER.val
+
+@unique
+class CmdFanOut(BaseEnum):
+    LOST_CONNECT = 201, "离线通知公共频道"
 
 
 @unique
@@ -67,6 +76,18 @@ class ClubMsgType(BaseEnum):
     QUIT_ROOM = 3, "退出茶馆游戏房间"
     DISMISS_ROOM = 4, "解散茶馆游戏房间"
     UPDATE_ROOM = 5, "更新茶馆游戏房间"
+
+@unique
+class CmdCompetition(BaseEnum):
+    MATCH_COMPETITION = 1, "加入比赛"
+    QUIT_COMPETITION = 2, "退出比赛"
+    START_COMPETITION = 3, "开始比赛"
+    ROOM_FINISH = 4, "房间结束", CallCheck.INNER.val
+    MATCH_FINISH = 5, "比赛结束"
+    MATCH_BY_INNER = 6, "加入比赛（内部调用）", CallCheck.INNER.val
+    BACK_COMPETITION = 7, "返回比赛"
+    COMPETITION_INFO = 8, "比赛信息"
+    UPDATE_SCORE = 9, "更新比赛积分", CallCheck.INNER.val
 
 
 @unique
@@ -154,6 +175,9 @@ class CmdRoom(BaseEnum):
     ROBOT_CAL_PENG = 100, "机器人碰计算", CallCheck.INNER.val
     ROBOT_CAL_GANG = 101, "机器人杠计算", CallCheck.INNER.val
     ZHA_JIAN = 102, "炸捡", "麻将"
+    CHANGE_CONNECT = 103,"玩家状态变化","麻将"
+    CLUB_QUIT_ROOM = 104, "茶馆玩家退出房间", CallCheck.INNER.val
+    FORCE_DISMISS_ROOM = 105, "强制解散房间", CallCheck.INNER.val
 
     #休闲玩法
     TIMELY_KOU_FEN = 110, "即时结算", "麻将"
@@ -162,6 +186,9 @@ class CmdRoom(BaseEnum):
     FAN_JI_INFO = 113, "翻鸡信息", "麻将"
     MANY_HU = 114, "多人胡", "麻将"
     RECORD_ACCOUNT = 115, "记账", "麻将"
+
+    #比赛玩法
+    ALL_PLAYER_FINISH = 120,"所有真人已结束当前轮次",CallCheck.INNER.val
 
 
 @unique
@@ -196,6 +223,15 @@ class CmdWorkers(BaseEnum):
     CANCEL_BACKGROUND_SCHEDULED_TASK = 26, "取消后台定时任务"
     FETCH_ACTIVE_MAILS = 27, "获取活跃（一段时间）邮件"
     USER_EVENT_TRACKING = 28, "用户事件追踪"
+    UPDATE_GAME_RECORD_TIMES = 29, "更新游戏战绩次数"
+    INSERT_GAME_RECORD_TOTAL = 30, "插入游戏战绩总分"
+    UPDATE_CYCLE_POINT_LEADERBOARD = 31, "更新赛季积分排行榜"
+    UPDATE_COMPETITION_RESULT = 32, "更新竞赛结果"
+    PROXY_INVITE_BIND = 41, "分销-邀请绑定"
+    PROXY_ORDER_SYNC = 42, "分销-订单同步"
+    PROXY_USER_SET = 43, "分销-用户配置"
+    CLUB_EVENT_LOG = 51, "茶馆事件日志"
+
 
 
 @unique
@@ -248,6 +284,7 @@ class RedDotType(BaseEnum):
     RD_CLUB_CHECK = 23, "俱乐部审批"
     RD_CLUB_USER_LIST = 24, "俱乐部用户列表"
     RD_CLUB_KICK = 25, "俱乐部踢出"
+    RD_CLUB_CHECK_REFRESH = 26, "俱乐部审批刷新"
 
 
 class CmdRobotMethods(BaseEnum):

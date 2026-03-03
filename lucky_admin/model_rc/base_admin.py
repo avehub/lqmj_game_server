@@ -1,7 +1,7 @@
 from nsanic.libs.tool import json_encode
 from nsanic.orm.rc_model import RCModel
 
-from lucky_admin.model_db.main import Admins
+from lucky_game.model_db.main import Admins
 
 
 class BaseAdminRC(RCModel):
@@ -26,3 +26,11 @@ class BaseAdminRC(RCModel):
                 await cls.conf.rds.set_hash(cls.tb_name, pk_val, json_encode(info))
             return info
         return
+
+    @classmethod
+    async def admin_info(cls, username):
+        """获取管理员信息"""
+        info = await cls.db_model.filter(username=username).first().values()
+        if info:
+            return True, info
+        return False, "用户不存在"

@@ -15,12 +15,18 @@ class ExtraClubEventRC(BaseCommonRC):
     EVENT_TYPE = {
         'FUND_RECHARGE': 1,  # 基金充值
         'FUND_CONSUME': 2,   # 基金消耗
-        'APPROVAL_LOG': 3    # 入馆审批
+        'APPROVAL_LOG': 3,    # 入馆审批
+        'CLOSE_LOG': 4,    # 茶馆解散
+        'OUT_CLUB': 5,   # 主动退出茶馆
+        'KICK_CLUB': 6,   # 踢出茶馆
     }
     EVENT_MSG = {
-        1: "{name}玩家（ID：{uid}）为茶馆充值基金{price}",
-        2: "{name}玩家（ID：{uid}）消耗{price}基金创建了{play_type}玩法（房间号：{room_id}）",
-        3: "记录{check_name}管理员（ID：{check_uid}）通过{name}玩家（ID：{uid}）加入茶馆",
+        1: "茶馆基金充值 {price}",
+        2: "茶馆基金消耗 {price}, 创建房间（ID: {room_id}）",
+        3: "管理员（ID：{check_uid}）审批（ID：{uid}）加入茶馆",
+        4: "茶馆基金消耗 {price}, 解散茶馆",
+        5: "管理员（ID：{check_uid}）审批（ID：{uid}）退出茶馆",
+        6: "管理员（ID：{check_uid}）将（ID：{uid}）踢出茶馆",
     }
 
     @classmethod
@@ -69,7 +75,7 @@ class ExtraClubEventRC(BaseCommonRC):
     @classmethod
     async def get_by_filter(cls, club_id: int = None, event_type: int = None, uid: int = None, start_time: int = None,
                             end_time: int = None,
-                            page_size: int = None, page: int = None, order_field: str = None, order_type: str = "DESC"):
+                            page_size: int = None, page: int = None, order_field: str = None):
         """根据条件获取茶馆列表"""
         try:
             query = {}
@@ -88,9 +94,9 @@ class ExtraClubEventRC(BaseCommonRC):
             if end_time is not None:
                 query["created__lt"] = end_time
             if event_type is not None:
-                query["event_type"] = event_type
+                query["type"] = event_type
             if order_field is None:
-                order_field = "id"
+                order_field = "-id"
             if page and page_size:
                 total, _ = await cls.count_record_total(**query)
                 records = []
@@ -102,7 +108,7 @@ class ExtraClubEventRC(BaseCommonRC):
             else:
                 result = records = await cls.db_model.filter(**query).order_by(order_field).values()
             if not records:
-                return result, "暂无战绩"
+                return result, "暂无记录"
         except OperationalError as e:
             return None, f"查询失败: {str(e)}"
         return result, "成功"

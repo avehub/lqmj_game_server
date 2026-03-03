@@ -7,7 +7,7 @@ import hashlib
 import requests
 from urllib.parse import quote
 from nsanic.libs.mult_log import NLogger
-from common.public.conf import ENV, VIVO_APP_ID, VIVO_APP_KEY, VIVO_CP_ID
+from common.public.conf import ENV
 
 class VivoPayment:
     """VIVO支付处理类"""
@@ -19,9 +19,9 @@ class VivoPayment:
         GATEWAY = "https://sandbox.vivopos.com/vivopay"
     
     def __init__(self):
-        self.app_id = VIVO_APP_ID
-        self.app_key = VIVO_APP_KEY
-        self.cp_id = VIVO_CP_ID
+        self.app_id = "1"
+        self.app_key = "1"
+        self.cp_id = "1"
     
     def _generate_sign(self, params: dict) -> str:
         """生成签名"""

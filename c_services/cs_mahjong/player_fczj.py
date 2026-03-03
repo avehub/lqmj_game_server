@@ -17,6 +17,8 @@ class PlayerFCZJ(Player):
         self.__max_hu_type = 0
         self.__max_multiple = 0
         self.__hu_type_score = 0
+        self.__ji_score = []
+        self.__recharge_sta = 0
 
     @property
     def first_down(self):
@@ -88,6 +90,18 @@ class PlayerFCZJ(Player):
     def hu_type_score(self, hu_type_score):
         self.__hu_type_score = hu_type_score
 
+    @property
+    def recharge_sta(self):
+        return self.__recharge_sta
+
+    @recharge_sta.setter
+    def recharge_sta(self,value):
+        self.__recharge_sta = value
+
+    def set_ji_score(self, ji_score):
+        self.__ji_score = ji_score
+
+
     def record_account(self, data, is_copy=True):
         """
         玩家记账
@@ -113,7 +127,8 @@ class PlayerFCZJ(Player):
             "hu_type": self.hu_type,
             "ji_pai": self.ji_pai,
             "max_hu_type": self.__max_hu_type,
-            "max_multiple": self.__max_multiple
+            "max_multiple": self.__max_multiple,
+            "ji_scores": self.__ji_score,
         }
         data.update(result)
         return data
@@ -131,12 +146,17 @@ class PlayerFCZJ(Player):
     def player_info(self, contain_cards=True):
         p_info = super().player_info(contain_cards)
         p_info["is_out"] = self.is_out
+        p_info["total_score"] = 0
+        p_info["recharge_sta"] = self.__recharge_sta
+        p_info["seconds"] = self.left_seconds()
         return p_info
 
     def clear_player(self):
         self.__first_down = 0
         self.__quan_count = 0
-        self.__record_account = []
+        self.__record_account.clear()
         self.__fan_ji = 0
         self.__hua_zhu = 0
+        self.__ji_score.clear()
+        self.__recharge_sta = 0
         super().clear_player()

@@ -7,9 +7,9 @@ from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
 from tortoise.transactions import in_transaction
 from common.proto.py_pb2.common import switch_enum, get_one_of_model, switch_type_enum
-from common.public.enum_const import DbKey, ServiceEnum
+from common.public.enum_const import DbKey, ServiceEnum, StaCode
 from common.public.common_class import CommonApi
-from lucky_game.base_api import GameAuthApi
+from lucky_game.base_api import GameAuthApi, SpecialApi
 from lucky_game.handler.up_assets import UpAssets
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
@@ -26,12 +26,18 @@ class StoreHandler(GameAuthApi):
 
     async def get(self, req: Request, **kwargs):
         platform = self.check_str(req.args.get("platform"), require=False, p_name="平台ID")
+        os = self.check_str(req.args.get("c_os"), require=False, p_name="APP系统")
         type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
         status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
         u_info = kwargs.get("u_info")
         uid = u_info.get("uid")
         if not platform:
             platform = PlatForm.all_values()
+        if int(platform) == PlatForm.NATIVE_APP.val and os:
+            platform = PlatForm.ANDROID_APP.val
+            if os == "ios":
+                platform = PlatForm.IOS_APP.val
+
         store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
         self.loginfo("store", store)
         if not store:
@@ -47,13 +53,14 @@ class StoreHandler(GameAuthApi):
 
 
 class PayByGood(GameAuthApi):
-    """ 商店购物 """
+    """ 商店购物（游戏内部） """
     async def post(self, req: Request, **kwargs):
         platform = self.check_int(req.args.get("platform"), require=True, p_name='平台ID')
         sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')
         if not sku:
             return self.answer(self.sta_code.ERR_ARG, hint="请选择商品")
         pay_mode = self.check_int(req.json.get("pay_mode"), require=True, p_name='支付方式')
+        os = self.check_str(req.args.get("c_os"), require=True, p_name='c_os')
         num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
         plat_enum = PlatForm.find_member_by_val(platform)
         pay_enum = PayMode.find_member_by_val(pay_mode)
@@ -75,7 +82,7 @@ class PayByGood(GameAuthApi):
 
         self.loginfo(f"商店购物：user={u_info}，good={express}")
         # 支付前校验
-        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num)
+        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num=num, os=os)
         self.loginfo(f"支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
         # 支付前校验失败
         if not sta_before:
@@ -102,6 +109,57 @@ class PayByGood(GameAuthApi):
                 self.logerr(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
             self.logerr(f'{pay_enum.phrase}事务执行失败，原因：{e}')
             self.answer(self.sta_code.FAIL, hint=f'{pay_enum.phrase}失败，请稍后再试')
+        data["buy_good"] = express
+        return self.answer(data=data)
+
+
+class StoreList(SpecialApi):
+    """ （网页）获取商店商品列表 """
+
+    async def get(self, req: Request, **kwargs):
+        platform = self.check_str(req.args.get("platform"), require=False, default=PlatForm.WECHAT_MINI_GAME, p_name="平台ID")
+        type_id = self.check_int(req.args.get("type_id"), require=False, p_name="类型ID")
+        status = self.check_int(req.args.get("status") or 1, require=False,  p_name="状态")
+        store, e = await StoreRC.get_store_filter(platform=platform, type_id=type_id, status=status)
+        if not store:
+            return self.answer(data=store, hint=e)
+        sid = [item.get("sid") for item in store]
+        goods, e = await GoodRC.get_good_filter(sid=sid, status=status)
+        if not goods:
+            return self.answer(data=goods, hint=e)
+            # data = await self.list_by_group(goods, "sid", unordered=False)
+        return self.answer(data=goods)
+
+class StoreBuy(GameAuthApi):
+    """ （网页）商店购买商品 """
+    async def post(self, req: Request, **kwargs):
+        sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')
+        num = self.check_int(req.json.get("num"), require=False, minval=1, default=1, p_name='购买数量')
+        uid = self.check_int(req.json.get("uid"), require=True, p_name='uid')
+        if not sku:
+            return self.answer(StaCode.ERR_ARG, hint="请选择商品")
+        purchase_user = kwargs.get("u_info")
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if not u_info:
+            return self.answer(StaCode.NO_PLAYER_INFO)
+        # 查询商品、校验
+        express = await GoodRC.get_good_info(sku)
+        payment = PaymentLogic()
+        (not express) and self.answer(code=self.sta_code.GOODS_NOT_FOUND, hint="商品异常，请联系客服")
+        check_sta, check_desc, buy_record = await payment.check_good_validity(u_info, express)
+        (not check_sta) and self.answer(code=self.sta_code.NOT_IN_VALID_STATE, hint=f"{check_desc}")
+        platform = PlatForm.WECHAT_MP
+        pay_mode = PayMode.HUI_FU_PAY
+
+        self.loginfo(f"微信商城购物：user={u_info}，purchase_user={purchase_user}，good={express}")
+        # 支付前校验
+        sta_before, msg, data_before = await payment.pay_before(u_info, express, pay_mode, platform, num=num, purchase_uid=purchase_user.get("uid"))
+        self.loginfo(f"微信商城支付前校验：sta_before={sta_before}, msg={msg}, data_before={data_before}")
+        # 支付前校验失败
+        if not sta_before:
+            return self.answer(self.sta_code.RESOURCE_NOT_ENOUGH, hint=msg)
+        # 购买商品事务处理
+        data = data_before.get("order")
         data["buy_good"] = express["content"]
         data["buy_good"]["img"] = express.get("img")
         return self.answer(data=data)
@@ -111,20 +169,6 @@ class PayByGood(GameAuthApi):
 
 
 
-    @staticmethod
-    async def pay_by_free(_, store_type, __, ___, conf_items: list):
-        """白嫖"""
-        gain_items = []
-        for ci in conf_items:
-            match store_type:
-                case StoreType.GOLD:
-                    ci["reason"] = ReasonCostGold.STORE_FREE_GOLD
-                    gain_items.append(ci)
-                case _:
-                    gain_items.append(ci)
-
-        return gain_items, gain_items
-
 
 class SwitchStaHandler(GameAuthApi):
     """ 开关状态（内购...） """
@@ -133,7 +177,7 @@ class SwitchStaHandler(GameAuthApi):
     async def get(self, req: Request, **_):
         conf_switch = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_SWITCH)
         c_os = req.args.get("c_os")
-        c_platform = req.args.get("c_platform")
+        platform = req.args.get("platform")
         switch_type = req.args.get("switch_type")
         if switch_type:
             switch_type = self.check_int(switch_type, require=True, minval=1)
@@ -142,7 +186,7 @@ class SwitchStaHandler(GameAuthApi):
         match switch_type:
             case switch_type_enum.IAP:
                 data = conf_switch.get("iap")
-                platform = PlatForm.get_val_by_phrase(c_platform)
+                platform = PlatForm.get_val_by_phrase(platform)
                 switch = data.get(f'{c_os}_{platform}') or switch_enum.OPEN
                 one_of_model = get_one_of_model()
                 one_of_model.switch = switch

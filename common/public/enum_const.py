@@ -66,6 +66,7 @@ class StaCode(BaseCode):
     FLOW_ERR = -105, 200, '流程错误'
     ALREADY_DO = -106, 200, '已经操作过'
     RESOURCE_NOT_ENOUGH = -107, 200, '资源不足'
+    COMPETITION_POINT_NOT_ENOUGH = -108,'比赛积分不足'
 
 
 @unique
@@ -75,7 +76,7 @@ class JWType(BaseEnum):
     """
     MANAGER = 1, "system_manager", 7 * 86400
     '''管理账户'''
-    AGENT = 2, "sales_agent", 14 * 86400
+    AGENT = 2, "sales_agent", 30 * 86400
     '''分销用户'''
     USER = 3, "normal_user", 2 * 86400
     '''普通用户'''
@@ -122,12 +123,16 @@ class ServiceEnum(BaseEnum):
     C_CLUB = 10, "lucky_club", '俱乐部服务'
 
     C_MAHJONG_FC = 11, "mahjong_fc", GameType.LEISURE
+    C_COMPETITION = 12, "competition","比赛场匹配服务"
 
     C_MAHJONG_XY = 22, "mahjong_xy", GameType.ROOM_CARD
     C_MAHJONG_GY = 23, "mahjong_gy", GameType.ROOM_CARD
     C_MAHJONG_ZY = 24, "mahjong_zy", GameType.ROOM_CARD
     C_MAHJONG_BJ = 25, "mahjong_bj", GameType.ROOM_CARD
     C_MAHJONG_RH = 26, "mahjong_rh", GameType.ROOM_CARD
+    C_MAHJONG_GY_MATCH = 27, "mahjong_gy_match", GameType.ROOM_CARD
+    C_MAHJONG_XY_MATCH = 28, "mahjong_xy_match", GameType.ROOM_CARD
+
 
     # 子游戏 -> 机器人，子服务游戏枚举[101 - 199]，接收游戏发送
     ROBOT_MONSTER = 101, "monster", '打妖怪机器人'
@@ -143,12 +148,15 @@ LEISURE_GAME_LIST = [ServiceEnum.C_MONSTER_SEQUEL.val, ServiceEnum.C_MONSTER_MAN
 class Channel(StrEnum):
     C_SERVICES = "C_SERVICES"  # 子服务频道前缀
     CHANNEL_SYSTEM_MSG = "CHANNEL_SYSTEM_MSG"  # 系统消息
+    C_SERVICES_COMMON = "C_SERVICES_COMMON" #公共广播消息
 
 
 class CacheKey(StrEnum):
     IN_SERVICE = "IN_SERVICE"  # 在子服务（在哪个子服务）
     WS_ONLINE_INFO = "WS_ONLINE_INFO"  # ws在线信息
     PLAYER_GOLD = "PLAYER_GOLD" #休闲场玩家起始金币
+    PLAYER_GAME_STA = "PLAYER_GAME_STA" #玩家游戏状态
+    IN_MATCH = "IN_MATCH"  # 在比赛中
 
 
 class DbKey(StrEnum):

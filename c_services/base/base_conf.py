@@ -8,6 +8,7 @@ from common.public.conf import CONF_DB, CONF_RDS, CONF_AMQP, DEBUG_MODE, USE_OBJ
 from common.public.enum_const import DbKey
 from common.utils.meta_class import SingleTon
 from .rmq_client import Rmq
+from common.utils.locker import ResourceLocker
 
 
 class BaseConf(metaclass=SingleTon):
@@ -45,6 +46,8 @@ class BaseConf(metaclass=SingleTon):
     log: NLogger = NLogger
     rmq: Rmq = None
 
+    locker = ResourceLocker()
+
     @classmethod
     def set_conf(cls, server_name, server_id):
         cls.SERVER_NAME = server_name
@@ -77,6 +80,7 @@ class BaseConf(metaclass=SingleTon):
         """数据库配置"""
         models = cls.MODEL_LIST + cls.MODEL_EXTRA
         model_list = [f'lucky_game.model_db.{item}' for item in models]
+        model_list.append("lucky_proxy.model_db.main")
         return cls.makeup_db_conf(model_list) if cls.CONF_DB else None
 
 

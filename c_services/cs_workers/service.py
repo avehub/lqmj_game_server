@@ -1,48 +1,46 @@
 import asyncio
 import random
+from common.model_rc.tournament_user_point import TournamentUserPointRC
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_encode
 from tortoise.transactions import in_transaction
 from c_services.base.base_server import JsonBaseServer
 from c_services.const.cs_enum_const import CmdWorkers, CmdNotice, RedDotType, CmdWs, GameAnnouncement
+from common.model_rc.tournament_cycle_leaderboard import TournamentCycleLeaderboardRC
 from common.proto.py_pb2.common import common_pb2
 from common.proto.py_pb2.ws_leisure import S2CTopAnnouncements
+from common.public.common_class import CommonApi
 from common.public.conf import ROBOT_RANK
 from common.public.enum_const import DbKey, LEISURE_GAME_LIST, ServiceEnum
-from common.utils.kit_async import DelayCall
-from common.utils.kit_dt import KitDt
 from lucky_admin.const import BackTaskSta, WeightEnum
-from lucky_admin.model_db.main import RecordsAdminTimedTask
+from lucky_game.model_db.main import RecordsAdminTimedTask
 from lucky_admin.model_rc.mails_manage import RecordsAdminMailsRC
+from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.active_behaviors import UserBehaviorsRC
 from lucky_game.model_rc.base_activity import UserActivityRC
 from lucky_game.model_rc.base_bag import UserBagRC
-# from lucky_game.model_rc.base_game_task import UserTaskRC, ConfTaskRC
-from lucky_game.model_rc.base_interaction import InteractionRC
 from lucky_game.model_rc.base_mails import MailsRC
-# from lucky_game.model_rc.base_safe_box import UserSafeBoxRC
-# from lucky_game.model_rc.base_skin import UserSkinRC, ItemsSkinRC
-from lucky_game.model_rc.base_store import StoreRC
 from lucky_game.model_rc.base_user import BaseUserRC
-# from lucky_game.model_rc.base_cosmetic import UserCosmeticRC, ItemsCosmeticRC
 from lucky_game.model_rc.conf_leisure import LeisureConfRC
-from lucky_game.model_rc.vip_level import UserVipRC, ConfVipRC
+from lucky_game.model_rc.distribution_settle_conf import DistributionSettleConfRC
+from lucky_game.model_rc.vip_level import UserVipRC
 from lucky_game.model_rc.player_game_times import PlayerGameTimesRC
 from lucky_game.model_db.extra import RecordsGameGrade, RecordsUserEvent
-from lucky_game.model_db.log import RecordsGoldStatement, RecordsDiamondStatement
-# from lucky_game.model_rc.base_ranking import UserRankingRC, ConfRankingRC, ConfSeasonRC
 from lucky_game.model_db.main import Mails, Orders
-from lucky_game.const import ActivityItem, GoodsItem, StoreItem, TaskType, AwardType, MailType, ActivityType, \
-    CompleteSta, EventTracking, OrderStatus, GoodsSku
-from lucky_game.logic.activity import act_count, Base, Package, FirstCharge
+from lucky_game.const import ActivityItem, TaskType, AwardType,  ActivityType, EventTracking, OrderStatus, GoodsSku
+from lucky_game.logic.activity import act_count, Base, Package, FirstCharge, InfinitePlay
 from lucky_game.model_rc.base_activity import ConfActivityRC
 from lucky_game.model_rc.user_activity import AwardGainsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.extra_club_behavior import ExtraClubBehaviorRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.logic.payment import PaymentLogic
-
-
+from common.utils.utils import UtilsTool
+from lucky_game.model_rc.records_game_room import RecordsGameRoomRC
+from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
+from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
+from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
+from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
 
 
 class WorkersServer(JsonBaseServer):
@@ -53,6 +51,7 @@ class WorkersServer(JsonBaseServer):
     ONCE_OPERATION_LIMIT = 1000  # 单次操作上限
     TASK_DATE_KEY = 'task_date'
     delay_fail = 2
+    SUBSCRIBE_FANOUT = None
 
     def __init__(self):
         super().__init__()
@@ -64,6 +63,16 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.UPDATE_ITEM_ORDER_COUNT: self.__update_item_order_count,
             CmdWorkers.BAN_PLAYER: self.__ban_player,
             CmdWorkers.NOTIFY_ANNOUNCEMENT: self.__notify_announcement,
+            CmdWorkers.INSERT_GAME_GRADE: self.__insert_game_grade,
+            CmdWorkers.UPDATE_GAME_RECORD_TIMES: self.__update_game_record_times,
+            CmdWorkers.INSERT_GAME_RECORD_TOTAL: self.__insert_game_record_total,
+            CmdWorkers.UPDATE_CYCLE_POINT_LEADERBOARD: self.__update_tournament_cycle_leaderboard,
+            CmdWorkers.UPDATE_COMPETITION_RESULT: self.__update_competition_result,
+            CmdWorkers.PROXY_INVITE_BIND: self.__invite_bind_user,
+            CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
+            CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
+            CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
+            CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
 
@@ -96,15 +105,8 @@ class WorkersServer(JsonBaseServer):
             # await self.__process_safe_box(uid, _)
             await self.__user_event_tracking(uid, {'event_tracking': EventTracking.AFTER_FIRST_PAY.val})
 
-    async def __insert_gold_statement(self, uid, data):
-        """ 插入金币流水 """
-        self.log_info(uid, "插入金币流水", data)
-        await RecordsGoldStatement.insert_one(uid, **data)
 
-    async def __insert_diamond_statement(self, uid, data):
-        """ 插入钻石流水 """
-        self.log_info(uid, "插入钻石流水", data)
-        await RecordsDiamondStatement.insert_one(uid, **data)
+
 
     async def __new_user_give_gift(self, uid, data):
         """ 新用户赠送礼物 """
@@ -145,7 +147,7 @@ class WorkersServer(JsonBaseServer):
             self.red_dot_log(uid, f"玩家{uid}ws未连上，无法获取红点")
             return
         rd_type_list = data.get("rd_type_list") or RedDotType.all_values()
-        self.red_dot_log(uid, "批量获取红点>>>", rd_type_list)
+        self.log_info(uid, "批量获取红点>>>", rd_type_list)
         get_red_dots = self.__get_red_dot_tasks(uid, rd_type_list)
         get_red_dots and await asyncio.gather(*get_red_dots)
 
@@ -195,8 +197,10 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_sign_in_by_month(self, uid):
         """每月累计签到奖励红点"""
-        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
-        sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, count=True)
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN, platform=u_info.get("platform"))
+        start, end = await self.get_time_range(period="month")
+        sta, gains = await AwardGainsRC.get_award_gains(uid, act_id=act.get("act_id", 0), status=0, start_time=start, end_time=end, count=True)
         self.red_dot_log(uid, "每月累计签到奖励红点查询", sta and gains > 0)
         if sta and gains > 0:
             await self.__notify_red_dot(uid, RedDotType.RD_SIGN_IN)
@@ -254,9 +258,9 @@ class WorkersServer(JsonBaseServer):
 
     async def __notice_by_first_charge(self, uid):
         """首充红点"""
-        sta = await FirstCharge().pay_count(uid)
-        self.red_dot_log(uid, "首充红点查询", not sta)
-        if not sta:
+        total = await FirstCharge().pay_count(uid)
+        self.red_dot_log(uid, "首充红点查询", not total)
+        if not total:
             await self.__notify_red_dot(uid, RedDotType.RD_FIRST_CHARGE)
 
     async def __notice_by_relief(self, uid):
@@ -265,12 +269,14 @@ class WorkersServer(JsonBaseServer):
         conf_data = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_RELIEF)
         if u_info.get("gold", 0) < conf_data.get("min_gold"):
             act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.INFINITE_PLAY)
-            sta, msg, progress = await Base().act_progress(uid, act.get("act_id", 0), ActivityType.INFINITE_PLAY)
-            num = 0
-            if sta and progress:
-                num = act.get("join_limit_day") - progress.get("today_total", 0)
-            self.red_dot_log(uid, "救济红点查询", progress)
-            if num > 0:
+            sta, msg, progress, _ = await Base().act_progress(act, u_info)
+            status = -1
+            if sta:
+                result = await InfinitePlay().progress_data(act, progress, u_info)
+                status = result.get("gains")[0].get("status")
+            result = status == 0
+            self.red_dot_log(uid, "救济金红点查询", result)
+            if result:
                 await self.__notify_red_dot(uid, RedDotType.RD_RELIEF)
 
     async def __notice_by_share(self, uid):
@@ -286,9 +292,12 @@ class WorkersServer(JsonBaseServer):
     async def __notice_by_limit_login(self, uid):
         """ 限时登录红点 """
         package = Package()
-        now_award_id = await package.now_award_id()
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        platform = u_info.get("platform")
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.PACKAGE, platform=platform)
+        now_award_id = await package.now_award_id(platform)
         if now_award_id:
-            progress = await package.get_progress(now_award_id, uid)
+            progress = await package.get_progress(now_award_id, uid, act)
             sta = progress["status"] == 0
             self.log_info(uid, "限时登录红点查询", sta)
             if sta:
@@ -324,17 +333,15 @@ class WorkersServer(JsonBaseServer):
         res = await UserBehaviorsRC.update_user_order_count(uid, data)
         self.log_info(uid, "更新玩家完成订单数", True if res else False)
 
-    async def __update_bag_prop(self, uid, data):
+    async def __update_bag_grop(self, uid, good_data):
         """ 更新背包物品 """
-        data = data.get("prop") or []
-        if not data:
+        if not good_data:
             return
-        await UserBagRC.update_user_bag(uid, data)
-        goods_id_list = []
-        for d in data:
-            goods_id_list.append(d.get('goods_id'))
-        await UserBagRC.batch_deal_new_props(uid, goods_id_list)
-        self.log_info(uid, "更新背包物品", data)
+        await UserBagRC.update_user_bag(uid, [good_data])
+        # await UserBagRC.batch_deal_new_props(uid, [good_data.get('good_id')])
+        await BaseUserRC.deal_user_update_goods(uid, id_list=[good_data.get('good_id')])
+        await self.__notice_by_bag(uid)
+        self.log_info(uid, "更新背包物品", good_data)
 
     async def __check_limited_goods(self, uid, data):
         """检查限时物品"""
@@ -462,10 +469,84 @@ class WorkersServer(JsonBaseServer):
         pb_data = S2CTopAnnouncements.pb_model(ann_list)
         await self.notice_ws_by_rmq(CmdNotice.TOP_ANNOUNCEMENT, uid, msg=pb_data)
 
+    async def __insert_game_grade(self, uid, data):
+        replay_msg_data = data.get("replay_msg_data")
+        tid = data.get("tid")
+        for replay_msg in replay_msg_data:
+            msg = replay_msg.get("replay_msg")
+            for i, m in enumerate(msg):
+                msg[i] = UtilsTool.base64_to_bytes(m,log_fun = self.log_info)
+        result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
+        self.log_info(tid,"游戏结束一轮结束战绩插入", result_data)
+
+
+
+    async def __update_game_record_times(self, uid, data):
+        """ 更新游戏战绩次数 """
+        tid = data.get("tid")
+        await self.conf.locker.locked(tid,self.update_record_times,(uid,data))
+
+    async def update_record_times(self,uid,data):
+        round_idx = data.get("round_idx")
+        record_id = data.get("record_id")
+        tid = data.get("tid")
+        is_all = data.get("is_all")
+        if not is_all:
+            round_msg_records = data.get("round_msg_records")
+            for i, m in enumerate(round_msg_records):
+                round_msg_records[i] = UtilsTool.base64_to_bytes(m, log_fun=self.log_info)
+            up_segment_sta, e = await RecordsGameSegmentRC.update_record_game_segment(record_id, uid, replay_msg=round_msg_records,
+                                                                  round_num=round_idx)
+            self.log_info(tid, "玩家", uid, "战绩更新结果", e)
+
+        else:
+            is_dismiss = data.get("is_dismiss")
+            record_data_list =data.get("record_data_list")
+            replay_msg_data = data.get("replay_msg_data") or None
+            if replay_msg_data:
+                for replay_msg in replay_msg_data:
+                    msg = replay_msg.get("replay_msg")
+                    for i, m in enumerate(msg):
+                        msg[i] = UtilsTool.base64_to_bytes(m, log_fun=self.log_info)
+                result_data = await RecordsGameSegmentRC.bulk_create_record_game_segment(replay_msg_data)
+                self.log_info(tid, "update_record游戏结束一轮结束战绩插入", result_data)
+            for record_data in record_data_list:
+                final_grade = record_data.get("final_grade")
+                final_ranking = record_data.get("final_ranking")
+                num = record_data.get("num")
+                room_status = record_data.get("room_status") or None
+                total_score = record_data.get("total_score")
+                game_over_data = record_data.get("game_over_data")
+                tid = record_data.get("tid")
+                uid = record_data.get("uid")
+                up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
+                                                                              , final_ranking, final_grade, game_over_data, num,
+                                                                              room_status)
+                self.log_info(tid, "update_record插入游戏战绩总分结果", up_result)
+            if is_dismiss:
+                up_room_sta, up_result = await RecordsGameRoomRC.update_record_game_room(record_id, round_num=round_idx)
+                self.log_info(tid, "玩家", uid, "战绩更新结果", data)
+                self.log_info(tid,"更新所有战绩结果", up_result)
+
+    async def __insert_game_record_total(self,uid,data):
+        """ 插入游戏战绩总分 """
+        record_id = data.get("record_id")
+        final_grade = data.get("final_grade")
+        final_ranking = data.get("final_ranking")
+        num = data.get("num")
+        room_status = data.get("room_status") or None
+        total_score = data.get("total_score")
+        game_over_data = data.get("game_over_data")
+        tid = data.get("tid")
+        up_result = await RecordsGameTotalRC.create_record_game_total(record_id, uid, total_score >= 0, total_score
+                                                                        , final_ranking, final_grade, game_over_data, num, room_status)
+        self.log_info(tid,"插入游戏战绩总分结果", up_result)
+
     async def __login_sign_in(self, uid):
         """登陆签到"""
         # 1.检查是否完成签到
-        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN)
+        u_info = await BaseUserRC.cache_by_uid(uid)
+        act, _ = await ConfActivityRC.get_activity_by_once(act_type=ActivityType.LUCK_SIGN_IN, platform=u_info.get("platform"))
         sta, count = await act_count(uid, act.get("act_id", 0), "day")
         if count > 0:
             self.log_info(uid, "今天的签到已完成")
@@ -553,16 +634,15 @@ class WorkersServer(JsonBaseServer):
     async def start_server(self):
         """ 重写启动服务 """
         if self.server_id == 1:
-            # print("启动定时服务>>>")
-            # from .timed_service import TimedService
-            # self.__timed_server = TimedService(self.conf, self)
+            from .timed_service import TimedService
+            self.__timed_server = TimedService(self.conf, self)
             try:
-                # self.__timed_server.start()
+                self.__timed_server.start()
                 await super().start_server()
             except asyncio.CancelledError:
                 pass
-            # finally:
-            #     self.__timed_server.close()  # 关闭scheduler
+            finally:
+                self.__timed_server.close()  # 关闭scheduler
             return
         await super().start_server()
 
@@ -604,4 +684,79 @@ class WorkersServer(JsonBaseServer):
                 "event_desc": et_enum.phrase,
                 "event_time": tool_dt.cur_time()
             })
+            
+    async def __insert_club_event(self, uid, data):
+        await ClubLogic.insert_club_event(data["club_id"], data["event_type"], uid, num=data["num"], room_id=data["room_id"], check_uid=data["check_uid"])
+
+
+    async def __update_tournament_cycle_leaderboard(self, uid, data):
+        total_points = data.get("total_points")
+        uid = data.get("uid")
+        cycle_id = data.get("cycle_id")
+        has, leaderboard_data = await TournamentCycleLeaderboardRC.get_uid_leaderboard(cycle_id, uid)
+        if not has:
+            sta, _ = await TournamentCycleLeaderboardRC.add_leaderboard(cycle_id, uid, total_points)
+        else:
+            up_data = {
+                "total_points": total_points,
+                "participated_rounds": 1 + leaderboard_data.get("participated_rounds"),
+            }
+            sta, _ = await TournamentCycleLeaderboardRC.update_leaderboard(leaderboard_data.get("id"), up_data)
+        self.log_info(f"赛季单场次结束排行榜更新：{sta}")
+
+    async def __update_competition_result(self,uid,data):
+        cycle_id = data.get("cycle_id")
+        up_data = data.get("up_data")
+        sta,result = await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+        self.log_info(f"更新比赛结果：{sta} 玩家{uid}")
+
+    async def __invite_bind_user(self, uid, data):
+        invite_code = data.get("invite_code")
+        created = data.get("created") if data.get("created") else tool_dt.cur_time()
+        # 调用分销模块接口
+        self.log_info(f"用户{uid}绑定邀请关系{invite_code}")
+        invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
+                                          promotion_time=created, promotion_type=0)
+        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
+        if not sta:
+            self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
+
+    async def __proxy_order_sync(self, uid, order_info):
+        # 调用分销模块接口
+        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"])
+        promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
+                                              order_type=order_info["order_type"], goods_number=int(order_info["express_content"]["amount"]) * int(order_info["num"]),
+                                              price=float(float(order_info["amount"]) / order_info["num"]),
+                                              order_amount=order_info["amount"], dividend_rate=dividend_rate,
+                                              order_time=order_info["created"])
+        sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
+        self.log_info(f"订单分销结果：{sta}")
+        if not sta:
+            self.log_err(f"用户{uid}分销失败")
+
+    async def __proxy_user_set(self, uid, order):
+        # 修改用户折扣并设置分销用户信息
+        conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_PROXY_VIP_DISCOUNT)
+        u_info = await BaseUserRC.cache_by_pk(order["uid"])
+        if u_info:
+            if conf and conf.get("discount"):
+                await BaseUserRC.update_info(u_info, {"discount": conf.get("discount")})
+            vip_level = 1
+            vip_expire_time = tool_dt.cur_time()
+            if order["sku"] == "NHEYRPIA":
+                # 月费会员
+                vip_expire_time += 30 * 86400
+            elif order["sku"] == "NHEYRPIB":
+                # 季度会员
+                vip_expire_time += 90 * 86400
+            elif order["sku"] == "NHEYRPIC":
+                # 年度会员
+                vip_expire_time += 365 * 86400
+            add_data = Level1ProxyDTO(player_id=uid, unionid=u_info["unionid"], phone=u_info["phone"] if u_info["phone"] else 13888888888,
+                                      vip_level=vip_level, vip_expire_time=vip_expire_time)
+            sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
+            self.log_info(f"订单分销结果：{sta} {msg}")
+
+
 

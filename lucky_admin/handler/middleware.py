@@ -5,7 +5,7 @@ from nsanic.libs.tool import json_encode
 from nsanic.libs.component import BaseMeta
 
 from lucky_admin.handler.decorator import sensitive_data_handler
-from lucky_admin.model_db.main import RecordsAdminOperates
+from lucky_game.model_db.main import RecordsAdminOperates
 
 
 class RepMiddle(BaseMeta):
@@ -28,5 +28,5 @@ class RepMiddle(BaseMeta):
         hint = ''
         if hasattr(rep, 'raw_body'):
             hint = rep.raw_body.get('msg') or ''
-        await RecordsAdminOperates.insert_one(username, route, op_name, method, params, status, hint[:32])
+        # await RecordsAdminOperates.insert_one(username, route, op_name, method, params, status, hint[:32])
         return

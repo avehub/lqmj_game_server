@@ -3,12 +3,11 @@ from common.proto.pb2 import ws_leisure_pb2
 
 class C2SEnterLeisure:
     """ 进入休闲场 """
-    __proto = ws_leisure_pb2.C2SEnterLeisure()
-
     @classmethod
     def decode(cls, msg):
-        cls.__proto.ParseFromString(msg)
-        return cls.__proto
+        proto = ws_leisure_pb2.C2SEnterLeisure()
+        proto.ParseFromString(msg)
+        return proto
 
 
 play_card_model = ws_leisure_pb2.C2SPlayCards()
@@ -32,6 +31,11 @@ enter_room_model = ws_leisure_pb2.C2SEnterRoom()
 set_cards_model = ws_leisure_pb2.C2SSetCard()
 ding_que_model = ws_leisure_pb2.C2SDingQue()
 fan_ji_index_model = ws_leisure_pb2.C2SFanJi()
+player_position_model = ws_leisure_pb2.C2SPlayerPosition()
 
 #茶馆
 leave_club_model = ws_leisure_pb2.C2SLeaveClubRoom()
+club_room_set_model = ws_leisure_pb2.C2SClubRoomSetInfo()
+
+# 比赛
+join_competition_model = ws_leisure_pb2.C2SJoinCompetition()

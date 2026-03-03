@@ -9,8 +9,8 @@ from nsanic.libs.mult_log import NLogger
 from nsanic.libs.tool import json_parse
 
 from common.utils.kit_dt import KitDt
-from common.public.conf import WeChatConf, HuiFuConf, PROD_SERVER_ADDR, LIVE_SERVER
-from lucky_game.const import OrderStatus, GainStatus
+from common.public.conf import WeChatConf, HuiFuConf, SERVER_ADDR, LIVE_SERVER
+from lucky_game.const import OrderStatus, GainStatus, PlatForm
 
 RESPONSE_CODE = {
     "00000000": "交易受理成功；注：交易状态以trans_stat为准",
@@ -100,17 +100,28 @@ class DouGongPay:
         request.req_date = KitDt.get_date_str()
         request.req_seq_id = order_info.get('order_no')
         request.goods_desc = str(order_info.get('sku')) or '未知商品'
-        request.trade_type = 'T_JSAPI'  # T_JSAPI: 微信公众号, JS-A_JSAPI:支付宝, T_APP：微信APP支付, 微信小程序-T_MINIAPP,
+        # T_JSAPI: 微信公众号, JS-A_JSAPI: 支付宝, T_APP: 微信APP支付, 微信小程序: T_MINIAPP
+        # trade_type = ""
+        # wx_data = {}
+        # if order_info.get('platform') == PlatForm.WECHAT_MP:
+        trade_type = "T_JSAPI"
+        wx_data = {
+            "sub_appid": WeChatConf.WE_CHAT_GZH_APP_ID,  # 微信公众号应用ID
+            "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
+        }
+        # elif order_info.get('platform') == PlatForm.WECHAT_MINI_GAME:
+        #     trade_type = "T_MINIAPP"
+        #     wx_data = {
+        #         "sub_appid": WeChatConf.WE_CHAT_MG_APP_ID,  # 微信小程序应用ID
+        #         "sub_openid": str(order_info.get('user_openid')) or '',  # 用户在子商户下唯一标识
+        #     }
+        request.trade_type = trade_type
         request.trans_amt = f"{float(order_info.get('amount')):.2f}"  # 交易金额，必须大于0，保留两位小数点，如0.10、100.05等
 
         # 准备extend_infos，包括所有需要额外传递的参数
-        server_addr = PROD_SERVER_ADDR
         extend_infos = {
-            "notify_url": f'{server_addr}/luckyGame/CallbackHf',  # 交易异步通知地址
-            "wx_data": {
-                "sub_appid": WeChatConf.WE_CHAT_GZH_APP_ID,  # 微信子应用ID
-                "sub_openid": str(order_info.get('gzh_openid')) or '',  # 用户在子商户下唯一标识
-            }
+            "notify_url": SERVER_ADDR + HuiFuConf.NOTIFY_URL,  # 交易异步通知地址
+            "wx_data": wx_data
         }
         # 异步请求
         loop = asyncio.get_running_loop()
@@ -177,6 +188,27 @@ class DouGongPay:
         # 异步请求
         loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(None, lambda: request.post(extend_infos))
+        return response
+
+    @classmethod
+    async def dou_gong_busi_config_query(cls):
+        """
+        微信配置查询
+        参考文档：https://paas.huifu.com/open/doc/api/#/shgl/shjj/api_shjj_wxshpzcx
+        """
+        DG_SDK = cls.dou_gong_init()
+        # 组装接口请求参数
+        request = DG_SDK.V2MerchantBusiConfigQueryRequest()
+        request.huifu_id = HuiFuConf.DOUGONG_SYS_ID
+        request.req_date = KitDt.get_date_str()
+        request.req_seq_id = await RngMaker.gen_num(str_len=32)
+
+        extend_infos = {}
+        # 异步请求
+        loop = asyncio.get_running_loop()
+        NLogger.info("汇付天下查询微信配置请求参数：", request)
+        response = await loop.run_in_executor(None, lambda: request.post(extend_infos))
+        NLogger.info("汇付天下查询微信配置响应结果：", response)
         return response
 
     @classmethod

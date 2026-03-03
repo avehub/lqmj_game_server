@@ -14,15 +14,23 @@ from c_services.const.cs_enum_const import ClubMsgType, CmdClub
 
 
 async def verify_rule_detail(rule_details, play_type) -> dict:
-    """游侠房间规则校验"""
+    """游戏房间规则校验"""
     rule = await CommonApi.json_by_dict(rule_details)
     decorator = BaseDecorator(None)
     play_rule = await GameRoomsRC.get_play_rule(play_type)
+    own_play_field = await GameRoomsRC.own_default_play_field(play_type)
+    own_play_value = await GameRoomsRC.own_default_play_value(play_type)
     for k, v in play_rule.items():
+        require = True
+        default = None
+        if own_play_field and k in own_play_field:
+            require = False
+            default = own_play_value[k]
         await decorator.check_inner(
             val=rule.get(k),
-            require=True,
+            require=require,
             inner_dick=v,
+            default=default,
             p_name=k
         )
     return rule
@@ -32,13 +40,13 @@ class RoomTemplateBase(GameAuthApi):
 
     async def verify_params(self, req: Request, **kwargs):
         """游戏房间常规参数校验"""
-        platform = self.check_int(req.args.get("platform"), require=True, minval=1, maxval=3, p_name="平台")
+        platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         cs_type = self.check_int(req.json.get("cs_type"), require=True, p_name="子服务类型")
         play_type = self.check_int(req.json.get("play_type"), require=True, p_name="玩法类型")
         club_id = self.check_int(req.json.get("club_id"), minval=100000, require=False, p_name="茶馆ID")
-        max_player = self.check_int(req.json.get("max_player"), require=True, p_name="最大人数")
+        max_player = self.check_int(req.json.get("max_player"), require=True, minval=2, maxval=4, p_name="最大人数")
         rule_details = self.check_str(req.json.get("rule_details"), require=True, p_name="规则详情")
-        total_round = self.check_int(req.json.get("total_round"), require=True, p_name="总局数")
+        total_round = self.check_int(req.json.get("total_round"), require=True, minval=4, maxval=24, p_name="总局数")
         price = self.check_int(req.json.get("price"), require=True, p_name="支付金额")
         is_location = self.check_int(req.json.get("is_location"), require=True, p_name="是否开启位置")
         is_friend = self.check_int(req.json.get("is_friend"), require=True, p_name="是否只允许好友进入")
@@ -75,6 +83,7 @@ class RoomTemplateCreate(RoomTemplateBase):
             club_id=club_id,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -113,6 +122,7 @@ class RoomTemplateUpdate(RoomTemplateBase):
             rule_details=rule_dick,
             is_location=is_location,
             is_friend=is_friend,
+            check_uid=uid,
         )
         if not new:
             return self.answer(StaCode.FAIL, hint=err)
@@ -157,7 +167,7 @@ class RoomTemplateDelete(RoomTemplateBase):
             return self.answer(StaCode.FAIL, hint=e)
         club_id = template["club_id"]
         await self.check_authority(uid, club_id)
-        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id)
+        sta, e = await ClubRoomTemplatesRC.delete_template(template_id, club_id, check_uid=uid)
         if not sta:
             return self.answer(StaCode.FAIL, hint=e)
         cs_enum = ServiceEnum.find_member_by_val(ServiceEnum.C_CLUB)

@@ -15,7 +15,7 @@ class ConfSrv(BaseConf):
     RUN_PORT = 8989
     HOST = '0.0.0.0'
     DEBUG_MODE = DEBUG_MODE
-    ACCESS_LOG = True
+    ACCESS_LOG = False
 
     RUN_FAST = RUN_FAST
     VER_CODE = None
@@ -64,6 +64,8 @@ class ConfSrv(BaseConf):
 
     @classmethod
     def makeup_db_conf(cls, model_list: list):
+        model_list.append("lucky_proxy.model_db.main")
+        model_list.append("lucky_admin.model_db.main")
         return {
             'apps': {
                 cls.SERVER_NAME: {'models': model_list},

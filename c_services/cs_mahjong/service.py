@@ -1,13 +1,13 @@
-from c_services.const.cs_enum_const import CmdRoom
+from c_services.const.cs_enum_const import CmdRoom, RoomStatus
 from c_services.cs_mahjong.player import Player
 from c_services.cs_mahjong.room_base import Room
 from common.public.enum_const import StaCode
-from lucky_game.model_rc.game_rooms import GameRoomsRC
 from .const import FlowStatus
+from .service_robot_act import MahjongServerRobotAct
 from ..base.base_card_service import BaseCardService
 
 
-class MahjongServer(BaseCardService):
+class MahjongServer(BaseCardService,MahjongServerRobotAct):
     ROOM = Room
     PLAYER = Player
 
@@ -25,6 +25,7 @@ class MahjongServer(BaseCardService):
             CmdRoom.PLAYER_EXCHANGE_CARDS.val: self.__on_player_exchange_cards,
             CmdRoom.PLAY_CARDS.val: self.__on_player_chu_pai,
             CmdRoom.PLAYER_TIAN_TING.val: self.__on_player_tian_ting,
+            CmdRoom.NOTIFY_POSITION.val: self.__notify_position,
         })
 
     async def __on_player_pass(self, player, room, _):
@@ -33,7 +34,7 @@ class MahjongServer(BaseCardService):
             return await self.cs2ws_by_rmq(CmdRoom.PLAYER_PASS, player.uid, code, msg, ws_id=player.ws_id)
         if room.flow_status in (FlowStatus.T_IN_PUBLIC_OPRATE, FlowStatus.T_IN_ZHUAN_WAN_GANG_PAI_CALL,
                                 FlowStatus.T_IN_TIAN_TING, FlowStatus.T_IN_FOUR_BAO_TING,FlowStatus.T_IN_MING_GANG_PAI_CALL,
-                                FlowStatus.T_IN_TIAN_HU, FlowStatus.T_IN_TIAN_TING):
+                                FlowStatus.T_IN_TIAN_HU, FlowStatus.T_IN_TIAN_TING,FlowStatus.T_IN_EIGHT_TIAN_HU):
             room.clear_record_operates(player.seat_id)
             self.log_info(room.tid, player.uid, player.seat_id, "server 玩家选择过：", room.record_operates)
             if not room.record_operates:
@@ -99,3 +100,7 @@ class MahjongServer(BaseCardService):
             await room.check_tian_ting_end()
         else:
             await room.check_action_end()
+
+    async def __notify_position(self, player, room, data):
+        self.log_info("收到定位信息",player.uid)
+        await room.set_player_position(player,data)
