@@ -5,7 +5,7 @@ import itertools
 
 from enum import IntEnum
 from copy import deepcopy
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from c_services.cs_robot_mahjong.const import ACTION_TYPE_MING_GANG, FcHuPaiType, FcPileType, ACTION_TYPE_ZHUAN_WAN_GANG
 from common.utils.utils import UtilsTool
@@ -378,6 +378,21 @@ class LpyMoveGenerator:
             elif cards[0] + 1 == cards[1] and cards[1] + 1 == cards[2]:
                 return Card2Type.KE_ZI
 
+    @staticmethod
+    def calc_remain_cards(curr_hand_cards, remain_cards: dict):
+        """
+        统计剩余卡牌
+        """
+        # 出牌、碰牌、杠牌已经减去，此处不再计算
+        if not remain_cards:
+            return {suit * 10 + num: 4 for suit in range(1, 4) for num in range(1, 10)}
+        remain_cards = {int(key): value for key, value in remain_cards.items()}
+        cards_dict = Counter(curr_hand_cards)
+        for card, nums in cards_dict.items():
+            if remain_cards.get(card, 0):
+                remain_cards[card] -= nums
+        return remain_cards
+
     def update_attr(
             self,
             hand_cards,
@@ -395,7 +410,7 @@ class LpyMoveGenerator:
         self.magic_card = magic_card or None
         self.hand_cards_len = len(self.hand_cards)
         self.others_hand_cards = others_hand_cards or []
-        self.res_cards_to_count = remain_cards or {suit * 10 + num: 4 for suit in range(1, 4) for num in range(1, 10)}
+        self.res_cards_to_count = self.calc_remain_cards(hand_cards, remain_cards)
 
         # todo: 碰杠数量(计算碰杠数)
         pong_gang_num = 4 - self.hand_cards_len // 3
@@ -578,16 +593,18 @@ class LpyMoveGenerator:
                 xts9, best_cards9 = self.match_qi_dui(*args)
                 all_played_cards.extend(best_cards9)
                 all_xts_cards.append(("xqd", xts9, best_cards9))
-                LOG_PRINT and print(f"小七对向听数: {xts9}, 最优出牌: {best_cards9}")
-                LOG_PRINT and print()
+                if LOG_PRINT:
+                    print(f"小七对向听数: {xts9}, 最优出牌: {best_cards9}")
+                    print()
 
             # 3.2 计算龙七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len and len(args[2]) == 1:
                 xts10, best_cards10 = self.calc_xts_by_long_qi_dui_lai_zi(*args)
                 all_played_cards.extend(best_cards10)
                 all_xts_cards.append(("lqd", xts10, best_cards10))
-                LOG_PRINT and print(f"龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
-                LOG_PRINT and print()
+                if LOG_PRINT:
+                    print(f"龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
+                    print()
 
         return all_played_cards, all_xts_cards, best_cards1
 
@@ -727,8 +744,6 @@ class LpyMoveGenerator:
                 for lai_zi in self.hand_cards:
                     if self.magic_card == lai_zi:
                         tmp_hand_cards.remove(self.magic_card)
-                # if self.magic_card in self.hand_cards:
-                #     self.hand_cards.remove(self.magic_card)
                 return random.choice(tmp_hand_cards)
             if len(all_xts_cards) == 1:
                 return random.choice(all_played_cards)
