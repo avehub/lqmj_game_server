@@ -6,7 +6,7 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, DINGTALK_STATISTICS_SECRET
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, DINGTALK_STATISTICS_SECRET, ENV
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
@@ -119,8 +119,8 @@ class TimedService:
     async def __test_tasks(self):
         # 统计数据推送
         now_time = datetime.now()
-        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
-        # self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=30))
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time)
+        self.__scheduler.add_date_job(self.check_tournament_cycle, run_date=now_time + timedelta(minutes=2))
 
 
 
@@ -137,7 +137,7 @@ class TimedService:
         # 更新赛季状态到比赛配置
         self.__scheduler.add_date_job(self.update_tournament_cycle_to_competition, run_date=now_time + timedelta(minutes=10))
         # # 统计数据推送
-        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=9))
         # 处理已注销用户
         self.__scheduler.add_date_job(self.clean_logout_user, run_date=now_time + timedelta(hours=0))
 
@@ -255,23 +255,21 @@ class TimedService:
     @classmethod
     async def send_ding_statistics(cls):
         """ 每日统计房间订单数据发送至钉钉 """
+        if ENV != "prod":
+            return
         order_sum_data = await OrderRC.statistics_order_by_sum_amount()
         order_count_data = await OrderRC.statistics_order_by_count()
         group_data = await RecordsGameRoomRC.statistics_game_room_by_group_count()
         count_data = await RecordsGameRoomRC.statistics_game_room_by_count()
-        group_dict = {}
-        if group_data:
-            group_dict = {f"{i['cs_type']}": i for i in group_data}
         ding_server = DingTalkNotifier().get_service()
         ding_server.config.webhook_url = DINGTALK_STATISTICS_WEBHOOK
         ding_server.config.secret = DINGTALK_STATISTICS_SECRET
         now = tool_dt.cur_time()
-        yesterday = now - 86400
-        content = f"- 时间：{tool_dt.dt_str(yesterday, fmt='%Y-%m-%d')}\n" \
-                   f"订单数：{count_data}\n" \
+        content = f"时间：{tool_dt.dt_str(now, fmt='%Y-%m-%d')}\n" \
+                   f"订单数：{order_count_data}\n" \
                    f"订单金额：{order_sum_data}\n" \
-                   f"房间总数：{order_count_data}\n" \
-                   f"多个玩法房间数：{group_dict}"
+                   f"房间总数：{count_data}\n" \
+                   f"多个玩法房间数：{group_data}"
         ding_server.send_text_message(content)
 
     async def check_proxy_vip(self):

@@ -23,6 +23,8 @@ class PlayType(BaseEnum):
     REN_HUAI_MJ = 9,"仁怀麻将"
     AN_SHUN_MJ = 10,"安顺麻将"
 
+    RUN_FAST = 11, "跑得快玩法"
+
 
 class ActionType(BaseEnum):
     """ 动作类型 """

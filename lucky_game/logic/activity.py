@@ -8,6 +8,7 @@ from typing import Union, Tuple
 
 from common.model_rc.tournament_cycle import TournamentCycleRC
 from common.model_rc.tournament_user_point import TournamentUserPointRC
+from lucky_game.model_rc.base_bag import UserBagRC
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
 
@@ -163,12 +164,16 @@ class Base:
                 award_amount = award.get("amount")
                 # if award_type in field_values:
                 NLogger.info(f"发放奖励：uid={uid}，award_type={award_type}，award_amount={award_amount}")
+                good_id = award.get("good_id", 0)
+                remark = {"type": award_type, "amount": award_amount}
+                if good_id:
+                    remark["good_id"] = good_id
                 sta, e = await AwardGainsRC.add_gains(
                     uid,
                     act_id,
                     award_id if award_id else award.get("award_id"),
                     reward_type,
-                    remark={"type": award_type, "amount": award_amount}
+                    remark=remark
                 )
                 NLogger.info(f"发放奖励入库结果：sta={sta}，e={e}")
         else:
@@ -227,6 +232,15 @@ class Base:
                                         }
                                         NLogger.info(f"领取赛事奖励：{up_data}")
                                         await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
+                            elif reward_type in ["scenic_spot_select", "scenic_spot", "phone_charge"]:
+                                good_id = remark.get("good_id")
+                                express = [{
+                                    "good_id": good_id,
+                                    "count": reward_amount,
+                                    "end_time": 0,
+                                }]
+                                sta = await UserBagRC.update_user_bag(uid, express)
+                                NLogger.info(f"领取门票奖励：sta={sta}")
         return sta, "OK"
 
     async def act_progress(self, ac: dict, u_info: dict):

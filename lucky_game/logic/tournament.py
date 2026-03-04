@@ -2,6 +2,7 @@
 import decimal
 import random
 
+from lucky_game.model_rc.base_award import AwardRC
 from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse
@@ -52,8 +53,8 @@ class TournamentLogic:
             # reward_content = reward.get("reward_content")
             reward_sta, reward_content = await TournamentRewardRC.get_reward_list(reward)
         mail_type = 2
-        sender = "1"
-        title = "【赛事奖励】" + cycle_info["reward_name"]
+        sender = "金州杯赛事组委会"
+        title = f"【{cycle_info['reward_name']}】恭喜您获得周赛奖励"
         for k, v in enumerate(ranking_list):
             ranking = k + 1
             if ranking > rank_end:
@@ -61,7 +62,7 @@ class TournamentLogic:
             uid = v.get("uid")
             if uid > R_UID_THRESHOLD:
                 award_ids = reward_content[k]["award_ids"]
-                content = f"尊敬的选手：{cycle_info['reward_name']}已结束，您在本次赛事中斩获第 {ranking}名的优异成绩！专属奖励已发放至您的邮件中，请及时查收并完成兑换，祝您后续赛事再创佳绩！"
+                content = f"尊敬的选手您好！\n恭喜您在贵州首届“金州杯”线上大奖赛中，取得第{ranking}名的优异成绩，获得周赛专属奖励！每周竞技，每周有奖，期待您后续再创佳绩！\n【兑换指引】\n所有奖品已为您发放至游戏【背包】，请您在背包内点击对应奖品，填写完整真实信息完成兑换哦~\n【温馨提醒】\n若未找到背包内奖品，可联系游戏客服核查。"
                 attachment = '{"award_ids": ' + f"{award_ids}" + '}'
                 await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         return True
@@ -88,7 +89,8 @@ class TournamentLogic:
 
     async def up_cycle_status(self, cycle_id: int):
         """ 更新赛事周期状态 """
-        sta, _ = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
+        sta, e = await TournamentCycleRC.update_cycle(cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_END})
+        NLogger.info("赛季更新状态：", sta, e)
         if sta:
             next_cycle_id = 1 + cycle_id
             await TournamentCycleRC.update_cycle(next_cycle_id, {"status": TournamentCycleRC.CYCLE_STATUS_STARTING})
@@ -132,6 +134,21 @@ class TournamentLogic:
             if uid in conf_data["special_uid"]:
                 status = True
         return status
+
+    @staticmethod
+    async def send_ranking_reward_by_one(cycle_id: int, uid: int, award_id: int, ranked: int):
+        """ 发送玩家奖励至邮件 """
+        sta, cycle_info = await TournamentCycleRC.get_cycle_info(cycle_id)
+        reward, _ = await AwardRC.get_award_info(award_id, is_content=False)
+        NLogger.info(f"cycle_id: {cycle_id}, uid: {uid}, award_id: {award_id}")
+        mail_type = 2
+        sender = "金州杯赛事组委会"
+        title = f"【{cycle_info['reward_name']}】恭喜您获得排行奖励"
+        if uid > R_UID_THRESHOLD:
+            content = f"尊敬的选手您好！恭喜您在贵州首届“金州杯”闷胡血流大奖赛线上热身赛中，斩获第{ranked}名的优异成绩，成功获得{reward['name']}奖励！感谢您的积极参与与精彩博弈！\n【兑换指引】所有奖品已为您发放至游戏【背包】，请您在背包内点击对应奖品，填写完整真实信息完成兑换哦~\n【温馨提醒】若未找到背包内奖品，可联系游戏客服核查"
+            attachment = '{"award_ids": ' + f"{[award_id]}" + '}'
+            await MailsRC.create_mail(mail_type, sender, str(uid), title, content, attachment)
+        return True
 
 
 

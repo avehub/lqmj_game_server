@@ -436,9 +436,9 @@ class BaseCardRoom(BaseRoom):
         if self.__match_room_id == 0:
             auto_time = 0
         elif over_type == OverType.LIU_JU:
-            auto_time = 3
+            auto_time = 4
         else:
-            auto_time = 9
+            auto_time = 12
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
@@ -959,8 +959,8 @@ class BaseCardRoom(BaseRoom):
         self.__match_round = match_round
         if self.__match_room_id > 0:
             player.is_ready = True
-            if self.ready_player_count <= self.in_room_count:
-                self.call_flow(1, self.try_start_game)
+            if self.ready_player_count >= self.in_room_count:
+                self.call_flow(1.5, self.try_start_game)
 
     def cancel_all_timer(self):
         """ 取消所有延时 """

@@ -14,7 +14,7 @@ from lucky_game.interface.game_room import CreateRoom, JoinRoom, LeaveRoom, Room
 from lucky_game.interface.club_room_template import RoomTemplateCreate, RoomTemplateUpdate, RoomTemplateList, \
     RoomTemplateDelete
 from lucky_game.interface.user import UserInfo, UpdateUserInfo, UpdateUserResource, Certification, FetchRedDotsByOpportunity, \
-    WriteOff, UpWechatUserInfo, UserInvite
+    WriteOff, UpWechatUserInfo, UserInvite, UserExchangeFutureValuea
 from lucky_game.interface.game_rule import GameRuleAll
 from lucky_game.interface.game_user import QueryUserIsInCService
 from lucky_game.interface.records_game import UserRecords, SegmentRecords, ClubRanks, PastRanks, \
@@ -31,7 +31,7 @@ from lucky_game.interface.tools import GetWeChatShareData, GetAppVersion, GetWec
 from lucky_game.interface.ad_event import CreateAdRecord
 from lucky_game.interface.club_user_group import AlterUserGroup, GetUserGroup
 from lucky_game.interface.tournament import TournamentConfig, TournamentUserPoint, TournamentLeaderboard, JoinTournament, \
-    CompetitionConfig
+    CompetitionConfig, TournamentTicket
 from lucky_game.interface.player_vault import BagList, UserInformationGather, UserExchangeList, DropBagItem
 
 
@@ -108,6 +108,8 @@ class MainBp(BaseBlue):
         Urls("/FetchRedDotsByOpportunity/", FetchRedDotsByOpportunity),  # 批量获取红点
         Urls("/WriteOff/", WriteOff),  # 注销账号
         # Urls("/UserInvite/", UserInvite),  # 邀请用户
+        Urls("/UserExchangeFutureValuea/", UserExchangeFutureValuea),  # 兑换福袋
+        
         #
         # # 游戏相关
         Urls("/GameRuleAll/", GameRuleAll),  # 获取所有游戏规则
@@ -155,6 +157,7 @@ class MainBp(BaseBlue):
         Urls("/TournamentLeaderboard/", TournamentLeaderboard),  # 获取赛事排行榜
         Urls("/JoinTournament/", JoinTournament),  # 加入赛事
         Urls("/CompetitionConfig/", CompetitionConfig),  # 获取赛事玩法配置
+        Urls("/TournamentTicket/", TournamentTicket),  # 赛事门票变更
 
         # 背包相关
         Urls("/BagList/", BagList),  # 获取背包列表

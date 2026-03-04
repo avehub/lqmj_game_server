@@ -67,7 +67,7 @@ class Room(BaseCardRoom):
         self.__zha_jian_seats = set()  # 记录炸捡玩家，主要解决A打牌，B炸捡，C正常捡的情况
         self.__record_operates = {}  # 当玩家手牌未固定时，别人出的牌与自己手牌形成能胡 或和手牌固定后都记录
         self.__exchange_three = self.rule_detail.get("exchange_three", 0)  # 换3张
-        self.__exchange_cards_type = self.rule_detail.get("__exchange_cards_type", 0)
+        self.__exchange_cards_type = self.rule_detail.get("exchange_cards_type", 0)
         self.__four_card_bao_ting = self.rule_detail.get("four_card_bao_ting", 0)
         self.__shang_ga = int(self.rule_detail.get("shang_ga", 0))  # 估卖（额外卖）
         self.__gu_mai_score = self.rule_detail.get("gu_mai_score", 0)
@@ -296,6 +296,9 @@ class Room(BaseCardRoom):
     @property
     def exchange_cards_info(self):
         return self.__exchange_cards_info
+
+    def is_same_suit(self):
+        return self.__exchange_cards_type == ChangeCardsType.SAME_SUIT_CARDS
 
     def serialize_room_info(self):
         room_info = self.room_info()
@@ -4446,7 +4449,7 @@ class Room(BaseCardRoom):
                             hu_info, extra_hu_lst, get_bearer.seat_id, is_zi_mo=True)
 
                         pei_seat = bearer.seat_id
-                        self.update_score(check_type, seat_id, pei_seat, total_score, card, accounts, -1, hu_type,
+                        self.update_score(check_type, seat_id, pei_seat, -total_score, card, accounts, -1, hu_type,
                                           extra_hu_lst)
                         if self.__shang_ga:
                             pei_p = self.get_player_by_seat_id(pei_seat)
@@ -4471,6 +4474,7 @@ class Room(BaseCardRoom):
                      extra_hu_type=None):
         if check_type_ == CheckType.WIND_JI:
             score = 0
+        print("score",score)
         other_data = self.other_ming_xi_data(check_type_, seat_id, score, card, hu_type, extra_hu_type, get_bearer)
         self_data = self.self_ming_xi_data(check_type_, [pei_seat], -score, card, hu_type, extra_hu_type)
         self.update_result_score(accounts, pei_seat, 0, other_data)

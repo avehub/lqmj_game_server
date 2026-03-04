@@ -45,7 +45,6 @@ class ProxyIncomeQuery(ProxyAuthApi):
                 self.log_info(f"channel_income={ch}")
                 income["today_income"] = income["today_income"] + ch.get("today_income", 0)
                 income["current_month_income"] = income["current_month_income"] + ch.get("income", 0)
-                income["room_income"] = income["room_income"] + ch.get("room_income", 0)
         else:
             income = {
                 "today_income": month_income.get("today_income"),

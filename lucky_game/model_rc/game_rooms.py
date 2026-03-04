@@ -108,6 +108,22 @@ class GameRoomsRC(BaseCommonRC):
         "lian_zhuang": {0, 1},  #连庄 0未勾选 1勾选
     }
 
+    RULE_DETAILS_PDK = {
+        "card_count": {16, 15},  #牌数 16是表示经典玩法 15表示十五张玩法
+        "can_pass": {0, 1},  #可过 0表示必须管 1表示可不要
+        "bomb_score": {5, 10},  #炸弹分数  5表示5分 10表示10分 
+        "is_double": {0, 1}, #是否加倍 0表示不加倍 1加倍
+        "is_qiang_guan": {0, 1},  #是否抢关 0没有抢关 1有抢关
+        "three_need_first": {0, 1},  #开门见三 0没有开门见三 1有
+        "can_four_with_three": {0, 1},  #能否四带三 0不能 1能
+        "three_A_is_bomb": {0, 1},  #三A算炸 0不算 1算
+        "drift": {0, 1},  #能否甩尾 0不能 1能
+        "early_show_cards": {0, 1},  #能否提前亮牌 0不能 1能
+        "call_one_must_big": {0, 1},  #是否报单必大 0否 1是
+        "show_cards_num": {0, 1},  #是否展示牌数 0否 1是
+        "card_tracker": {0, 1},  #是否展示记牌器 0否 1是
+    }
+
     @classmethod
     async def get_play_rule(cls, play_type: int):
         if PlayType.JIAN_LOU_XUE_LIU == play_type:
@@ -120,6 +136,8 @@ class GameRoomsRC(BaseCommonRC):
             return cls.RULE_DETAILS_BJMJ
         elif PlayType.ZUN_YI_LAI_ZI == play_type:
             return cls.RULE_DETAILS_ZYMJ
+        elif PlayType.RUN_FAST == play_type:
+            return cls.RULE_DETAILS_PDK
 
     @classmethod
     async def own_default_play_field(cls, play_type: int):

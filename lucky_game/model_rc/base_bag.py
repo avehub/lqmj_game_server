@@ -131,6 +131,7 @@ class UserBagRC(RCModel):
                 good_id = item.get('good_id')
                 new_exp_time = item.get('end_time') if item.get('end_time') else -1
                 goods_count = item.get('count') or 1
+
                 for ob in old_bag:
                     bag_id = ob.get('id')
                     old_count = ob.get('count') or 0
@@ -150,7 +151,7 @@ class UserBagRC(RCModel):
                             ob["count"] = max(new_count, 0)  # 确保goods_count不会小于0
                             # to_update["count"] = ob.get('count') or 1,
                             to_update = {
-                                "count": ob.get('count') or 1,
+                                "count": ob["count"],
                             }
 
                         if to_update:
@@ -161,7 +162,6 @@ class UserBagRC(RCModel):
                 if not founded:
                     res = await insert_bag(item)
                     new_bag.append(res)
-
             if update_tasks:
                 await asyncio.gather(*update_tasks)
 
