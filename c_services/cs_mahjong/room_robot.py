@@ -225,10 +225,6 @@ class RoomRobot(Room):
         """
         todo: 设置机器人固定计算参数
         """
-        count_dict = {}
-        for card in self.poker.remain_cards:
-            key = str(card)
-            count_dict[key] = count_dict.get(key, 0) + 1
         data = {
             "uid": p.uid,
             "tid": self.tid,
@@ -238,8 +234,10 @@ class RoomRobot(Room):
             "piles": p.table_cards,
             "left_count": self.poker.left_count,
             "curr_card": self.curr_card,
-            "remain_cards": count_dict,
+            "remain_cards": self.remain_cards_dict,
             'cs_type': self.service.service_type,
+            'all_hu_cards':self.all_hu_cards,
+            'all_play_out_cards':self.all_play_out_cards,
         }
         return data
 

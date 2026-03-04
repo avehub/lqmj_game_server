@@ -64,6 +64,7 @@ class Player(BaseLeisurePlayer):
         self.__y = earth_position.Y_NA  # 玩家纬度
 
         self.__is_exchange_status = False #玩家换牌状态 防止多个玩家同一时间选择换牌导致换牌有误
+        self.__hu_cards = set()
 
     @property
     def has_shang_ga(self):
@@ -207,6 +208,10 @@ class Player(BaseLeisurePlayer):
     def table_cards(self):
         return self.__table_cards.copy()
 
+    @property
+    def hu_cards(self):
+        return self.__hu_cards
+
     def table_cards_len(self):
         return len(self.__table_cards)
 
@@ -219,6 +224,7 @@ class Player(BaseLeisurePlayer):
     def add_men_cards(self, data, is_zha=False):
         self.__men_cards.append(data)
         card = data["card"]
+        self.__hu_cards.add(card)
         self.__zi_mo_cards.append(card)
         if card in self.cards:
             self.rm_cards([card])
@@ -318,6 +324,7 @@ class Player(BaseLeisurePlayer):
         self.__jian_next_player_card = 0
         self.__is_ready = False
         self.__hu_path = []
+        self.__hu_cards = set()
 
 
 
@@ -521,6 +528,8 @@ class Player(BaseLeisurePlayer):
 
     def add_jian_cards(self, data, is_zha=False):
         self.__men_cards.append(data)
+        card = data["card"]
+        self.__hu_cards.add(card)
         if not is_zha:
             self.__jie_pao_count += 1
 

@@ -30,6 +30,9 @@ class Room(BaseCardRoom):
         super().__init__(tid, service, room_conf, Poker, self.__liang_men_pai)
         self.__shang_ga_list = [1, 2, 3, 4, 5, 0]
         self.__exchange_cards_info = {}
+        self.__remain_cards_dict = {}
+        self.__all_hu_cards = {}
+        self.__all_play_out_cards = {}
         self.__dice_num = None
         self.__over_type = 0
         self.__card_count = 13
@@ -297,6 +300,18 @@ class Room(BaseCardRoom):
     def exchange_cards_info(self):
         return self.__exchange_cards_info
 
+    @property
+    def remain_cards_dict(self):
+        return self.__remain_cards_dict
+
+    @property
+    def all_hu_cards(self):
+        return self.__all_hu_cards
+
+    @property
+    def all_play_out_cards(self):
+        return self.__all_play_out_cards
+
     def is_same_suit(self):
         return self.__exchange_cards_type == ChangeCardsType.SAME_SUIT_CARDS
 
@@ -435,6 +450,9 @@ class Room(BaseCardRoom):
             self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
+        for card in self.poker.remain_cards:
+            key = str(card)
+            self.__remain_cards_dict[key] = self.__remain_cards_dict.get(key, 0) + 1
         if self.is_exchange_three():
             return await self.start_exchange_three()
         await self.ding_que_or_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
@@ -503,6 +521,9 @@ class Room(BaseCardRoom):
         self.__fan_yin_ji_cards = set()
         self.__zhuo_ji_card = 0
         self.__ji_and_gang_score = 0
+        self.__remain_cards_dict = {}
+        self.__all_hu_cards = {}
+        self.__all_play_out_cards = {}
 
     def is_exchange_three(self):
         """ 判断是否换三张 """
@@ -692,6 +713,9 @@ class Room(BaseCardRoom):
             data_model = S2CDealCardsMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
+        for card in self.poker.remain_cards:
+            key = str(card)
+            self.__remain_cards_dict[key] = self.__remain_cards_dict.get(key, 0) + 1
         if not has_player_tian_ting and self.is_exchange_three():
             return await self.start_exchange_three()
         await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
@@ -763,6 +787,8 @@ class Room(BaseCardRoom):
         p.rev_card(mo_pai)
         p.mo_pai = mo_pai
         self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards, "剩余", self.poker.left_count)
+        card_key = str(mo_pai)
+        self.__remain_cards_dict[card_key] = self.__remain_cards_dict.get(card_key, 0) - 1
         for player in self.seats:
             data = {
                 "seat_id": p.seat_id,
@@ -1593,6 +1619,7 @@ class Room(BaseCardRoom):
 
             data = self.deal_men_jian_data(p, 0, hu_info, CheckType.CHECK_MEN_ZHA)
             p.add_men_cards(data, is_zha=True)
+            self.__all_hu_cards[str(p.seat_id)] = list(p.hu_cards)
             self.__men_record.append(data)
             data_model = S2CMenInfoMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.PLAYER_MEN_SUC, data_model)
@@ -1623,6 +1650,7 @@ class Room(BaseCardRoom):
             extra_score = self.cal_extra_hu_score(hu_info, extra_hu_lst)
             data = self.deal_men_jian_data(p, base_score + extra_score, hu_info, CheckType.CHECK_JIAN_ZHA)
             p.add_jian_cards(data, is_zha=True)
+            self.__all_hu_cards[str(p.seat_id)] = list(p.hu_cards)
             self.__men_record.append(data)
 
             other_data = {
@@ -1869,6 +1897,7 @@ class Room(BaseCardRoom):
 
             data = self.deal_men_jian_data(p, 0, hu_info)
             p.add_men_cards(data)
+            self.__all_hu_cards[str(p.seat_id)] = list(p.hu_cards)
             self.__men_record.append(data)
             data_model = S2CMenInfoMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.PLAYER_MEN_SUC, data_model)
@@ -1910,6 +1939,7 @@ class Room(BaseCardRoom):
             data = self.deal_men_jian_data(p, base_score + extra_score, hu_info, check_type)
 
             p.add_jian_cards(data, is_zha)
+            self.__all_hu_cards[str(p.seat_id)] = list(p.hu_cards)
             self.__men_record.append(data)
             other_data = {
                 "fang_pao_seat_id": data.get("fang_pao_seat_id"),
@@ -2444,6 +2474,10 @@ class Room(BaseCardRoom):
                 self.record_lou_hu(player, "出牌")
         self.save_player_action(player, ActionType.ACTION_TYPE_CHU_PAI, data)
         player.chu_pai(card)
+        seat_id_str = str(player.seat_id)
+        if seat_id_str not in self.__all_play_out_cards:
+            self.__all_play_out_cards[seat_id_str] = []
+        self.__all_play_out_cards[seat_id_str].append(card)
         player.mo_pai = 0
         self.__curr_card = card
         self.__curr_card_exist = 1
