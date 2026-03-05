@@ -18,7 +18,7 @@ class OrderRC(BaseCommonRC):
     async def add_order(cls, uid: int, good_id: int, sku: str, platform: int, amount: decimal.Decimal, currency: int,
                         pay_mode: int, order_no: str, num: int, out_order_no: str = '', gain_status: int = 0,
                         status: int = OrderStatus.WAIT_PAY, prepay_id: str = "", explain: str = "",
-                        purchase_uid: int = 0):
+                        purchase_uid: int = 0, u_os: int = 0):
         """新增订单"""
         try:
             data = {
@@ -37,6 +37,7 @@ class OrderRC(BaseCommonRC):
                 "gain_status": gain_status if gain_status else 0,
                 "prepay_id": prepay_id if prepay_id else "",
                 "explain": explain if explain else "",
+                "u_os": u_os if u_os else 0,
             }
             cls.conf.log.info("插入订单表信息: ", data)
             new = await cls.db_model.add_one(data)

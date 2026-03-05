@@ -8,6 +8,7 @@ from typing import Union, Tuple
 
 from common.model_rc.tournament_cycle import TournamentCycleRC
 from common.model_rc.tournament_user_point import TournamentUserPointRC
+from lucky_game.const.const import OperatingSystem
 from lucky_game.model_rc.base_bag import UserBagRC
 from nsanic.libs import tool_dt
 from tortoise.transactions import in_transaction
@@ -58,11 +59,16 @@ class Base:
     conf: ConfSrv = conf_srv
 
     async def act_handler(self, activity: dict, u_info: dict, award_type: int, pay_mode: int = None,
-                          platform: int = None, return_url: str = None):
+                          platform: int = None, return_url: str = None, c_os: str = None):
         """ 根据活动类型获取活动操作 """
         uid = u_info.get("uid")
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
+        u_os = 0
+        if c_os == OperatingSystem.Android:
+            u_os = 1
+        elif c_os == OperatingSystem.IOS:
+            u_os = 2
         if act_type == ActivityType.FIRST_CHARGE:
             act_total = await FirstCharge().pay_count(uid)
         else:
@@ -90,7 +96,7 @@ class Base:
             return sta, msg, {"award": data, "pay_info": {}}
         elif act_type in [ActivityType.FIRST_CHARGE, ActivityType.REPLENISH_GIFT, ActivityType.REVIVE_GIFT,
                           ActivityType.RETURN_GIFT]:
-            sta, msg, data = await FirstCharge().handler(uid, activity, award_type, pay_mode, platform, return_url)
+            sta, msg, data = await FirstCharge().handler(uid, activity, award_type, pay_mode, platform, return_url,u_os=u_os)
             return sta, msg, {"award": [], "pay_info": data}
         elif act_type == ActivityType.AUTHENTICATION:
             pi = u_info.get("pi")
@@ -709,7 +715,7 @@ class FirstCharge(Base):
     """ 首充 (充值类活动均适用)"""
 
     async def handler(self, uid: int, activity: dict, award_type: int, pay_mode: int, platform: int = None,
-                      return_url: str = None):
+                      return_url: str = None, u_os: int = 0):
         if award_type != AwardType.TOP_UP:
             return False, "活动参与类型错误", {}
         _, condition_awards = await self.act_by_awards(uid, activity)
@@ -742,7 +748,7 @@ class FirstCharge(Base):
             extra = {'return_gold': return_gold.get("gold", 0)}
             explain = json_encode(extra)
         act_order, msg = await PaymentLogic().create_order(uid, express, pay_mode, platform, explain=explain,
-                                                           return_url=return_url)
+                                                           return_url=return_url, u_os=u_os)
         NLogger.info(f"首充活动订单信息：{act_order}")
         if not act_order:
             return False, msg, act_order
