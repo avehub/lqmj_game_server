@@ -71,6 +71,7 @@ class ProxyLoginType(BaseEnum):
     """ 方式 """
     PHONE_LOGIN = 1, "手机号登录"
     WECHAT_MP_LOGIN = 2, "微信公众号授权登陆"
+    WECHAT_MINI_GAME_LOGIN = 3, "微信小游戏授权登陆"
 
 
 class ProxyLevel(BaseEnum):
