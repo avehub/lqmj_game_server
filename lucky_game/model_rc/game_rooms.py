@@ -122,6 +122,7 @@ class GameRoomsRC(BaseCommonRC):
         "call_one_must_big": {0, 1},  #是否报单必大 0否 1是
         "show_cards_num": {0, 1},  #是否展示牌数 0否 1是
         "card_tracker": {0, 1},  #是否展示记牌器 0否 1是
+        "is_fan_guan": {0, 1},  #是否反关 0否 1是
     }
 
     @classmethod
