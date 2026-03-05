@@ -8,8 +8,8 @@ from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, Ext
     HuType, FlowStatus, \
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
-from common.proto.py_pb2.ws_leisure import s2c_trustee_model, s2c_one_of_model, S2CGameOverInfo, S2CRoundOverInfo, \
-    S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo
+from common.proto.py_pb2.ws_leisure import s2c_trustee_model, s2c_one_of_model, S2CGameOverInfo, \
+    S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo, S2CGameOverInfoRunFast
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
 from common.utils.kit_async import DelayCall
@@ -378,9 +378,9 @@ class BaseCardRoom(BaseRoom):
         """ 随机出牌 """
 
     async def round_over(self, over_type, **kwargs):
-        self.set_flow_status(FlowStatus.T_IN_CHECK_OUT)
         await self.async_set_room_status(RoomStatus.T_CHECK_OUT)
         account = kwargs.pop("account")
+        round_over_msg_type = kwargs.pop("round_over_msg_type")
         data = kwargs
 
         self.__replay_msg_data = []
@@ -418,7 +418,7 @@ class BaseCardRoom(BaseRoom):
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
         # if over_type != OverType.FORCE:
-        data_model = S2CRoundOverInfo.pb_model(**data)
+        data_model = round_over_msg_type.pb_model(**data)
         await self.inner_broadcast(CmdRoom.ROUND_OVER, data_model)
         if self.__match_room_id > 0:
             await self.send_player_score_to_competition(player_score, CmdCompetition.UPDATE_SCORE)
@@ -521,8 +521,10 @@ class BaseCardRoom(BaseRoom):
             if not p:
                 continue
             result["seats"].append(p.game_over_data)
-
-        data_model = S2CGameOverInfo.pb_model(**result)
+        if self.play_type < PlayType.RUN_FAST:
+            data_model = S2CGameOverInfo.pb_model(**result)
+        else:
+            data_model = S2CGameOverInfoRunFast.pb_model(**result)
         await self.inner_broadcast(CmdRoom.GAME_OVER, data_model)
 
         # 游戏结束后在这里更新战绩以及回放数据

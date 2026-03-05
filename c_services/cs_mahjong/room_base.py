@@ -10,7 +10,7 @@ from common.proto.py_pb2.ws_leisure import S2CReady07Mahjong, S2CRoomInfo04Mahjo
     S2CPlayCardsMahjong, S2CFirstJiMahjong, S2CHuInfoMahjong, S2CHuAfterCards, S2CMenInfoMahjong, S2CAfterGangMoCard, \
     S2CGangInfo, \
     S2CHuBaseInfo, S2CExchangeCardsInfo, S2CTianTingInfo, S2CStartDingQueInfo, S2CNotifyPosition, S2CStartExchangeCards, \
-    S2CRoomDismissInfo
+    S2CRoomDismissInfo, S2CRoundOverInfo
 from common.utils import earth_position
 from . import const
 from .player import Player
@@ -3319,7 +3319,9 @@ class Room(BaseCardRoom):
             "fan_ji_card": zhuo_ji,  # 翻到的那张牌
             "all_ji": list(self.__ji_cards) if self.__ji_cards else [],
             "account": account,
+            "round_over_msg_type":S2CRoundOverInfo
         }
+        self.set_flow_status(FlowStatus.T_IN_CHECK_OUT)
         await super().round_over(over_type, **data)
 
     def get_player_jiao_pai(self):

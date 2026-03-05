@@ -338,8 +338,9 @@ class Rule(BaseRule):
         return True
 
     @staticmethod
-    def get_move_type(move):
+    def get_move_type(move,drift = False):
         """ 获取动作类型 """
+        """drift 是否甩尾"""
         move_size = len(move)
         move_dict = collections.Counter(move)
 
@@ -439,6 +440,8 @@ class Rule(BaseRule):
                     return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': len(serial_3)}
                 if len(serial_3) == len(pair) and len(move_dict) == len(serial_3) * 2:
                     return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': len(serial_3)}
+                if drift and len(serial_3) > len(single) + len(pair) * 2:
+                    return {'type': ActionType.TYPE_19_SERIAL_3_2_DRIFT, 'rank': serial_3[0], 'len': len(serial_3)}
 
             if len(serial_3) == 4:
                 if Rule.is_continuous_seq(serial_3[1:]):

@@ -237,7 +237,7 @@ class RoomRobot(Room):
             "remain_cards": self.remain_cards_dict,
             'cs_type': self.service.service_type,
             'all_hu_cards':self.all_hu_cards,
-            'all_play_out_cards':self.all_play_out_cards,
+            'all_played_cards':self.all_play_out_cards,
         }
         return data
 

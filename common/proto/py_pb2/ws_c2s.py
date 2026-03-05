@@ -39,3 +39,7 @@ club_room_set_model = ws_leisure_pb2.C2SClubRoomSetInfo()
 
 # 比赛
 join_competition_model = ws_leisure_pb2.C2SJoinCompetition()
+
+# 跑得快
+do_re_double_model = ws_leisure_pb2.C2SDoReDoubleRunFast()
+qiang_guan_model = ws_leisure_pb2.C2SQiangGuanRunFast()
