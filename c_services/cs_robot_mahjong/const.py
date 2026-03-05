@@ -4,7 +4,6 @@ import numpy as np
 
 from enum import Enum, IntEnum, unique
 
-
 # TODO: 常量设置
 LAI_ZI = 80  # 癞子牌
 PLAYERS_NUM = 3  # 玩家人数
@@ -35,7 +34,7 @@ NumOnes2Array = {
     1: np.array([1, 0, 0, 0]),  # 1次
     2: np.array([1, 1, 0, 0]),  # 2次
     3: np.array([1, 1, 1, 0]),  # 3次
-    4: np.array([1, 1, 1, 1])   # 4次
+    4: np.array([1, 1, 1, 1])  # 4次
 }
 
 # 卡牌类型编码信息(万、条、筒、癞子)
@@ -43,7 +42,7 @@ CardType2Column = {
     1: 0,  # 万
     2: 1,  # 条
     3: 2,  # 筒
-    8: 3   # 癞
+    8: 3  # 癞
 }
 
 # 卡牌编码信息
@@ -113,6 +112,7 @@ class SuitType(IntEnum):
     SUIT_TONG = 3  # 筒
     SUIT_HONG = 8  # 红中
 
+
 @unique
 class CardType(IntEnum):
     """
@@ -121,6 +121,7 @@ class CardType(IntEnum):
     YAO_JI = 21
     WU_GU_JI = 38
     LAI_ZI = 51
+
 
 @unique
 class TypeScore(IntEnum):
@@ -133,6 +134,7 @@ class TypeScore(IntEnum):
     GAP_CARD = 20  # 坎张
     EDGE_CARD = 19  # 边张
     XIAO_SHUN = 40  # 二顺
+
 
 @unique
 class Card2Type(IntEnum):
@@ -159,7 +161,6 @@ COMB_REMOVE_XTS = {
     Card2Type.SHUN_ZI: 2,  # 减去向听(三连顺)2
     Card2Type.KE_ZI: 2,  # 减去向听(刻子)2
 }
-
 
 # 默认鸡牌(幺鸡和乌骨鸡)
 DEFAULT_JI_CARDS = {
@@ -236,6 +237,7 @@ class YaoTongHuPaiType(IntEnum):
     THREE_LONG_QI = 113  # 三龙(a-a-a-a, b-b-b-b, c-c-c-c, dd)
     QING_THREE_LONG_QI = 114  # 清三龙(a-a-a-a, b-b-b-b, c-c-c-c, dd)
 
+
 @unique
 class FcHuPaiType(IntEnum):
     """
@@ -258,6 +260,7 @@ class FcHuPaiType(IntEnum):
     LONG_QI_DUI = 115  # 5组对子+1组3张，胡牌为三张中的一张
     ZHI_XING_HE_YI = 116  # 含有四组杠的和牌，不计八音坐唱
 
+
 @unique
 class FcPileType(IntEnum):
     """
@@ -268,6 +271,7 @@ class FcPileType(IntEnum):
     PILE_ZHUAN_WAN_GANG = 3
     PILE_AN_GANG = 4
 
+
 @unique
 class YaoTongPileType(IntEnum):
     """
@@ -277,6 +281,7 @@ class YaoTongPileType(IntEnum):
     PILE_MING_GANG = 2
     PILE_ZHUAN_WAN_GANG = 3
     PILE_AN_GANG = 4
+
 
 @unique
 class ExtraHuPaiType(IntEnum):
@@ -356,6 +361,7 @@ GANG_RES = {
     YaoTongPileType.PILE_ZHUAN_WAN_GANG: 0,
     YaoTongPileType.PILE_AN_GANG: 0
 }
+
 
 @unique
 class JiType_XL(IntEnum):

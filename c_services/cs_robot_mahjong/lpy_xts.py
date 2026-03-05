@@ -6,6 +6,7 @@ import itertools
 from enum import IntEnum
 from copy import deepcopy
 from collections import defaultdict, Counter
+from typing import Iterable
 
 from c_services.cs_robot_mahjong.const import ACTION_TYPE_MING_GANG, FcHuPaiType, FcPileType, ACTION_TYPE_ZHUAN_WAN_GANG
 from common.utils.utils import UtilsTool
@@ -60,39 +61,50 @@ class LpyMoveGenerator:
         "__magic_card",
         "__hand_cards_len",
         "__cards_to_count",
-        "__pong_gang_cards",
         "__qys_flag_len",
         "__xqd_flag_len",
         "__ddz_flag_len",
         "__modify_flag",
         "__fc_hu_types",
         "__piles",
+        "__others_cards_and_piles",
+        "__all_hu_cards",
+        "__all_played_cards",
         "__left_count",
         "__most_hand_cards_len",
         "__res_cards_to_count",
         "__others_hand_cards",
-        "__the_worst_xts_by_hu_type"
+        "__the_worst_xts_by_hu_type",
+        
+        "__played_card2count",
     )
 
     def __init__(self):
         """
         初始化手牌参数
         """
+        self.__piles = []  # 碰杠牌
+        self.__others_cards_and_piles = []  # 其它玩家碰杠牌
         self.__hand_cards = []
-        self.__magic_card = None
-        self.__hand_cards_len = len(self.__hand_cards)
-        self.__cards_to_count = {}
-        self.__pong_gang_cards = []
-        self.__piles = []
         self.__left_count = 0
+        self.__magic_card = None
+        self.__hand_cards_len = 0
+        self.__others_hand_cards = []
+        self.__res_cards_to_count = {}
+
+        self.__all_hu_cards = {}
+        self.__all_played_cards = {}
+
+        self.__cards_to_count = {}
+        self.__the_worst_xts_by_hu_type = ...
+        
+        self.__played_card2count: dict = {}
+
         self.__modify_flag = 7
         self.__ddz_flag_len = 2
         self.__xqd_flag_len = 3
         self.__qys_flag_len = 10
         self.__most_hand_cards_len = 14
-        self.__res_cards_to_count = {}
-        self.__others_hand_cards = []
-        self.__the_worst_xts_by_hu_type = ...
         self.__fc_hu_types = ["lqd", "dlq", "ddz", "xqd", "jgg", "sxz", "sjg3", "byzc", "sxc", "sjg4", "zxhy"]
 
     @property
@@ -128,14 +140,6 @@ class LpyMoveGenerator:
         self.__cards_to_count = count
 
     @property
-    def pong_gong_cards(self):
-        return self.__pong_gang_cards
-
-    @pong_gong_cards.setter
-    def pong_gong_cards(self, piles):
-        self.__pong_gang_cards = piles
-
-    @property
     def piles(self):
         return self.__piles
 
@@ -150,14 +154,6 @@ class LpyMoveGenerator:
     @left_count.setter
     def left_count(self, count):
         self.__left_count = count
-
-    @property
-    def modify_flag(self):
-        return self.__modify_flag
-
-    @modify_flag.setter
-    def modify_flag(self, value):
-        self.__modify_flag = value
 
     @property
     def ddz_flag_len(self):
@@ -397,20 +393,31 @@ class LpyMoveGenerator:
             self,
             hand_cards,
             piles=None,
+            others_cards_and_piles=None,
             left_count=0,
             others_hand_cards=None,
             remain_cards=None,
-            magic_card=None):
+            magic_card=None,
+            all_hu_cards: dict = None,
+            all_played_cards: dict = None,
+    ):
         """
         更新参数，根据手牌数量，判断玩家胡牌类型
         """
         self.piles = piles or []
+        self.__others_cards_and_piles = others_cards_and_piles or []
+
         self.hand_cards = hand_cards
         self.left_count = left_count or 0
         self.magic_card = magic_card or None
         self.hand_cards_len = len(self.hand_cards)
         self.others_hand_cards = others_hand_cards or []
         self.res_cards_to_count = self.calc_remain_cards(hand_cards, remain_cards)
+
+        self.__all_hu_cards = all_hu_cards or {}
+        self.__all_played_cards = all_played_cards or {}
+        
+        self.__played_card2count = self.cards_to_count_dict(self.__all_played_cards.values())
 
         # todo: 碰杠数量(计算碰杠数)
         pong_gang_num = 4 - self.hand_cards_len // 3
@@ -721,7 +728,7 @@ class LpyMoveGenerator:
 
         return all_played_cards, all_xts_cards, best_cards1
 
-    def calc_xts_by_max_hu_type(self, other_cards_and_piles=None):
+    def calc_xts_by_max_hu_type(self):
         """
         todo: 根据向听数构建大牌胡牌类型，清一色 or 非清一色
             1.清一色胡牌类型
@@ -731,12 +738,12 @@ class LpyMoveGenerator:
             5.大对: 对子数量 + 刻子数量 > 3
         """
         # 判断清一色牌型是否符合条件，清一色牌型分为玩家未进行过碰、杠或进行过碰、杠
-        other_cards_and_piles = other_cards_and_piles or []
+        other_cards_and_piles = self.__others_cards_and_piles or []
         curr_cards_res, qing_yi_se_res = self.decide_qing_yi_se_by_res(other_cards_and_piles)
 
         # todo: 1.计算清一色牌型所有出牌，有效牌
         if len(curr_cards_res.keys()) == 1 and qing_yi_se_res:
-            all_played_cards, all_xts_cards, ph_best_cards = self.calc_qing_yi_se_build_types()
+            all_played_cards, all_xts_cards, ping_hu_best_cards = self.calc_qing_yi_se_build_types()
             if not all_played_cards:
                 # todo: 处理万能牌
                 tmp_hand_cards = self.hand_cards[:]
@@ -748,7 +755,7 @@ class LpyMoveGenerator:
             if len(all_xts_cards) == 1:
                 return random.choice(all_played_cards)
             if len(all_xts_cards) > 1:
-                return self.calc_best_play_card(all_xts_cards, ph_best_cards)
+                return self.calc_best_play_card(all_xts_cards, ping_hu_best_cards)
             return self.calc_xts_by_normal_best_cards()
 
         # todo: 2.根据当前玩家持有花色手牌结果，决定是否做清一色牌型
@@ -815,7 +822,7 @@ class LpyMoveGenerator:
         构建清一色牌型
         """
         # 判断当前清一色是否进行过碰/杠
-        if self.left_count > self.modify_flag:
+        if self.left_count > self.__modify_flag:
             tmp_hand_cards = self.hand_cards[:]
             # todo: 处理做清一色牌型时，
             for lai_zi in self.hand_cards:
@@ -868,14 +875,14 @@ class LpyMoveGenerator:
             return pong_gong_cards
         return []
 
-    def calc_best_play_card(self, all_xts_cards, ph_best_cards):
+    def calc_best_play_card(self, all_xts_cards, ping_hu_best_cards):
         """
         判断是否选择大牌做牌类型及出牌
         """
         min_xts = sorted(all_xts_cards, key=lambda x: x[1])
         xts_yxp_cards = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
         # 判断剩余卡牌是否还满足做大牌条件
-        if self.left_count < (self.modify_flag * 2) - 2:
+        if self.left_count < (self.__modify_flag * 2) - 2:
             eq_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
             if eq_cards:
                 return random.choice(eq_cards)
@@ -888,8 +895,6 @@ class LpyMoveGenerator:
             for lai_zi in self.hand_cards:
                 if self.magic_card == lai_zi:
                     tmp_hand_cards.remove(self.magic_card)
-            # if self.magic_card in self.magic_card:
-            #     self.hand_cards.remove(self.magic_card)
             return random.choice(tmp_hand_cards)
 
         # todo: 开始构建较大牌型组合并选择最优出牌
@@ -901,13 +906,13 @@ class LpyMoveGenerator:
                     return random.choice(yxp_infos[2])
             if yxp_infos[1] < self.xqd_flag_len and yxp_infos[0] != "ph":
                 if yxp_infos[0] in self.fc_hu_types:
-                    eq_card = list(set(ph_best_cards) & set(yxp_infos[2]))
+                    eq_card = list(set(ping_hu_best_cards) & set(yxp_infos[2]))
                     best_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
                     if eq_card:
                         return random.choice(eq_card)
                     if yxp_infos[2]:
                         return random.choice(yxp_infos[2])
-                    if not ph_best_cards and not xts_yxp_cards:
+                    if not ping_hu_best_cards and not xts_yxp_cards:
                         # todo: 万能牌不能出，直接删除
                         tmp_hand_cards = self.hand_cards[:]
                         for lai_zi in self.hand_cards:
@@ -918,7 +923,10 @@ class LpyMoveGenerator:
                         return random.choice(self.hand_cards)
                     if not best_cards or not xts_yxp_cards:
                         return random.choice(best_cards + xts_yxp_cards)
-                    return self.control_play_card(ph_best_cards, xts_yxp_cards)
+
+                    # 看一下哪张牌打得最多打哪张
+                    xts_yxp_cards.sort(key=self.__played_card2count.get)
+                    return xts_yxp_cards[-1]
 
         # todo: 按最小数组合选择最优出牌
         if min_xts[0][2]:
@@ -938,17 +946,20 @@ class LpyMoveGenerator:
         """
         根据向听数大小，牌型优先级别为: 清一色、龙七对、大对子、小七对
         """
-        all_played_cards, all_xts_cards, ph_best_cards = self.calc_normal_build_types()
+        all_played_cards, all_xts_cards, ping_hu_best_cards = self.calc_normal_build_types()
         # 仅存在一张胡牌牌型
         if len(all_xts_cards) == 1:
-            if all_xts_cards[0][1] < 0 or len(all_xts_cards) == 1:
-                return random.choice(ph_best_cards or all_played_cards)
-            xts_cards_res = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
-            return self.control_play_card(ph_best_cards, xts_cards_res)
+            if all_xts_cards[0][1] < 0:
+                return random.choice(ping_hu_best_cards or all_played_cards)
+            all_cards_by_xts = all_xts_cards[0][-1]
+            
+            all_cards_by_xts.sort(key=self.__played_card2count.get)
+            # 看一下哪张牌打得最多打哪张
+            return all_cards_by_xts[-1]
 
         # 存在多种胡牌牌型
         if len(all_xts_cards) > 1:
-            return self.calc_best_play_card(all_xts_cards, ph_best_cards)
+            return self.calc_best_play_card(all_xts_cards, ping_hu_best_cards)
 
     def cal_xts_ping_hu(self, *args, need_mz=None):
         """
@@ -1930,11 +1941,11 @@ class LpyMoveGenerator:
         return result
 
     @staticmethod
-    def cards_to_count_dict(cards):
+    def cards_to_count_dict(cards: Iterable):
         """
         统计卡牌数量(dict)
         """
-        card_to_count = dict()
+        card_to_count = {}
         for c in cards:
             card_to_count[c] = card_to_count.get(c, 0) + 1
         return card_to_count

@@ -139,15 +139,18 @@ class RobotMahjongServer(JsonBaseServer):
         """
         # print("============计算发财捉鸡出牌============")
         self.update_move_gen_attr(data)
-        action = self.__move_gen.calc_xts_by_max_hu_type(data.get("others_cards_and_piles") or None)
+        action = self.__move_gen.calc_xts_by_max_hu_type()
         return action
 
     def update_move_gen_attr(self, data):
         self.__move_gen.update_attr(
             hand_cards=data.get("curr_hand_cards"),
             piles=data.get("piles"),
+            others_cards_and_piles=data.get("others_cards_and_piles"),
             left_count=data.get("left_count"),
             others_hand_cards=data.get("others_hand_cards"),
             remain_cards=data.get("remain_cards"),
-            magic_card=data.get("magic_card", None),
+            magic_card=data.get("magic_card"),
+            all_hu_cards=data.get("all_hu_cards"),
+            all_played_cards=data.get("all_played_cards"),
         )
