@@ -166,6 +166,8 @@ class Room(BaseCardRoom):
             num = today.isoweekday()
             self.__week_ji_num = {num + 10, num + 20, num + 30}
 
+        self.__ex_direction = 0 #换牌方向 0 顺时针 1 逆时针
+
     @property
     def liang_men_pai(self):
         return self.__liang_men_pai
@@ -2687,7 +2689,7 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前流程不可换牌"
         if player.tian_ting:
             return StaCode.RULE_ERR, "天听不可换牌"
-            # 检测data是否是list类型
+        # 检测data是否是list类型
         if isinstance(data, list):
             ex_cards = data
         else:
@@ -2722,14 +2724,22 @@ class Room(BaseCardRoom):
         one_of_model.seat_id = player.seat_id
         await self.inner_broadcast(CmdRoom.PLAYER_EXCHANGE_CARDS, one_of_model)
         if self.exchange_cards_is_end():
-            p_get_cards = {}
-            for c_info in self.__exchange_cards_info.values():
+
+            exchange_map = {}
+            for seat_id, c_info in self.__exchange_cards_info.items():
                 target_p = c_info.get("target_p")
-                cards = c_info.get("ex_cards")
-                target_c_info = self.__exchange_cards_info.get(target_p.seat_id)
-                target_ex_cards_index = target_c_info.get("ex_cards_index")
-                target_p.exchange_cards_seat(target_ex_cards_index, cards)
-                p_get_cards[target_p.seat_id] = cards
+                exchange_map[target_p.seat_id] = {
+                    "cards": c_info.get("ex_cards"),
+                    "index": self.__exchange_cards_info.get(target_p.seat_id, {}).get("ex_cards_index")
+                }
+
+            p_get_cards = {}
+            for seat_id, info in exchange_map.items():
+                if info["index"]:
+                    player = self.get_player_by_seat_id(seat_id)
+                    player.exchange_cards_seat(info["index"], info["cards"])
+                    p_get_cards[seat_id] = info["cards"]
+
 
             result = {}
             send_list = []
@@ -3204,8 +3214,9 @@ class Room(BaseCardRoom):
         return card_to_count
 
     def find_target_exchange_cards_seat(self, player):
+        direction = -1 if self.__ex_direction == 1 else 1
         for offset in range(1, self.max_player_count):
-            target_seat_id = (player.seat_id - 1 + offset) % self.max_player_count
+            target_seat_id = (player.seat_id - 1 + offset * direction) % self.max_player_count
             target_player = self.seats[target_seat_id]
             if not target_player.tian_ting:
                 return target_player
@@ -3245,6 +3256,7 @@ class Room(BaseCardRoom):
         self.curr_seat_id = self.dealer_id
         self.clear_room_round_start()
         self.__dice_num = Rule.random_dice(2)
+        self.__ex_direction = 1 if (self.__dice_num[0] +self.__dice_num[1]) % 2 == 0 else 0
         data = {"round_idx": self.round_idx, "dealer": self.dealer_id, "dice_num": self.__dice_num}
         if self.play_type == PlayType.AN_SHUN_MJ and self.__lai_zi_ji:
             self.__lai_zi = random.choice(const.ALL_CARDS_WITHOUT_ZI_HUA)
