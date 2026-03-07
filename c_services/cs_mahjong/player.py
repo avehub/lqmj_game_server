@@ -52,7 +52,7 @@ class Player(BaseLeisurePlayer):
         self.__han_bao_dou_an_gang_count = 0
         self.__han_bao_dou_zhuan_wan_gang_count = 0
         self.__han_dou_cards = set()
-        self.__is_ready = False
+
         self.__hu_info = {}  # 胡开信息
         self.__shao_tong_xing_zheng = 0  # 烧通行证
         self.__hu_path = []
@@ -313,7 +313,7 @@ class Player(BaseLeisurePlayer):
         self.__shao_tong_xing_zheng = 0
         self.__tui_zhang_ke_kai = 0
         self.__jian_next_player_card = 0
-        self.__is_ready = False
+        self.is_ready = False
         self.__hu_path = []
         self.__hu_cards = set()
 
@@ -752,13 +752,6 @@ class Player(BaseLeisurePlayer):
                 if card in default_ji:
                     self.__ji_pai.append(card)
 
-    @property
-    def is_ready(self):
-        return self.__is_ready
-
-    @is_ready.setter
-    def is_ready(self, value: bool):
-        self.__is_ready = value
 
     def player_info(self, contain_cards=True):
         public_men_cards = []
@@ -769,7 +762,7 @@ class Player(BaseLeisurePlayer):
             public_men_cards.append(data)
 
         p_info = super().player_info(contain_cards)
-        p_info["is_ready"] = self.__is_ready
+        p_info["is_ready"] = self.is_ready
         p_info["shang_ga"] = self.__has_shang_ga
         p_info["shang_ga_score"] = self.__shang_ga_score
         p_info["is_bao_ting"] = self.__tian_ting == 1
