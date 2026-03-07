@@ -445,11 +445,11 @@ class Room(BaseCardRoom):
         """ 庄家轮转的逻辑 """
         dealer = self.dealer()
         if not dealer:  # 首局随机庄
-            if self.owner:
-                p = self.get_player_by_uid(self.owner)
-                if p:
-                    self.dealer_id = p.seat_id
-                    return
+            # if self.owner:
+            #     p = self.get_player_by_uid(self.owner)
+            #     if p:
+            #         self.dealer_id = p.seat_id
+            #         return
             dealer = random.randrange(1, self.in_room_count + 1)
             self.dealer_id = dealer
             return
