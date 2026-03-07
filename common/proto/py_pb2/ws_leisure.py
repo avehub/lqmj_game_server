@@ -1321,6 +1321,7 @@ class S2CPlayerInfoRunFast:
             pack_base_player_info(p_info, **one_data)
             p_info.is_ready = one_data.get("is_ready") or False
             p_info.total_score = one_data.get("total_score") or 0
+            p_info.has_double = one_data.get("has_double") or False
         return obj
 
 class S2CDealCardsRunFast:
