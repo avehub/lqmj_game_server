@@ -552,11 +552,13 @@ class Rule(BaseRule):
         return Rule.handle_by_bu_xi_pai(moves, rival_move)
 
     @staticmethod
-    def get_last_action(turn_cards):
+    def get_last_action(turn_cards,max_player = 3):
         """ 获取上一个动作 """
         if len(turn_cards) == 0:
             return []
         if len(turn_cards[-1]) == 0:
+            if max_player == 2:
+                return []
             last_action = turn_cards[-2]
         else:
             last_action = turn_cards[-1]
@@ -663,12 +665,12 @@ class Rule(BaseRule):
         return False, None
 
     @staticmethod
-    def get_legal_card_play_actions(cards: List[Cards], action_sequence, allow_actions: dict):
+    def get_legal_card_play_actions(cards: List[Cards], action_sequence, allow_actions: dict,max_player = 3):
         """ 获取当前合法动作 """
         cards = [c.val for c in cards]
         cards_dict = Rule.get_cards_count_dict(cards)
 
-        rival_move = Rule.get_last_action(action_sequence)
+        rival_move = Rule.get_last_action(action_sequence,max_player)
         rival_move = [c.val for c in rival_move]
 
         rival_type = Rule.get_move_type(rival_move)
