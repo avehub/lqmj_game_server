@@ -57,17 +57,20 @@ class BaseCardRoom(BaseRoom):
         self.__robot_fast = False
 
     async def close_room_timeout_idle(self):
-        if self.game_began:
-            return
         idle_time = tool_dt.cur_time() - self.__create_time
+        if self.game_began:
+            if idle_time >= self.__timeout_idle_time * 6:
+                self.log_info("游戏开始且超过6个小时，强制解散房间", self.in_room_count, self.seats,"时长",idle_time)
+                await self.force_dismiss(OverType.ULTIMATE_DISMISS)
+            return
         if idle_time < self.__timeout_idle_time:
             return
         if self.in_room_count > 0:
             # 有人则 x2
             if idle_time < self.__timeout_idle_time * 2:
-                self.log_info("房间空闲超时但还有人，增加300s超时", idle_time, self.__timeout_idle_time)
+                self.log_info("房间空闲超时但还有人，增加300s超时", idle_time, self.__timeout_idle_time,"时长",idle_time)
                 return
-        self.log_info("超时关闭房间", self.in_room_count, self.seats)
+        self.log_info("超时关闭房间", self.in_room_count, self.seats,"时长",idle_time)
         await self.force_dismiss(OverType.ULTIMATE_DISMISS)
 
     @property
