@@ -428,7 +428,7 @@ class GameRoomsRC(BaseCommonRC):
                 room_data, e = await cls.get_game_room_by_room_id(room_id)
                 if not room_data:
                     return False, e
-                elif room_data and not room_data["status"]:
+                elif room_data and room_data["status"] < RoomStatus.T_PLAYING:
                     return False, "房间未开始"
                 key = "room_card"
                 if room_data["club_id"] and room_data["club_id"] > 0:
