@@ -923,9 +923,9 @@ class BaseCardRoom(BaseRoom):
         }
 
     async def force_dismiss(self, over_type=OverType.DEFAULT):
-        self.log_info("force_dismiss", self.not_playing_dismiss, over_type)
+        self.log_info("force_dismiss", self.not_playing_dismiss, over_type,"游戏开始",self.game_began)
         self.__agree_dismiss_seats.clear()
-        if self.round_idx <= 1 and over_type in [OverType.FORCE, OverType.CLUB_OWNER_DISMISS, OverType.ULTIMATE_DISMISS]:
+        if self.round_idx <= 1 and self.game_began and over_type in [OverType.FORCE, OverType.CLUB_OWNER_DISMISS, OverType.ULTIMATE_DISMISS]:
             sta,e = await GameRoomsRC.refund_room_card(room_id=self.tid)
             self.log_info("退还房卡","结果",sta,"原因",e)
         if over_type == OverType.ULTIMATE_DISMISS:
