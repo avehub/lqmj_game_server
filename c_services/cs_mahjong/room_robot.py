@@ -43,7 +43,7 @@ class RoomRobot(Room):
             res = random.randint(1, 2)
             if self.robot_fast:
                 res = 0.5
-            self.call_flow_robot(res, self.check_robot_operate)
+            self.call_flow_robot_opt(res, self.check_robot_operate)
         else:
             if curr_player.card_is_lock() and curr_player.is_action_in_operates(ActionType.ACTION_TYPE_MEN):
                 self.call_flow(seconds, self.operates_time_out)
@@ -59,7 +59,7 @@ class RoomRobot(Room):
                 rs = UtilsTool.random_choice_num([1, 2, 3], [0.5, 0.3, 0.2])
             if self.robot_fast:
                 rs = 0.5
-            self.call_flow_robot(rs, self.check_robot_auto_chu_pai)
+            self.call_flow_robot_opt(rs, self.check_robot_auto_chu_pai)
             return
         self.call_flow(timeout_seconds, self.chu_pai_time_out, p)
 
@@ -183,7 +183,7 @@ class RoomRobot(Room):
         res = random.randint(2, 3)
         if self.robot_fast:
             res = 0.5
-        self.call_flow_robot(res, self.check_robot_operate)
+        self.call_flow_robot_opt(res, self.check_robot_operate)
         await self.deal_operates_time_out()
 
 
