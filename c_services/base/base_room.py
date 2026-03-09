@@ -40,6 +40,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__timer = None
         self.__timer_trustee = None  # 托管timer
         self.__timer_robot = None  # 托管timer
+        self.__timer_robot_opt = None  # 托管timer
 
     @property
     def tid(self):
@@ -138,6 +139,11 @@ class BaseRoom(metaclass=ABCMeta):
             self.__timer_robot.cancel()
             self.__timer_robot = None
 
+    def __cancel_timer_robot_opt(self):
+        if self.__timer_robot_opt:
+            self.__timer_robot_opt.cancel()
+            self.__timer_robot_opt = None
+
     def __cancel_timer_trustee(self):
         if self.__timer_trustee:
             self.__timer_trustee.cancel()
@@ -154,6 +160,12 @@ class BaseRoom(metaclass=ABCMeta):
         self.__cancel_timer_robot()
         self.__timer_robot = DelayCall(seconds, func, *params, **kwargs, log_handler=self.err_log)
         self.__timer_robot.start()
+
+    def call_flow_robot_opt(self, seconds, func, *params, **kwargs):
+        """ 机器人操作延时 """
+        self.__cancel_timer_robot_opt()
+        self.__timer_robot_opt = DelayCall(seconds, func, *params, **kwargs, log_handler=self.err_log)
+        self.__timer_robot_opt.start()
 
     def call_flow_trustee(self, seconds, func, *params, **kwargs):
         """ 托管延时 """
@@ -177,6 +189,7 @@ class BaseRoom(metaclass=ABCMeta):
         self.__cancel_timer()
         self.__cancel_timer_robot()
         self.__cancel_timer_trustee()
+        self.__cancel_timer_robot_opt()
 
     @staticmethod
     async def delay_func(seconds, func, *args, **kwargs):

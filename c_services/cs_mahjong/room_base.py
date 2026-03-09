@@ -30,6 +30,7 @@ class Room(BaseCardRoom):
         super().__init__(tid, service, room_conf, Poker, self.__liang_men_pai)
         self.__shang_ga_list = [1, 2, 3, 4, 5, 0]
         self.__exchange_cards_info = {}
+        self.__remain_cards_dict = {}
         self.__dice_num = None
         self.__over_type = 0
         self.__card_count = 13
@@ -166,6 +167,8 @@ class Room(BaseCardRoom):
             num = today.isoweekday()
             self.__week_ji_num = {num + 10, num + 20, num + 30}
 
+        self.__ex_direction = 0 #换牌方向 0 顺时针 1 逆时针
+
     @property
     def liang_men_pai(self):
         return self.__liang_men_pai
@@ -296,6 +299,10 @@ class Room(BaseCardRoom):
     @property
     def exchange_cards_info(self):
         return self.__exchange_cards_info
+
+    @property
+    def remain_cards_dict(self):
+        return self.__remain_cards_dict
 
     def is_same_suit(self):
         return self.__exchange_cards_type == ChangeCardsType.SAME_SUIT_CARDS
@@ -435,6 +442,9 @@ class Room(BaseCardRoom):
             self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
+        for card in self.poker.remain_cards:
+            key = str(card)
+            self.__remain_cards_dict[key] = self.__remain_cards_dict.get(key, 0) + 1
         if self.is_exchange_three():
             return await self.start_exchange_three()
         await self.ding_que_or_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
@@ -443,11 +453,11 @@ class Room(BaseCardRoom):
         """ 庄家轮转的逻辑 """
         dealer = self.dealer()
         if not dealer:  # 首局随机庄
-            if self.owner:
-                p = self.get_player_by_uid(self.owner)
-                if p:
-                    self.dealer_id = p.seat_id
-                    return
+            # if self.owner:
+            #     p = self.get_player_by_uid(self.owner)
+            #     if p:
+            #         self.dealer_id = p.seat_id
+            #         return
             dealer = random.randrange(1, self.in_room_count + 1)
             self.dealer_id = dealer
             return
@@ -503,6 +513,7 @@ class Room(BaseCardRoom):
         self.__fan_yin_ji_cards = set()
         self.__zhuo_ji_card = 0
         self.__ji_and_gang_score = 0
+        self.__remain_cards_dict = {}
 
     def is_exchange_three(self):
         """ 判断是否换三张 """
@@ -692,6 +703,9 @@ class Room(BaseCardRoom):
             data_model = S2CDealCardsMahjong.pb_model(**data)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
 
+        for card in self.poker.remain_cards:
+            key = str(card)
+            self.__remain_cards_dict[key] = self.__remain_cards_dict.get(key, 0) + 1
         if not has_player_tian_ting and self.is_exchange_three():
             return await self.start_exchange_three()
         await self.start_tian_ting() if self.__bao_ting else self.call_flow(0, self.enter_mo_pai_call)
@@ -763,6 +777,8 @@ class Room(BaseCardRoom):
         p.rev_card(mo_pai)
         p.mo_pai = mo_pai
         self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards, "剩余", self.poker.left_count)
+        card_key = str(mo_pai)
+        self.__remain_cards_dict[card_key] = self.__remain_cards_dict.get(card_key, 0) - 1
         for player in self.seats:
             data = {
                 "seat_id": p.seat_id,
@@ -2687,7 +2703,7 @@ class Room(BaseCardRoom):
             return StaCode.FLOW_ERR, "当前流程不可换牌"
         if player.tian_ting:
             return StaCode.RULE_ERR, "天听不可换牌"
-            # 检测data是否是list类型
+        # 检测data是否是list类型
         if isinstance(data, list):
             ex_cards = data
         else:
@@ -2722,14 +2738,22 @@ class Room(BaseCardRoom):
         one_of_model.seat_id = player.seat_id
         await self.inner_broadcast(CmdRoom.PLAYER_EXCHANGE_CARDS, one_of_model)
         if self.exchange_cards_is_end():
-            p_get_cards = {}
-            for c_info in self.__exchange_cards_info.values():
+
+            exchange_map = {}
+            for seat_id, c_info in self.__exchange_cards_info.items():
                 target_p = c_info.get("target_p")
-                cards = c_info.get("ex_cards")
-                target_c_info = self.__exchange_cards_info.get(target_p.seat_id)
-                target_ex_cards_index = target_c_info.get("ex_cards_index")
-                target_p.exchange_cards_seat(target_ex_cards_index, cards)
-                p_get_cards[target_p.seat_id] = cards
+                exchange_map[target_p.seat_id] = {
+                    "cards": c_info.get("ex_cards"),
+                    "index": self.__exchange_cards_info.get(target_p.seat_id, {}).get("ex_cards_index")
+                }
+
+            p_get_cards = {}
+            for seat_id, info in exchange_map.items():
+                if info["index"]:
+                    player = self.get_player_by_seat_id(seat_id)
+                    player.exchange_cards_seat(info["index"], info["cards"])
+                    p_get_cards[seat_id] = info["cards"]
+
 
             result = {}
             send_list = []
@@ -3204,8 +3228,9 @@ class Room(BaseCardRoom):
         return card_to_count
 
     def find_target_exchange_cards_seat(self, player):
+        direction = -1 if self.__ex_direction == 1 else 1
         for offset in range(1, self.max_player_count):
-            target_seat_id = (player.seat_id - 1 + offset) % self.max_player_count
+            target_seat_id = (player.seat_id - 1 + offset * direction) % self.max_player_count
             target_player = self.seats[target_seat_id]
             if not target_player.tian_ting:
                 return target_player
@@ -3245,6 +3270,7 @@ class Room(BaseCardRoom):
         self.curr_seat_id = self.dealer_id
         self.clear_room_round_start()
         self.__dice_num = Rule.random_dice(2)
+        self.__ex_direction = 1 if (self.__dice_num[0] +self.__dice_num[1]) % 2 == 0 else 0
         data = {"round_idx": self.round_idx, "dealer": self.dealer_id, "dice_num": self.__dice_num}
         if self.play_type == PlayType.AN_SHUN_MJ and self.__lai_zi_ji:
             self.__lai_zi = random.choice(const.ALL_CARDS_WITHOUT_ZI_HUA)
