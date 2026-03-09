@@ -40,7 +40,7 @@ class ClubCreate(BaseClub):
         room_card = u_info.get("room_card")
         if room_card < BaseClubRC.KEY_CLUB_CARD_LIMIT:
             return self.answer(StaCode.FAIL, hint="房卡不足")
-        new, e = await BaseClubRC.create_club(name, uid, room_card)
+        new, e = await BaseClubRC.create_club(name, uid)
         if not new:
             return self.answer(StaCode.FAIL, hint=e)
         return self.answer(data={"club_id": new.id})
