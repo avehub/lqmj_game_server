@@ -232,7 +232,7 @@ class Base:
                                         }
                                         NLogger.info(f"领取赛事奖励：{up_data}")
                                         await TournamentUserPointRC.up_user_point(cycle_id, uid, up_data)
-                            elif reward_type in ["scenic_spot_select", "scenic_spot", "phone_charge"]:
+                            elif reward_type in ["scenic_spot_select", "scenic_spot", "phone_charge", "qualified"]:
                                 good_id = remark.get("good_id")
                                 express = [{
                                     "good_id": good_id,
