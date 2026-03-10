@@ -338,7 +338,7 @@ class Rule(BaseRule):
         return True
 
     @staticmethod
-    def get_move_type(move,drift = False):
+    def get_move_type(move,drift = False,allow_not_pair = False):
         """ 获取动作类型 """
         """drift 是否甩尾"""
         move_size = len(move)
@@ -399,6 +399,8 @@ class Rule(BaseRule):
         if move_size == 5 and count_dict.get(4, 0) == 0:  # 不这样处理炸弹 + 单牌会识别为3带2
             if len(move_dict) == 2:
                 return {'type': ActionType.TYPE_7_3_2, 'rank': move[2]}
+            if allow_not_pair and count_dict.get(3, 0) == 1:
+                return {'type': ActionType.TYPE_7_3_2, 'rank': move[2]}
             else:
                 return {'type': ActionType.TYPE_16_WRONG}
 
@@ -435,19 +437,24 @@ class Rule(BaseRule):
                     return {'type': ActionType.TYPE_16_WRONG}
 
             serial_3.sort()
+            single_len = len(single)
+            pair_len = len(pair)
+            serial_3_len = len(serial_3)
             if Rule.is_continuous_seq(serial_3):
-                if len(serial_3) == len(single) + len(pair) * 2:
-                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': len(serial_3)}
-                if len(serial_3) == len(pair) and len(move_dict) == len(serial_3) * 2:
-                    return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': len(serial_3)}
-                if drift and len(serial_3) > len(single) + len(pair) * 2:
-                    return {'type': ActionType.TYPE_19_SERIAL_3_2_DRIFT, 'rank': serial_3[0], 'len': len(serial_3)}
+                if serial_3_len == single_len + pair_len * 2:
+                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': serial_3_len}
+                if serial_3_len == pair_len and len(move_dict) == serial_3_len * 2:
+                    return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': serial_3_len}
+                if allow_not_pair and serial_3_len == (move_size - serial_3_len)/2 :
+                    return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': serial_3_len}
+                if drift and serial_3_len > single_len + pair_len * 2:
+                    return {'type': ActionType.TYPE_19_SERIAL_3_2_DRIFT, 'rank': serial_3[0], 'len': serial_3_len}
 
-            if len(serial_3) == 4:
+            if serial_3_len == 4:
                 if Rule.is_continuous_seq(serial_3[1:]):
-                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[1], 'len': len(serial_3) - 1}
+                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[1], 'len': serial_3_len - 1}
                 if Rule.is_continuous_seq(serial_3[:-1]):
-                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': len(serial_3) - 1}
+                    return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': serial_3_len - 1}
 
         return {'type': ActionType.TYPE_16_WRONG}
 
@@ -665,7 +672,7 @@ class Rule(BaseRule):
         return False, None
 
     @staticmethod
-    def get_legal_card_play_actions(cards: List[Cards], action_sequence, allow_actions: dict,max_player = 3):
+    def get_legal_card_play_actions(cards: List[Cards], action_sequence, allow_actions: dict,drift = False, max_player = 3, allow_not_pair = False):
         """ 获取当前合法动作 """
         cards = [c.val for c in cards]
         cards_dict = Rule.get_cards_count_dict(cards)
@@ -673,7 +680,7 @@ class Rule(BaseRule):
         rival_move = Rule.get_last_action(action_sequence,max_player)
         rival_move = [c.val for c in rival_move]
 
-        rival_type = Rule.get_move_type(rival_move)
+        rival_type = Rule.get_move_type(rival_move,drift,allow_not_pair)
         rival_move_type = rival_type['type']
         rival_move_len = rival_type.get('len', 1)
         moves = []

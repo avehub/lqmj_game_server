@@ -1324,6 +1324,13 @@ class S2CPlayerInfoRunFast:
             p_info.has_double = one_data.get("has_double") or False
         return obj
 
+class S2CRoundStartRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CRoundStartRunFast()
+        obj.round_idx = kwargs.get("round_idx") or 0
+        return obj
+
 class S2CDealCardsRunFast:
     @classmethod
     def pb_model(cls, **kwargs):
