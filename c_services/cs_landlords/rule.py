@@ -445,7 +445,7 @@ class Rule(BaseRule):
                     return {'type': ActionType.TYPE_11_SERIAL_3_1, 'rank': serial_3[0], 'len': serial_3_len}
                 if serial_3_len == pair_len and len(move_dict) == serial_3_len * 2:
                     return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': serial_3_len}
-                if allow_not_pair and serial_3_len == (move_size - serial_3_len)/2 :
+                if allow_not_pair and serial_3_len == (move_size - serial_3_len*3)/2 :
                     return {'type': ActionType.TYPE_12_SERIAL_3_2, 'rank': serial_3[0], 'len': serial_3_len}
                 if drift and serial_3_len > single_len + pair_len * 2:
                     return {'type': ActionType.TYPE_19_SERIAL_3_2_DRIFT, 'rank': serial_3[0], 'len': serial_3_len}
