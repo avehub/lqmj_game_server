@@ -125,7 +125,12 @@ class PaymentLogic:
             else:
                 express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
         express["price"] = decimal.Decimal(price)
-        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num, purchase_uid=purchase_uid)
+        u_os = 0
+        if os == OperatingSystem.Android:
+            u_os = 1
+        elif os == OperatingSystem.IOS:
+            u_os = 2
+        order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num, purchase_uid=purchase_uid, u_os=u_os)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 
     async def pay(self, u_info: dict, data_before: dict, express: dict):
@@ -281,7 +286,7 @@ class PaymentLogic:
                 await UserVipRC.update_user_vip_level(uid, order["amount"])
             return True, "ok"
 
-    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0):
+    async def create_order(self, uid, express, pay_mode, platform, num: int = 1, explain: str = "", return_url: str = None, purchase_uid: int = 0, u_os: int = 0):
         # 创建订单
         NLogger.info("create_order 商品信息: good", express)
 
@@ -299,6 +304,7 @@ class PaymentLogic:
             order_no=order_no,
             status=OrderStatus.WAIT_PAY,
             explain=explain,
+            u_os=u_os,
         )
         NLogger.info("create_order 订单插入状态: new_order", new, msg)
         if not new:

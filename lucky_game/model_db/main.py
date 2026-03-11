@@ -413,6 +413,8 @@ class Orders(DBModel):
                                   description='订单状态：0待支付 1支付失败 2订单关闭 99支付成功')
     gain_status = fields.SmallIntField(max_length=2, null=True, description='领取状态：0未发放 1已发放 99已领取')
     explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
+    u_os = fields.SmallIntField(max_length=2, null=True, default=0,
+                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单') 
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
 
 
@@ -839,6 +841,8 @@ class DistributionSettleConf(DBModel):
     profit_condition = fields.CharField(max_length=32, default="", description='分润条件')
     profit_ratio = fields.FloatField(null=True, default=1.0000, description='分润比例')
     desc = fields.CharField(max_length=256, null=True, default="", description='描述')
+    u_os = fields.SmallIntField(max_length=2, null=True, default=0,
+                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单') 
     updated = fields.BigIntField(default=0, description='更新时间')
 
     class Meta:

@@ -724,7 +724,7 @@ class WorkersServer(JsonBaseServer):
 
     async def __proxy_order_sync(self, uid, order_info):
         # 调用分销模块接口
-        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"])
+        dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"], order_info["u_os"])
         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
                                               order_type=order_info["order_type"], goods_number=int(order_info["express_content"]["amount"]) * int(order_info["num"]),
                                               price=float(float(order_info["amount"]) / order_info["num"]),

@@ -230,7 +230,7 @@ class MiniProgramRecvPush(SpecialApi):
             express = await GoodRC.get_good_info(str(sku))
             if not express:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
-            pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, purchase_uid=uid)
+            pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, purchase_uid=uid, u_os=3)
             if not pay_info:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
             # 3.发送客服消息（支付界面相关信息）
