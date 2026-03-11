@@ -126,10 +126,11 @@ class PaymentLogic:
                 express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
         express["price"] = decimal.Decimal(price)
         u_os = 0
-        if os == OperatingSystem.Android:
-            u_os = 1
-        elif os == OperatingSystem.IOS:
-            u_os = 2
+        if platform == PlatForm.NATIVE_APP:
+            if os == OperatingSystem.Android:
+                u_os = 1
+            elif os == OperatingSystem.IOS:
+                u_os = 2
         order, msg = await self.create_order(u_info.get("uid"), express, pay_mode, platform, num, purchase_uid=purchase_uid, u_os=u_os)
         return True, msg, {"field": field, "field_name": field_name, "order": order}
 

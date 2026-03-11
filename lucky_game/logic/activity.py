@@ -65,10 +65,11 @@ class Base:
         act_type = activity.get("act_type")
         act_id = activity.get("act_id")
         u_os = 0
-        if c_os == OperatingSystem.Android:
-            u_os = 1
-        elif c_os == OperatingSystem.IOS:
-            u_os = 2
+        if platform == PlatForm.NATIVE_APP:
+            if c_os == OperatingSystem.Android:
+                u_os = 1
+            elif c_os == OperatingSystem.IOS:
+                u_os = 2
         if act_type == ActivityType.FIRST_CHARGE:
             act_total = await FirstCharge().pay_count(uid)
         else:
