@@ -51,6 +51,8 @@ class CompetitionServer(BaseServer):
         self.__current_cycle_type = 0
         self.__player_info = {}
         self.__reward_info = None
+        self.__all_robot = []
+        self.__robot_data = []
 
         DelayCall(0.5, self.__init_data).start()
         DelayCall((1.1, 2.0), self.__loop_match_competition).loop_start()
@@ -108,22 +110,27 @@ class CompetitionServer(BaseServer):
         start_ruid = ROBOT_BATTLE[0] + 1
         end_ruid = start_ruid + 2100
         r_list = list(range(start_ruid, end_ruid))
-        self.__all_robot = await BaseRobotRC.cache_part_robot(r_list)
-        self.__robot_count = len(self.__all_robot)
+        self.__robot_data = await BaseRobotRC.cache_part_robot(r_list)
+        self.__all_robot = self.__robot_data.copy()
         random.shuffle(self.__all_robot)
+
 
     async def __rand_robot_data(self) -> dict:
         """ 随机一个机器人数据 """
         if not self.__all_robot:
-            await self.__read_robot_data()
-        one_robot = self.__all_robot[self.__robot_cursor]
-        if self.__robot_cursor == self.__robot_count - 1:
-            # 当取到 最后一个 机器人 时游标置为0 且 打乱机器人列表
-            self.__robot_cursor = 0
+            all_robot = []
+            for robot in self.__robot_data:
+                robot_uid = robot.get("uid")
+                join_info = await self.__get_player_in_match(robot_uid)
+                if not join_info:
+                    all_robot.append(robot)
+            if not all_robot:
+                self.log_info("没有可用机器人")
+                return {}
+            self.__all_robot = all_robot
             random.shuffle(self.__all_robot)
-        else:
-            self.__robot_cursor += 1
-
+            self.log_info("没有可用机器人，重新读取",len(self.__all_robot))
+        one_robot = self.__all_robot.pop()
         return {"uid": one_robot.get("uid"), "is_robot": 1}
 
     async def __loop_match_competition(self):
@@ -136,6 +143,9 @@ class CompetitionServer(BaseServer):
             max_match_player = conf_data.get("max_match_player")
             if count < max_match_player:
                 robot_data = await self.__rand_robot_data()
+                if not robot_data:
+                    self.log_info("没有空闲机器人")
+                    continue
                 uid = robot_data.get("uid")
                 await self.conf.locker.locked(value, self.__join_competition, (uid, value, conf_data))
 
