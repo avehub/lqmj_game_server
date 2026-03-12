@@ -151,8 +151,13 @@ class GameDataSync(LogMeta):
         
             if order_type == ChargeOrderType.TYPE_2:
                 cls.log_info(
-                    f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单不再给原代理产生分佣，data={data}")
-                return 1
+                    f"player_id={data.player_id}已经升级为一级代理,该玩家充值的订单非房卡订单 给原代理 按比例产生分佣 之前为不分，data={data}")
+
+                proxy_income = (
+                        decimal.Decimal(str(data.order_amount)) * decimal.Decimal(str(data.dividend_rate))).quantize(
+                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
+                platform_income = (decimal.Decimal(str(data.order_amount)) - proxy_income).quantize(
+                    decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
         else:
             if data.dividend_income and float(data.dividend_income) > 0:
                 incoming = decimal.Decimal(str(data.dividend_income)).quantize(decimal.Decimal('0.01'), rounding=decimal.ROUND_HALF_UP)
