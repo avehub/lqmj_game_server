@@ -42,7 +42,7 @@ class OrderDetail(GameAuthApi):
         order, msg = await OrderRC.get_order_info(order_no=order_no)
         if not order:
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
-        if query_platform != 0:
+        if order.get("status") == OrderStatus.WAIT_PAY and query_platform != 0:
             # 为待支付订单主动查询支付平台订单状态
             payment = PaymentLogic()
             sta, msg, up_data = await payment.order_method(order.get("pay_mode"), order_no, order.get("out_order_no"))
@@ -110,8 +110,8 @@ class CallbackAli(SpecialApi):
             trade_no = data.get("trade_no")
             trade_status = data.get("trade_status")
         else:
-            order_no = form.get("out_trade_no", "")
-            trade_no = form.get("trade_no", "")
+            order_no = form.get("out_trade_no")[0]
+            trade_no = form.get("trade_no")[0]
             trade_status = OrderStatus.PAID
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)

@@ -406,7 +406,7 @@ class Orders(DBModel):
                                     description="购买资源支付类型：0无 1金币 2钻石 3房卡 4黄钻 5人民币")
     pay_mode = fields.IntEnumField(enum_type=PayMode, null=True, default=PayMode.DEFAULT_MODE, description="支付方式")
     num = fields.IntField(max_length=10, null=True, default=0, description="购买数量")
-    order_no = fields.CharField(max_length=64, index=True, default='', description="订单编号")
+    order_no = fields.CharField(max_length=32, index=True, default='', description="订单编号")
     out_order_no = fields.CharField(max_length=64, index=True, default='', description="外部订单编号")
     prepay_id = fields.CharField(max_length=64, null=True, default='', description="外部支付标识")
     status = fields.SmallIntField(max_length=2, null=True,
