@@ -110,8 +110,8 @@ class CallbackAli(SpecialApi):
             trade_no = data.get("trade_no")
             trade_status = data.get("trade_status")
         else:
-            order_no = form.get("out_trade_no", "")
-            trade_no = form.get("trade_no", "")
+            order_no = form.get("out_trade_no")[0]
+            trade_no = form.get("trade_no")[0]
             trade_status = OrderStatus.PAID
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)
