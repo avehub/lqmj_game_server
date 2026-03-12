@@ -60,12 +60,11 @@ class BaseCardRoom(BaseRoom):
         idle_time = tool_dt.cur_time() - self.__create_time
         if self.game_began:
             if idle_time >= self.__timeout_idle_time * 8:
-                await self.force_dismiss(OverType.ULTIMATE_DISMISS)
                 self.log_info("游戏开始且超过6个小时，强制解散房间", self.in_room_count, self.seats, "时长", idle_time)
-            elif idle_time >= self.__timeout_idle_time * 6:
-                await self.force_dismiss(OverType.FORCE)
+                await self.force_dismiss(OverType.ULTIMATE_DISMISS)
+            elif idle_time >= 60 * 4:
                 self.log_info("游戏开始且超过6个小时，强制解散房间", self.in_room_count, self.seats,"时长",idle_time)
-
+                await self.force_dismiss(OverType.FORCE)
             return
         if idle_time < self.__timeout_idle_time:
             return
