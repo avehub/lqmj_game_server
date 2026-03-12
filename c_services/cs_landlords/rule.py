@@ -369,6 +369,8 @@ class Rule(BaseRule):
                 return {'type': ActionType.TYPE_4_BOMB, 'rank': move[0]}
             elif len(move_dict) == 2:
                 if move[0] == move[1] == move[2] or move[1] == move[2] == move[3]:
+                    if drift:
+                        return {'type': ActionType.TYPE_20_3_2_DRIFT, 'rank': move[1]}
                     return {'type': ActionType.TYPE_6_3_1, 'rank': move[1]}
                 else:
                     return {'type': ActionType.TYPE_16_WRONG}
