@@ -24,6 +24,8 @@ from lucky_proxy.logic.proxy_settlement import ProxysJobExecutor
 from lucky_proxy.logic.proxy_user import ProxyUserLogic
 from nsanic.libs.mult_log import NLogger
 
+from lucky_game.model_rc.stats_income_daily import StatsIncomeDailyRC
+
 
 
 class TimedService:
@@ -113,7 +115,7 @@ class TimedService:
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
         # 测试任务
-        self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
 
 
     async def __test_tasks(self):
@@ -141,7 +143,11 @@ class TimedService:
         # 处理已注销用户
         self.__scheduler.add_date_job(self.clean_logout_user, run_date=now_time + timedelta(hours=0))
 
-   
+        # self.__scheduler.add_date_job(self.send_ding_statistics, run_date=now_time + timedelta(hours=7))
+        # 每日统计数据
+        self.__scheduler.add_date_job(self.__income_daily_stats, run_date=now_time + timedelta(hours=0))
+
+
 
     async def __stats_data_tasks(self):
         """ 数据统计任务 """
@@ -160,6 +166,11 @@ class TimedService:
         now_time = datetime.now()
         # 删除历史战绩（7天外）
         self.__scheduler.add_date_job(self.__del_to_game_record_history, run_date=now_time)
+
+    @classmethod
+    async def __income_daily_stats(cls):
+        day = datetime.now() - timedelta(days=1)
+        await StatsIncomeDailyRC.upsert_for_day(day)
 
 
 

@@ -111,7 +111,7 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
                 f",promotion_type={data.promotion_type}")
-            return 0
+            return 0, f"【代理用户不存在】忽悠游戏同步邀请关系绑定player_id={data.player_id},promotion_code={data.promotion_code}"
 
         level1_proxy_user = proxy_user
         if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
@@ -122,7 +122,7 @@ class GameDataAdapter(LogMeta):
         if not level1_proxy_user:
             cls.log_info(
                 f"【重要日志】代理id={proxy_id},所属一级代理不存在，忽略邀请用户同步，data={data}")
-            return 0
+            return 0, f" 代理id={proxy_id},所属一级代理不存在，忽略邀请用户同步，data={data}"
         vip_expire_time = level1_proxy_user.get("vip_expire_time")
         # 非永久会员 会员过期
         if level1_proxy_user.get("vip_level") != ProxyVipLevel.LEVEL_999 \
@@ -130,7 +130,7 @@ class GameDataAdapter(LogMeta):
             cls.log_info(
                 f"【重要日志】会员已过期，忽略邀请用户同步uid={data.player_id},"
                 f",now={data.promotion_time},vip_expire_time={vip_expire_time},reason=[{proxy_id}]会员已过期或所属的一级代理会员已过期")
-            return 0
+            return 0, f" 会员已过期，忽略邀请用户同步uid={data.player_id},"
 
         query_relation = {
             "player_id": data.player_id,
@@ -140,7 +140,7 @@ class GameDataAdapter(LogMeta):
         if exists_relation:
             cls.log_info(f"游戏同步邀请关系已被绑定uid={data.player_id},promotion_code={data.promotion_code}"
                          f",promotion_type={data.promotion_type}")
-            return 0
+            return 0, f"游戏同步邀请关系已被绑定uid={data.player_id},promotion_code={data.promotion_code}"
         data_date = datetime.fromtimestamp(data.promotion_time)
         level1_proxy_id = 0
         if proxy_user.get("proxy_level") == ProxyLevel.LEVEL_2:
@@ -166,8 +166,8 @@ class GameDataAdapter(LogMeta):
                 await ProxyPromotionRelation.add_one(relation)
         except Exception as e:
             cls.log_err(f"同步分销用户绑定关系失败err={e},data={data}")
-            return 0
-        return 1
+            return 0, f"同步分销用户绑定关系失败err={e},data={data}"
+        return 1, f"成功"
 
 
 if __name__ == '__main__':

@@ -1,14 +1,16 @@
 import asyncio
 import base64
 
+from nsanic.libs.tool import json_encode
 from nsanic.libs import tool_dt
 from c_services.base.base_room import BaseRoom
-from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, CmdClub, ClubMsgType, CmdCompetition
+from c_services.const.cs_enum_const import RoomStatus, CmdRoom, CmdWorkers, GameAnnouncement, CmdClub, ClubMsgType, CmdCompetition
 from c_services.cs_mahjong.const import OverType, PlayType, EXTRA_SCORE_MAP, ExtraHuPai, CheckType, PAI_XING_SCORE_MAP, \
     HuType, FlowStatus, \
     JI_PAI_SCORE, CardsType, JiType
 from common.proto.py_pb2.ws_base import PbWsBaseRep
-from common.proto.py_pb2.ws_leisure import s2c_trustee_model, s2c_one_of_model, S2CGameOverInfo, S2CRoundOverInfo, \
+from common.proto.py_pb2.ws_leisure import S2CDealCards, s2c_tickets_model, S2CBrokeBroad, \
+    s2c_trustee_model, s2c_gold_model, s2c_one_of_model, s2c_recharge_model, S2CGameOverInfo, S2CRoundOverInfo, \
     S2CChangeConnect, S2CReqDismissRoom, S2CRoomDismissInfo
 from common.public.conf import LIVE_SERVER, C_SERVICE_SECRET_KEY
 from common.public.enum_const import TaskId, StaCode, ServiceEnum
@@ -54,7 +56,6 @@ class BaseCardRoom(BaseRoom):
         self.__match_room_id = 0
         self.__total_match_round = 0
         self.__match_round = 0
-        self.__robot_fast = False
 
     async def close_room_timeout_idle(self):
         if self.game_began:
@@ -113,14 +114,6 @@ class BaseCardRoom(BaseRoom):
     @property
     def match_round(self):
         return self.__match_round
-
-    @property
-    def robot_fast(self):
-        return self.__robot_fast
-
-    @robot_fast.setter
-    def robot_fast(self,value):
-        self.__robot_fast = value
 
 
     def set_not_playing_dismiss(self, status, value):
@@ -306,8 +299,6 @@ class BaseCardRoom(BaseRoom):
         # 首局并且空闲不记录
         if not self.game_began:
             return
-        if self.__match_room_id > 0:
-            return
         if isinstance(data, dict):
             data.pop("legal_actions", None)
         self.__add_pack_msg_records(cmd, data, code, hint)
@@ -412,8 +403,7 @@ class BaseCardRoom(BaseRoom):
             record_data["round_ranking"] = score_rank_map[p.round_score] if score_rank_map else 0
             record_data["round_result"] = over_data
             player_score[str(p.uid)] = p.total_score
-            if self.__match_room_id == 0:
-                self.__replay_msg_data.append(record_data)
+            self.__replay_msg_data.append(record_data)
             p.clear_data_round_over()
 
         self.log_info("round_index:", self.round_idx, "结算：", data)
@@ -429,16 +419,11 @@ class BaseCardRoom(BaseRoom):
                 replay_msg_data = {"replay_msg_data": self.__replay_msg_data, "tid": self.tid}
                 await self.send_task_to_worker(CmdWorkers.INSERT_GAME_GRADE, replay_msg_data)
                 self.__replay_msg_data = []
-            await self.next_round_ready(over_type)
+            await self.next_round_ready()
 
-    async def next_round_ready(self,over_type):
+    async def next_round_ready(self):
         await self.start_next_round()
-        if self.__match_room_id == 0:
-            auto_time = 0
-        elif over_type == OverType.LIU_JU:
-            auto_time = 4
-        else:
-            auto_time = 12
+        auto_time = 0 if self.__match_room_id == 0 else 10
         for p in self.seats:
             p.is_ready = False if auto_time == 0 else True
         await self.delay_func(auto_time, self.try_start_game)
@@ -500,8 +485,7 @@ class BaseCardRoom(BaseRoom):
                 if not record_info:
                     self.log_info("战绩创建失败", e, "入参", self.tid, tool_dt.cur_time())
                 self.__record_id = record_info.record_rid
-        start_time = 2 if self.__match_room_id == 0 else 0.5
-        self.call_flow(start_time, self.round_start)
+        self.call_flow(2, self.round_start)
         for p in self.seats:
             if p and not p.is_robot:
                 await self.service.sava_player_in_game(p.uid, self.tid, self.owner, self.club_id, 2)
@@ -651,9 +635,9 @@ class BaseCardRoom(BaseRoom):
     def clear_room(self):
         """ 房间回收清理 """
         self.__round_msg_records = []  # 每局消息记录
-        self.__replay_msg_data = []# 存入战绩数据
+        self.__replay_msg_data = []  # 存入战绩数据
         self.__online_group_user = []
-        self.cancel_timer_dismiss()
+        self.__timer_dismiss = None
         self.__agree_dismiss_seats = set()
         self.__timeout_idle_time = 60 * 60 * 1
         self.__game_began = False
@@ -661,9 +645,7 @@ class BaseCardRoom(BaseRoom):
         self.__extra_score_map = {}
         self.__pai_xing_score_map = {}
         self.__match_room_id = 0
-        self.__total_match_round = 0
-        self.__match_round = 0
-        self.__robot_fast = False
+
         super().clear_room()
 
     def refresh_room_conf(self, service, room_conf):
@@ -683,12 +665,9 @@ class BaseCardRoom(BaseRoom):
         self.__agree_dismiss_seats = set()
 
     def get_extra_score_map(self) -> dict:
-        map_result = {}
-        # 复制 EXTRA_SCORE_MAP 的内容
-        for key, value in EXTRA_SCORE_MAP.items():
-            map_result[key] = value
+        map_copy = EXTRA_SCORE_MAP.copy()
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
-            map_result.update({
+            map_copy.update({
                 ExtraHuPai.GANG_SHANG_PAO: 3,
                 ExtraHuPai.GANG_SHANG_HUA: 3,
                 CheckType.CHECK_CHA_QUE: 1,
@@ -698,9 +677,9 @@ class BaseCardRoom(BaseRoom):
                 CheckType.CHECK_LAI_ZI_GNAG: 40,
                 CheckType.CHECK_LAI_ZI_JI: 2,
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.BI_JIE_MJ:
-            map_result.update({
+            map_copy.update({
                 ExtraHuPai.GANG_SHANG_PAO: 10,
                 ExtraHuPai.GANG_SHANG_HUA: 3,
                 ExtraHuPai.QIANG_GANG_HU: 15,
@@ -709,9 +688,9 @@ class BaseCardRoom(BaseRoom):
                 ExtraHuPai.TIAN_HU: 60,
                 ExtraHuPai.SHA_BAO: 20,
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
-            map_result.update({
+            map_copy.update({
                 ExtraHuPai.GANG_SHANG_PAO: 10,
                 ExtraHuPai.GANG_SHANG_HUA: 10,
                 ExtraHuPai.QIANG_GANG_HU: 10,
@@ -730,30 +709,27 @@ class BaseCardRoom(BaseRoom):
                 CheckType.CHECK_LAI_ZI_JI: 2,
                 CheckType.CHECK_LAI_ZI_CHONG_XI: 25,
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.REN_HUAI_MJ:
             qys_score = self.__rule_details.get("qing_yi_se_score", 1)
             gao_wa_dan = self.__rule_details.get("gao_wa_dan", 0)
             if gao_wa_dan:
                 qys_score = qys_score * 50
-            map_result.update({
+            map_copy.update({
                 ExtraHuPai.GANG_SHANG_HUA: qys_score,
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.AN_SHUN_MJ:
-            map_result.update({
+            map_copy.update({
                 ExtraHuPai.SEA_MOON: 2,
                 ExtraHuPai.GAN_KOU: 5,
             })
-            return map_result
+            return map_copy
         else:
-            return map_result
+            return map_copy
 
     def get_pai_xing_score_map(self) -> dict:
-        map_result = {}
-        # 复制 PAI_XING_SCORE_MAP 的内容
-        for key, value in PAI_XING_SCORE_MAP.items():
-            map_result[key] = value
+        map_copy = PAI_XING_SCORE_MAP.copy()
         if self.play_type in (PlayType.GUI_YANG_4, PlayType.GUI_YANG_3, PlayType.GUI_YANG_2):
             qing_yi_se = 10
             if self.play_type == PlayType.GUI_YANG_3:
@@ -761,7 +737,7 @@ class BaseCardRoom(BaseRoom):
                 if qys_score:
                     qing_yi_se = 10 + 5
 
-            map_result.update({
+            map_copy.update({
                 HuType.DI_LONG_QI: 20,
                 HuType.DOUBLE_DI_LONG_QI: 30,
                 HuType.QING_DOUBLE_DI_LONG_QI: 40,
@@ -769,9 +745,9 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_THREE_DI_LONG_QI: 50,
                 HuType.QING_YI_SE: qing_yi_se
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.BI_JIE_MJ:
-            map_result.update({
+            map_copy.update({
                 HuType.PING_HU: 6,
                 HuType.DA_DUI_ZI: 12,
                 HuType.QI_DUI: 10,
@@ -793,10 +769,10 @@ class BaseCardRoom(BaseRoom):
                 HuType.QYS_RUAN_WU_DUI: 40,  # 清硬五对
                 HuType.QYS_YING_WU_DUI: 40,  # 清硬五对
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.ZUN_YI_LAI_ZI:
             base_score = 5
-            map_result.update({
+            map_copy.update({
                 HuType.PING_HU: base_score,
                 HuType.DA_DUI_ZI: base_score + 10,
                 HuType.QI_DUI: base_score + 20,
@@ -818,13 +794,13 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_THREE_LONG_QI: base_score + 140,
                 HuType.QING_JIN_GOU: base_score + 40
             })
-            return map_result
+            return map_copy
         elif self.play_type == PlayType.REN_HUAI_MJ:
             qys_score = self.__rule_details.get("qing_yi_se_score", 10)
             jgd_score = self.__rule_details.get("jin_gou_diao_score", 10)
             da_kuan_zhang_score = self.__rule_details.get("da_kuan_zhang_score", 4)
             ddz_score = self.__rule_details.get("da_dui_zi_score", 5)
-            map_result.update({
+            map_copy.update({
                 HuType.QING_YI_SE: qys_score,
                 HuType.JIN_GOU_DIAO: jgd_score,
                 HuType.DA_KUAN_ZHANG: da_kuan_zhang_score,
@@ -832,17 +808,14 @@ class BaseCardRoom(BaseRoom):
                 HuType.QING_QI_DUI: 10 + + qys_score,
                 HuType.QING_LONG_BEI: 20 + + qys_score,
             })
-            return map_result
+            return map_copy
         else:
-            return map_result
+            return map_copy
 
     def get_ji_pai_score_map(self) -> dict:
-        map_result = {}
-        # 复制 JI_PAI_SCORE 的内容
-        for key, value in JI_PAI_SCORE.items():
-            map_result[key] = value
+        map_copy = JI_PAI_SCORE.copy()
         if self.play_type == PlayType.BI_JIE_MJ:
-            map_result.update({
+            map_copy.update({
                 CardsType.YI_TONG: 5,
                 JiType.CHONG_FENG_JI: 2,
                 JiType.CHONG_FENG_JIN_JI: 2 * 10,
@@ -850,11 +823,11 @@ class BaseCardRoom(BaseRoom):
                 JiType.YIN_JI: 5,
                 JiType.ZE_REN_JI: 1,
             })
-            return map_result
+            return map_copy
         if self.play_type == PlayType.ZUN_YI_LAI_ZI:
             wgj_score = self.__rule_details.get("wu_gu_ji_score", 2)
             default_score = 1 if wgj_score == 3 else 2
-            map_result.update({
+            map_copy.update({
                 CardsType.WU_GU_JI: wgj_score,
                 CardsType.YAO_JI: 2,
                 CardsType.YI_WAN: 2,
@@ -880,14 +853,14 @@ class BaseCardRoom(BaseRoom):
                 JiType.MING_GANG: 5,
                 JiType.ZHUAN_WAN_GANG: 5,
             })
-            return map_result
+            return map_copy
         if self.play_type == PlayType.REN_HUAI_MJ:
-            map_result.update({
+            map_copy.update({
                 JiType.WEEK_JI: 1,
             })
-            return map_result
+            return map_copy
         else:
-            return map_result
+            return map_copy
 
     async def async_set_room_status(self, status: RoomStatus):
         self.set_room_status(status)
@@ -959,8 +932,8 @@ class BaseCardRoom(BaseRoom):
         self.__match_round = match_round
         if self.__match_room_id > 0:
             player.is_ready = True
-            if self.ready_player_count >= self.in_room_count:
-                self.call_flow(1.5, self.try_start_game)
+            if self.ready_player_count <= self.in_room_count:
+                self.call_flow(1, self.try_start_game)
 
     def cancel_all_timer(self):
         """ 取消所有延时 """
