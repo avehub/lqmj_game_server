@@ -41,6 +41,7 @@ from lucky_game.model_rc.records_game_segment import RecordsGameSegmentRC
 from lucky_game.model_rc.records_game_total import RecordsGameTotalRC
 from lucky_proxy.game_adapter.game_data_adapter import GameDataAdapter
 from lucky_proxy.logic.game_data_sync import PromotionAddUserDTO, PromotionOrderDataDTO, Level1ProxyDTO
+from lucky_proxy.logic.proxy_user import ProxyUserLogic
 
 
 class WorkersServer(JsonBaseServer):
@@ -72,6 +73,7 @@ class WorkersServer(JsonBaseServer):
             CmdWorkers.PROXY_ORDER_SYNC: self.__proxy_order_sync,
             CmdWorkers.CLUB_EVENT_LOG: self.__insert_club_event,
             CmdWorkers.PROXY_USER_SET: self.__proxy_user_set,
+            CmdWorkers.PROXY_USER_UP: self.__proxy_user_up,
             CmdWorkers.UPDATE_BAG_PROP: self.__update_bag_grop,
         })
         self.__user_query_red_dot_func_map = {}  # 记录用户查询红点任务
@@ -717,7 +719,7 @@ class WorkersServer(JsonBaseServer):
         self.log_info(f"用户{uid}绑定邀请关系{invite_code}")
         invite_data = PromotionAddUserDTO(player_id=uid, promotion_code=invite_code,
                                           promotion_time=created, promotion_type=0)
-        sta = await GameDataAdapter.sync_promotion_user(invite_data)
+        sta, msg = await GameDataAdapter.sync_promotion_user(invite_data)
         self.log_info(f"用户{uid}绑定邀请关系返回{sta}")
         if not sta:
             self.log_err(f"用户{uid}绑定邀请关系{invite_code}失败")
@@ -725,11 +727,12 @@ class WorkersServer(JsonBaseServer):
     async def __proxy_order_sync(self, uid, order_info):
         # 调用分销模块接口
         dividend_rate = await DistributionSettleConfRC.get_profit_ratio(int(order_info["express_content"]["amount"]), order_info["order_type"], order_info["u_os"])
+        dividend_num = await DistributionSettleConfRC.get_profit_num(int(order_info["express_content"]["amount"]), order_info["order_type"], order_info["u_os"])
         promoted_data = PromotionOrderDataDTO(order_id=order_info["id"], order_no=order_info["order_no"], player_id=order_info["uid"],
                                               order_type=order_info["order_type"], goods_number=int(order_info["express_content"]["amount"]) * int(order_info["num"]),
                                               price=float(float(order_info["amount"]) / order_info["num"]),
                                               order_amount=order_info["amount"], dividend_rate=dividend_rate,
-                                              order_time=order_info["created"])
+                                              order_time=order_info["created"], dividend_income=dividend_num)
         sta = await GameDataAdapter.sync_promotion_order_data(promoted_data)
         self.log_info(f"订单分销结果：{sta}")
         if not sta:
@@ -757,6 +760,14 @@ class WorkersServer(JsonBaseServer):
                                       vip_level=vip_level, vip_expire_time=vip_expire_time)
             sta, msg = await GameDataAdapter.add_level1_proxy(add_data)
             self.log_info(f"订单分销结果：{sta} {msg}")
+
+    async def __proxy_user_up(self, uid, up_data):
+        # 修改用户折扣并设置分销用户信息
+        u_info = await BaseUserRC.cache_by_pk(uid)
+        if u_info and up_data:
+            if await ProxyUserLogic.get_proxy_user_filter(player_id=uid):
+                sta, msg = await ProxyUserLogic.update_proxy_user(uid, up_data)
+                self.log_info(f"更新分销会员结果：{sta} {msg}")
 
 
 

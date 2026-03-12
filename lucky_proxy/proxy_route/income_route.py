@@ -29,7 +29,7 @@ INCOME_APIS = [
     Urls("proxy/MyIncomeDetailQuery", MyIncomeDetailQuery),
     Urls("proxy/MyRechargeOrders", MyRechargeOrders),
     Urls("proxy/MyRechargeTotal", MyRechargeTotal),
-    # Urls("proxy/TestOrder", TestOrder),
-    # Urls("proxy/GameDataAdapterOrderTest", GameDataAdapterOrderTest),
-    # Urls("proxy/TestInvite", TestInvite),
+    Urls("proxy/TestOrder", TestOrder),
+    Urls("proxy/GameDataAdapterOrderTest", GameDataAdapterOrderTest),
+    Urls("proxy/TestInvite", TestInvite),
 ]

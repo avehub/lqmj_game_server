@@ -414,8 +414,40 @@ class Orders(DBModel):
     gain_status = fields.SmallIntField(max_length=2, null=True, description='领取状态：0未发放 1已发放 99已领取')
     explain = fields.CharField(max_length=256, null=True, default='', description='其他说明')
     u_os = fields.SmallIntField(max_length=2, null=True, default=0,
-                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单') 
+                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单')
     updated = fields.BigIntField(null=True, default=0, description='更新时间')
+
+
+class StatsIncomeDaily(DBModel):
+    """每日收入统计"""
+    id = fields.IntField(pk=True, description='主键ID')
+    time_node = fields.BigIntField(max_length=28, index=True, null=False, default=0, description='时间节点：天')
+    total_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='总收入')
+    roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='房卡收入')
+    agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='助农收入')
+    total_orders = fields.IntField(default=0, description='总订单数')
+    roomcard_orders = fields.IntField(default=0, description='房卡订单数')
+    agriculture_orders = fields.IntField(default=0, description='助农订单数')
+    # 分销分类统计
+    distribution_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销收入')
+    distribution_orders = fields.IntField(default=0, description='分销订单数')
+    distribution_roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销房卡收入')
+    distribution_roomcard_orders = fields.IntField(default=0, description='分销房卡订单数')
+    distribution_agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='分销助农收入')
+    distribution_agriculture_orders = fields.IntField(default=0, description='分销助农订单数')
+    # 自然流分类统计
+    natural_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流收入')
+    natural_orders = fields.IntField(default=0, description='自然流订单数')
+    natural_roomcard_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流房卡收入')
+    natural_roomcard_orders = fields.IntField(default=0, description='自然流房卡订单数')
+    natural_agriculture_income = fields.DecimalField(max_digits=65, decimal_places=2, default=0, description='自然流助农收入')
+    natural_agriculture_orders = fields.IntField(default=0, description='自然流助农订单数')
+    updated = fields.BigIntField(default=0, description='更新时间')
+    created = fields.BigIntField(default=0, description='创建时间')
+
+    class Meta:
+        unique_together = (("time_node",),)
+        table = "stats_income_daily"
 
 
 class Guilds(DBModel):
@@ -840,9 +872,10 @@ class DistributionSettleConf(DBModel):
     range_max = fields.IntField(default=0, description='最大取值范围')
     profit_condition = fields.CharField(max_length=32, default="", description='分润条件')
     profit_ratio = fields.FloatField(null=True, default=1.0000, description='分润比例')
+    profit_num = fields.FloatField(null=True, default=0.0000, description='分润金额')
     desc = fields.CharField(max_length=256, null=True, default="", description='描述')
     u_os = fields.SmallIntField(max_length=2, null=True, default=0,
-                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单') 
+                                  description='用户支付系统：0默认 1安卓 2苹果 3微信小程序网页订单')
     updated = fields.BigIntField(default=0, description='更新时间')
 
     class Meta:
