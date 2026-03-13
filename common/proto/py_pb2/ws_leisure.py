@@ -561,6 +561,27 @@ def pack_rule_details(obj, **kwargs):
     obj.rule_details.eight_card_tian_hu = rule_details.get("eight_card_tian_hu") or 0
     obj.rule_details.four_card_tian_hu = rule_details.get("four_card_tian_hu") or 0
 
+def pack_rule_details_run_fast(obj, **kwargs):
+    """ 跑得快打包规则信息 """
+    rule_details = kwargs.get("rule_details", {})
+    obj.rule_details.card_count = rule_details.get("card_count") or 0
+    obj.rule_details.can_pass = rule_details.get("can_pass") or 0
+    obj.rule_details.first_play_type = rule_details.get("first_play_type") or 0
+    obj.rule_details.bomb_score = rule_details.get("bomb_score") or 0
+    obj.rule_details.is_double = rule_details.get("is_double") or 0
+    obj.rule_details.is_qiang_guan = rule_details.get("is_qiang_guan") or 0
+    obj.rule_details.is_fan_guan = rule_details.get("is_fan_guan") or 0
+    obj.rule_details.three_need_first = rule_details.get("three_need_first") or 0
+    obj.rule_details.can_four_with_three = rule_details.get("can_four_with_three") or 0
+    obj.rule_details.three_A_is_bomb = rule_details.get("three_A_is_bomb") or 0
+    obj.rule_details.drift = rule_details.get("drift") or 0
+    obj.rule_details.early_show_cards = rule_details.get("early_show_cards") or 0
+    obj.rule_details.call_one_must_big = rule_details.get("call_one_must_big") or 0
+    obj.rule_details.show_cards_num = rule_details.get("show_cards_num") or 0
+    obj.rule_details.card_tracker = rule_details.get("card_tracker") or 0
+
+
+
 
 class S2CReady07Mahjong:
     @classmethod
@@ -1267,6 +1288,176 @@ class S2CCompetitionInfo:
 
 # ################################## 比赛通知 ##################################
 
+# ################################## 跑得快通知 ##################################
+
+class S2CRoomInfoRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CRoomInfoRunFast()
+        pack_base_room_info(obj, **kwargs)
+        dismiss_info = kwargs.get("dismiss_info", {})
+        obj.dismiss_info.agree_seats.extend(dismiss_info.get("agree_seats") or [])
+        obj.dismiss_info.req_dismiss_left_sec = dismiss_info.get("req_dismiss_left_sec") or 0
+        obj.owner = kwargs.get("owner") or 0
+        pack_rule_details_run_fast(obj, **kwargs)
+        obj.cs_type = kwargs.get("cs_type") or 0
+        obj.is_location = kwargs.get("is_location") or 0
+        obj.is_friend = kwargs.get("is_friend") or 0
+        obj.club_id = kwargs.get("club_id") or 0
+        obj.pay_type = kwargs.get("pay_type") or 0
+        table_cards = kwargs.get("table_cards") or []
+        for data in table_cards:
+            table_card = obj.table_cards.add()
+            table_card.seat_id = data.get("seat_id") or 0
+            table_card.cards.extend(data.get("cards") or [])
+
+        obj.turn_end = kwargs.get("turn_end") or False
+        return obj
+
+class S2CPlayerInfoRunFast:
+    @classmethod
+    def pb_model(cls, data:list):
+        obj = ws_leisure_pb2.S2CPlayerInfoRunFast()
+        for one_data in data:
+            p_info = obj.player_info.add()
+            pack_base_player_info(p_info, **one_data)
+            p_info.is_ready = one_data.get("is_ready") or False
+            p_info.total_score = one_data.get("total_score") or 0
+            p_info.has_double = one_data.get("has_double") or False
+        return obj
+
+class S2CRoundStartRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CRoundStartRunFast()
+        obj.round_idx = kwargs.get("round_idx") or 0
+        return obj
+
+class S2CDealCardsRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CDealCardsRunFast()
+        obj.hand_cards.extend(kwargs.get("hand_cards") or [])
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.dealer_id = kwargs.get("dealer_id") or 0
+        return obj
+
+class S2CTurnToRunFast:
+    """ 轮到 """
+
+    @staticmethod
+    def pack_legal_actions(obj, kwargs):
+        """ 打包合法动作 """
+        legal_actions = kwargs.get("legal_actions") or []
+        for cards in legal_actions:
+            t_obj = obj.legal_actions.add()
+            t_obj.legal_action.extend(cards)
+
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CTurnToRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.seconds = kwargs.get("seconds") or 0
+        obj.yao_de_qi = kwargs.get("yao_de_qi") or False
+        obj.turn_end = kwargs.get("turn_end") or False
+
+        legal_actions = kwargs.get("legal_actions") or []
+        if legal_actions:
+            obj.legal_actions = json_encode(legal_actions)
+        return obj
+
+class S2CStartQiangGuan:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CStartQiangGuan()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.seconds = kwargs.get("seconds") or 0
+        return obj
+
+class S2CQiangGuanRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CQiangGuanRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.qiang_guan = kwargs.get("qiang_guan") or 0
+        return obj
+
+class S2CDoDoubleRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CDoDoubleRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.is_double = kwargs.get("is_double") or False
+        return obj
+
+class S2CPlayCardsRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CPlayCardsRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.cards_len = kwargs.get("cards_len") or 0
+        obj.act_type = kwargs.get("act_type") or 0
+        obj.cards.extend(kwargs.get("cards") or [])
+        return obj
+
+class S2CRoundOverInfoRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CRoundOverInfoRunFast()
+        obj.round_idx = kwargs.get("round_idx") or 0
+        obj.has_next_round = kwargs.get("has_next_round") or False
+        obj.finish_type = kwargs.get("finish_type") or 0
+        obj.curr_card = kwargs.get("curr_card") or 0
+        obj.dealer = kwargs.get("dealer") or 0
+        seats = kwargs.get("seats") or []
+        for data in seats:
+            seat_info = obj.seats.add()
+            seat_info.seat_id = data.get("seat_id") or 0
+            seat_info.hand_cards.extend(data.get("hand_cards") or [])
+            seat_info.round_score = data.get("round_score") or 0
+            seat_info.total_score = data.get("total_score") or 0
+            seat_info.quan_guan = data.get("quan_guan") or False
+            seat_info.fan_guan = data.get("fan_guan") or False
+            seat_info.round_bomb_count = data.get("round_bomb_count") or 0
+        return obj
+
+class S2CBombScoreRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CBombScoreRunFast()
+        bomb_scores = kwargs.get("bomb_scores") or []
+        for data in bomb_scores:
+            bomb_score_info = obj.bomb_score.add()
+            bomb_score_info.seat_id = data.get("seat_id") or 0
+            bomb_score_info.round_score = data.get("round_score") or 0
+            bomb_score_info.win_score = data.get("win_score") or 0
+        return obj
+
+class S2CEarlyShowCardRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CEarlyShowCardRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.cards.extend(kwargs.get("cards") or [])
+        return obj
+
+class S2CGameOverInfoRunFast:
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CGameOverInfoRunFast()
+        seats = kwargs.get("seats") or []
+        for data in seats:
+            seat_info = obj.seats.add()
+            seat_info.seat_id = data.get("seat_id") or 0
+            seat_info.uid = data.get("uid") or 0
+            seat_info.total_score = data.get("total_score") or 0
+            seat_info.max_score = data.get("max_score") or 0
+            seat_info.win_count = data.get("win_count") or 0
+            seat_info.bomb_count = data.get("bomb_count") or 0
+        obj.tid = kwargs.get("tid") or 0
+        return obj
+
+# ################################## 跑得快通知 ##################################
 
 # ################################## ws大厅通知 ##################################
 class S2CTopAnnouncements:

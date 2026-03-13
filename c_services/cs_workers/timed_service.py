@@ -6,7 +6,7 @@ from tortoise.transactions import in_transaction
 from c_services.base.base_conf import BaseConf
 from common.aliyun.dingtalk_service import DingTalkRobotService, DingTalkNotifier, DingTalkConfig
 from common.model_rc.tournament_cycle import TournamentCycleRC
-from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, DINGTALK_STATISTICS_SECRET, ENV
+from common.public.conf import LIVE_SERVER, CertificationConf, DINGTALK_STATISTICS_WEBHOOK, ENV
 from common.public.enum_const import ServiceEnum, DbKey, UserSource
 from common.utils.utils import UtilsTool
 from lucky_admin.const import BackTaskSta
@@ -113,7 +113,7 @@ class TimedService:
         # 每小时一次任务
         self.__scheduler.add_cron_job(self.__order_do_tasks, hour='*/1')
         # 测试任务
-        self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
+        # self.__scheduler.add_cron_job(self.__test_tasks, minute='*/1')
 
 
     async def __test_tasks(self):
@@ -263,7 +263,7 @@ class TimedService:
         count_data = await RecordsGameRoomRC.statistics_game_room_by_count()
         ding_server = DingTalkNotifier().get_service()
         ding_server.config.webhook_url = DINGTALK_STATISTICS_WEBHOOK
-        ding_server.config.secret = DINGTALK_STATISTICS_SECRET
+        # ding_server.config.secret = DINGTALK_STATISTICS_SECRET
         now = tool_dt.cur_time()
         content = f"时间：{tool_dt.dt_str(now, fmt='%Y-%m-%d')}\n" \
                    f"订单数：{order_count_data}\n" \

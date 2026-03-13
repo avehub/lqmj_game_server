@@ -190,6 +190,12 @@ class CmdRoom(BaseEnum):
     #比赛玩法
     ALL_PLAYER_FINISH = 120,"所有真人已结束当前轮次",CallCheck.INNER.val
 
+    #跑得快
+    START_QIANG_GUAN = 130, "开始抢关","跑得快"
+    QIANG_GUAN = 131, "玩家抢关","跑得快"
+    BOMB_SCORE = 132, "玩家炸弹分数","跑得快"
+    EARLY_SHOW_CARD = 133, "玩家提前亮牌(全大)","跑得快"
+
 
 @unique
 class CmdRobotCal(BaseEnum):
