@@ -55,6 +55,8 @@ class StoreHandler(GameAuthApi):
 class PayByGood(GameAuthApi):
     """ 商店购物（游戏内部） """
     async def post(self, req: Request, **kwargs):
+        self.loginfo(f"商店购物GET入参：{req.args}")
+        self.loginfo(f"商店购物POST入参：{req.json}")
         platform = self.check_int(req.args.get("platform"), require=True, p_name='平台ID')
         sku = self.check_str(req.json.get("sku"), require=True, p_name='商品SKU')
         if not sku:
