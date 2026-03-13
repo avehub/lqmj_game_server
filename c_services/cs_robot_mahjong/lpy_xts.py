@@ -417,7 +417,7 @@ class LpyMoveGenerator:
         self.__all_hu_cards = set(all_hu_cards.values())
         self.__all_played_cards = all_played_cards or {}
 
-        self.__played_card2count = self.cards_to_count_dict(self.__all_played_cards.values())
+        self.__played_card2count = self.cards_to_count_dict(itertools.chain.from_iterable(self.__all_played_cards.values()))
 
         # todo: 碰杠数量(计算碰杠数)
         pong_gang_num = 4 - self.hand_cards_len // 3
