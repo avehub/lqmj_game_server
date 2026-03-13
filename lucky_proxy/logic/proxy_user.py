@@ -54,6 +54,36 @@ class ProxyUserLogic(LogMeta):
         return result
 
     @classmethod
+    async def get_proxy_user_details_filter(cls, player_id: int = None, proxy_level: int = None,
+                                            phone: str = None, promotion_code: str = None,
+                                            page: int = 1, page_size: int = 10):
+        where = "1=1"
+        if player_id is not None:
+            where += f" AND pu.id = {player_id}"
+        if proxy_level is not None:
+            where += f" AND pu.proxy_level = {proxy_level}"
+        if phone is not None:
+            where += f" AND pu.phone = {phone}"
+        if promotion_code is not None:
+            where += f" AND pu.promotion_code = '{promotion_code}'"
+        count_sql = f"SELECT COUNT(1) AS total FROM proxy_user pu WHERE {where}"
+        total_row = await ProxyUser.exec_sql(count_sql, query=True)
+        total = total_row[0]["total"] if total_row else 0
+        offset = (page - 1) * page_size
+        sql = f"""
+        SELECT pu.id, pu.phone, pu.unionid, pu.proxy_level, pu.vip_level, pu.status, pu.auth_status,
+               pu.promotion_code, pu.assistance_program_rate, pu.room_card_rate, pu.join_day,
+               COALESCE(pw.level2_total_player, 0) AS level2_total_player
+        FROM proxy_user pu
+        LEFT JOIN proxy_user_wallet pw ON pw.id = pu.id
+        WHERE {where}
+        ORDER BY pu.id DESC
+        LIMIT {page_size} OFFSET {offset}
+        """
+        rows = await ProxyUser.exec_sql(sql, query=True)
+        return await BaseCommonRC.page_result(page, page_size, total, rows or [])
+
+    @classmethod
     async def update_proxy_user(cls, player_id: int, up_data: dict):
         """
         更新proxy_user

@@ -98,6 +98,7 @@ class JoinActivity(GameAuthApi):
         pay_platform = self.check_int(req.json.get("pay_platform"), require=False, p_name="支付平台")
         platform = self.check_int(req.args.get("platform"), require=True, p_name="平台")
         return_url = self.check_str(req.json.get("return_url"), require=False, default="", p_name="返回地址")
+        os = self.check_str(req.args.get("c_os"), require=False, p_name="APP系统")
         pay_enum = PayMode.find_member_by_val(pay_mode)
         award_enum = AwardType.find_member_by_val(award_type)
         if pay_mode and not isinstance(pay_enum, PayMode):
@@ -109,7 +110,7 @@ class JoinActivity(GameAuthApi):
         (not ac or ac.get("status") != ActivityStatus.ACT_UNDER_WAY) and self.answer(self.sta_code.NO_CONFIGURATION,
                                                                                      hint="活动不存在或已结束")
 
-        sta, msg, result = await Base().act_handler(ac, u_info, award_type, pay_mode, platform, return_url=return_url)
+        sta, msg, result = await Base().act_handler(ac, u_info, award_type, pay_mode, platform, return_url=return_url, c_os=os)
         if not sta:
             self.answer(self.sta_code.FAIL, hint=msg)
         return self.answer(data={"status": sta, "result": result})

@@ -9,7 +9,7 @@ from nsanic.libs import tool_dt
 from nsanic.libs.tool import json_parse, json_encode
 from tortoise.transactions import in_transaction
 
-from common.public.conf import WeChatConf, AliPayConf
+from common.public.conf import WeChatConf, AliPayConf, ENV
 from common.public.enum_const import DbKey, StaCode
 from common.utils.kit_dt import KitDt
 from lucky_game.base_api import GameAuthApi, SpecialApi
@@ -42,7 +42,7 @@ class OrderDetail(GameAuthApi):
         order, msg = await OrderRC.get_order_info(order_no=order_no)
         if not order:
             return self.answer(code=self.sta_code.FAIL, hint="订单不存在")
-        if query_platform != 0:
+        if order.get("status") == OrderStatus.WAIT_PAY and query_platform != 0:
             # 为待支付订单主动查询支付平台订单状态
             payment = PaymentLogic()
             sta, msg, up_data = await payment.order_method(order.get("pay_mode"), order_no, order.get("out_order_no"))
@@ -101,13 +101,18 @@ class CallbackAli(SpecialApi):
         pay_platform = "APP" if app_id == AliPayConf.PLATFORM.get("APP").get("APP_ID") else "H5"
         if hasattr(form, 'get'):
             form = dict(form)
-        sta, data = AlipayPayment(pay_platform).verify_callback(form, sign)
-        self.loginfo(f"支付宝回调验证结果: {sta}, {data}")
-        if not sta:
-            return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数验证失败")
-        order_no = data.get("order_no")
-        trade_no = data.get("trade_no")
-        trade_status = data.get("trade_status")
+        if ENV == "prod":
+            sta, data = AlipayPayment(pay_platform).verify_callback(form, sign)
+            self.loginfo(f"支付宝回调验证结果: {sta}, {data}")
+            if not sta:
+                return self.answer(code=self.sta_code.FAIL, hint="支付宝回调参数验证失败")
+            order_no = data.get("order_no")
+            trade_no = data.get("trade_no")
+            trade_status = data.get("trade_status")
+        else:
+            order_no = form.get("out_trade_no")[0]
+            trade_no = form.get("trade_no")[0]
+            trade_status = OrderStatus.PAID
         sta, msg, _ = await PaymentLogic().completed_order(order_no=order_no, trade_no=trade_no,
                                                            order_status=trade_status)
         if not sta:
@@ -230,7 +235,7 @@ class MiniProgramRecvPush(SpecialApi):
             express = await GoodRC.get_good_info(str(sku))
             if not express:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": '商品异常，请联系客服'})
-            pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, purchase_uid=uid)
+            pay_info, msg = await PaymentLogic().create_order(uid, express, PayMode.HUI_FU_PAY, platform, purchase_uid=uid, u_os=3)
             if not pay_info:
                 return response.json({"ErrCode": self.sta_code.FAIL, "ErrMsg": msg})
             # 3.发送客服消息（支付界面相关信息）
