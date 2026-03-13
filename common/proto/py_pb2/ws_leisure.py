@@ -1310,6 +1310,8 @@ class S2CRoomInfoRunFast:
             table_card = obj.table_cards.add()
             table_card.seat_id = data.get("seat_id") or 0
             table_card.cards.extend(data.get("cards") or [])
+
+        obj.turn_end = kwargs.get("turn_end") or False
         return obj
 
 class S2CPlayerInfoRunFast:
@@ -1338,6 +1340,30 @@ class S2CDealCardsRunFast:
         obj.hand_cards.extend(kwargs.get("hand_cards") or [])
         obj.seat_id = kwargs.get("seat_id") or 0
         obj.dealer_id = kwargs.get("dealer_id") or 0
+        return obj
+
+class S2CTurnToRunFast:
+    """ 轮到 """
+
+    @staticmethod
+    def pack_legal_actions(obj, kwargs):
+        """ 打包合法动作 """
+        legal_actions = kwargs.get("legal_actions") or []
+        for cards in legal_actions:
+            t_obj = obj.legal_actions.add()
+            t_obj.legal_action.extend(cards)
+
+    @classmethod
+    def pb_model(cls, **kwargs):
+        obj = ws_leisure_pb2.S2CTurnToRunFast()
+        obj.seat_id = kwargs.get("seat_id") or 0
+        obj.seconds = kwargs.get("seconds") or 0
+        obj.yao_de_qi = kwargs.get("yao_de_qi") or False
+        obj.turn_end = kwargs.get("turn_end") or False
+
+        legal_actions = kwargs.get("legal_actions") or []
+        if legal_actions:
+            obj.legal_actions = json_encode(legal_actions)
         return obj
 
 class S2CStartQiangGuan:
