@@ -5,6 +5,7 @@ from sanic import Request
 from lucky_game.base_api import GameAuthApi
 from lucky_game.logic.club import ClubLogic
 from lucky_game.model_rc.base_clubs import BaseClubRC
+from lucky_game.model_rc.conf_json import ConfJsonRC
 from lucky_game.model_rc.game_rooms import GameRoomsRC
 from lucky_game.model_rc.club_users import ClubUsersRC
 from lucky_game.model_rc.club_room_templates import ClubRoomTemplatesRC
@@ -317,12 +318,15 @@ class ClubRoomCard(BaseClub):
         # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
         if num > u_info["room_card"]:
             return self.answer(StaCode.FAIL, hint="房卡不足")
-        # 只允许馆主充值
+        # 只允许馆主充值及特定用户充值
         club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[9], club_id=club_id)
         if club_manage:
             manage_uid = [item.get("uid") for item in club_manage]
             if u_info["uid"] not in manage_uid:
-                return self.answer(StaCode.FAIL, hint="无操作权限")
+                conf = await ConfJsonRC.cache_conf_data_by_pk(ConfJsonRC.CONF_CLUB_RECHARGE)
+                if conf and conf.get("special_uid"):
+                    if u_info["uid"] not in conf.get("special_uid"):
+                        return self.answer(StaCode.FAIL, hint="无操作权限")
         data, e = await BaseClubRC.club_room_card_operation(u_info, club_id, num)
         if not data:
             return self.answer(StaCode.FAIL, hint=e)
