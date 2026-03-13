@@ -416,7 +416,7 @@ class LpyMoveGenerator:
 
         self.__all_hu_cards = set(all_hu_cards.values())
         self.__all_played_cards = all_played_cards or {}
-        
+
         self.__played_card2count = self.cards_to_count_dict(self.__all_played_cards.values())
 
         # todo: 碰杠数量(计算碰杠数)
@@ -734,10 +734,17 @@ class LpyMoveGenerator:
             if c in cards:
                 cards.remove(c)
         for c in cards:
-            if c in self.magic_card:
+            if c == self.magic_card:
                 cards.remove(c)
         cards = cards or ori_cards
-        cards.sort(key=self.__played_card2count.get)
+
+        played_cards = []
+        for c in cards:
+            if c in self.__played_card2count:
+                played_cards.append(c)
+        if played_cards:
+            played_cards.sort(key=self.__played_card2count.get)
+            return played_cards[-1]
         return cards[-1]
 
     def calc_xts_by_max_hu_type(self):

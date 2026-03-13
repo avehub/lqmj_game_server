@@ -36,7 +36,7 @@ class RobotMahjongServer(JsonBaseServer):
         cs_type = data.get("cs_type", None)
         cs_enum = ServiceEnum.find_member_by_val(cs_type)
         match cs_enum:
-            case ServiceEnum.C_MAHJONG_FC:
+            case ServiceEnum.C_MAHJONG_FC | ServiceEnum.C_MAHJONG_XY_MATCH:
                 # 血流红中🀄
                 action = self.calc_lpy_xl_actions(data)
             case _:
