@@ -33,7 +33,7 @@ class DistributionSettleConfRC(RCModel):
         return await cls.conf.rds.drop_item(f"{cls.tb_name}:{query}")
 
     @classmethod
-    async def get_profit_conf_filter(cls, level: int = None, profit_type: int = None, range_num: int = None, profit_condition: str = None):
+    async def get_profit_conf_filter(cls, level: int = None, profit_type: int = None, range_num: int = None, profit_condition: str = None, u_os: int = None):
         """
         获取分销结算配置
         :return:
@@ -48,6 +48,8 @@ class DistributionSettleConfRC(RCModel):
                  query["type"] = profit_type
             if range_num is not None:
                 query["range_max"] = range_num
+            if u_os is not None:
+                 query["u_os"] = u_os
             result = records = await cls.db_model.filter(**query).order_by("level").values()
             if not records:
                 return False, []
@@ -57,16 +59,29 @@ class DistributionSettleConfRC(RCModel):
 
 
     @classmethod
-    async def get_profit_ratio(cls, num: int, profit_type: int = TYPE_ROOM_CARD_SETTLE):
+    async def get_profit_ratio(cls, num: int, profit_type: int = TYPE_ROOM_CARD_SETTLE, u_os: int = 0):
         """ 获取分润比例 """
-        query = f"{profit_type}_{num}"
+        query = f"raito_{profit_type}_{u_os}_{num}"
         profit_ratio = await cls.cache_session_get(query)
         if not profit_ratio:
-            sta, profit_data = await cls.get_profit_conf_filter(range_num=num, profit_type=profit_type)
+            sta, profit_data = await cls.get_profit_conf_filter(range_num=num, profit_type=profit_type, u_os=u_os)
             profit_ratio = 0
             if profit_data and profit_data[0]:
                 profit_ratio = profit_data[0].get("profit_ratio", 0)
                 await cls.cache_session_set(query, profit_ratio)
         return profit_ratio
+
+    @classmethod
+    async def get_profit_num(cls, num: int, profit_type: int = TYPE_ROOM_CARD_SETTLE, u_os: int = 0):
+        """ 获取分润比例 """
+        query = f"num_{profit_type}_{u_os}_{num}"
+        profit_num = await cls.cache_session_get(query)
+        if not profit_num:
+            sta, profit_data = await cls.get_profit_conf_filter(range_num=num, profit_type=profit_type, u_os=u_os)
+            profit_num = 0
+            if profit_data and profit_data[0]:
+                profit_num = profit_data[0].get("profit_num", 0)
+                await cls.cache_session_set(query, profit_num)
+        return profit_num
 
 

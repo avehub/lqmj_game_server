@@ -317,8 +317,8 @@ class ClubRoomCard(BaseClub):
         # operation = self.check_int(req.json.get("operation"), require=True, minval=1, maxval=2, p_name="操作方式")
         if num > u_info["room_card"]:
             return self.answer(StaCode.FAIL, hint="房卡不足")
-        # 只允许管理员充值
-        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[1, 9], club_id=club_id)
+        # 只允许馆主充值
+        club_manage, e = await ClubUsersRC.get_club_user_by_filter(role=[9], club_id=club_id)
         if club_manage:
             manage_uid = [item.get("uid") for item in club_manage]
             if u_info["uid"] not in manage_uid:

@@ -94,12 +94,13 @@ class OrderList(AdminAuthApi):
         order_no = self.check_str(req.args.get('order_no'), require=False, p_name='订单号')
         status = self.check_int(req.args.get('status'), require=False, p_name='订单状态')
         pay_mode = self.check_int(req.args.get('pay_mode'), require=False, p_name='支付方式')
+        currency = self.check_int(req.args.get('currency'), require=False, p_name='资源类型')
         uid = self.check_int(req.args.get('uid'), require=False, p_name='用户ID')
         start_time = self.check_int(req.args.get('start_time'), require=False, p_name='开始时间')
         end_time = self.check_int(req.args.get('end_time'), require=False, p_name='结束时间')
         page = self.check_int(req.args.get('page'), require=False, default=1, p_name='页码')
         page_size = self.check_int(req.args.get('page_size'), require=False, default=10, p_name='每页数量')
-        data, msg = await OrderRC.get_order_filter(order_no=order_no, status=status, pay_mode=pay_mode, uid=uid,
+        data, msg = await OrderRC.get_order_filter(order_no=order_no, status=status, pay_mode=pay_mode, uid=uid, currency=currency,
                                               start_time=start_time, end_time=end_time, page=page, page_size=page_size)
         if data and data['list']:
             data['list'] = await OrderLogic.order_sku_good(data['list'])
