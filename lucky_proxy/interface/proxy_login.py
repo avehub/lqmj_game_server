@@ -52,6 +52,19 @@ class ProxyLogin(BaseApi):
             self.log_info(f"获取的unionid={unionid}")
             query_param = {"unionid": unionid}
             # TODO union 查询用户是否注册
+        if proxy_login_type == ProxyLoginType.WECHAT_MINI_GAME_LOGIN:
+            status, wechat_data = await WeChatMpLogin.wechat_mini_game_login(code)
+            if not status:
+                self.log_info(f"代理端微信小游戏授权登陆失败：{wechat_data}")
+                self.answer(StaCode.FAIL, hint="登陆失败")
+            
+            unionid = wechat_data.get("unionid")
+            if not unionid:
+                self.log_err("代理端微信小游戏授权登陆失败，没有获取unionid")
+                self.answer(StaCode.FAIL, hint="登陆失败")
+            
+            self.log_info(f"获取的unionid={unionid}")
+            query_param = {"unionid": unionid}
         if proxy_login_type == ProxyLoginType.PHONE_LOGIN:
             phone_number = self.check_phone_number(req.json.get('phone_number'), require=True)
             scene = self.check_str(req.json.get('scene'), require=False, default="login", p_name="验证码场景")

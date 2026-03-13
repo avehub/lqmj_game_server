@@ -39,6 +39,22 @@ class WeChatMpLogin(LogMeta):
         return False, req_data_json
 
     @classmethod
+    async def wechat_mini_game_login(cls, code):
+        """ 微信小游戏登录 code2Session """
+        app_id = WeChatConf.WE_CHAT_MG_PROXY_APP_ID
+        app_secret = WeChatConf.WE_CHAT_MG_PROXY_APP_SECRET
+
+        url = "https://api.weixin.qq.com/sns/jscode2session?appid={0}&secret={1}&js_code={2}&grant_type=authorization_code"
+        url = url.format(app_id, app_secret, code)
+        req_data = await http_get(url)
+        req_data = json_parse(req_data)
+        NLogger.info(f"微信平台接口返参解析：{req_data}")
+        errcode = req_data.get("errcode") or 0
+        if errcode != 0:
+            return False, req_data.get("errmsg")
+        return True, req_data
+
+    @classmethod
     async def wechat_userinfo(cls, access_token, open_id):
         """获取微信用户信息"""
         url = f"https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={open_id}&connect_redirect=1"
