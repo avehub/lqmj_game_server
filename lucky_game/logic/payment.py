@@ -248,7 +248,7 @@ class PaymentLogic:
                 # 当为兑换商品时，直接修改订单状态
                 up_data["status"] = OrderStatus.PAID
             up_data["gain_status"] = GainStatus.RECEIVED
-            if express["sid"] not in [10, 7]:
+            if express["sid"] not in [10, 7, 11]:
                 NLogger.info("领取资源：content:", content)
                 if isinstance(content, list):
                     for item in content:

@@ -172,7 +172,7 @@ class CreateRoom(GameRoomAPI):
             if not sta:
                 return self.answer(StaCode.FAIL, hint=e)
         else:
-            # 预处理
+            # 预处理    后续加入新玩法需要维护的地方
             rule_details = await verify_rule_detail(rule_details, play_type)
             await self._before_create_room(
                 creator=creator,
