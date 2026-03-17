@@ -3331,7 +3331,9 @@ class Room(BaseCardRoom):
             "fan_ji_card": zhuo_ji,  # 翻到的那张牌
             "all_ji": list(self.__ji_cards) if self.__ji_cards else [],
             "account": account,
+            "round_over_msg_type":S2CRoundOverInfo
         }
+        self.set_flow_status(FlowStatus.T_IN_CHECK_OUT)
         await super().round_over(over_type, **data)
 
     def get_player_jiao_pai(self):
