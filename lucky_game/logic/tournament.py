@@ -82,13 +82,13 @@ class TournamentLogic:
                 if this_goods_type in ExtraUserResourceChangesRC.CURRENCY_MAP.values():
                     amount = goods_one.get('amount')
                     extra_info = goods_one.get('extra_info') or {}
-                    send_good_ids = extra_info.get('good_ids') or 0
+                    send_award_ids = extra_info.get('award_ids') or 0
                     mail_type = 2
                     sender = "赛事系统"
                     title = "普安红茶礼包【赠礼】"
-                    content = f"【充值赠礼】您购买的{good['amount']}元普安红茶礼包额外赠礼{amount}张房卡已到账，请注意查收！"
-                    attachment = '{"good_ids": send_good_ids, "num": goods_one["num"]}'
-                    return await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+                    content = f"【充值赠礼】您购买的{order['amount']}元普安红茶礼包额外赠礼{amount}张房卡已到账，请注意查收！"
+                    attachment = {"award_ids": send_award_ids, "num": goods_one["num"]}
+                    await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         # 发送商品至背包
         express = [{
             "good_id": good["good_id"],
