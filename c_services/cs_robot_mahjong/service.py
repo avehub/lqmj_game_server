@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import asyncio
 import time
 
 from collections import Counter
@@ -30,7 +30,6 @@ class RobotMahjongServer(JsonBaseServer):
         计算出牌动作
         """
         self.log_info("出牌", data)  # 日志记录
-
         # print("计算时间: {}, 从队列中读取数据: {}".format(self.calc_receive_time(), data))
         # print("######-> AI开始计算预测动作 <-######")
         cs_type = data.get("cs_type", None)

@@ -302,7 +302,8 @@ class LpyMoveGenerator:
                     hand_cards_copy.remove(card)
                 one_list, two_list, three_list, four_list = args_tup
                 if card_num == 4:
-                    four_list.remove(card)
+                    if card in four_list:
+                        four_list.remove(card)
 
                 self.hand_cards = hand_cards_copy
                 self.the_worst_xts_by_hu_type[FcHuPaiType.PING_HU] -= 2
@@ -383,10 +384,6 @@ class LpyMoveGenerator:
         if not remain_cards:
             return {suit * 10 + num: 4 for suit in range(1, 4) for num in range(1, 10)}
         remain_cards = {int(key): value for key, value in remain_cards.items()}
-        cards_dict = Counter(curr_hand_cards)
-        for card, nums in cards_dict.items():
-            if remain_cards.get(card, 0):
-                remain_cards[card] -= nums
         return remain_cards
 
     def update_attr(
@@ -414,9 +411,19 @@ class LpyMoveGenerator:
         self.others_hand_cards = others_hand_cards or []
         self.res_cards_to_count = self.calc_remain_cards(hand_cards, remain_cards)
 
-        self.__all_hu_cards = set(all_hu_cards.values())
+        hu_cards_set = set()
+        try:
+            for value in all_hu_cards.values():
+                if isinstance(value, list):
+                    for item in value:
+                        hu_cards_set.add(item)
+                else:
+                    hu_cards_set.add(value)
+        except Exception as e:
+            print(f"Error : {str(e)}")
+        self.__all_hu_cards = hu_cards_set
+        # self.__all_hu_cards = set(all_hu_cards.values())
         self.__all_played_cards = all_played_cards or {}
-
         self.__played_card2count = self.cards_to_count_dict(itertools.chain.from_iterable(self.__all_played_cards.values()))
 
         # todo: 碰杠数量(计算碰杠数)
@@ -951,7 +958,7 @@ class LpyMoveGenerator:
             if all_xts_cards[0][1] < 0:
                 return random.choice(ping_hu_best_cards or all_best_cards)
             all_cards_by_xts = all_xts_cards[0][-1]
-            all_cards_by_xts.sort(key=self.__played_card2count.get)
+            all_cards_by_xts.sort(key=lambda x: self.__played_card2count.get(x, 0))
             # 看一下哪张牌打得最多打哪张
             return all_cards_by_xts[-1]
 
@@ -1811,11 +1818,12 @@ class LpyMoveGenerator:
         cards: 如果不传则就计算手牌
         """
         if not cards:
+            if not cards:
+                cards = self.hand_cards[:]
             if not self.cards_to_count:
                 # 删除万能牌，然后计算向听数
-                cards = self.hand_cards[:]
                 self.remove_by_value(cards, self.magic_card, -1)
-                self.cards_to_count = self.cards_to_count_dict(cards)
+            self.cards_to_count = self.cards_to_count_dict(cards)
             return self.cards_to_count
         else:
             self.remove_by_value(cards, self.magic_card, -1)
