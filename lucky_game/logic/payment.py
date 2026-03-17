@@ -248,30 +248,27 @@ class PaymentLogic:
                 # 当为兑换商品时，直接修改订单状态
                 up_data["status"] = OrderStatus.PAID
             up_data["gain_status"] = GainStatus.RECEIVED
-            if express["sid"] not in [10, 7, 11]:
-                NLogger.info("领取资源：content:", content)
-                if isinstance(content, list):
-                    for item in content:
-                        add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
-                            uid,
-                            item.get("type"),
-                            item.get("amount"),
-                            "add",
-                            reason=ReasonCostGold.CONVERT_AWARDS
-                        )
-                        NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
-                        if not add_sta:
-                            return False, e
-                else:
+            NLogger.info("领取资源：content:", content)
+            if isinstance(content, list):
+                for item in content:
                     add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                         uid,
-                        content.get("type"),
-                        content.get("amount"),
+                        item.get("type"),
+                        item.get("amount"),
                         "add",
                         reason=ReasonCostGold.CONVERT_AWARDS
                     )
-                    if not add_sta:
-                        return False, e
+                    NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
+            else:
+                add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+                    uid,
+                    content.get("type"),
+                    content.get("amount"),
+                    "add",
+                    reason=ReasonCostGold.CONVERT_AWARDS
+                )
+                NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", content)
+
             order_sta, e = await OrderRC.up_order(
                 up_data,
                 order_no
