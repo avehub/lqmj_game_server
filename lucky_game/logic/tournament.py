@@ -17,6 +17,7 @@ from common.public.common_class import CommonApi
 from lucky_game.model_rc.base_bag import UserBagRC
 from lucky_game.model_rc.base_mails import MailsRC
 from lucky_game.model_rc.conf_json import ConfJsonRC
+from lucky_game.model_rc.extra_user_resource_changes import ExtraUserResourceChangesRC
 from lucky_game.model_rc.order import OrderRC
 from lucky_game.model_rc.base_store import GoodRC
 from lucky_game.const import ReasonCostGold, CurrencyType, PayMode, OrderStatus, GainStatus, GoodsSku, PlatForm, \
@@ -71,13 +72,23 @@ class TournamentLogic:
         """ 分发订单商品、道具 """
         uid = order.get("uid")
         good = await GoodRC.get_good_info(order.get("sku"))
-        # 发送农产品至邮件
-        # mail_type = 2
-        # sender = "赛事系统"
-        # title = "赛事农产品领取"
-        # content = f"恭喜您在赛事中获得{order['num']}个{good['name']}"
-        # attachment = {"good_ids": [good["good_id"]], "num": order["num"]}
-        # return await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+        sid = good.get('sid')
+        # sid=7  表示赛事农产品商城   11表示小程序赛事农产品商城
+        if sid == 7:
+            # 发送农产品至邮件
+            goods_content = good.get('content') or []
+            for goods_one in goods_content:
+                this_goods_type = goods_one.get('type')
+                if this_goods_type in ExtraUserResourceChangesRC.CURRENCY_MAP.values():
+                    amount = goods_one.get('amount')
+                    extra_info = goods_one.get('extra_info') or {}
+                    send_award_ids = extra_info.get('award_ids') or 0
+                    mail_type = 2
+                    sender = "赛事系统"
+                    title = "普安红茶礼包【赠礼】"
+                    content = f"【充值赠礼】您购买的{order['amount']}元普安红茶礼包额外赠礼{amount}张房卡已到账，请注意查收！"
+                    attachment = {"award_ids": send_award_ids, "num": goods_one["num"]}
+                    await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
         # 发送商品至背包
         express = [{
             "good_id": good["good_id"],
