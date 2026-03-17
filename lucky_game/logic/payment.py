@@ -121,7 +121,7 @@ class PaymentLogic:
             field = "gold"
             # 随机今日领取金币
             if "content" in express and isinstance(express["content"], list) and express["content"]:
-                express["content"] = express["content"][random.randint(0, len(express["content"]) - 1)]
+                express["content"] = [express["content"][random.randint(0, len(express["content"]) - 1)]]
             else:
                 express["content"] = 0  # 如果没有配置content或格式不正确，设置为默认值0
         express["price"] = decimal.Decimal(price)
