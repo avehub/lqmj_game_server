@@ -249,25 +249,26 @@ class PaymentLogic:
                 up_data["status"] = OrderStatus.PAID
             up_data["gain_status"] = GainStatus.RECEIVED
             NLogger.info("领取资源：content:", content)
-            if isinstance(content, list):
-                for item in content:
+            if express.get('sid') not in [7]:
+                if isinstance(content, list):
+                    for item in content:
+                        add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
+                            uid,
+                            item.get("type"),
+                            item.get("amount"),
+                            "add",
+                            reason=ReasonCostGold.CONVERT_AWARDS
+                        )
+                        NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
+                else:
                     add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
                         uid,
-                        item.get("type"),
-                        item.get("amount"),
+                        content.get("type"),
+                        content.get("amount"),
                         "add",
                         reason=ReasonCostGold.CONVERT_AWARDS
                     )
-                    NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", item)
-            else:
-                add_sta, e = await ExtraUserResourceChangesRC.change_user_resource(
-                    uid,
-                    content.get("type"),
-                    content.get("amount"),
-                    "add",
-                    reason=ReasonCostGold.CONVERT_AWARDS
-                )
-                NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", content)
+                    NLogger.info(f"支付成功-更新用户资源 添加结果add_sta: {add_sta} e: {e}", content)
 
             order_sta, e = await OrderRC.up_order(
                 up_data,
@@ -565,7 +566,7 @@ class PaymentLogic:
                 await GoodRC.update_int_field(express["good_id"], "total", order["num"], "add")
         return True
 
-    async def pay_success(self, order: dict) -> bool:
+    async def  pay_success(self, order: dict) -> bool:
         """订单支付成功"""
 
         express = await GoodRC.get_good_info(order["sku"])
