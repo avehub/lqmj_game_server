@@ -52,18 +52,18 @@ class Player(BaseLeisurePlayer):
         self.__han_bao_dou_an_gang_count = 0
         self.__han_bao_dou_zhuan_wan_gang_count = 0
         self.__han_dou_cards = set()
-        self.__is_ready = False
+
         self.__hu_info = {}  # 胡开信息
         self.__shao_tong_xing_zheng = 0  # 烧通行证
         self.__hu_path = []
         self.__dian_pao_no_hu = 0  # 点炮未胡
         self.__eight_card_tian_hu = 0
-        self.__receive_enter_room = 0 #是否收到过客户端发送的03消息
 
         self.__x = earth_position.X_NA  # 玩家经度
         self.__y = earth_position.Y_NA  # 玩家纬度
 
         self.__is_exchange_status = False #玩家换牌状态 防止多个玩家同一时间选择换牌导致换牌有误
+        self.__hu_cards = set()
 
     @property
     def has_shang_ga(self):
@@ -207,6 +207,10 @@ class Player(BaseLeisurePlayer):
     def table_cards(self):
         return self.__table_cards.copy()
 
+    @property
+    def hu_cards(self):
+        return self.__hu_cards
+
     def table_cards_len(self):
         return len(self.__table_cards)
 
@@ -219,6 +223,7 @@ class Player(BaseLeisurePlayer):
     def add_men_cards(self, data, is_zha=False):
         self.__men_cards.append(data)
         card = data["card"]
+        self.__hu_cards.add(card)
         self.__zi_mo_cards.append(card)
         if card in self.cards:
             self.rm_cards([card])
@@ -241,14 +246,6 @@ class Player(BaseLeisurePlayer):
     @dian_pao_no_hu.setter
     def dian_pao_no_hu(self, value):
         self.__dian_pao_no_hu = value
-
-    @property
-    def receive_enter_room(self):
-        return self.__receive_enter_room
-
-    @receive_enter_room.setter
-    def receive_enter_room(self,value):
-        self.__receive_enter_room = value
 
     def gang_in_operates(self):
         if ActionType.ACTION_TYPE_AN_GANG in self.__operates:
@@ -316,8 +313,9 @@ class Player(BaseLeisurePlayer):
         self.__shao_tong_xing_zheng = 0
         self.__tui_zhang_ke_kai = 0
         self.__jian_next_player_card = 0
-        self.__is_ready = False
+        self.is_ready = False
         self.__hu_path = []
+        self.__hu_cards = set()
 
 
 
@@ -521,6 +519,8 @@ class Player(BaseLeisurePlayer):
 
     def add_jian_cards(self, data, is_zha=False):
         self.__men_cards.append(data)
+        card = data["card"]
+        self.__hu_cards.add(card)
         if not is_zha:
             self.__jie_pao_count += 1
 
@@ -752,13 +752,6 @@ class Player(BaseLeisurePlayer):
                 if card in default_ji:
                     self.__ji_pai.append(card)
 
-    @property
-    def is_ready(self):
-        return self.__is_ready
-
-    @is_ready.setter
-    def is_ready(self, value: bool):
-        self.__is_ready = value
 
     def player_info(self, contain_cards=True):
         public_men_cards = []
@@ -769,7 +762,7 @@ class Player(BaseLeisurePlayer):
             public_men_cards.append(data)
 
         p_info = super().player_info(contain_cards)
-        p_info["is_ready"] = self.__is_ready
+        p_info["is_ready"] = self.is_ready
         p_info["shang_ga"] = self.__has_shang_ga
         p_info["shang_ga_score"] = self.__shang_ga_score
         p_info["is_bao_ting"] = self.__tian_ting == 1
@@ -914,7 +907,6 @@ class Player(BaseLeisurePlayer):
     def clear_player(self):
         self.on_round_over_clear()
         self.__clear_game_data()
-        self.__receive_enter_room = 0
         super().clear_player()
 
     def jiao_di_long(self):

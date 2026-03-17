@@ -24,6 +24,8 @@ class BaseLeisurePlayer(BasePlayer, Player):
 
         self.__actual_score = 0  # 实际赢分，非加成
         self.__is_win = 0  # 是输还是赢
+        self.__receive_enter_room = 0 #是否收到过客户端发送的03消息
+        self.__is_ready = False
 
     def __cancel_timer(self):
         if self.__timer:
@@ -95,6 +97,22 @@ class BaseLeisurePlayer(BasePlayer, Player):
     @is_win.setter
     def is_win(self, flag: int):
         self.__is_win = flag
+
+    @property
+    def receive_enter_room(self):
+        return self.__receive_enter_room
+
+    @receive_enter_room.setter
+    def receive_enter_room(self,value):
+        self.__receive_enter_room = value
+
+    @property
+    def is_ready(self):
+        return self.__is_ready
+
+    @is_ready.setter
+    def is_ready(self, value: bool):
+        self.__is_ready = value
 
     def init_player(self, u_info: dict):
         self.__gold = int(u_info.get("gold")) if u_info.get("gold") is not None else 0
@@ -184,6 +202,7 @@ class BaseLeisurePlayer(BasePlayer, Player):
 
         self.__actual_score = 0
         self.__is_win = 0
+        self.__receive_enter_room = 0
         self.__cancel_timer()
         BasePlayer.clear_player(self)
         Player.clear_player(self)

@@ -37,6 +37,14 @@ class ActionType(BaseEnum):
     TYPE_15_SERIAL_BOMB = 15, "滚炸", "15"
     TYPE_16_WRONG = 16, "错误", "16"
 
+    #跑得快特殊类型
+    TYPE_17_THREE_A_IS_BOMB = 17, "三A炸", "17"
+    TYPE_18_4_3 = 18, "四带3", "18"
+    TYPE_19_SERIAL_3_2_DRIFT = 19, "飞机带双甩尾", "19"
+    TYPE_20_3_2_DRIFT = 20, "三带二甩尾", "20"
+    TYPE_21_4_2_DRIFT = 21, "四带二甩尾", "21"
+    TYPE_22_4_3_DRIFT = 22, "四带3甩尾", "22"
+
 
 class DoubleType(BaseEnum):
     """ 加倍类型 """

@@ -5,7 +5,8 @@ import itertools
 
 from enum import IntEnum
 from copy import deepcopy
-from collections import defaultdict
+from collections import defaultdict, Counter
+from typing import Iterable
 
 from c_services.cs_robot_mahjong.const import ACTION_TYPE_MING_GANG, FcHuPaiType, FcPileType, ACTION_TYPE_ZHUAN_WAN_GANG
 from common.utils.utils import UtilsTool
@@ -60,39 +61,50 @@ class LpyMoveGenerator:
         "__magic_card",
         "__hand_cards_len",
         "__cards_to_count",
-        "__pong_gang_cards",
         "__qys_flag_len",
         "__xqd_flag_len",
         "__ddz_flag_len",
         "__modify_flag",
         "__fc_hu_types",
         "__piles",
+        "__others_cards_and_piles",
+        "__all_hu_cards",
+        "__all_played_cards",
         "__left_count",
         "__most_hand_cards_len",
         "__res_cards_to_count",
         "__others_hand_cards",
-        "__the_worst_xts_by_hu_type"
+        "__the_worst_xts_by_hu_type",
+        
+        "__played_card2count",
     )
 
     def __init__(self):
         """
         初始化手牌参数
         """
+        self.__piles = []  # 碰杠牌
+        self.__others_cards_and_piles = []  # 其它玩家碰杠牌
         self.__hand_cards = []
-        self.__magic_card = None
-        self.__hand_cards_len = len(self.__hand_cards)
-        self.__cards_to_count = {}
-        self.__pong_gang_cards = []
-        self.__piles = []
         self.__left_count = 0
+        self.__magic_card = None
+        self.__hand_cards_len = 0
+        self.__others_hand_cards = []
+        self.__res_cards_to_count = {}
+
+        self.__all_hu_cards = {}
+        self.__all_played_cards = {}
+
+        self.__cards_to_count = {}
+        self.__the_worst_xts_by_hu_type = ...
+        
+        self.__played_card2count: dict = {}
+
         self.__modify_flag = 7
         self.__ddz_flag_len = 2
         self.__xqd_flag_len = 3
         self.__qys_flag_len = 10
         self.__most_hand_cards_len = 14
-        self.__res_cards_to_count = {}
-        self.__others_hand_cards = []
-        self.__the_worst_xts_by_hu_type = ...
         self.__fc_hu_types = ["lqd", "dlq", "ddz", "xqd", "jgg", "sxz", "sjg3", "byzc", "sxc", "sjg4", "zxhy"]
 
     @property
@@ -128,14 +140,6 @@ class LpyMoveGenerator:
         self.__cards_to_count = count
 
     @property
-    def pong_gong_cards(self):
-        return self.__pong_gang_cards
-
-    @pong_gong_cards.setter
-    def pong_gong_cards(self, piles):
-        self.__pong_gang_cards = piles
-
-    @property
     def piles(self):
         return self.__piles
 
@@ -150,14 +154,6 @@ class LpyMoveGenerator:
     @left_count.setter
     def left_count(self, count):
         self.__left_count = count
-
-    @property
-    def modify_flag(self):
-        return self.__modify_flag
-
-    @modify_flag.setter
-    def modify_flag(self, value):
-        self.__modify_flag = value
 
     @property
     def ddz_flag_len(self):
@@ -306,7 +302,8 @@ class LpyMoveGenerator:
                     hand_cards_copy.remove(card)
                 one_list, two_list, three_list, four_list = args_tup
                 if card_num == 4:
-                    four_list.remove(card)
+                    if card in four_list:
+                        four_list.remove(card)
 
                 self.hand_cards = hand_cards_copy
                 self.the_worst_xts_by_hu_type[FcHuPaiType.PING_HU] -= 2
@@ -378,24 +375,56 @@ class LpyMoveGenerator:
             elif cards[0] + 1 == cards[1] and cards[1] + 1 == cards[2]:
                 return Card2Type.KE_ZI
 
+    @staticmethod
+    def calc_remain_cards(curr_hand_cards, remain_cards: dict):
+        """
+        统计剩余卡牌
+        """
+        # 出牌、碰牌、杠牌已经减去，此处不再计算
+        if not remain_cards:
+            return {suit * 10 + num: 4 for suit in range(1, 4) for num in range(1, 10)}
+        remain_cards = {int(key): value for key, value in remain_cards.items()}
+        return remain_cards
+
     def update_attr(
             self,
             hand_cards,
             piles=None,
+            others_cards_and_piles=None,
             left_count=0,
             others_hand_cards=None,
             remain_cards=None,
-            magic_card=None):
+            magic_card=None,
+            all_hu_cards: dict = None,
+            all_played_cards: dict = None,
+    ):
         """
         更新参数，根据手牌数量，判断玩家胡牌类型
         """
         self.piles = piles or []
+        self.__others_cards_and_piles = others_cards_and_piles or []
+
         self.hand_cards = hand_cards
         self.left_count = left_count or 0
         self.magic_card = magic_card or None
         self.hand_cards_len = len(self.hand_cards)
         self.others_hand_cards = others_hand_cards or []
-        self.res_cards_to_count = remain_cards or {suit * 10 + num: 4 for suit in range(1, 4) for num in range(1, 10)}
+        self.res_cards_to_count = self.calc_remain_cards(hand_cards, remain_cards)
+
+        hu_cards_set = set()
+        try:
+            for value in all_hu_cards.values():
+                if isinstance(value, list):
+                    for item in value:
+                        hu_cards_set.add(item)
+                else:
+                    hu_cards_set.add(value)
+        except Exception as e:
+            print(f"Error : {str(e)}")
+        self.__all_hu_cards = hu_cards_set
+        # self.__all_hu_cards = set(all_hu_cards.values())
+        self.__all_played_cards = all_played_cards or {}
+        self.__played_card2count = self.cards_to_count_dict(itertools.chain.from_iterable(self.__all_played_cards.values()))
 
         # todo: 碰杠数量(计算碰杠数)
         pong_gang_num = 4 - self.hand_cards_len // 3
@@ -481,17 +510,17 @@ class LpyMoveGenerator:
         """
         计算卡牌组成类型及向听数
         """
-        all_played_cards, all_xts_cards = [], []
+        all_best_cards, all_xts_cards = [], []
         # args = [[单张], [对子], [刻子], [四张]]
         args = self.split_cards_dict_res()
         LOG_PRINT and print("卡牌及张数: ", sorted(self.hand_cards), self.hand_cards_len)
         LOG_PRINT and print()
 
         # todo: 1.平胡向听数及最佳出牌
-        xts1, best_cards1 = self.match_ping_hu(*args)
-        all_played_cards.extend(best_cards1)
-        all_xts_cards.append(("ph", xts1, best_cards1))
-        LOG_PRINT and print(f"平胡向听数: {xts1}, 最优出牌: {best_cards1}")
+        xts1, ping_hu_best_cards = self.match_ping_hu(*args)
+        all_best_cards.extend(ping_hu_best_cards)
+        all_xts_cards.append(("ph", xts1, ping_hu_best_cards))
+        LOG_PRINT and print(f"平胡向听数: {xts1}, 最优出牌: {ping_hu_best_cards}")
         LOG_PRINT and print()
 
         # todo: 2.大对子/三星照/三节高/四节高/八音坐唱/四喜财/知行和一向听数及最佳出牌
@@ -504,7 +533,7 @@ class LpyMoveGenerator:
         ]
         if any(ddz_case):
             xts2, best_cards2 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards2)
+            all_best_cards.extend(best_cards2)
             all_xts_cards.append(("ddz", xts2, best_cards2))
             LOG_PRINT and print(f"大对子向听数: {xts2}, 最优出牌: {best_cards2}")
             LOG_PRINT and print()
@@ -516,7 +545,7 @@ class LpyMoveGenerator:
         ]
         if any(sxz_case):
             xts3, best_cards3 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards3)
+            all_best_cards.extend(best_cards3)
             all_xts_cards.append(("sxz", xts3, best_cards3))
             LOG_PRINT and print(f"三星照向听数: {xts3}, 最优出牌: {best_cards3}")
             LOG_PRINT and print()
@@ -528,7 +557,7 @@ class LpyMoveGenerator:
         ]
         if any(sxc_case):
             xts4, best_cards4 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards4)
+            all_best_cards.extend(best_cards4)
             all_xts_cards.append(("sxc", xts4, best_cards4))
             LOG_PRINT and print(f"四喜财向听数: {xts4}, 最优出牌: {best_cards4}")
             LOG_PRINT and print()
@@ -539,7 +568,7 @@ class LpyMoveGenerator:
         ag_count = self.count_piles_gang_res(FcPileType.PILE_AN_GANG)
         if mg_count + zw_count + ag_count > self.ddz_flag_len:
             xts5, best_cards5 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards5)
+            all_best_cards.extend(best_cards5)
             all_xts_cards.append(("byzc", xts5, best_cards5))
             LOG_PRINT and print(f"八音坐唱向听数: {xts5}, 最优出牌: {best_cards5}")
             LOG_PRINT and print()
@@ -547,7 +576,7 @@ class LpyMoveGenerator:
         # 2.5 计算知行合一向听数及最佳出牌
         if mg_count + zw_count + ag_count == self.xqd_flag_len:
             xts6, best_cards6 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards6)
+            all_best_cards.extend(best_cards6)
             all_xts_cards.append(("zxhy", xts6, best_cards6))
             LOG_PRINT and print(f"知行合一向听数: {xts6}, 最优出牌: {best_cards6}")
             LOG_PRINT and print()
@@ -557,7 +586,7 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.ddz_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts7, best_cards7 = self.match_da_dui_zi(*args)
-                all_played_cards.extend(best_cards7)
+                all_best_cards.extend(best_cards7)
                 all_xts_cards.append(("sjg3", xts7, best_cards7))
                 LOG_PRINT and print(f"三节高向听数: {xts7}, 最优出牌: {best_cards7}")
                 LOG_PRINT and print()
@@ -566,7 +595,7 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.xqd_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts8, best_cards8 = self.match_da_dui_zi(*args)
-                all_played_cards.extend(best_cards8)
+                all_best_cards.extend(best_cards8)
                 all_xts_cards.append(("sjg4", xts8, best_cards8))
                 LOG_PRINT and print(f"四节高向听数: {xts8}, 最优出牌: {best_cards8}")
                 LOG_PRINT and print()
@@ -576,33 +605,35 @@ class LpyMoveGenerator:
             # 3.1 计算七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len:
                 xts9, best_cards9 = self.match_qi_dui(*args)
-                all_played_cards.extend(best_cards9)
+                all_best_cards.extend(best_cards9)
                 all_xts_cards.append(("xqd", xts9, best_cards9))
-                LOG_PRINT and print(f"小七对向听数: {xts9}, 最优出牌: {best_cards9}")
-                LOG_PRINT and print()
+                if LOG_PRINT:
+                    print(f"小七对向听数: {xts9}, 最优出牌: {best_cards9}")
+                    print()
 
             # 3.2 计算龙七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len and len(args[2]) == 1:
                 xts10, best_cards10 = self.calc_xts_by_long_qi_dui_lai_zi(*args)
-                all_played_cards.extend(best_cards10)
+                all_best_cards.extend(best_cards10)
                 all_xts_cards.append(("lqd", xts10, best_cards10))
-                LOG_PRINT and print(f"龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
-                LOG_PRINT and print()
+                if LOG_PRINT:
+                    print(f"龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
+                    print()
 
-        return all_played_cards, all_xts_cards, best_cards1
+        return all_best_cards, all_xts_cards, ping_hu_best_cards
 
     def calc_qing_yi_se_build_types(self):
         """
         计算清一色卡牌组成类型及向听数
         """
-        all_played_cards, all_xts_cards = [], []
+        all_best_cards, all_xts_cards = [], []
         # args = [[单张], [对子], [刻子], [四张]]
         args = self.split_cards_dict_res()
         LOG_PRINT and print("卡牌及张数: ", self.hand_cards, self.hand_cards_len)
 
         # todo: 1.清一色 -> 平胡
         xts1, best_cards1 = self.match_ping_hu(*args)
-        all_played_cards.extend(best_cards1)
+        all_best_cards.extend(best_cards1)
         all_xts_cards.append(("ph", xts1, best_cards1))
         LOG_PRINT and print(f"清一色 -> 平胡向听数: {xts1}, 最优出牌: {best_cards1}")
         LOG_PRINT and print()
@@ -617,7 +648,7 @@ class LpyMoveGenerator:
         ]
         if any(ddz_case):
             xts2, best_cards2 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards2)
+            all_best_cards.extend(best_cards2)
             all_xts_cards.append(("ddz", xts2, best_cards2))
             LOG_PRINT and print(f"清一色 -> 大对子向听数: {xts2}, 最优出牌: {best_cards2}")
             LOG_PRINT and print()
@@ -629,7 +660,7 @@ class LpyMoveGenerator:
         ]
         if any(sxz_case):
             xts3, best_cards3 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards3)
+            all_best_cards.extend(best_cards3)
             all_xts_cards.append(("sxz", xts3, best_cards3))
             LOG_PRINT and print(f"清一色 -> 三星照向听数: {xts3}, 最优出牌: {best_cards3}")
             LOG_PRINT and print()
@@ -641,7 +672,7 @@ class LpyMoveGenerator:
         ]
         if any(sxc_case):
             xts4, best_cards4 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards4)
+            all_best_cards.extend(best_cards4)
             all_xts_cards.append(("sxc", xts4, best_cards4))
             LOG_PRINT and print(f"清一色 -> 四喜财向听数: {xts4}, 最优出牌: {best_cards4}")
             LOG_PRINT and print()
@@ -652,7 +683,7 @@ class LpyMoveGenerator:
         ag_count = self.count_piles_gang_res(FcPileType.PILE_AN_GANG)
         if mg_count + zw_count + ag_count == self.ddz_flag_len:
             xts5, best_cards5 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards5)
+            all_best_cards.extend(best_cards5)
             all_xts_cards.append(("byzc", xts5, best_cards5))
             LOG_PRINT and print(f"清一色 -> 八音坐唱向听数: {xts5}, 最优出牌: {best_cards5}")
             LOG_PRINT and print()
@@ -660,7 +691,7 @@ class LpyMoveGenerator:
         # 2.5 计算知行合一向听数及最佳出牌
         if mg_count + zw_count + ag_count == self.xqd_flag_len:
             xts6, best_cards6 = self.match_da_dui_zi(*args)
-            all_played_cards.extend(best_cards6)
+            all_best_cards.extend(best_cards6)
             all_xts_cards.append(("zxhy", xts6, best_cards6))
             LOG_PRINT and print(f"清一色 -> 知行合一向听数: {xts6}, 最优出牌: {best_cards6}")
             LOG_PRINT and print()
@@ -670,7 +701,7 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.ddz_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts7, best_cards7 = self.match_da_dui_zi(*args)
-                all_played_cards.extend(best_cards7)
+                all_best_cards.extend(best_cards7)
                 all_xts_cards.append(("sjg3", xts7, best_cards7))
                 LOG_PRINT and print(f"清一色 -> 三节高向听数: {xts7}, 最优出牌: {best_cards7}")
                 LOG_PRINT and print()
@@ -679,7 +710,7 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.xqd_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts8, best_cards8 = self.match_da_dui_zi(*args)
-                all_played_cards.extend(best_cards8)
+                all_best_cards.extend(best_cards8)
                 all_xts_cards.append(("sjg4", xts8, best_cards8))
                 LOG_PRINT and print(f"清一色 -> 四节高向听数: {xts8}, 最优出牌: {best_cards8}")
                 LOG_PRINT and print()
@@ -689,7 +720,7 @@ class LpyMoveGenerator:
             # 3.1 计算七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len:
                 xts9, best_cards9 = self.match_qi_dui(*args)
-                all_played_cards.extend(best_cards9)
+                all_best_cards.extend(best_cards9)
                 all_xts_cards.append(("xqd", xts9, best_cards9))
                 LOG_PRINT and print(f"清一色 -> 小七对向听数: {xts9}, 最优出牌: {best_cards9}")
                 LOG_PRINT and print()
@@ -697,14 +728,33 @@ class LpyMoveGenerator:
             # 3.2 计算龙七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len and len(args[2]) == 1:
                 xts10, best_cards10 = self.calc_xts_by_long_qi_dui_lai_zi(*args)
-                all_played_cards.extend(best_cards10)
+                all_best_cards.extend(best_cards10)
                 all_xts_cards.append(("lqd", xts10, best_cards10))
                 LOG_PRINT and print(f"清一色 -> 龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
                 LOG_PRINT and print()
 
-        return all_played_cards, all_xts_cards, best_cards1
+        return all_best_cards, all_xts_cards, best_cards1
 
-    def calc_xts_by_max_hu_type(self, other_cards_and_piles=None):
+    def exclude_history_hu_cards_and_lai_zi(self, cards: list):
+        ori_cards = cards[:]
+        for c in self.__all_hu_cards:
+            if c in cards:
+                cards.remove(c)
+        for c in cards:
+            if c == self.magic_card:
+                cards.remove(c)
+        cards = cards or ori_cards
+
+        played_cards = []
+        for c in cards:
+            if c in self.__played_card2count:
+                played_cards.append(c)
+        if played_cards:
+            played_cards.sort(key=self.__played_card2count.get)
+            return played_cards[-1]
+        return cards[-1]
+
+    def calc_xts_by_max_hu_type(self):
         """
         todo: 根据向听数构建大牌胡牌类型，清一色 or 非清一色
             1.清一色胡牌类型
@@ -714,33 +764,27 @@ class LpyMoveGenerator:
             5.大对: 对子数量 + 刻子数量 > 3
         """
         # 判断清一色牌型是否符合条件，清一色牌型分为玩家未进行过碰、杠或进行过碰、杠
-        other_cards_and_piles = other_cards_and_piles or []
+        other_cards_and_piles = self.__others_cards_and_piles or []
         curr_cards_res, qing_yi_se_res = self.decide_qing_yi_se_by_res(other_cards_and_piles)
 
         # todo: 1.计算清一色牌型所有出牌，有效牌
         if len(curr_cards_res.keys()) == 1 and qing_yi_se_res:
-            all_played_cards, all_xts_cards, ph_best_cards = self.calc_qing_yi_se_build_types()
-            if not all_played_cards:
+            all_best_cards, all_xts_cards, ping_hu_best_cards = self.calc_qing_yi_se_build_types()
+            if not all_best_cards:
                 # todo: 处理万能牌
                 tmp_hand_cards = self.hand_cards[:]
-                # todo: 处理做清一色牌型时，
-                for lai_zi in self.hand_cards:
-                    if self.magic_card == lai_zi:
-                        tmp_hand_cards.remove(self.magic_card)
-                # if self.magic_card in self.hand_cards:
-                #     self.hand_cards.remove(self.magic_card)
-                return random.choice(tmp_hand_cards)
+                return self.exclude_history_hu_cards_and_lai_zi(tmp_hand_cards)
             if len(all_xts_cards) == 1:
-                return random.choice(all_played_cards)
+                return self.exclude_history_hu_cards_and_lai_zi(all_best_cards)
             if len(all_xts_cards) > 1:
-                return self.calc_best_play_card(all_xts_cards, ph_best_cards)
+                return self.calc_best_play_card(all_xts_cards, ping_hu_best_cards)
             return self.calc_xts_by_normal_best_cards()
 
         # todo: 2.根据当前玩家持有花色手牌结果，决定是否做清一色牌型
         if qing_yi_se_res:
             qys_res = self.make_qing_yi_se_type(curr_cards_res)
-            return qys_res if qys_res else self.calc_xts_by_normal_best_cards()
-
+            if qys_res:
+                return qys_res
         # todo: 3.上面条件不满足(不是清一色，也不能做清一色牌型)，则选择最佳胡牌牌型
         return self.calc_xts_by_normal_best_cards()
 
@@ -800,14 +844,12 @@ class LpyMoveGenerator:
         构建清一色牌型
         """
         # 判断当前清一色是否进行过碰/杠
-        if self.left_count > self.modify_flag:
+        if self.left_count > self.__modify_flag:
             tmp_hand_cards = self.hand_cards[:]
             # todo: 处理做清一色牌型时，
             for lai_zi in self.hand_cards:
                 if self.magic_card == lai_zi:
                     tmp_hand_cards.remove(self.magic_card)
-            # if self.magic_card in tmp_hand_cards:
-            #     tmp_hand_cards.remove(self.magic_card)
             for curr_type, curr_cards in curr_cards_res.items():
                 if self.piles:
                     pong_gang_cards = self.decide_pong_gang_type_res(curr_type)
@@ -853,87 +895,76 @@ class LpyMoveGenerator:
             return pong_gong_cards
         return []
 
-    def calc_best_play_card(self, all_xts_cards, ph_best_cards):
+    def calc_best_play_card(self, all_xts_cards, ping_hu_best_cards):
         """
         判断是否选择大牌做牌类型及出牌
         """
         min_xts = sorted(all_xts_cards, key=lambda x: x[1])
         xts_yxp_cards = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
         # 判断剩余卡牌是否还满足做大牌条件
-        if self.left_count < (self.modify_flag * 2) - 2:
+        if self.left_count < (self.__modify_flag * 2) - 2:
             eq_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
             if eq_cards:
-                return random.choice(eq_cards)
+                return self.exclude_history_hu_cards_and_lai_zi(eq_cards)
             if min_xts[0][2]:
-                return random.choice(min_xts[0][2])
+                return self.exclude_history_hu_cards_and_lai_zi(min_xts[0][2])
             if xts_yxp_cards:
-                return random.choice(xts_yxp_cards)
-            # todo: 万能牌不能出，直接删除
+                return self.exclude_history_hu_cards_and_lai_zi(xts_yxp_cards)
+
             tmp_hand_cards = self.hand_cards[:]
-            for lai_zi in self.hand_cards:
-                if self.magic_card == lai_zi:
-                    tmp_hand_cards.remove(self.magic_card)
-            # if self.magic_card in self.magic_card:
-            #     self.hand_cards.remove(self.magic_card)
-            return random.choice(tmp_hand_cards)
+            return self.exclude_history_hu_cards_and_lai_zi(tmp_hand_cards)
 
         # todo: 开始构建较大牌型组合并选择最优出牌
         for yxp_infos in min_xts:
             if yxp_infos[1] < 0:
-                if len(min_xts)==1 and yxp_infos[0] == "ph":
-                    return random.choice(yxp_infos[2])
-                elif len(min_xts)>1 and yxp_infos[0] != "ph":
-                    return random.choice(yxp_infos[2])
+                if len(min_xts) == 1 and yxp_infos[0] == "ph":
+                    return self.exclude_history_hu_cards_and_lai_zi(yxp_infos[2])
+                elif len(min_xts) > 1 and yxp_infos[0] != "ph":
+                    return self.exclude_history_hu_cards_and_lai_zi(yxp_infos[2])
             if yxp_infos[1] < self.xqd_flag_len and yxp_infos[0] != "ph":
                 if yxp_infos[0] in self.fc_hu_types:
-                    eq_card = list(set(ph_best_cards) & set(yxp_infos[2]))
+                    eq_card = list(set(ping_hu_best_cards) & set(yxp_infos[2]))
                     best_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
                     if eq_card:
-                        return random.choice(eq_card)
+                        return self.exclude_history_hu_cards_and_lai_zi(eq_card)
                     if yxp_infos[2]:
-                        return random.choice(yxp_infos[2])
-                    if not ph_best_cards and not xts_yxp_cards:
+                        return self.exclude_history_hu_cards_and_lai_zi(yxp_infos[2])
+                    if not ping_hu_best_cards and not xts_yxp_cards:
                         # todo: 万能牌不能出，直接删除
                         tmp_hand_cards = self.hand_cards[:]
-                        for lai_zi in self.hand_cards:
-                            if self.magic_card == lai_zi:
-                                tmp_hand_cards.remove(self.magic_card)
-                        # if self.magic_card in self.magic_card:
-                        #     self.hand_cards.remove(self.magic_card)
-                        return random.choice(self.hand_cards)
+                        return self.exclude_history_hu_cards_and_lai_zi(tmp_hand_cards)
                     if not best_cards or not xts_yxp_cards:
-                        return random.choice(best_cards + xts_yxp_cards)
-                    return self.control_play_card(ph_best_cards, xts_yxp_cards)
+                        return self.exclude_history_hu_cards_and_lai_zi(best_cards + xts_yxp_cards)
+
+                    # 看一下哪张牌打得最多打哪张
+                    return self.exclude_history_hu_cards_and_lai_zi(xts_yxp_cards)
 
         # todo: 按最小数组合选择最优出牌
         if min_xts[0][2]:
-            return random.choice(min_xts[0][2])
+            return self.exclude_history_hu_cards_and_lai_zi(min_xts[0][2])
         if xts_yxp_cards:
-            return random.choice(xts_yxp_cards)
+            return self.exclude_history_hu_cards_and_lai_zi(xts_yxp_cards)
         # todo: 万能牌不能出，直接删除
         tmp_hand_cards = self.hand_cards[:]
-        for lai_zi in self.hand_cards:
-            if self.magic_card == lai_zi:
-                tmp_hand_cards.remove(self.magic_card)
-        # if self.magic_card in self.magic_card:
-        #     self.hand_cards.remove(self.magic_card)
-        return random.choice(tmp_hand_cards)
+        return self.exclude_history_hu_cards_and_lai_zi(tmp_hand_cards)
 
     def calc_xts_by_normal_best_cards(self):
         """
         根据向听数大小，牌型优先级别为: 清一色、龙七对、大对子、小七对
         """
-        all_played_cards, all_xts_cards, ph_best_cards = self.calc_normal_build_types()
+        all_best_cards, all_xts_cards, ping_hu_best_cards = self.calc_normal_build_types()
         # 仅存在一张胡牌牌型
         if len(all_xts_cards) == 1:
-            if all_xts_cards[0][1] < 0 or len(all_xts_cards) == 1:
-                return random.choice(ph_best_cards or all_played_cards)
-            xts_cards_res = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
-            return self.control_play_card(ph_best_cards, xts_cards_res)
-        
+            if all_xts_cards[0][1] < 0:
+                return random.choice(ping_hu_best_cards or all_best_cards)
+            all_cards_by_xts = all_xts_cards[0][-1]
+            all_cards_by_xts.sort(key=lambda x: self.__played_card2count.get(x, 0))
+            # 看一下哪张牌打得最多打哪张
+            return all_cards_by_xts[-1]
+
         # 存在多种胡牌牌型
         if len(all_xts_cards) > 1:
-            return self.calc_best_play_card(all_xts_cards, ph_best_cards)
+            return self.calc_best_play_card(all_xts_cards, ping_hu_best_cards)
 
     def cal_xts_ping_hu(self, *args, need_mz=None):
         """
@@ -1787,11 +1818,12 @@ class LpyMoveGenerator:
         cards: 如果不传则就计算手牌
         """
         if not cards:
+            if not cards:
+                cards = self.hand_cards[:]
             if not self.cards_to_count:
                 # 删除万能牌，然后计算向听数
-                cards = self.hand_cards[:]
                 self.remove_by_value(cards, self.magic_card, -1)
-                self.cards_to_count = self.cards_to_count_dict(cards)
+            self.cards_to_count = self.cards_to_count_dict(cards)
             return self.cards_to_count
         else:
             self.remove_by_value(cards, self.magic_card, -1)
@@ -1915,11 +1947,11 @@ class LpyMoveGenerator:
         return result
 
     @staticmethod
-    def cards_to_count_dict(cards):
+    def cards_to_count_dict(cards: Iterable):
         """
         统计卡牌数量(dict)
         """
-        card_to_count = dict()
+        card_to_count = {}
         for c in cards:
             card_to_count[c] = card_to_count.get(c, 0) + 1
         return card_to_count

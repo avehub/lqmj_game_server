@@ -35,7 +35,7 @@ class RoomFCZJ(BaseLeisureRoom):
 
         self.__lai_zi_count = room_conf.get("rule_conf").get("lai_zi_count") or 4
         super().__init__(tid, service, room_conf, extra_room_info, Poker, self.__lai_zi_count)
-
+        self.__remain_cards_dict = {}
         self.__deal_cards_count = 13
         self.__curr_card = 0
         self.__que_list = [1, 2, 3]
@@ -118,6 +118,9 @@ class RoomFCZJ(BaseLeisureRoom):
             data_model = S2CDealCardsMahjong.pb_model(**data)
             self.log_info("玩家手牌", p.cards, "座位号", p.seat_id)
             await self.inner_send(p, CmdRoom.DEALER_CARDS, data_model)
+        for card in self.poker.remain_cards:
+            key = str(card)
+            self.__remain_cards_dict[key] = self.__remain_cards_dict.get(key, 0) + 1
         self.call_flow(1, self.start_ding_que)
 
     async def start_ding_que(self):
@@ -1925,6 +1928,8 @@ class RoomFCZJ(BaseLeisureRoom):
         p.rev_card(mo_pai)
         p.mo_pai = mo_pai
         self.log_info("玩家", p.seat_id, "摸牌", mo_pai, "手牌", p.cards, "剩余", self.poker.left_count)
+        card_key = str(mo_pai)
+        self.__remain_cards_dict[card_key] = self.__remain_cards_dict.get(card_key, 0) - 1
         for player in self.seats:
             data = {
                 "seat_id": p.seat_id,
@@ -2830,10 +2835,6 @@ class RoomFCZJ(BaseLeisureRoom):
         """
         todo: 设置机器人固定计算参数
         """
-        count_dict = {}
-        for card in self.poker.remain_cards:
-            key = str(card)
-            count_dict[key] = count_dict.get(key, 0) + 1
         data = {
             "uid": p.uid,
             "tid": self.tid,
@@ -2843,7 +2844,7 @@ class RoomFCZJ(BaseLeisureRoom):
             "piles": p.table_cards,
             "left_count": self.poker.left_count,
             "curr_card": self.__curr_card,
-            "remain_cards": count_dict,
+            "remain_cards": self.__remain_cards_dict,
             'cs_type': self.service.service_type,
         }
         return data
@@ -3034,6 +3035,7 @@ class RoomFCZJ(BaseLeisureRoom):
         self.__record_id = 0
         self.__win_seat_list.clear()
         self.__is_mo_pai_scheduled = False
+        self.__remain_cards_dict = {}
 
     async def record_game(self):
 
