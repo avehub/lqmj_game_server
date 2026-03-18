@@ -2,6 +2,7 @@
 import decimal
 import random
 
+from c_services.const.cs_enum_const import CmdWorkers, RedDotType
 from lucky_game.model_rc.base_award import AwardRC
 from nsanic.libs.mk_random import RngMaker
 from nsanic.libs import tool_dt
@@ -89,6 +90,8 @@ class TournamentLogic:
                     content = f"【充值赠礼】您购买的{order['amount']}元普安红茶礼包额外赠礼{amount}张房卡已到账，请注意查收！"
                     attachment = {"award_ids": send_award_ids, "num": goods_one["num"]}
                     await MailsRC.create_mail(mail_type, sender, uid, title, content, attachment)
+                    await CommonApi.push_task2worker(CmdWorkers.GET_RED_DOT_LIST, msg={
+                        "rd_type_list": [RedDotType.RD_MAILS.val]}, uid=uid)
         # 发送商品至背包
         express = [{
             "good_id": good["good_id"],
