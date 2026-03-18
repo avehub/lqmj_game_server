@@ -90,10 +90,21 @@ class RoomRobot(Room):
                     if hu_cards_count <= 3:
                         # 剩余能胡的牌的数量小于等于3，直接胡牌
                         should_hu = True
+                        if should_hu:
+                            now_score = self.cal_now_score(p.seat_id)
+                            self.log_info(f"机器人得分{now_score}", p.uid, p.seat_id)
+                            if now_score < 0:
+                                should_hu = False
                     elif 3 < hu_cards_count <= 6:
                         # 剩余能胡的牌的数量大于3小于等于6，有50%的概率胡牌
                         import random
                         should_hu = random.random() < 0.5
+                        if should_hu:
+                            now_score = self.cal_now_score(p.seat_id)
+                            self.log_info(f"机器人得分{now_score}", p.uid, p.seat_id)
+                            if now_score < 0:
+                                should_hu = False
+
                     if should_hu:
                         code, _ = await self.on_player_hu(p)
                         if StaCode.PASS != code:

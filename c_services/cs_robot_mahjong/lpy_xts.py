@@ -1762,6 +1762,11 @@ class LpyMoveGenerator:
             count = 0
             for c in yxp:
                 count += self.res_cards_to_count.get(c, 0)
+            if best_cards:
+                for c in self.__all_hu_cards:
+                    if c in best_cards:
+                        best_cards.remove(c)
+                        yxp_count = 0
             if count > yxp_count:
                 best_cards.clear()
                 yxp_count = count

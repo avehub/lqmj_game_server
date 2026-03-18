@@ -4362,6 +4362,47 @@ class Room(BaseCardRoom):
         for men_info in self.__men_record:
             self.check_by_num_3(accounts, men_info, liu_ju=liu_ju)
 
+    def cal_now_score(self,searcher_id):
+        """
+        计算当前玩家得分
+        """
+        now_score = 0
+        for men_info in self.__men_record:
+            score = self.get_player_now_score(men_info,searcher_id)
+            now_score += score
+        return now_score
+
+    def get_player_now_score(self, hu_info,searcher_id):
+        """
+        获取玩家当前得分
+        """
+        is_zi_mo = hu_info.get("is_zi_mo")
+        seat_id = hu_info.get("seat_id")  # 闷捡者
+        extra_hu_lst = hu_info.get("extra_hu_type", [])
+        pei_seat = hu_info.get("fang_pao_seat_id")
+
+        base_score = self.get_base_score(hu_info, extra_hu_lst)
+        extra_score = self.cal_extra_hu_score(hu_info, extra_hu_lst, pei_seat)
+        total_score = base_score + extra_score
+        if searcher_id == pei_seat:
+            return -total_score
+        else:
+            if seat_id == searcher_id:
+                if is_zi_mo:
+                    for p in self.seats:
+                        if p.seat_id == seat_id:
+                            continue
+                        per_score = self.get_base_score(hu_info, extra_hu_lst, p.seat_id, True)
+                        per_score += self.cal_extra_hu_score(hu_info, extra_hu_lst, p.seat_id, is_zi_mo=True)
+                        total_score += per_score
+                    return total_score
+                else:
+                    return total_score
+            else:
+                return 0
+
+
+
     def check_by_num_3(self, accounts, hu_info, liu_ju=False):
         """
         处理3人胡牌|闷捡的结算，统一接口
@@ -4522,7 +4563,6 @@ class Room(BaseCardRoom):
                      extra_hu_type=None):
         if check_type_ == CheckType.WIND_JI:
             score = 0
-        print("score",score)
         other_data = self.other_ming_xi_data(check_type_, seat_id, score, card, hu_type, extra_hu_type, get_bearer)
         self_data = self.self_ming_xi_data(check_type_, [pei_seat], -score, card, hu_type, extra_hu_type)
         self.update_result_score(accounts, pei_seat, 0, other_data)
