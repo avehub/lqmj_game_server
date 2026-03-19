@@ -596,8 +596,9 @@ class PaymentLogic:
         if order_type:
             order["order_type"] = order_type
             new_content = await self.check_content_by_type(express.get("content"), order_type)
-            order["express_content"] = new_content
-            await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order["uid"], msg=order)
+            if new_content:
+                order["express_content"] = new_content
+                await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order["uid"], msg=order)
 
         if good_type in [10, 11, 12]:
             await FirstCharge().charge_order(order)
