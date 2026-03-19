@@ -77,6 +77,7 @@ class LpyMoveGenerator:
         "__the_worst_xts_by_hu_type",
         
         "__played_card2count",
+        "__is_fczj",
     )
 
     def __init__(self):
@@ -99,6 +100,7 @@ class LpyMoveGenerator:
         self.__the_worst_xts_by_hu_type = ...
         
         self.__played_card2count: dict = {}
+        self.__is_fczj = False  # 是否是发财捉鸡
 
         self.__modify_flag = 7
         self.__ddz_flag_len = 2
@@ -218,6 +220,16 @@ class LpyMoveGenerator:
     @fc_hu_types.setter
     def fc_hu_types(self, hu_types):
         self.__fc_hu_types = hu_types
+
+    @property
+    def is_fczj(self):
+        return self.__is_fczj
+
+    @is_fczj.setter
+    def is_fczj(self, is_fczj: bool):
+        self.__is_fczj = is_fczj
+
+
 
     def calc_can_xqd_pong(self, card):
         """
@@ -856,11 +868,27 @@ class LpyMoveGenerator:
                     if len(pong_gang_cards) + len(curr_cards) > self.qys_flag_len:
                         LOG_PRINT and print("构建清一色牌型: ", self.hand_cards, self.hand_cards_len)
                         LOG_PRINT and print("同一花色色牌型: ", curr_cards, len(curr_cards))
-                        return random.choice(list(set(tmp_hand_cards).difference(set(curr_cards))))
+                        choose_card = list(set(tmp_hand_cards).difference(set(curr_cards)))
+                        if not self.is_fczj:
+                            copy_choose_card = choose_card[:]
+                            for card in copy_choose_card:
+                                if card in self.__all_hu_cards:
+                                    choose_card.remove(card)
+                        if not choose_card:
+                            return None
+                        return random.choice(choose_card)
                 if len(curr_cards) > self.qys_flag_len:
                     LOG_PRINT and print("构建清一色牌型: ", self.hand_cards, self.hand_cards_len)
                     LOG_PRINT and print("同一花色色牌型: ", curr_cards, len(curr_cards))
-                    return random.choice(list(set(tmp_hand_cards).difference(set(curr_cards))))
+                    choose_card = list(set(tmp_hand_cards).difference(set(curr_cards)))
+                    if not self.is_fczj:
+                        copy_choose_card = choose_card[:]
+                        for card in copy_choose_card:
+                            if card in self.__all_hu_cards:
+                                choose_card.remove(card)
+                    if not choose_card:
+                        return None
+                    return random.choice(choose_card)
         return None
 
     def calc_qing_yi_se(self, cards):
@@ -901,9 +929,14 @@ class LpyMoveGenerator:
         """
         min_xts = sorted(all_xts_cards, key=lambda x: x[1])
         xts_yxp_cards = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
+        xts_yxp_cards
         # 判断剩余卡牌是否还满足做大牌条件
         if self.left_count < (self.__modify_flag * 2) - 2:
             eq_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
+            eq_cards_copy = eq_cards[:]
+            for card in eq_cards_copy:
+                if card in self.__all_hu_cards:
+                    eq_cards.remove(card)
             if eq_cards:
                 return self.exclude_history_hu_cards_and_lai_zi(eq_cards)
             if min_xts[0][2]:

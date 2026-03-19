@@ -153,3 +153,6 @@ class RobotMahjongServer(JsonBaseServer):
             all_hu_cards=data.get("all_hu_cards"),
             all_played_cards=data.get("all_played_cards"),
         )
+        cs_type = data.get("cs_type", None)
+        cs_enum = ServiceEnum.find_member_by_val(cs_type)
+        self.__move_gen.is_fczj = (cs_enum == ServiceEnum.C_MAHJONG_FC)
