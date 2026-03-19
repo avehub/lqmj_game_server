@@ -566,6 +566,20 @@ class PaymentLogic:
                 await GoodRC.update_int_field(express["good_id"], "total", order["num"], "add")
         return True
 
+    async def check_content_by_type(self, content, order_type):
+        name_map = {
+            1: "room_card",
+            2: "good"
+        }
+        return_dict = {}
+        key_name = name_map.get(order_type)
+        for content_one in content:
+            this_type = content_one.get("type")
+            if key_name == this_type:
+                return_dict = content_one
+                break
+        return return_dict
+
     async def pay_success(self, order: dict) -> bool:
         """订单支付成功"""
 
@@ -581,7 +595,8 @@ class PaymentLogic:
             order_type = 2
         if order_type:
             order["order_type"] = order_type
-            order["express_content"] = express.get("content")
+            new_content = await self.check_content_by_type(express.get("content"), order_type)
+            order["express_content"] = new_content
             await CommonApi.push_task2worker(CmdWorkers.PROXY_ORDER_SYNC, uid=order["uid"], msg=order)
 
         if good_type in [10, 11, 12]:
