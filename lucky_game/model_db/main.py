@@ -1137,5 +1137,5 @@ class LogoutUser(DBModel):
     updated = fields.IntField(null=True, default=0, description='更新时间')
 
     class Meta:
-        unique_together = (("platform", "openid"),("unionid", "platform"),("uid"),)  # 唯一索引
+        unique_together = (("platform", "openid"), ("unionid", "platform"),)  # 唯一索引
         table = "logout_user"
