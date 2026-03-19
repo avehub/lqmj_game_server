@@ -566,7 +566,7 @@ class PaymentLogic:
                 await GoodRC.update_int_field(express["good_id"], "total", order["num"], "add")
         return True
 
-    async def  pay_success(self, order: dict) -> bool:
+    async def pay_success(self, order: dict) -> bool:
         """订单支付成功"""
 
         express = await GoodRC.get_good_info(order["sku"])
