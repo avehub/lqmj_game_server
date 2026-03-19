@@ -178,7 +178,7 @@ class ProxyPromotionCode(DBModel):
 
     class Meta:
         table = "proxy_promotion_code"
-        unique_together = "promotion_code"
+        unique_together = (("promotion_code",),)
 
     def to_dict(self):
         return {
