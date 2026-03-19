@@ -1162,6 +1162,8 @@ class LpyMoveGenerator:
                                 # 当向听数小于上次记录的向听数时
                                 # 则更新上次记录的向听数
                                 record_lowest_xts = xts
+                            if xts == record_lowest_xts and xts==0: # 向听数为0时，添加多个最优组合
+                                optimal_path.append((xts, res_split_cards))
 
             optimal_split_cards(new_hand_cards)
 
