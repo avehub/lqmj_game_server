@@ -409,8 +409,14 @@ class RoomRobot(Room):
             candidates = [(s, cs) for s, cs in suit_cards.items() if len(cs) >= 3]
             if candidates:
                 # 选牌数最多的花色（可调整策略）
-                _, best_cards = max(candidates, key=lambda x: len(x[1]))
-                return self.select_most_isolated(best_cards, 3)
+                _, best_cards = min(candidates, key=lambda x: len(x[1]))
+                if len(best_cards) == 3 and all(card == 21 for card in best_cards):
+                    _, best_cards = max(candidates, key=lambda x: len(x[1]))
+                if len(best_cards) >= 3:
+                    return self.select_most_isolated(best_cards, 3)
+                else:
+                    _, best_cards = max(candidates, key=lambda x: len(x[1]))
+                    return self.select_most_isolated(best_cards, 3)
 
         # 普通策略：按花色数量升序处理（先处理杂花）
         suit_list = sorted(suit_cards.items(), key=lambda x: len(x[1]))
@@ -429,6 +435,14 @@ class RoomRobot(Room):
         """从 cards 中选出 n 张最孤立的牌"""
         if len(cards) <= n:
             return cards[:]
+        copy_cards = cards[:]
+        for card in copy_cards:
+            if card == 21:
+                cards.remove(card)
+        if len(cards) == n:
+            return cards[:]
+        if len(cards) < n:
+            cards = copy_cards
         sorted_cards = sorted(cards)
         scores = []
         for i, card in enumerate(sorted_cards):
