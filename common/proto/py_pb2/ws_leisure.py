@@ -1324,6 +1324,7 @@ class S2CPlayerInfoRunFast:
             p_info.is_ready = one_data.get("is_ready") or False
             p_info.total_score = one_data.get("total_score") or 0
             p_info.has_double = one_data.get("has_double") or False
+            p_info.has_qiang_guan = one_data.get("has_qiang_guan") or False
         return obj
 
 class S2CRoundStartRunFast:
@@ -1419,6 +1420,7 @@ class S2CRoundOverInfoRunFast:
             seat_info.quan_guan = data.get("quan_guan") or False
             seat_info.fan_guan = data.get("fan_guan") or False
             seat_info.round_bomb_count = data.get("round_bomb_count") or 0
+            seat_info.bao_pei = data.get("bao_pei") or False
         return obj
 
 class S2CBombScoreRunFast:
