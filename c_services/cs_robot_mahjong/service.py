@@ -139,6 +139,9 @@ class RobotMahjongServer(JsonBaseServer):
         # print("============计算发财捉鸡出牌============")
         self.update_move_gen_attr(data)
         action = self.__move_gen.calc_xts_by_max_hu_type()
+        if not action:
+            hand_card = data.get("curr_hand_cards")
+            return hand_card[-1]
         return action
 
     def update_move_gen_attr(self, data):

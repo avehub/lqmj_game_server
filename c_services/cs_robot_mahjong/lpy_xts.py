@@ -764,6 +764,8 @@ class LpyMoveGenerator:
         if played_cards:
             played_cards.sort(key=self.__played_card2count.get)
             return played_cards[-1]
+        if not cards:
+            return cards
         return cards[-1]
 
     def calc_xts_by_max_hu_type(self):
@@ -929,7 +931,6 @@ class LpyMoveGenerator:
         """
         min_xts = sorted(all_xts_cards, key=lambda x: x[1])
         xts_yxp_cards = sum([xts_yxp[2] for xts_yxp in all_xts_cards], [])
-        xts_yxp_cards
         # 判断剩余卡牌是否还满足做大牌条件
         if self.left_count < (self.__modify_flag * 2) - 2:
             eq_cards = [x for x in xts_yxp_cards if xts_yxp_cards.count(x) > 1]
