@@ -1312,6 +1312,7 @@ class S2CRoomInfoRunFast:
             table_card.cards.extend(data.get("cards") or [])
 
         obj.turn_end = kwargs.get("turn_end") or False
+        obj.price = kwargs.get("price") or 0
         return obj
 
 class S2CPlayerInfoRunFast:
