@@ -521,7 +521,7 @@ class BaseCardRoom(BaseRoom):
             if not p:
                 continue
             result["seats"].append(p.game_over_data)
-        if self.play_type < PlayType.RUN_FAST:
+        if self.service.service_type != ServiceEnum.C_RUN_FAST:
             data_model = S2CGameOverInfo.pb_model(**result)
         else:
             data_model = S2CGameOverInfoRunFast.pb_model(**result)

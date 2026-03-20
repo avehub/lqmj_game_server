@@ -1420,6 +1420,7 @@ class S2CRoundOverInfoRunFast:
             seat_info.quan_guan = data.get("quan_guan") or False
             seat_info.fan_guan = data.get("fan_guan") or False
             seat_info.round_bomb_count = data.get("round_bomb_count") or 0
+            seat_info.bao_pei = data.get("bao_pei") or False
         return obj
 
 class S2CBombScoreRunFast:
