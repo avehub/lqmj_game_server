@@ -530,6 +530,8 @@ class LpyMoveGenerator:
 
         # todo: 1.平胡向听数及最佳出牌
         xts1, ping_hu_best_cards = self.match_ping_hu(*args)
+        if self.magic_card in ping_hu_best_cards:
+            ping_hu_best_cards.remove(self.magic_card)
         all_best_cards.extend(ping_hu_best_cards)
         all_xts_cards.append(("ph", xts1, ping_hu_best_cards))
         LOG_PRINT and print(f"平胡向听数: {xts1}, 最优出牌: {ping_hu_best_cards}")
@@ -545,6 +547,8 @@ class LpyMoveGenerator:
         ]
         if any(ddz_case):
             xts2, best_cards2 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards2:
+                best_cards2.remove(self.magic_card)
             all_best_cards.extend(best_cards2)
             all_xts_cards.append(("ddz", xts2, best_cards2))
             LOG_PRINT and print(f"大对子向听数: {xts2}, 最优出牌: {best_cards2}")
@@ -557,6 +561,8 @@ class LpyMoveGenerator:
         ]
         if any(sxz_case):
             xts3, best_cards3 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards3:
+                best_cards3.remove(self.magic_card)
             all_best_cards.extend(best_cards3)
             all_xts_cards.append(("sxz", xts3, best_cards3))
             LOG_PRINT and print(f"三星照向听数: {xts3}, 最优出牌: {best_cards3}")
@@ -569,6 +575,8 @@ class LpyMoveGenerator:
         ]
         if any(sxc_case):
             xts4, best_cards4 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards4:
+                best_cards4.remove(self.magic_card)
             all_best_cards.extend(best_cards4)
             all_xts_cards.append(("sxc", xts4, best_cards4))
             LOG_PRINT and print(f"四喜财向听数: {xts4}, 最优出牌: {best_cards4}")
@@ -580,6 +588,8 @@ class LpyMoveGenerator:
         ag_count = self.count_piles_gang_res(FcPileType.PILE_AN_GANG)
         if mg_count + zw_count + ag_count > self.ddz_flag_len:
             xts5, best_cards5 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards5:
+                best_cards5.remove(self.magic_card)
             all_best_cards.extend(best_cards5)
             all_xts_cards.append(("byzc", xts5, best_cards5))
             LOG_PRINT and print(f"八音坐唱向听数: {xts5}, 最优出牌: {best_cards5}")
@@ -588,6 +598,8 @@ class LpyMoveGenerator:
         # 2.5 计算知行合一向听数及最佳出牌
         if mg_count + zw_count + ag_count == self.xqd_flag_len:
             xts6, best_cards6 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards6:
+                best_cards6.remove(self.magic_card)
             all_best_cards.extend(best_cards6)
             all_xts_cards.append(("zxhy", xts6, best_cards6))
             LOG_PRINT and print(f"知行合一向听数: {xts6}, 最优出牌: {best_cards6}")
@@ -598,6 +610,8 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.ddz_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts7, best_cards7 = self.match_da_dui_zi(*args)
+                if self.magic_card in best_cards7:
+                    best_cards7.remove(self.magic_card)
                 all_best_cards.extend(best_cards7)
                 all_xts_cards.append(("sjg3", xts7, best_cards7))
                 LOG_PRINT and print(f"三节高向听数: {xts7}, 最优出牌: {best_cards7}")
@@ -607,6 +621,8 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.xqd_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts8, best_cards8 = self.match_da_dui_zi(*args)
+                if self.magic_card in best_cards8:
+                    best_cards8.remove(self.magic_card)
                 all_best_cards.extend(best_cards8)
                 all_xts_cards.append(("sjg4", xts8, best_cards8))
                 LOG_PRINT and print(f"四节高向听数: {xts8}, 最优出牌: {best_cards8}")
@@ -617,6 +633,8 @@ class LpyMoveGenerator:
             # 3.1 计算七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len:
                 xts9, best_cards9 = self.match_qi_dui(*args)
+                if self.magic_card in best_cards9:
+                    best_cards9.remove(self.magic_card)
                 all_best_cards.extend(best_cards9)
                 all_xts_cards.append(("xqd", xts9, best_cards9))
                 if LOG_PRINT:
@@ -626,6 +644,8 @@ class LpyMoveGenerator:
             # 3.2 计算龙七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len and len(args[2]) == 1:
                 xts10, best_cards10 = self.calc_xts_by_long_qi_dui_lai_zi(*args)
+                if self.magic_card in best_cards10:
+                    best_cards10.remove(self.magic_card)
                 all_best_cards.extend(best_cards10)
                 all_xts_cards.append(("lqd", xts10, best_cards10))
                 if LOG_PRINT:
@@ -645,6 +665,8 @@ class LpyMoveGenerator:
 
         # todo: 1.清一色 -> 平胡
         xts1, best_cards1 = self.match_ping_hu(*args)
+        if self.magic_card in best_cards1:
+            best_cards1.remove(self.magic_card)
         all_best_cards.extend(best_cards1)
         all_xts_cards.append(("ph", xts1, best_cards1))
         LOG_PRINT and print(f"清一色 -> 平胡向听数: {xts1}, 最优出牌: {best_cards1}")
@@ -660,6 +682,8 @@ class LpyMoveGenerator:
         ]
         if any(ddz_case):
             xts2, best_cards2 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards2:
+                best_cards2.remove(self.magic_card)
             all_best_cards.extend(best_cards2)
             all_xts_cards.append(("ddz", xts2, best_cards2))
             LOG_PRINT and print(f"清一色 -> 大对子向听数: {xts2}, 最优出牌: {best_cards2}")
@@ -672,6 +696,8 @@ class LpyMoveGenerator:
         ]
         if any(sxz_case):
             xts3, best_cards3 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards3:
+                best_cards3.remove(self.magic_card)
             all_best_cards.extend(best_cards3)
             all_xts_cards.append(("sxz", xts3, best_cards3))
             LOG_PRINT and print(f"清一色 -> 三星照向听数: {xts3}, 最优出牌: {best_cards3}")
@@ -684,6 +710,8 @@ class LpyMoveGenerator:
         ]
         if any(sxc_case):
             xts4, best_cards4 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards4:
+                best_cards4.remove(self.magic_card)
             all_best_cards.extend(best_cards4)
             all_xts_cards.append(("sxc", xts4, best_cards4))
             LOG_PRINT and print(f"清一色 -> 四喜财向听数: {xts4}, 最优出牌: {best_cards4}")
@@ -695,6 +723,8 @@ class LpyMoveGenerator:
         ag_count = self.count_piles_gang_res(FcPileType.PILE_AN_GANG)
         if mg_count + zw_count + ag_count == self.ddz_flag_len:
             xts5, best_cards5 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards5:
+                best_cards5.remove(self.magic_card)
             all_best_cards.extend(best_cards5)
             all_xts_cards.append(("byzc", xts5, best_cards5))
             LOG_PRINT and print(f"清一色 -> 八音坐唱向听数: {xts5}, 最优出牌: {best_cards5}")
@@ -703,6 +733,8 @@ class LpyMoveGenerator:
         # 2.5 计算知行合一向听数及最佳出牌
         if mg_count + zw_count + ag_count == self.xqd_flag_len:
             xts6, best_cards6 = self.match_da_dui_zi(*args)
+            if self.magic_card in best_cards6:
+                best_cards6.remove(self.magic_card)
             all_best_cards.extend(best_cards6)
             all_xts_cards.append(("zxhy", xts6, best_cards6))
             LOG_PRINT and print(f"清一色 -> 知行合一向听数: {xts6}, 最优出牌: {best_cards6}")
@@ -722,6 +754,8 @@ class LpyMoveGenerator:
         if len(sjg_case) > self.xqd_flag_len - 1:
             if self.is_continuous(sjg_case) and self.calc_qing_yi_se(sjg_case):
                 xts8, best_cards8 = self.match_da_dui_zi(*args)
+                if self.magic_card in best_cards8:
+                    best_cards8.remove(self.magic_card)
                 all_best_cards.extend(best_cards8)
                 all_xts_cards.append(("sjg4", xts8, best_cards8))
                 LOG_PRINT and print(f"清一色 -> 四节高向听数: {xts8}, 最优出牌: {best_cards8}")
@@ -732,6 +766,8 @@ class LpyMoveGenerator:
             # 3.1 计算七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len:
                 xts9, best_cards9 = self.match_qi_dui(*args)
+                if self.magic_card in best_cards9:
+                    best_cards9.remove(self.magic_card)
                 all_best_cards.extend(best_cards9)
                 all_xts_cards.append(("xqd", xts9, best_cards9))
                 LOG_PRINT and print(f"清一色 -> 小七对向听数: {xts9}, 最优出牌: {best_cards9}")
@@ -740,6 +776,8 @@ class LpyMoveGenerator:
             # 3.2 计算龙七对向听数及最佳出牌
             if len(args[1]) > self.ddz_flag_len and len(args[2]) == 1:
                 xts10, best_cards10 = self.calc_xts_by_long_qi_dui_lai_zi(*args)
+                if self.magic_card in best_cards10:
+                    best_cards10.remove(self.magic_card)
                 all_best_cards.extend(best_cards10)
                 all_xts_cards.append(("lqd", xts10, best_cards10))
                 LOG_PRINT and print(f"清一色 -> 龙七对向听数: {xts10}, 最优出牌: {best_cards10}")
@@ -1869,6 +1907,7 @@ class LpyMoveGenerator:
         else:
             self.remove_by_value(cards, self.magic_card, -1)
             return self.cards_to_count_dict(cards)
+
 
     def split_cards_dict_res(self):
         """ 计算不同数量的cards """

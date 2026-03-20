@@ -964,7 +964,6 @@ class RoomFCZJ(BaseLeisureRoom):
                 else:
                     rs = UtilsTool.random_choice_num([1, 2, 3], [0.5, 0.3, 0.2])
                 self.call_flow_robot(rs, self.check_robot_auto_chu_pai)
-                chu_pai_sta = True
         if chu_pai_sta:
             return
         self.call_flow(TimerDelay.CHU_PAI_TIME, self.chu_pai_time_out, p)

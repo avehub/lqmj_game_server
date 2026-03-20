@@ -21,7 +21,7 @@ class MahjongServerRobotAct(BaseService):
             room.log_info(tid, "uid", uid, "cs_robot_mahjong出牌失败", code, msg)
             return
         room.log_info(tid, "uid", uid, "cs_robot_mahjong出牌消息", data)
-        await room.enter_chu_pai_call()
+        room.call_flow(0.5, room.enter_chu_pai_call)
 
     async def on_robot_cal_peng(self, uid, data):
         tid = data.get("tid")
